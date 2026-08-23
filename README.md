@@ -1,33 +1,50 @@
-# AI Software Factory — prototype local Docker
+# AI Software Factory Local
 
-Prototype simplifié d'une usine logicielle agentique d'entreprise. Il montre le flux **requirement → plan → patch → sandbox → tests → SBOM/vuln scan → review → approbation humaine → PR**.
+Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. Le dépôt matérialise un flux contrôlé de type :
 
-## 1. Composants
+`requirement -> plan -> patch -> validation du diff -> sandbox -> tests -> SBOM -> scan sécurité -> review -> approbation humaine -> pull request`
+
+## Vue d'ensemble
+
+La stack actuelle contient :
 
 | Fonction | Composant |
 |---|---|
-| SCM / PR | Gitea |
-| LLM local | Ollama |
-| Gateway LLM | LiteLLM (sélection locale ou cloud) |
-| Saisie des spécifications | Factory Web (ticket d'usine) |
+| Interface de saisie | `factory-web` |
 | Orchestration | Spring Boot 3.5 / Java 21 |
-| Sandbox | Docker containers éphémères |
-| Tests | Maven / Gradle / npm (détection simple) |
-| SBOM | Syft / CycloneDX |
-| Vulnérabilités / secrets | Trivy |
-| Qualité | SonarQube (profil `full`, à raccorder au pipeline selon le projet) |
-| Artefacts | Nexus Repository (profil `full`) |
-| Métriques | Spring Actuator + Prometheus + Grafana (profil `full`) |
+| Passerelle LLM | LiteLLM |
+| Modèle local | Ollama |
+| Modèle cloud optionnel | OpenAI via LiteLLM |
+| SCM / PR | Gitea + PostgreSQL |
+| Sandbox d'exécution | conteneurs Docker éphémères |
+| Tests | Maven / Gradle / npm selon le dépôt |
+| SBOM | Syft |
+| Scan sécurité | Trivy |
+| Observabilité optionnelle | Prometheus + Grafana |
+| Qualité/artefacts optionnels | SonarQube + Nexus |
 
-## 2. Pré-requis
+## Ce que fait réellement le prototype
 
-- Docker Desktop / Docker Engine + Docker Compose v2
-- `make`, `curl`, `git`, `jq` recommandés sur l'hôte
-- 16 Go RAM minimum pour le profil core ; 24–32 Go recommandés pour `full` + LLM local
+1. L'utilisateur soumet un ticket depuis l'interface web ou `POST /api/tasks`.
+2. L'orchestrateur clone le dépôt cible sur la branche demandée.
+3. Le `Planner` produit un plan à partir du besoin et du contexte du dépôt.
+4. Le `Developer` génère un patch `unified diff`.
+5. Le patch est normalisé puis validé avec `git apply --check`.
+6. En cas d'échec, un second appel LLM tente une réparation complète du diff.
+7. Si `dryRun=false`, le patch est appliqué en sandbox puis les tests et scans sont exécutés.
+8. Le `Tester` et le `Reviewer` complètent l'analyse à partir des preuves déterministes.
+9. La tâche passe en `WAITING_APPROVAL`.
+10. Après `POST /api/tasks/{id}/approve`, l'orchestrateur crée une branche `ai-factory/<taskId>`, committe, pousse et ouvre une PR Gitea.
 
-> Le premier build télécharge les images Docker ainsi que Syft/Trivy dans l'image de sandbox.
+## Pré-requis
 
-## 3. Démarrage rapide
+- Docker Desktop ou Docker Engine avec Compose v2
+- `make`, `curl`, `git`
+- `jq` recommandé pour les appels API
+- environ 16 Go de RAM pour le profil core
+- environ 24 Go ou plus pour `full` avec LLM local
+
+## Démarrage rapide
 
 ```bash
 make init
@@ -36,58 +53,33 @@ make model
 make bootstrap
 ```
 
-Services core :
+URLs principales :
+
 - Factory Web : `http://localhost:8080`
 - Gitea : `http://localhost:3000`
 - Orchestrateur : `http://localhost:8088`
 - Ollama : `http://localhost:11434`
 
-Le script `bootstrap` crée le compte POC `aiadmin` (mot de passe dans `.env`) et le dépôt `customer-api`.
+Le bootstrap crée le compte Gitea de démonstration `aiadmin` et le dépôt `customer-api`, puis pousse le contenu de `sample-repo/`.
 
-### Saisir une spécification depuis l'interface
+## Utilisation
 
-Ouvrez `http://localhost:8080`. L'interface présente un ticket avec un résumé, le contexte, les critères d'acceptation, le dépôt cible et la branche. À l'envoi, elle crée une tâche dans l'orchestrateur et suit son état automatiquement. Le mode simulation est activé par défaut pour éviter toute modification du dépôt.
+### Depuis l'interface web
 
-### Choisir le LLM du ticket
+L'interface `factory-web` permet de :
 
-Le slider **LLM local / LLM cloud** est une décision explicite stockée avec la tâche. Il n'y a pas de fallback automatique : le mode sélectionné est utilisé pour toutes les étapes agentiques du ticket.
+- rédiger un ticket structuré ;
+- choisir le mode `LOCAL` ou `CLOUD` ;
+- activer ou non `dry-run` ;
+- suivre l'exécution en temps réel ;
+- consulter l'historique des tâches ;
+- approuver une tâche non dry-run en attente.
 
-- **LLM local** utilise Ollama ; le code et la spécification restent dans les conteneurs locaux.
-- **LLM cloud** utilise OpenAI via LiteLLM ; le contexte du dépôt et la spécification sont transmis au fournisseur cloud.
+Par défaut, une tâche est soumise en `dryRun=true`.
 
-Le cloud est désactivé par défaut. Pour l'autoriser, renseignez `.env` puis relancez la stack :
+### Depuis l'API
 
-```bash
-OPENAI_API_KEY=...
-AI_FACTORY_CLOUD_ENABLED=true
-```
-
-La clé OpenAI est injectée uniquement dans LiteLLM, jamais dans le navigateur ni dans l'orchestrateur.
-
-### Générer un token Gitea
-
-Le script `make bootstrap` tente de générer automatiquement un token Gitea et de l’écrire dans `.env`. Si cela échoue, dans Gitea : **Settings → Applications → Generate New Token** puis placez la valeur dans :
-
-```bash
-GITEA_TOKEN=...
-```
-
-puis redémarrez l'orchestrateur :
-
-```bash
-docker compose up -d --force-recreate orchestrator
-```
-
-## 4. Première démonstration en dry-run
-
-```bash
-make demo
-curl -s http://localhost:8088/api/tasks | jq
-```
-
-Le dry-run exécute Planner + Developer + Tester + Reviewer mais **n'applique pas le patch** et ne lance pas les quality gates. C'est le meilleur mode pour valider la génération du diff avec le modèle choisi.
-
-## 5. Exécution complète
+Créer une tâche :
 
 ```bash
 curl -s -X POST http://localhost:8088/api/tasks \
@@ -95,115 +87,140 @@ curl -s -X POST http://localhost:8088/api/tasks \
   -d '{
     "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
     "baseBranch":"main",
-    "requirement":"Add GET /customers/{id}. Return 404 if not found and add tests.",
-    "dryRun":false
-  }' | jq
+    "requirement":"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
+    "dryRun":true,
+    "llmMode":"LOCAL"
+  }'
 ```
 
-Suivre la tâche :
+Lire une tâche :
 
 ```bash
-curl -s http://localhost:8088/api/tasks/<TASK_ID> | jq
+curl -s http://localhost:8088/api/tasks/<TASK_ID>
 ```
 
-États principaux : `PLANNING`, `GENERATING_PATCH`, `APPLYING_PATCH`, `TESTING`, `SECURITY_SCANNING`, `REVIEWING`, `WAITING_APPROVAL`.
-
-Chaque patch est d'abord validé avec `git apply --check` dans le sandbox. En cas de diff invalide, l'usine demande une réécriture complète au modèle avec le diagnostic Git, puis valide cette seconde version avant toute modification du dépôt. Si elle est encore invalide, la tâche passe en `FAILED` et conserve `changes.patch` ainsi que `changes.invalid.patch` dans le volume `factory-workspace`. Les sandboxes remontent ce volume Docker nommé directement, ce qui évite les restrictions de partage de chemins de Docker Desktop sur macOS. C'est volontaire : le prototype ne masque pas les échecs agentiques.
-
-### Approbation humaine et création de PR
-
-Quand la tâche est `WAITING_APPROVAL` :
+Lister les tâches :
 
 ```bash
-curl -s -X POST http://localhost:8088/api/tasks/<TASK_ID>/approve | jq
+curl -s http://localhost:8088/api/tasks
 ```
 
-L'orchestrateur crée alors une branche `ai-factory/<TASK_ID>`, committe, pousse et ouvre une Pull Request Gitea.
+Approuver une tâche :
 
-## 6. Profil complet
+```bash
+curl -s -X POST http://localhost:8088/api/tasks/<TASK_ID>/approve
+```
+
+Capacités exposées :
+
+```bash
+curl -s http://localhost:8088/api/capabilities
+```
+
+## États de tâche
+
+Les statuts réellement utilisés sont :
+
+- `QUEUED`
+- `CLONING`
+- `PLANNING`
+- `GENERATING_PATCH`
+- `APPLYING_PATCH`
+- `TESTING`
+- `SECURITY_SCANNING`
+- `REVIEWING`
+- `WAITING_APPROVAL`
+- `APPROVED`
+- `PR_CREATED`
+- `FAILED`
+
+`/api/tasks/{id}` retourne aussi le plan, le patch, les résumés de test et de sécurité, la review IA, l'erreur éventuelle, l'URL de PR et l'historique des étapes.
+
+## Modes LLM
+
+Le routage LLM passe toujours par LiteLLM :
+
+- `LOCAL` -> alias `factory-code-local` -> Ollama
+- `CLOUD` -> alias `factory-code-cloud` -> OpenAI
+
+Le mode cloud n'est accepté que si `AI_FACTORY_CLOUD_ENABLED=true`.
+
+Variables `.env` principales :
+
+```bash
+OLLAMA_MODEL=qwen2.5-coder:7b
+OPENAI_MODEL=gpt-5.6-luna
+OPENAI_API_KEY=
+AI_FACTORY_CLOUD_ENABLED=false
+LITELLM_MASTER_KEY=local-dev-litellm-key
+```
+
+## Démonstration
+
+Envoyer une tâche de démonstration en dry-run :
+
+```bash
+make demo
+```
+
+Exécuter le flux complet avec patch appliqué, tests et scans :
+
+```bash
+curl -s -X POST http://localhost:8088/api/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
+    "baseBranch":"main",
+    "requirement":"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
+    "dryRun":false,
+    "llmMode":"LOCAL"
+  }'
+```
+
+## Profil complet
 
 ```bash
 make full
 ```
 
-Ajoute :
+Services ajoutés :
+
 - SonarQube : `http://localhost:9000`
 - Nexus : `http://localhost:8081`
 - Prometheus : `http://localhost:9090`
 - Grafana : `http://localhost:3001`
 
-SonarQube et Nexus sont volontairement **présents comme briques d'usine** mais leur configuration projet/token/repository reste à adapter au langage et au contexte du POC. Syft + Trivy sont, eux, intégrés directement dans le flux d'exécution.
+Important : SonarQube et Nexus sont présents dans la stack mais ne sont pas encore branchés automatiquement dans le pipeline d'exécution.
 
-## 7. Choisir le modèle Ollama
-
-Modifier `.env` :
+## Commandes utiles
 
 ```bash
-OLLAMA_MODEL=qwen2.5-coder:7b
+make help
+make status
+make logs
+make restart
+make urls
+make test
+make down
+make clean
 ```
 
-Puis :
+## Limites actuelles
 
-```bash
-make model
-docker compose up -d --force-recreate litellm orchestrator
-```
+- stockage des tâches en mémoire uniquement ;
+- pas de persistance PostgreSQL pour l'orchestrateur ;
+- exécution locale uniquement, sans scheduler ni queue ;
+- prompts versionnés mais sans gouvernance avancée ;
+- un seul pipeline d'exécution, avec rôles LLM logiques ;
+- support des builds limité à Maven, Gradle et npm ;
+- pas de SSO, RBAC ni policy engine ;
+- montage de `/var/run/docker.sock` dans l'orchestrateur ;
+- pas de sandbox Kubernetes ni d'egress allow-list ;
+- approbation humaine obligatoire avant push/PR ;
+- `dryRun=true` par défaut pour réduire le risque.
 
-Pour un POC agentique, privilégier un modèle de code suffisamment fiable pour produire des unified diffs. Un modèle trop petit échouera souvent à `git apply --check` — ce taux d'échec est justement un KPI utile du prototype.
+## Documentation complémentaire
 
-## 8. API
-
-### Créer une tâche
-
-`POST /api/tasks`
-
-```json
-{
-  "repositoryUrl": "http://gitea:3000/aiadmin/customer-api.git",
-  "baseBranch": "main",
-  "requirement": "Add GET /customers/{id} with 404 and tests",
-  "dryRun": true
-}
-```
-
-### Lire une tâche
-
-`GET /api/tasks/{id}`
-
-### Lister
-
-`GET /api/tasks`
-
-### Approuver
-
-`POST /api/tasks/{id}/approve`
-
-## 9. Limites assumées du MVP
-
-- stockage des tâches en mémoire ;
-- un seul LLM Ollama, rôles logiques via prompts ;
-- pas encore de MCP réel : le contexte est chargé directement depuis le repository ;
-- SonarQube/Nexus ne sont pas encore branchés automatiquement au pipeline ;
-- Docker socket monté dans l'orchestrateur (POC uniquement) ;
-- pas de SSO/Keycloak dans le MVP ;
-- le patch LLM doit être un unified diff strict et peut échouer ;
-- pas d'auto-merge : l'approbation humaine reste obligatoire.
-
-## 10. Étapes d'industrialisation
-
-1. Remplacer le Docker socket par des Kubernetes Jobs / Sandbox API.
-2. Ajouter PostgreSQL pour l'état des tâches et une queue (Kafka/RabbitMQ).
-3. Introduire un AI Gateway multi-modèles.
-4. Ajouter un MCP Gateway privé et des serveurs MCP approuvés (Git, Jira, Confluence, Sonar, Artifactory/Nexus).
-5. Ajouter Keycloak/SSO/RBAC et policy-as-code.
-6. Brancher SonarQube et Nexus dans les quality gates.
-7. Signer artefacts/SBOM et produire des attestations SLSA.
-8. Ajouter des niveaux d'autonomie A0–A3 par type de changement.
-
-Voir `docs/architecture.md` et `docs/security.md`.
-
-## Documentation détaillée
-
-Le dossier complet d'explication du prototype, avec les diagrammes au format Mermaid, est disponible dans :
-
-`docs/AI_SOFTWARE_FACTORY_LOCAL.md`
+- [Vue détaillée du prototype](docs/AI_SOFTWARE_FACTORY_LOCAL.md)
+- [Architecture](docs/architecture.md)
+- [Sécurité](docs/security.md)

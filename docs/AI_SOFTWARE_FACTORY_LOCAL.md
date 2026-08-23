@@ -1,475 +1,79 @@
-# AI Software Factory locale — prototype Docker
+# AI Software Factory locale
 
-## 1. Objectif
+## 1. Objectif du prototype
 
-Ce prototype matérialise, sur une seule machine, une version simplifiée d'une **usine de production logicielle basée sur l'IA**. L'objectif n'est pas de reproduire immédiatement toute la complexité d'une plateforme d'entreprise, mais de valider les principes structurants de l'architecture cible : orchestration agentique, contextualisation du code, exécution isolée, contrôles déterministes, sécurité, SBOM, revue et validation humaine avant création d'une Pull Request.
+Ce dépôt implémente une usine logicielle agentique locale destinée à démontrer un enchaînement complet entre expression du besoin, génération de modification, contrôles automatisés et création de pull request sous validation humaine.
 
-Le flux nominal est le suivant :
+L'objectif réel du POC est de répondre à quatre questions :
 
-```mermaid
-flowchart LR
-    R[Requirement] --> P[Planner Agent]
-    P --> D[Developer Agent]
-    D --> PATCH[Unified Diff]
-    PATCH --> S[Sandbox Docker]
-    S --> B[Build & Tests]
-    B --> T[Tester Agent]
-    T --> SEC[Syft + Trivy]
-    SEC --> REV[Reviewer Agent]
-    REV --> H{Validation humaine}
-    H -->|Approve| PR[Branche + Commit + PR Gitea]
-    H -->|Reject| STOP[Arrêt / correction]
-```
+1. Est-ce que le modèle produit des patches Git exploitables ?
+2. Est-ce que ces patches passent les contrôles déterministes du dépôt cible ?
+3. Est-ce que la séparation `génération -> validation -> approbation -> livraison` est suffisante pour une démonstration crédible ?
+4. Quels sont les points durs à industrialiser ensuite ?
 
-Le principe essentiel du prototype est le même que celui de la cible d'entreprise :
+Le prototype ne cherche pas encore à résoudre la gouvernance complète d'une plateforme d'entreprise.
 
-> **L'IA propose et exécute ; les contrôles déterministes et les validations gouvernées décident si le changement peut progresser.**
+## 2. Résumé exécutable
 
----
+Le comportement actuel est le suivant :
 
-## 2. Pourquoi Docker Compose pour le prototype
+- le ticket est saisi depuis `factory-web` ou l'API ;
+- l'orchestrateur clone le dépôt cible ;
+- un `Planner` génère un plan ;
+- un `Developer` génère un `unified diff` ;
+- le diff est validé puis éventuellement réparé par un prompt dédié ;
+- en exécution complète, le patch est appliqué en sandbox ;
+- les tests, le SBOM et le scan Trivy sont exécutés ;
+- un `Tester` et un `Reviewer` synthétisent les preuves ;
+- la tâche attend une approbation humaine ;
+- après approbation, une branche, un commit, un push et une PR Gitea sont créés.
 
-Docker Compose est adapté à une première implémentation locale pour plusieurs raisons :
-
-- mise en œuvre rapide ;
-- reproductibilité de l'environnement ;
-- isolation des composants ;
-- déploiement sur un seul poste ;
-- possibilité de simuler les plans de contrôle, d'exécution et d'assurance ;
-- transition naturelle vers Kubernetes lorsque le POC est validé.
-
-Le prototype repose donc sur des services persistants orchestrés par Docker Compose, complétés par des **containers éphémères** créés à la demande pour l'exécution des tâches agentiques.
-
----
-
-## 3. Architecture fonctionnelle simplifiée
+## 3. Architecture d'ensemble
 
 ```mermaid
 flowchart TB
-    DEV[Développeur / Architecte\nVS Code / Browser]
-    GIT[Gitea\nRepositories • Issues • PR]
-    ORCH[Agent Orchestrator\nSpring Boot / Java 21]
-    LLM[LLM local\nOllama]
-    CTX[Context / Repository Loader]
-    SB[Docker Agent Sandbox\nContainer éphémère]
-    CI[Quality Gates\nBuild • Tests • Syft • Trivy]
-    SONAR[SonarQube\nprofil full]
-    NEXUS[Nexus Repository\nprofil full]
-    OBS[Prometheus + Grafana\nprofil full]
-
-    DEV --> GIT
-    GIT --> ORCH
-    ORCH --> LLM
-    ORCH --> CTX
-    ORCH --> SB
-    CTX --> ORCH
-    SB --> CI
-    CI --> ORCH
-    SONAR -. qualité .-> CI
-    NEXUS -. dépendances / artefacts .-> SB
-    OBS -. métriques .-> ORCH
-    ORCH -->|après approbation| GIT
-```
-
----
-
-## 4. Architecture technique cible du prototype
-
-La version locale conserve les mêmes plans logiques que l'architecture d'entreprise, mais avec des implémentations volontairement légères.
-
-```mermaid
-flowchart TB
-    subgraph L1[1. Canaux d'entrée / Product & Engineering]
-        U[Développeurs / Architectes]
-        J[Jira / Issues\nreprésenté par Gitea Issues]
-        DOC[Confluence / ADR\nreprésenté par docs du repo]
-        CAT[Service Catalog\noptionnel dans le MVP]
-    end
-
-    subgraph L2[2. Control Plane / Orchestration]
-        ORCH[Spring Boot Orchestrator]
-        POL[Policies simples]
-        APP[Approbation humaine]
-        AUD[Logs / traces]
-    end
-
-    subgraph L3[3. Agent & Model Plane]
-        PL[Planner]
-        DEVAG[Developer]
-        TESTAG[Tester]
-        REV[Reviewer]
-        OLL[Ollama]
-    end
-
-    subgraph L4[4. Context Plane]
-        REPO[Git repository]
-        SRC[Code source]
-        ADR[README / docs / ADR]
-        MCP[MCP Gateway\nfuture extension]
-    end
-
-    subgraph L5[5. Execution Plane]
-        SANDBOX[Container Docker éphémère]
-        CLONE[git clone]
-        BUILD[build]
-        TESTS[tests]
-        APPLY[git apply]
-    end
-
-    subgraph L6[6. Delivery / Assurance Plane]
-        SYFT[Syft / SBOM CycloneDX]
-        TRIVY[Trivy\nvulnérabilités + secrets]
-        SONAR[SonarQube\nprofil full]
-        NEXUS[Nexus\nprofil full]
-        PR[Pull Request Gitea]
-    end
-
-    U --> ORCH
-    J --> ORCH
-    DOC --> ORCH
-    ORCH --> PL
-    ORCH --> DEVAG
-    ORCH --> TESTAG
-    ORCH --> REV
-    PL --> OLL
-    DEVAG --> OLL
-    TESTAG --> OLL
-    REV --> OLL
-    REPO --> ORCH
-    SRC --> ORCH
-    ADR --> ORCH
-    MCP -. futur .-> ORCH
-    ORCH --> SANDBOX
-    SANDBOX --> CLONE --> APPLY --> BUILD --> TESTS
-    TESTS --> SYFT
-    TESTS --> TRIVY
-    TESTS -. optionnel .-> SONAR
-    BUILD -. artefacts .-> NEXUS
-    SYFT --> APP
-    TRIVY --> APP
-    SONAR --> APP
-    APP -->|approve| PR
-```
-
----
-
-## 5. Composants du prototype
-
-| Fonction | Composant | Rôle dans le POC |
-|---|---|---|
-| SCM / Issues / PR | Gitea | Dépôts Git, tickets, branches, Pull Requests |
-| LLM local | Ollama | Exécution des rôles agentiques |
-| Orchestration | Spring Boot 3.5 / Java 21 | Pilotage du workflow, appels LLM, sandboxes, états de tâche |
-| Sandbox | Docker | Exécution isolée et éphémère des modifications |
-| Tests | Maven / Gradle / npm | Validation fonctionnelle de base |
-| SBOM | Syft / CycloneDX | Inventaire des composants logiciels |
-| Vulnérabilités / secrets | Trivy | Analyse de sécurité |
-| Qualité | SonarQube | Analyse qualité avancée, profil `full` |
-| Artefacts | Nexus Repository | Proxy / dépôt d'artefacts, profil `full` |
-| Observabilité | Spring Actuator + Prometheus + Grafana | Métriques techniques, profil `full` |
-
-Le MVP ne cherche pas à intégrer immédiatement GitLab Duo, GitHub AI Controls ou un MCP Gateway complet. Il reproduit d'abord les **mécanismes architecturaux** afin de valider le modèle avant de remplacer les briques locales par leurs équivalents d'entreprise.
-
----
-
-## 6. Organisation du projet
-
-```text
-ai-software-factory-local/
-├── docker-compose.yml
-├── Makefile
-├── .env.example
-├── orchestrator/
-│   ├── Dockerfile
-│   ├── pom.xml
-│   └── src/...
-├── sandbox/
-│   └── Dockerfile
-├── agents/
-│   ├── planner.yaml
-│   ├── developer.yaml
-│   ├── tester.yaml
-│   └── reviewer.yaml
-├── prompts/
-│   ├── planner.md
-│   ├── developer.md
-│   ├── tester.md
-│   └── reviewer.md
-├── sample-repo/
-│   └── ...
-├── scripts/
-│   ├── bootstrap-gitea.sh
-│   └── demo.sh
-├── observability/
-│   └── prometheus.yml
-└── docs/
-    ├── architecture.md
-    ├── security.md
-    └── AI_SOFTWARE_FACTORY_LOCAL.md
-```
-
----
-
-## 7. Principe d'orchestration agentique
-
-Le premier prototype utilise **un seul LLM**, mais plusieurs rôles logiques. Cette approche évite de complexifier inutilement l'architecture dès le départ.
-
-```mermaid
-flowchart LR
-    O[Orchestrateur]
-    L[Ollama / modèle unique]
-
-    O -->|prompt Planner| L
-    L -->|plan| O
-    O -->|prompt Developer| L
-    L -->|patch| O
-    O -->|prompt Tester| L
-    L -->|analyse tests| O
-    O -->|prompt Reviewer| L
-    L -->|review| O
-```
-
-Les rôles sont définis par des prompts et des fichiers YAML distincts :
-
-- **Planner** : comprend la demande et produit un plan de modification ;
-- **Developer** : génère un patch strict au format unified diff ;
-- **Tester** : examine les résultats de tests et complète l'analyse ;
-- **Reviewer** : réalise une revue finale basée sur les preuves d'exécution.
-
-Cette séparation permet ensuite d'affecter des modèles différents à chaque rôle sans modifier le workflow global.
-
----
-
-## 8. Flux complet d'une tâche
-
-```mermaid
-sequenceDiagram
-    actor U as Utilisateur
-    participant O as Orchestrateur
-    participant G as Gitea
-    participant L as Ollama
-    participant S as Sandbox Docker
-    participant Q as Quality Gates
-
-    U->>O: POST /api/tasks
-    O->>G: git clone
-    G-->>O: repository
-
-    O->>L: Planner(requirement + contexte)
-    L-->>O: plan.md
-
-    O->>L: Developer(plan + contexte)
-    L-->>O: unified diff
-
-    alt dryRun = true
-        O->>L: Tester(diff + contexte)
-        L-->>O: analyse
-        O->>L: Reviewer(plan + diff + analyse)
-        L-->>O: revue finale
-        O-->>U: Résultat sans modification du repo
-    else dryRun = false
-        O->>S: création sandbox
-        O->>S: git apply --check
-        O->>S: git apply
-        O->>S: build + tests
-        S-->>O: résultats
-
-        O->>Q: Syft + Trivy
-        Q-->>O: SBOM + findings
-
-        O->>L: Tester(résultats)
-        L-->>O: analyse
-        O->>L: Reviewer(evidence)
-        L-->>O: revue
-
-        O-->>U: WAITING_APPROVAL
-        U->>O: POST /approve
-        O->>G: branch + commit + push + PR
-        G-->>O: URL Pull Request
-        O-->>U: PR créée
-    end
-```
-
----
-
-## 9. États de la tâche
-
-```mermaid
-stateDiagram-v2
-    [*] --> PLANNING
-    PLANNING --> GENERATING_PATCH
-    GENERATING_PATCH --> APPLYING_PATCH: dryRun=false
-    GENERATING_PATCH --> TESTING: dryRun=true
-    APPLYING_PATCH --> TESTING
-    TESTING --> SECURITY_SCANNING: exécution réelle
-    TESTING --> REVIEWING: dryRun
-    SECURITY_SCANNING --> REVIEWING
-    REVIEWING --> WAITING_APPROVAL: exécution réelle
-    REVIEWING --> COMPLETED: dryRun
-    WAITING_APPROVAL --> COMPLETED: approve + PR
-
-    PLANNING --> FAILED
-    GENERATING_PATCH --> FAILED
-    APPLYING_PATCH --> FAILED
-    TESTING --> FAILED
-    SECURITY_SCANNING --> FAILED
-    REVIEWING --> FAILED
-```
-
-Les états principaux exposés par l'API sont :
-
-- `PLANNING` ;
-- `GENERATING_PATCH` ;
-- `APPLYING_PATCH` ;
-- `TESTING` ;
-- `SECURITY_SCANNING` ;
-- `REVIEWING` ;
-- `WAITING_APPROVAL` ;
-- `COMPLETED` ;
-- `FAILED`.
-
----
-
-## 10. Sandbox Docker
-
-L'agent ne doit pas exécuter directement les commandes de build sur la machine hôte. L'orchestrateur crée donc un container temporaire pour chaque tâche.
-
-```mermaid
-flowchart TB
-    O[Orchestrateur] --> C[Création container temporaire]
-    C --> R[Clone repository]
-    R --> A[Application du patch]
-    A --> B[Build]
-    B --> T[Tests]
-    T --> S[Syft + Trivy]
-    S --> E[Collecte des résultats]
-    E --> D[Destruction du container]
-```
-
-Le container de sandbox contient ou utilise :
-
-- Git ;
-- Java / Maven ou Gradle selon le projet ;
-- Node/npm lorsque nécessaire ;
-- Syft ;
-- Trivy ;
-- un workspace isolé ;
-- des credentials temporaires ou limités au POC.
-
-### Limitations de sécurité du MVP
-
-Pour faciliter la création des sandboxes, l'orchestrateur monte le socket Docker :
-
-```yaml
-volumes:
-  - /var/run/docker.sock:/var/run/docker.sock
-```
-
-Ce mécanisme est **acceptable uniquement pour un prototype local dédié**. Il donne à l'orchestrateur un niveau de privilège proche de root sur le moteur Docker.
-
-Dans une cible industrielle, il faut remplacer ce mécanisme par une **Sandbox API**, des **Kubernetes Jobs** ou une technologie d'isolation équivalente.
-
----
-
-## 11. Contrôles déterministes
-
-La sortie du LLM n'est jamais considérée comme une preuve suffisante de qualité. Le prototype introduit des contrôles reproductibles et indépendants du modèle.
-
-```mermaid
-flowchart LR
-    PATCH[Patch IA] --> CHECK[git apply --check]
-    CHECK --> BUILD[Compile / Build]
-    BUILD --> UT[Tests unitaires]
-    UT --> IT[Tests intégration]
-    IT --> SBOM[Syft SBOM]
-    SBOM --> VULN[Trivy]
-    VULN --> REVIEW[Review Agent]
+    USER[Utilisateur] --> WEB[Factory Web]
+    USER --> GIT[Gitea]
+    WEB --> ORCH[Spring Boot Orchestrator]
+    ORCH --> LLM[LiteLLM]
+    LLM -->|LOCAL| OLLAMA[Ollama]
+    LLM -->|CLOUD| OPENAI[OpenAI]
+    ORCH --> CTX[Repository Context Service]
+    ORCH --> SB[Docker Sandbox]
+    SB --> BUILD[Build et tests]
+    SB --> SEC[Syft et Trivy]
+    BUILD --> REVIEW[Reviewer]
+    SEC --> REVIEW
     REVIEW --> HUMAN{Approbation humaine}
-    HUMAN -->|OK| PR[Pull Request]
+    HUMAN -->|approve| PR[Pull Request Gitea]
 ```
 
-Le profil `full` ajoute SonarQube et Nexus comme briques supplémentaires, même si leur branchement automatique est volontairement laissé à adapter selon les projets et langages.
+## 4. Composants réels du dépôt
 
----
+| Répertoire ou service | Rôle |
+|---|---|
+| `web/` | interface ticket et suivi d'exécution |
+| `orchestrator/` | API, orchestration, appels LLM, sandbox, PR |
+| `litellm/` | config LiteLLM et point d'entrée |
+| `sandbox/` | image d'exécution des patches, tests et scans |
+| `agents/` | définition logique des agents |
+| `prompts/` | prompts Planner, Developer, Tester, Reviewer, Patch Repair |
+| `sample-repo/` | dépôt de démonstration poussé dans Gitea |
+| `scripts/bootstrap-gitea.sh` | initialisation Gitea + dépôt demo + token |
+| `scripts/demo.sh` | soumission d'une tâche de démonstration |
+| `observability/` | Prometheus et Grafana |
+| `docs/` | documentation du prototype |
 
-## 12. SBOM et sécurité
-
-Syft génère un SBOM au format CycloneDX. Trivy analyse les vulnérabilités et les secrets.
-
-```mermaid
-flowchart TB
-    SRC[Workspace après build]
-    SRC --> SYFT[Syft]
-    SRC --> TRIVY[Trivy]
-    SYFT --> CYC[CycloneDX SBOM]
-    TRIVY --> FIND[Findings vulnérabilités / secrets]
-    CYC --> EVID[Evidence Bundle]
-    FIND --> EVID
-    EVID --> REV[Reviewer Agent]
-    REV --> HUMAN[Validation humaine]
-```
-
-Dans une version industrielle, ce bloc serait étendu avec :
-
-- signature des artefacts ;
-- signature du SBOM ;
-- provenance SLSA ;
-- policy-as-code ;
-- vérification de licences ;
-- promotion contrôlée Dev → Test → Prod.
-
----
-
-## 13. Validation humaine
-
-Le prototype ne fait pas d'auto-merge. Après la génération du patch, les tests, les scans et la review, la tâche passe en `WAITING_APPROVAL`.
-
-```mermaid
-flowchart LR
-    E[Evidence complète] --> W[WAITING_APPROVAL]
-    W --> H{Décision humaine}
-    H -->|Approve| B[Création branche]
-    B --> C[Commit]
-    C --> P[Push]
-    P --> PR[Pull Request Gitea]
-    H -->|Reject| R[Reprise / abandon]
-```
-
-Cette étape matérialise le niveau d'autonomie **A2** : l'agent peut produire une PR, mais l'humain garde la décision de merge.
-
----
-
-## 14. Niveaux d'autonomie visés
-
-```mermaid
-flowchart LR
-    A0[A0\nConseil uniquement]
-    A1[A1\nModifications locales\nHumain valide]
-    A2[A2\nCréation de PR\nHumain merge]
-    A3[A3\nAuto-merge low-risk\nCI + policies]
-    A4[A4\nDéploiement autonome\nCas très maîtrisés]
-
-    A0 --> A1 --> A2 --> A3 --> A4
-```
-
-Le prototype est volontairement centré sur **A1/A2**. Une éventuelle ouverture A3 ne doit concerner que des changements faiblement risqués et très déterministes : documentation, génération de tests, refactorings simples ou mises à jour de dépendances encadrées.
-
----
-
-## 15. Démarrage rapide
+## 5. Démarrage et initialisation
 
 ### Pré-requis
 
-- Docker Desktop ou Docker Engine ;
 - Docker Compose v2 ;
-- `make` ;
-- `curl` ;
-- `git` ;
-- `jq` recommandé.
+- `make`, `curl`, `git` ;
+- `jq` recommandé ;
+- ressources mémoire suffisantes pour la stack locale.
 
-Pour le profil core, 16 Go de RAM peuvent suffire. Pour le profil `full` combinant LLM local, SonarQube, Nexus, Prometheus et Grafana, 24 à 32 Go sont préférables.
-
-### Initialisation
+### Démarrage minimal
 
 ```bash
 make init
@@ -478,401 +82,277 @@ make model
 make bootstrap
 ```
 
-Services core :
-
-- Gitea : `http://localhost:3000` ;
-- Orchestrateur : `http://localhost:8088` ;
-- Ollama : `http://localhost:11434`.
-
-Le bootstrap crée un compte POC `aiadmin` ainsi qu'un repository `customer-api`.
-
----
-
-## 16. Token Gitea
-
-Le script `make bootstrap` tente de générer automatiquement un token Gitea et de le placer dans `.env`.
-
-Si cette étape échoue, créer manuellement un token dans Gitea :
-
-**Settings → Applications → Generate New Token**
-
-Puis renseigner :
-
-```bash
-GITEA_TOKEN=...
-```
-
-et redémarrer l'orchestrateur :
-
-```bash
-docker compose up -d --force-recreate orchestrator
-```
-
----
-
-## 17. Démonstration en dry-run
-
-Le mode `dryRun=true` permet de valider la qualité du raisonnement et la génération du diff sans modifier le repository.
-
-```bash
-make demo
-curl -s http://localhost:8088/api/tasks | jq
-```
-
-Le flux exécuté est :
-
-```mermaid
-flowchart LR
-    REQ[Requirement] --> PLAN[Planner]
-    PLAN --> DEV[Developer]
-    DEV --> DIFF[Unified Diff]
-    DIFF --> TESTER[Tester]
-    TESTER --> REVIEWER[Reviewer]
-    REVIEWER --> RESULT[Résultat dry-run]
-```
-
-Ce mode est particulièrement utile pour mesurer la fiabilité du modèle sélectionné avant de lui permettre d'appliquer réellement ses modifications.
-
----
-
-## 18. Exécution complète
-
-Exemple :
-
-```bash
-curl -s -X POST http://localhost:8088/api/tasks \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
-    "baseBranch":"main",
-    "requirement":"Add GET /customers/{id}. Return 404 if not found and add tests.",
-    "dryRun":false
-  }' | jq
-```
-
-Suivi de la tâche :
-
-```bash
-curl -s http://localhost:8088/api/tasks/<TASK_ID> | jq
-```
-
-Lorsque la tâche arrive à `WAITING_APPROVAL` :
-
-```bash
-curl -s -X POST http://localhost:8088/api/tasks/<TASK_ID>/approve | jq
-```
-
-L'orchestrateur crée alors :
-
-- une branche `ai-factory/<TASK_ID>` ;
-- un commit ;
-- un push ;
-- une Pull Request Gitea.
-
----
-
-## 19. Profil complet
+### Démarrage avec services additionnels
 
 ```bash
 make full
 ```
 
-Le profil `full` ajoute :
+Cela démarre aussi :
 
-- SonarQube : `http://localhost:9000` ;
-- Nexus : `http://localhost:8081` ;
-- Prometheus : `http://localhost:9090` ;
-- Grafana : `http://localhost:3001`.
+- SonarQube ;
+- Nexus ;
+- Prometheus ;
+- Grafana.
 
-```mermaid
-flowchart TB
-    CORE[Core profile\nGitea + Ollama + Orchestrator + Sandboxes]
-    FULL[Full profile]
-    SONAR[SonarQube]
-    NEXUS[Nexus]
-    PROM[Prometheus]
-    GRAF[Grafana]
+À ce stade, SonarQube et Nexus sont présents dans la stack mais pas encore intégrés automatiquement au pipeline.
 
-    CORE --> FULL
-    FULL --> SONAR
-    FULL --> NEXUS
-    FULL --> PROM
-    PROM --> GRAF
-```
+## 6. Variables de configuration importantes
 
-SonarQube et Nexus sont présents comme briques structurantes de l'usine, mais leur configuration projet, token et repository doit être adaptée au contexte réel.
-
----
-
-## 20. Choix du modèle Ollama
-
-Le modèle est configuré dans `.env` :
+Extrait de `.env.example` :
 
 ```bash
 OLLAMA_MODEL=qwen2.5-coder:7b
+OPENAI_MODEL=gpt-5.6-luna
+OPENAI_API_KEY=
+LITELLM_MASTER_KEY=local-dev-litellm-key
+AI_FACTORY_CLOUD_ENABLED=false
+ORCHESTRATOR_PORT=8088
+WEB_APP_PORT=8080
+GITEA_HTTP_PORT=3000
+GITEA_SSH_PORT=2222
+GITEA_ADMIN_USER=aiadmin
+GITEA_ADMIN_PASSWORD=ChangeMe123!
+GITEA_ADMIN_EMAIL=aiadmin@example.local
+GITEA_TOKEN=
 ```
 
-Après modification :
+Variables d'orchestration injectées dans le conteneur :
 
-```bash
-make model
-docker compose up -d --force-recreate orchestrator
+- `AI_FACTORY_LLM_BASE_URL`
+- `AI_FACTORY_LLM_API_KEY`
+- `AI_FACTORY_LOCAL_MODEL`
+- `AI_FACTORY_CLOUD_MODEL`
+- `AI_FACTORY_WORKSPACE_ROOT`
+- `AI_FACTORY_WORKSPACE_VOLUME`
+- `AI_FACTORY_SANDBOX_IMAGE`
+- `AI_FACTORY_GITEA_BASE_URL`
+- `AI_FACTORY_GITEA_PUBLIC_BASE_URL`
+- `AI_FACTORY_GITEA_TOKEN`
+- `AI_FACTORY_GITEA_USER`
+
+## 7. Modèle d'exécution LLM
+
+Le prototype ne distingue pas encore plusieurs moteurs spécialisés par rôle. Il utilise un routage logique via LiteLLM.
+
+```mermaid
+flowchart LR
+    O[Orchestrateur] -->|planner| L[LiteLLM]
+    O -->|developer| L
+    O -->|tester| L
+    O -->|reviewer| L
+    O -->|patch-repair| L
+    L -->|factory-code-local| OL[Ollama]
+    L -->|factory-code-cloud| OP[OpenAI]
 ```
 
-Le critère le plus important du POC est la capacité du modèle à produire un **unified diff strict et applicable**. Un taux significatif d'échec à `git apply --check` est une mesure utile : il renseigne directement sur la robustesse du modèle dans un workflow industriel.
+Règles actuelles :
 
----
+- `llmMode=LOCAL` si absent ;
+- `llmMode=CLOUD` refusé si `AI_FACTORY_CLOUD_ENABLED=false` ;
+- LiteLLM contient deux alias :
+  - `factory-code-local`
+  - `factory-code-cloud`
 
-## 21. API du prototype
+## 8. Cycle de vie d'une tâche
 
-### Créer une tâche
+### Création
 
-`POST /api/tasks`
+L'API `POST /api/tasks` retourne immédiatement `202 Accepted` avec une vue de tâche.
+
+La requête attend :
 
 ```json
 {
   "repositoryUrl": "http://gitea:3000/aiadmin/customer-api.git",
   "baseBranch": "main",
   "requirement": "Add GET /customers/{id} with 404 and tests",
-  "dryRun": true
+  "dryRun": true,
+  "llmMode": "LOCAL"
 }
 ```
 
-### Lire une tâche
+Valeurs implicites :
 
-`GET /api/tasks/{id}`
+- `baseBranch` -> `main`
+- `dryRun` -> `true`
+- `llmMode` -> `LOCAL`
 
-### Lister les tâches
+### États utilisés
 
-`GET /api/tasks`
-
-### Approuver une tâche
-
-`POST /api/tasks/{id}/approve`
-
----
-
-## 22. Observabilité et KPIs
-
-Le prototype doit permettre de mesurer autre chose que le nombre de tokens ou de lignes de code générées.
-
-```mermaid
-flowchart TB
-    ORCH[Orchestrateur]
-    ACT[Spring Actuator]
-    PROM[Prometheus]
-    GRAF[Grafana]
-
-    ORCH --> ACT --> PROM --> GRAF
-
-    GRAF --> K1[Taux de réussite des tâches]
-    GRAF --> K2[Taux de patchs applicables]
-    GRAF --> K3[Taux d'acceptation des PR]
-    GRAF --> K4[Durée moyenne d'une tâche]
-    GRAF --> K5[Interventions humaines]
-    GRAF --> K6[Coût / consommation modèle]
+```text
+QUEUED
+CLONING
+PLANNING
+GENERATING_PATCH
+APPLYING_PATCH
+TESTING
+SECURITY_SCANNING
+REVIEWING
+WAITING_APPROVAL
+APPROVED
+PR_CREATED
+FAILED
 ```
 
-KPIs recommandés :
+### Détail du pipeline
 
-- taux de `git apply --check` réussi ;
-- taux de build réussi après génération ;
-- taux de tests réussis ;
-- nombre de vulnérabilités introduites ;
-- taux de PR acceptées ;
-- temps moyen de traitement ;
-- nombre d'interventions humaines ;
-- coût par changement accepté ;
-- taux d'échec par rôle agentique.
+#### Clonage et contexte
 
----
+- clone Git du dépôt cible ;
+- création d'un workspace dédié sous `AI_FACTORY_WORKSPACE_ROOT/<taskId>` ;
+- collecte du contexte dépôt pour les prompts.
 
-## 23. Limites assumées du MVP
+#### Planification
 
-Le prototype est volontairement simple :
+- appel du prompt `planner` ;
+- persistance du résultat dans `.ai-plan.md`.
 
-- stockage des tâches en mémoire ;
-- un seul LLM Ollama ;
-- rôles logiques implémentés par prompts ;
-- contexte chargé directement depuis le repository ;
-- pas de MCP Gateway réel ;
-- SonarQube et Nexus non branchés automatiquement à tous les workflows ;
-- socket Docker monté dans l'orchestrateur ;
-- pas de SSO / Keycloak ;
-- pas de queue distribuée ;
-- unified diff strict exigé ;
-- pas d'auto-merge ;
-- validation humaine obligatoire.
+#### Génération du diff
 
-Ces limites sont intentionnelles : elles réduisent le nombre de variables à tester pendant la phase de validation.
+- appel du prompt `developer` ;
+- nettoyage des éventuels fences Markdown ;
+- normalisation du diff ;
+- écriture dans `changes.patch`.
 
----
+#### Réparation automatique du patch
 
-## 24. Sécurité du prototype
+Si `git apply --check` échoue :
 
-### Docker socket
+- conservation de la première tentative dans `changes.invalid.patch` ;
+- appel du prompt `patch-repair` avec l'erreur Git ;
+- nouvelle validation ;
+- échec terminal si le second diff reste invalide.
 
-Le socket Docker constitue le principal compromis du POC. Un container qui peut piloter `/var/run/docker.sock` peut généralement obtenir un contrôle étendu sur l'hôte Docker.
+#### Application et exécution
 
-### Réseau
+Si `dryRun=false` :
 
-L'application du patch peut être exécutée sans réseau. Les builds et scans peuvent rejoindre le réseau local de la factory afin de résoudre les dépendances et d'accéder aux services internes du POC.
+- application du patch en sandbox ;
+- `git diff --check` ;
+- tests ;
+- synthèse `Tester` ;
+- SBOM + Trivy.
 
-Dans une cible d'entreprise, cela doit devenir :
+Si `dryRun=true` :
 
-```mermaid
-flowchart LR
-    SB[Sandbox] --> NP[NetworkPolicy]
-    NP --> EGRESS[Egress allow-list]
-    EGRESS --> PROXY[Dependency / Artifact Proxy]
-    PROXY --> EXT[Sources externes approuvées]
-```
+- pas d'application du patch ;
+- pas de tests ;
+- pas de scan ;
+- synthèse `Tester` basée uniquement sur le requirement et le patch proposé.
 
-### Credentials
+#### Revue finale
 
-Les tokens stockés dans `.env` sont adaptés à un POC local uniquement. La cible doit utiliser :
+Le `Reviewer` reçoit :
 
-- identité de workload ;
-- tokens à durée de vie courte ;
-- Secret Manager / Vault ;
-- scopes minimaux.
+- requirement ;
+- plan ;
+- patch ;
+- synthèse de test ;
+- synthèse sécurité.
 
----
+La tâche termine en `WAITING_APPROVAL`.
 
-## 25. Trajectoire d'industrialisation
+### Livraison
 
-```mermaid
-flowchart LR
-    P1[Phase 1\nPOC local\nDocker Compose\nA1/A2]
-    P2[Phase 2\nSocle industriel\nSSO • DB • Queue\nAI Gateway]
-    P3[Phase 3\nContextualisation\nMCP Gateway\nJira • Confluence • CMDB]
-    P4[Phase 4\nAgentic Factory\nKubernetes sandboxes\nMulti-agents • A3 low-risk]
+Une approbation valide déclenche :
 
-    P1 --> P2 --> P3 --> P4
-```
+- création de branche `ai-factory/<taskId>` ;
+- configuration Git auteur `AI Factory Agent` ;
+- `git add -A` ;
+- retrait des artefacts internes `.ai-*` du commit ;
+- commit ;
+- push ;
+- création de pull request Gitea.
 
-### Phase 1 — POC local
+## 9. Interface utilisateur actuelle
 
-- Docker Compose ;
-- Gitea ;
-- Ollama ;
-- Spring Boot Orchestrator ;
-- Docker sandboxes ;
-- Syft / Trivy ;
-- approbation humaine.
+L'interface `factory-web` propose deux vues :
 
-### Phase 2 — socle industriel
+- `Ticket`
+- `Executions`
 
-- PostgreSQL pour persister les tâches ;
-- Kafka ou RabbitMQ pour découpler les traitements ;
-- SSO / RBAC ;
-- AI Gateway multi-modèles ;
-- policies centralisées ;
-- télémétrie complète.
+Fonctionnalités visibles :
 
-### Phase 3 — contextualisation
+- formulaire structuré pour le besoin ;
+- sélection `LOCAL` ou `CLOUD` ;
+- case `dry-run` ;
+- suivi temps réel de la progression ;
+- historique des exécutions ;
+- consultation du plan, patch, tests, sécurité et review ;
+- bouton d'approbation si la tâche est éligible.
 
-- MCP Gateway privé ;
-- Git ;
-- Jira ;
-- Confluence ;
-- CMDB ;
-- API Catalog ;
-- SonarQube ;
-- Nexus / Artifactory.
+Le formulaire assemble le requirement final à partir des champs :
 
-### Phase 4 — Agentic Factory
+- résumé ;
+- objectif métier ;
+- domaine ;
+- comportement actuel ;
+- comportement attendu ;
+- critères d'acceptation ;
+- contexte ;
+- contraintes techniques ;
+- hors périmètre ;
+- validation attendue.
 
-- remplacement du socket Docker par Kubernetes Jobs ou Sandbox API ;
-- agents spécialisés ;
-- modèles différents selon les tâches ;
-- workflows multi-agents ;
-- niveaux d'autonomie A0 à A3 ;
-- supply chain signée ;
-- provenance SLSA.
+## 10. Artefacts produits par une tâche
 
----
+Dans le workspace de tâche, on retrouve typiquement :
 
-## 26. Architecture cible après industrialisation
+- `.ai-plan.md`
+- `changes.patch`
+- `changes.invalid.patch` en cas de première tentative invalide
+- `.ai-review.md`
+- `.ai-factory/test.txt`
+- `.ai-factory/trivy.txt`
+- `.ai-factory/sbom.cdx.json`
 
-```mermaid
-flowchart TB
-    subgraph ENTRY[Product & Engineering]
-        JIRA[Jira / Issues]
-        CONF[Confluence / ADR]
-        BACK[Backstage / Service Catalog]
-        USERS[Développeurs / Architectes]
-    end
+Ces fichiers servent à la traçabilité locale et au débogage du POC.
 
-    subgraph CONTROL[AI Software Control Plane]
-        PLATFORM[GitLab Duo Agent Platform\nou GitHub AI Controls]
-        IAM[SSO / IAM\nOIDC • RBAC • SCIM]
-    end
+## 11. Observabilité
 
-    subgraph MODEL[Agent & Model Plane]
-        CODEX[Codex Enterprise]
-        CLAUDE[Claude Code]
-        CUSTOM[Agents custom]
-        AIGW[AI Gateway\nroutage • quotas • DLP • logs]
-    end
+L'orchestrateur expose Actuator sur :
 
-    subgraph CONTEXT[Context Plane]
-        MCPGW[MCP Gateway / Catalogue privé]
-        GIT[Git repositories]
-        CMDB[CMDB]
-        API[API Catalog]
-        SONAR[SonarQube]
-        ART[Artifact Repository]
-    end
+- `/actuator/health`
+- `/actuator/info`
+- `/actuator/metrics`
+- `/actuator/prometheus`
 
-    subgraph EXEC[Execution Plane]
-        K8S[Kubernetes Jobs / Sandboxes]
-        CREDS[Credentials temporaires]
-        NET[Egress restreint]
-    end
+Prometheus et Grafana sont disponibles via le profil `full`.
 
-    subgraph ASSURE[Delivery & Assurance]
-        CI[CI/CD déterministe]
-        SEC[Security Gates]
-        SBOM[SBOM]
-        SIG[Signature / Provenance]
-        REG[Registry]
-        PROMO[Promotion Dev → Test → Prod]
-    end
+## 12. Ce que le prototype prouve
 
-    ENTRY --> CONTROL
-    CONTROL --> MODEL
-    CONTROL --> IAM
-    MODEL --> AIGW
-    MODEL --> CONTEXT
-    MCPGW --> GIT
-    MCPGW --> CMDB
-    MCPGW --> API
-    MCPGW --> SONAR
-    MCPGW --> ART
-    MODEL --> EXEC
-    CONTEXT --> EXEC
-    EXEC --> ASSURE
-    CI --> SEC --> SBOM --> SIG --> REG --> PROMO
-```
+Le POC démontre déjà :
 
----
+- un pipeline agentique cohérent ;
+- un usage concret des rôles IA ;
+- la nécessité d'un contrôle strict du format de patch ;
+- l'intérêt du `dry-run` comme mode d'exploration sûr ;
+- la valeur d'une approbation humaine avant livraison.
 
-## 27. Conclusion
+## 13. Ce qu'il ne résout pas encore
 
-Ce prototype permet de tester localement les mécanismes essentiels d'une AI Software Factory sans dépendre immédiatement d'une plateforme SaaS ou d'un environnement Kubernetes complexe.
+- persistance robuste des tâches ;
+- multi-tenant ;
+- RBAC/SSO ;
+- gouvernance des modèles et des prompts ;
+- sandbox réellement durcie ;
+- contrôle fin des accès réseau ;
+- stockage et audit centralisés ;
+- intégration native de SonarQube et Nexus au pipeline ;
+- planification distribuée ou scalabilité horizontale.
 
-Il valide notamment :
+## 14. Suite logique d'industrialisation
 
-1. la transformation d'une exigence en plan ;
-2. la génération de code sous forme de patch ;
-3. l'exécution isolée ;
-4. la validation par build et tests ;
-5. la génération d'un SBOM ;
-6. le scan de vulnérabilités et de secrets ;
-7. la revue agentique ;
-8. la validation humaine ;
-9. la création d'une Pull Request ;
-10. la mesure de KPIs utiles à une future industrialisation.
+1. Remplacer le pilotage Docker local par des jobs isolés.
+2. Persister les tâches, artefacts et journaux d'audit.
+3. Introduire une file de traitement et des workers dédiés.
+4. Ajouter identité workload, gestionnaire de secrets et politiques réseau.
+5. Gouverner les modèles, prompts, outils et niveaux d'autonomie.
+6. Intégrer pleinement qualité, artefacts et supply chain signée.
 
-Le POC doit être considéré comme une **miniature fonctionnelle de l'architecture cible**, et non comme une architecture de production. Sa valeur principale est de permettre de mesurer la qualité réelle des agents, la robustesse des workflows, la sécurité des sandboxes et le niveau d'autonomie acceptable avant de généraliser le modèle à l'échelle de l'entreprise.
+## 15. Références
+
+- [README](../README.md)
+- [Architecture](architecture.md)
+- [Sécurité](security.md)
