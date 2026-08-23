@@ -81,6 +81,15 @@ services:
         condition: service_healthy
     networks: [factory]
 
+  factory-web:
+    build:
+      context: ./web
+    ports:
+      - "${WEB_APP_PORT:-8080}:80"
+    depends_on:
+      - orchestrator
+    networks: [factory]
+
   sonar-db:
     profiles: ["full"]
     image: postgres:16-alpine

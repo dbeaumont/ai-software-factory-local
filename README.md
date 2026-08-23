@@ -8,6 +8,7 @@ Prototype simplifié d'une usine logicielle agentique d'entreprise. Il montre le
 |---|---|
 | SCM / PR | Gitea |
 | LLM local | Ollama |
+| Saisie des spécifications | Factory Web (ticket d'usine) |
 | Orchestration | Spring Boot 3.5 / Java 21 |
 | Sandbox | Docker containers éphémères |
 | Tests | Maven / Gradle / npm (détection simple) |
@@ -35,11 +36,16 @@ make bootstrap
 ```
 
 Services core :
+- Factory Web : `http://localhost:8080`
 - Gitea : `http://localhost:3000`
 - Orchestrateur : `http://localhost:8088`
 - Ollama : `http://localhost:11434`
 
 Le script `bootstrap` crée le compte POC `aiadmin` (mot de passe dans `.env`) et le dépôt `customer-api`.
+
+### Saisir une spécification depuis l'interface
+
+Ouvrez `http://localhost:8080`. L'interface présente un ticket avec un résumé, le contexte, les critères d'acceptation, le dépôt cible et la branche. À l'envoi, elle crée une tâche dans l'orchestrateur et suit son état automatiquement. Le mode simulation est activé par défaut pour éviter toute modification du dépôt.
 
 ### Générer un token Gitea
 

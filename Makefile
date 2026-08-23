@@ -3,6 +3,7 @@ SHELL := /bin/bash
 -include .env
 
 ORCHESTRATOR_PORT ?= 8088
+WEB_APP_PORT ?= 8080
 GITEA_HTTP_PORT ?= 3000
 GITEA_SSH_PORT ?= 2222
 OLLAMA_PORT ?= 11434
@@ -17,7 +18,7 @@ help:
 	@echo "AI Software Factory local prototype"
 	@echo "  make init       - create .env from .env.example"
 	@echo "  make build      - build orchestrator + sandbox images"
-	@echo "  make up         - start core stack (Gitea, Ollama, orchestrator)"
+	@echo "  make up         - start core stack (web app, Gitea, Ollama, orchestrator)"
 	@echo "  make full       - start core + SonarQube, Nexus, Prometheus, Grafana"
 	@echo "  make model      - pull configured Ollama model"
 	@echo "  make bootstrap  - create demo Gitea user/repository and push sample app"
@@ -38,10 +39,10 @@ init:
 
 build:
 	docker build -t ai-factory-sandbox:local ./sandbox
-	docker compose build orchestrator
+	docker compose build orchestrator factory-web
 
 up: init build
-	docker compose up -d gitea-db gitea ollama orchestrator
+	docker compose up -d gitea-db gitea ollama orchestrator factory-web
 	$(MAKE) urls
 
 full: init build
@@ -79,6 +80,7 @@ logs:
 
 urls:
 	@echo "Core"
+	@echo "  Factory web:  http://localhost:$(WEB_APP_PORT)"
 	@echo "  Gitea:        http://localhost:$(GITEA_HTTP_PORT)"
 	@echo "  Gitea API:    http://localhost:$(GITEA_HTTP_PORT)/api/v1"
 	@echo "  Gitea SSH:    ssh://git@localhost:$(GITEA_SSH_PORT)"
