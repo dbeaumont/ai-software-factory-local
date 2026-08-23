@@ -3,10 +3,12 @@
 ```mermaid
 flowchart TB
   DEV[Développeur / Architecte] --> WEB[Factory Web\nTicket de spécification]
-  WEB --> ORCH
+  WEB -->|ticket + mode LOCAL/CLOUD| ORCH
+  ORCH --> LLM[LiteLLM Gateway]
+  LLM -->|LOCAL| OLLAMA
+  LLM -->|CLOUD| OPENAI[OpenAI API]
   DEV --> GIT[Gitea\nRepos • Issues • PR]
   GIT --> ORCH[Orchestrateur Spring Boot\nPlanner → Developer → Reviewer]
-  ORCH --> OLLAMA[Ollama\nLLM local]
   ORCH --> CTX[Context loader\nGit / code / docs]
   ORCH --> SB[Sandbox Docker éphémère]
   SB --> BUILD[Build & tests]

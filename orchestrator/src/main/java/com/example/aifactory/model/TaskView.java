@@ -10,6 +10,7 @@ public record TaskView(
         String baseBranch,
         String requirement,
         boolean dryRun,
+        LlmMode llmMode,
         String workspace,
         String plan,
         String patch,

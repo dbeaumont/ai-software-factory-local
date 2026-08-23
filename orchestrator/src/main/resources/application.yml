@@ -16,11 +16,15 @@ management:
         enabled: true
 
 ai-factory:
-  ollama-base-url: ${AI_FACTORY_OLLAMA_BASE_URL:http://localhost:11434}
-  ollama-model: ${AI_FACTORY_OLLAMA_MODEL:qwen2.5-coder:7b}
+  llm-base-url: ${AI_FACTORY_LLM_BASE_URL:http://localhost:4000/v1}
+  llm-api-key: ${AI_FACTORY_LLM_API_KEY:}
+  local-model: ${AI_FACTORY_LOCAL_MODEL:factory-code-local}
+  cloud-model: ${AI_FACTORY_CLOUD_MODEL:factory-code-cloud}
+  cloud-enabled: ${AI_FACTORY_CLOUD_ENABLED:false}
   workspace-root: ${AI_FACTORY_WORKSPACE_ROOT:/tmp/ai-factory/tasks}
   sandbox-image: ${AI_FACTORY_SANDBOX_IMAGE:ai-factory-sandbox:local}
   gitea-base-url: ${AI_FACTORY_GITEA_BASE_URL:http://localhost:3000}
+  gitea-public-base-url: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL:http://localhost:3000}
   gitea-token: ${AI_FACTORY_GITEA_TOKEN:}
   gitea-user: ${AI_FACTORY_GITEA_USER:aiadmin}
   prompt-root: ${AI_FACTORY_PROMPT_ROOT:/opt/ai-factory/prompts}

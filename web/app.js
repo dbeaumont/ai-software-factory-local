@@ -10,10 +10,87 @@ const taskSummary = document.querySelector('#task-summary');
 const taskDetail = document.querySelector('#task-detail');
 const progressBar = document.querySelector('#progress-bar');
 const steps = document.querySelector('#steps');
+const pipelineProgress = document.querySelector('#pipeline-progress');
 const prLink = document.querySelector('#pr-link');
+const llmMode = document.querySelector('#llm-mode');
+const llmDescription = document.querySelector('#llm-mode-description');
+const cloudWarning = document.querySelector('#cloud-warning');
+const taskLlmMode = document.querySelector('#task-llm-mode');
+const llmChoice = document.querySelector('.llm-choice');
+const views = document.querySelectorAll('.app-view');
+const viewLinks = document.querySelectorAll('[data-view]');
+const executionList = document.querySelector('#execution-list');
+const executionEmpty = document.querySelector('#execution-empty');
+const refreshExecutionsButton = document.querySelector('#refresh-executions');
 
 let activeTaskId;
 let pollTimer;
+let executionsPollTimer;
+
+function renderLlmMode() {
+  const cloud = llmMode.checked;
+  llmChoice.classList.toggle('cloud-selected', cloud);
+  llmDescription.textContent = cloud
+    ? "Le ticket sera traité par le modèle cloud configuré dans LiteLLM."
+    : "Le code et la spécification restent dans l'environnement Docker local via Ollama.";
+  cloudWarning.hidden = !cloud;
+}
+
+llmMode.addEventListener('change', renderLlmMode);
+
+async function loadCapabilities() {
+  try {
+    const response = await fetch('/api/capabilities');
+    if (!response.ok) return;
+    const capabilities = await response.json();
+    if (!capabilities.cloudEnabled) {
+      llmMode.disabled = true;
+      llmDescription.textContent = 'Le mode cloud est désactivé par la configuration de cette usine.';
+    }
+  } catch {
+    // The local mode remains available when the status endpoint is temporarily unavailable.
+  }
+}
+
+loadCapabilities();
+
+function showView(name) {
+  views.forEach((view) => { view.hidden = view.id !== `${name}-view`; });
+  viewLinks.forEach((link) => link.classList.toggle('active', link.dataset.view === name));
+  if (name === 'executions') loadExecutions();
+}
+
+function resetTicketDraft() {
+  clearInterval(pollTimer);
+  activeTaskId = undefined;
+  form.reset();
+  renderLlmMode();
+  message.textContent = '';
+  submitButton.disabled = false;
+  submitButton.innerHTML = 'Créer le ticket <span aria-hidden="true">→</span>';
+  emptyState.hidden = false;
+  taskStatus.hidden = true;
+  statusPanel.classList.remove('failed');
+  statusLabel.textContent = 'QUEUED';
+  taskLlmMode.textContent = 'LOCAL';
+  taskId.textContent = '';
+  taskSummary.textContent = '';
+  taskDetail.textContent = '';
+  progressBar.style.width = '8%';
+  pipelineProgress.textContent = '0/9 opérations terminées';
+  steps.replaceChildren();
+  prLink.hidden = true;
+  prLink.removeAttribute('href');
+}
+
+viewLinks.forEach((link) => link.addEventListener('click', (event) => {
+  event.preventDefault();
+  if (link.dataset.view === 'ticket') resetTicketDraft();
+  showView(link.dataset.view);
+  history.replaceState(null, '', `#${link.dataset.view}`);
+}));
+
+refreshExecutionsButton.addEventListener('click', loadExecutions);
 
 const progress = {
   QUEUED: 8, CLONING: 18, PLANNING: 32, GENERATING_PATCH: 47,
@@ -21,6 +98,16 @@ const progress = {
   REVIEWING: 92, WAITING_APPROVAL: 100, APPROVED: 100,
   PR_CREATED: 100, FAILED: 100
 };
+
+const pipelineStages = [
+  { name: 'Préparation', jobs: [{ id: 'CLONING', label: 'Clonage du dépôt' }] },
+  { name: 'Conception', jobs: [{ id: 'PLANNING', label: 'Planning' }] },
+  { name: 'Développement', jobs: [{ id: 'GENERATING_PATCH', label: 'Génération du patch' }, { id: 'APPLYING_PATCH', label: 'Application du patch' }] },
+  { name: 'Validation', jobs: [{ id: 'TESTING', label: 'Build + tests' }, { id: 'SECURITY_SCANNING', label: 'Analyse sécurité' }] },
+  { name: 'Revue', jobs: [{ id: 'REVIEWING', label: 'Revue IA' }] },
+  { name: 'Livraison', jobs: [{ id: 'WAITING_APPROVAL', label: 'Approbation humaine' }, { id: 'PR_CREATED', label: 'Création de la pull request' }] }
+];
+const pipelineJobs = pipelineStages.flatMap((stage) => stage.jobs);
 
 function buildRequirement(data) {
   const sections = [
@@ -37,8 +124,133 @@ function buildRequirement(data) {
   return sections.join('\n\n');
 }
 
+function taskTitle(task) {
+  return task.requirement.match(/^Titre : (.*)$/m)?.[1] || 'Ticket sans titre';
+}
+
+function activeStep(task) {
+  if (task.status === 'APPROVED') return 'Création de la pull request';
+  return pipelineJobs.find((job) => job.id === task.status)?.label || task.status.replaceAll('_', ' ');
+}
+
+function displayDate(value) {
+  return value ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '—';
+}
+
+function stateClass(status) {
+  if (status === 'FAILED') return 'failed';
+  if (['WAITING_APPROVAL', 'PR_CREATED'].includes(status)) return 'pending';
+  return '';
+}
+
+function renderExecutionList(tasks) {
+  const sorted = [...tasks].sort((left, right) => new Date(right.updatedAt) - new Date(left.updatedAt));
+  executionList.replaceChildren(...sorted.map((task) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'execution-row';
+    const title = document.createElement('span');
+    title.innerHTML = `<span class="execution-title"></span><span class="execution-key">#${task.id}</span>`;
+    title.querySelector('.execution-title').textContent = taskTitle(task);
+    const mode = document.createElement('span');
+    mode.className = `execution-mode ${(task.llmMode || 'LOCAL').toLowerCase()}`;
+    mode.textContent = task.llmMode || 'LOCAL';
+    const step = document.createElement('span');
+    step.className = 'execution-step';
+    step.textContent = activeStep(task);
+    const date = document.createElement('span');
+    date.className = 'execution-date';
+    date.textContent = displayDate(task.updatedAt);
+    const state = document.createElement('span');
+    state.className = `execution-state ${stateClass(task.status)}`;
+    state.textContent = task.status.replaceAll('_', ' ');
+    row.append(title, mode, step, date, state);
+    row.addEventListener('click', () => {
+      activeTaskId = task.id;
+      renderTask(task);
+      showView('ticket');
+      clearInterval(pollTimer);
+      if (!isFinished(task.status)) pollTimer = setInterval(refreshTask, 3000);
+    });
+    return row;
+  }));
+  executionEmpty.hidden = sorted.length !== 0;
+}
+
+async function loadExecutions() {
+  try {
+    const response = await fetch('/api/tasks');
+    if (!response.ok) throw new Error('Impossible de charger les exécutions.');
+    renderExecutionList(await response.json());
+  } catch (error) {
+    executionList.replaceChildren();
+    executionEmpty.textContent = error.message;
+    executionEmpty.hidden = false;
+  }
+}
+
+function browserPullRequestUrl(value) {
+  const url = new URL(value, window.location.origin);
+  if (url.hostname === 'gitea') {
+    url.protocol = window.location.protocol;
+    url.hostname = window.location.hostname;
+    url.port = '3000';
+  }
+  return url.toString();
+}
+
 function isFinished(status) {
   return ['WAITING_APPROVAL', 'PR_CREATED', 'FAILED'].includes(status);
+}
+
+function jobState(task, job, knownSteps) {
+  if (job.id === task.status) return 'running';
+  const actual = knownSteps.get(job.id);
+  if (actual) return actual.summary?.toLowerCase().includes('dry-run') ? 'skipped' : 'done';
+  if (job.id === 'WAITING_APPROVAL' && ['APPROVED', 'PR_CREATED'].includes(task.status)) return 'done';
+  if (task.status === 'FAILED') return 'pending';
+  const currentIndex = pipelineJobs.findIndex((item) => item.id === task.status);
+  const jobIndex = pipelineJobs.findIndex((item) => item.id === job.id);
+  return currentIndex > jobIndex ? 'done' : 'pending';
+}
+
+function renderPipeline(task) {
+  const knownSteps = new Map((task.steps || []).map((step) => [step.name, step]));
+  let completed = 0;
+  const stages = pipelineStages.map((stage) => {
+    const section = document.createElement('section');
+    section.className = 'pipeline-stage';
+    const title = document.createElement('h3');
+    title.textContent = stage.name;
+    const jobs = document.createElement('ol');
+    jobs.className = 'pipeline-jobs';
+    stage.jobs.forEach((job) => {
+      const state = jobState(task, job, knownSteps);
+      if (state === 'done' || state === 'skipped') completed += 1;
+      const item = document.createElement('li');
+      item.className = `pipeline-job ${state}`;
+      const marker = document.createElement('span');
+      marker.className = 'job-marker';
+      marker.textContent = state === 'done' ? '✓' : state === 'skipped' ? '–' : state === 'running' ? '●' : '○';
+      const content = document.createElement('span');
+      content.className = 'job-content';
+      const label = document.createElement('strong');
+      label.textContent = job.label;
+      content.append(label);
+      const actual = knownSteps.get(job.id);
+      if (state === 'running' && actual?.summary) {
+        const detail = document.createElement('small');
+        detail.textContent = actual.summary;
+        content.append(detail);
+      }
+      item.append(marker, content);
+      jobs.append(item);
+    });
+    section.append(title, jobs);
+    return section;
+  });
+  steps.replaceChildren(...stages);
+  pipelineProgress.textContent = `${completed}/${pipelineJobs.length} opérations terminées`;
 }
 
 function renderTask(task) {
@@ -46,21 +258,14 @@ function renderTask(task) {
   taskStatus.hidden = false;
   statusPanel.classList.toggle('failed', task.status === 'FAILED');
   statusLabel.textContent = task.status.replaceAll('_', ' ');
+  taskLlmMode.textContent = task.llmMode || 'LOCAL';
   taskId.textContent = `#${task.id.slice(0, 8)}`;
-  taskSummary.textContent = task.requirement.match(/^Titre : (.*)$/m)?.[1] || 'Ticket soumis';
+  taskSummary.textContent = taskTitle(task);
   taskDetail.textContent = task.error || statusDescription(task.status, task.dryRun);
   progressBar.style.width = `${progress[task.status] || 10}%`;
-  steps.replaceChildren(...(task.steps || []).slice(-6).map((step) => {
-    const item = document.createElement('li');
-    const name = document.createElement('span');
-    const state = document.createElement('strong');
-    name.textContent = step.name || step.phase || 'Étape';
-    state.textContent = step.status || 'EN COURS';
-    item.append(name, state);
-    return item;
-  }));
+  renderPipeline(task);
   prLink.hidden = !task.pullRequestUrl;
-  if (task.pullRequestUrl) prLink.href = task.pullRequestUrl;
+  if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);
 }
 
 function statusDescription(status, dryRun) {
@@ -77,6 +282,7 @@ async function refreshTask() {
     if (!response.ok) throw new Error('Impossible de suivre cette tâche.');
     const task = await response.json();
     renderTask(task);
+    loadExecutions();
     if (isFinished(task.status)) clearInterval(pollTimer);
   } catch (error) {
     taskDetail.textContent = error.message;
@@ -88,6 +294,7 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(form));
   const dryRun = document.querySelector('#dry-run').checked;
+  const selectedLlmMode = llmMode.checked ? 'CLOUD' : 'LOCAL';
   message.textContent = '';
   submitButton.disabled = true;
   submitButton.textContent = 'Transmission...';
@@ -99,7 +306,8 @@ form.addEventListener('submit', async (event) => {
         repositoryUrl: data.repository,
         baseBranch: data.branch,
         requirement: buildRequirement(data),
-        dryRun
+        dryRun,
+        llmMode: selectedLlmMode
       })
     });
     const task = await response.json();
@@ -109,6 +317,7 @@ form.addEventListener('submit', async (event) => {
     clearInterval(pollTimer);
     pollTimer = setInterval(refreshTask, 3000);
     message.textContent = `Ticket ${task.id.slice(0, 8)} envoyé.`;
+    loadExecutions();
   } catch (error) {
     message.textContent = error.message;
   } finally {
@@ -116,3 +325,6 @@ form.addEventListener('submit', async (event) => {
     submitButton.innerHTML = 'Envoyer à l\'usine <span aria-hidden="true">→</span>';
   }
 });
+
+executionsPollTimer = setInterval(loadExecutions, 5000);
+showView(window.location.hash === '#executions' ? 'executions' : 'ticket');

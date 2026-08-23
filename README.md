@@ -8,6 +8,7 @@ Prototype simplifié d'une usine logicielle agentique d'entreprise. Il montre le
 |---|---|
 | SCM / PR | Gitea |
 | LLM local | Ollama |
+| Gateway LLM | LiteLLM (sélection locale ou cloud) |
 | Saisie des spécifications | Factory Web (ticket d'usine) |
 | Orchestration | Spring Boot 3.5 / Java 21 |
 | Sandbox | Docker containers éphémères |
@@ -46,6 +47,22 @@ Le script `bootstrap` crée le compte POC `aiadmin` (mot de passe dans `.env`) e
 ### Saisir une spécification depuis l'interface
 
 Ouvrez `http://localhost:8080`. L'interface présente un ticket avec un résumé, le contexte, les critères d'acceptation, le dépôt cible et la branche. À l'envoi, elle crée une tâche dans l'orchestrateur et suit son état automatiquement. Le mode simulation est activé par défaut pour éviter toute modification du dépôt.
+
+### Choisir le LLM du ticket
+
+Le slider **LLM local / LLM cloud** est une décision explicite stockée avec la tâche. Il n'y a pas de fallback automatique : le mode sélectionné est utilisé pour toutes les étapes agentiques du ticket.
+
+- **LLM local** utilise Ollama ; le code et la spécification restent dans les conteneurs locaux.
+- **LLM cloud** utilise OpenAI via LiteLLM ; le contexte du dépôt et la spécification sont transmis au fournisseur cloud.
+
+Le cloud est désactivé par défaut. Pour l'autoriser, renseignez `.env` puis relancez la stack :
+
+```bash
+OPENAI_API_KEY=...
+AI_FACTORY_CLOUD_ENABLED=true
+```
+
+La clé OpenAI est injectée uniquement dans LiteLLM, jamais dans le navigateur ni dans l'orchestrateur.
 
 ### Générer un token Gitea
 
@@ -129,7 +146,7 @@ Puis :
 
 ```bash
 make model
-docker compose up -d --force-recreate orchestrator
+docker compose up -d --force-recreate litellm orchestrator
 ```
 
 Pour un POC agentique, privilégier un modèle de code suffisamment fiable pour produire des unified diffs. Un modèle trop petit échouera souvent à `git apply --check` — ce taux d'échec est justement un KPI utile du prototype.

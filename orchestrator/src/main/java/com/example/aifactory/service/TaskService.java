@@ -19,17 +19,17 @@ public class TaskService {
     private final ProcessRunner runner;
     private final RepositoryContextService contextService;
     private final PromptService prompts;
-    private final OllamaClient ollama;
+    private final LlmGatewayClient llm;
     private final SandboxService sandbox;
     private final GiteaService gitea;
 
     public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextService contextService,
-                       PromptService prompts, OllamaClient ollama, SandboxService sandbox, GiteaService gitea) {
+                       PromptService prompts, LlmGatewayClient llm, SandboxService sandbox, GiteaService gitea) {
         this.props = props;
         this.runner = runner;
         this.contextService = contextService;
         this.prompts = prompts;
-        this.ollama = ollama;
+        this.llm = llm;
         this.sandbox = sandbox;
         this.gitea = gitea;
     }
@@ -37,6 +37,9 @@ public class TaskService {
     public TaskView create(TaskRequest request) {
         if (request.repositoryUrl() == null || request.repositoryUrl().isBlank()) throw new IllegalArgumentException("repositoryUrl is required");
         if (request.requirement() == null || request.requirement().isBlank()) throw new IllegalArgumentException("requirement is required");
+        if (request.effectiveLlmMode() == LlmMode.CLOUD && !props.cloudEnabled()) {
+            throw new IllegalArgumentException("Cloud LLM is disabled by configuration");
+        }
         String id = UUID.randomUUID().toString().substring(0, 8);
         TaskState state = new TaskState(id, request);
         tasks.put(id, state);
@@ -82,11 +85,11 @@ public class TaskService {
             String context = contextService.collect(ws);
 
             s.transition(TaskStatus.PLANNING, "Planner agent analyzing requirement and repository context");
-            s.plan = ollama.chat(prompts.load("planner"), "REQUIREMENT:\n" + s.request.requirement() + "\n\nREPOSITORY CONTEXT:\n" + context);
+            s.plan = llm.chat(s.request.effectiveLlmMode(), prompts.load("planner"), "REQUIREMENT:\n" + s.request.requirement() + "\n\nREPOSITORY CONTEXT:\n" + context);
             Files.writeString(ws.resolve(".ai-plan.md"), s.plan);
 
             s.transition(TaskStatus.GENERATING_PATCH, "Developer agent generating a unified diff");
-            String rawPatch = ollama.chat(prompts.load("developer"), "REQUIREMENT:\n" + s.request.requirement() + "\n\nPLAN:\n" + s.plan + "\n\nREPOSITORY CONTEXT:\n" + context);
+            String rawPatch = llm.chat(s.request.effectiveLlmMode(), prompts.load("developer"), "REQUIREMENT:\n" + s.request.requirement() + "\n\nPLAN:\n" + s.plan + "\n\nREPOSITORY CONTEXT:\n" + context);
             s.patch = stripFence(rawPatch);
             Files.writeString(ws.resolve("changes.patch"), s.patch);
 
@@ -100,7 +103,7 @@ public class TaskService {
             if (!s.request.isDryRun()) {
                 s.transition(TaskStatus.TESTING, "Running deterministic build and tests in sandbox");
                 String deterministicTests = tail(sandbox.test(ws), 12000);
-                String testerReview = ollama.chat(prompts.load("tester"),
+                String testerReview = llm.chat(s.request.effectiveLlmMode(), prompts.load("tester"),
                         "REQUIREMENT:\n" + s.request.requirement() + "\n\nPATCH:\n" + s.patch +
                                 "\n\nDETERMINISTIC TEST EVIDENCE:\n" + deterministicTests);
                 s.testSummary = deterministicTests + "\n\n--- AI TESTER REVIEW ---\n" + testerReview;
@@ -111,7 +114,7 @@ public class TaskService {
                 s.securitySummary = tail(sandbox.security(ws), 12000);
             } else {
                 s.transition(TaskStatus.TESTING, "Dry-run: deterministic tests skipped; Tester agent reviews the proposed patch");
-                String testerReview = ollama.chat(prompts.load("tester"),
+                String testerReview = llm.chat(s.request.effectiveLlmMode(), prompts.load("tester"),
                         "REQUIREMENT:\n" + s.request.requirement() + "\n\nPATCH:\n" + s.patch +
                                 "\n\nDETERMINISTIC TEST EVIDENCE:\nNot executed because dryRun=true");
                 s.testSummary = "Deterministic execution skipped because dryRun=true.\n\n--- AI TESTER REVIEW ---\n" + testerReview;
@@ -120,7 +123,7 @@ public class TaskService {
             }
 
             s.transition(TaskStatus.REVIEWING, "Reviewer agent assessing plan, patch and deterministic evidence");
-            s.review = ollama.chat(prompts.load("reviewer"),
+            s.review = llm.chat(s.request.effectiveLlmMode(), prompts.load("reviewer"),
                     "REQUIREMENT:\n" + s.request.requirement() + "\n\nPLAN:\n" + s.plan + "\n\nPATCH:\n" + s.patch +
                             "\n\nTEST EVIDENCE:\n" + s.testSummary + "\n\nSECURITY EVIDENCE:\n" + s.securitySummary);
             Files.writeString(ws.resolve(".ai-review.md"), s.review);

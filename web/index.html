@@ -3,145 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Factory Intake</title>
+    <title>AI Factory | Nouveau ticket</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/pipeline.css" />
+    <link rel="stylesheet" href="/executions.css" />
   </head>
   <body>
-    <main class="page-shell">
-      <header class="masthead">
-        <a class="brand" href="/" aria-label="Factory Intake">
-          <span class="brand-mark">AF</span>
-          <span>AI SOFTWARE FACTORY</span>
-        </a>
-        <div class="environment"><span class="pulse"></span> LOCAL FACTORY</div>
-      </header>
-
-      <section class="intro">
-        <p class="eyebrow">NEW DELIVERY REQUEST</p>
-        <h1>Ouvrir un ticket<br />pour l'usine.</h1>
-        <p class="lede">Décrivez le changement attendu. L'usine prépare un plan, génère le patch et le soumet aux contrôles avant approbation.</p>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="AI Software Factory"><span class="brand-mark">A</span>AI Factory</a>
+      <nav class="topnav" aria-label="Navigation principale"><a href="#ticket" data-view="ticket" class="active">Tickets</a><a href="#executions" data-view="executions">Exécutions</a><a href="http://localhost:3000" target="_blank" rel="noreferrer">Dépôts</a></nav>
+      <div class="topbar-actions"><span class="environment"><i></i> LOCAL</span><button class="create-button" type="button" onclick="document.querySelector('#summary').focus()">Créer</button></div>
+    </header>
+    <main class="app-main">
+      <nav class="breadcrumbs" aria-label="Fil d'Ariane"><a href="/">AI Software Factory</a><span>/</span><a href="#ticket-title">Demandes</a><span>/</span><strong>Nouveau ticket</strong></nav>
+      <section id="ticket-view" class="app-view">
+      <section class="issue-heading">
+        <div class="issue-icon" aria-hidden="true">✦</div><div><p class="issue-key">AF-NEW <span>·</span> DEMANDE DE LIVRAISON</p><h1 id="ticket-title">Créer un ticket pour l'usine</h1><p>Transformez une spécification métier en plan, patch, contrôles et pull request.</p></div>
       </section>
-
-      <div class="workspace">
-        <section class="ticket-card" aria-labelledby="ticket-title">
-          <div class="ticket-heading">
-            <div>
-              <p class="eyebrow">SPECIFICATION</p>
-              <h2 id="ticket-title">Nouveau ticket</h2>
-            </div>
-            <span class="ticket-key">DRAFT</span>
-          </div>
-
+      <div class="issue-layout">
+        <section class="issue-main" aria-label="Formulaire de création de ticket">
           <form id="ticket-form">
-            <section class="spec-section">
-              <p class="section-number">01 / INTENTION</p>
-              <div class="field full">
-                <label for="summary">Titre</label>
-                <input id="summary" name="summary" type="text" maxlength="160" placeholder="Ex. Ajouter GET /customers/{id} avec réponse 404" required />
-                <p class="hint">Formulez une action, une fonctionnalité et son contexte.</p>
-              </div>
-              <div class="field full">
-                <label for="business-goal">Objectif métier</label>
-                <textarea id="business-goal" name="businessGoal" rows="3" placeholder="Quelle valeur est attendue et quel problème cette évolution résout-elle ?" required></textarea>
-              </div>
-            </section>
-
-            <section class="spec-section">
-              <p class="section-number">02 / CONTEXTE</p>
-              <div class="form-grid">
-                <div class="field">
-                  <label for="scope">Application / domaine concerné</label>
-                  <input id="scope" name="scope" type="text" placeholder="Ex. Customer API, gestion des clients" required />
-                </div>
-                <div class="field">
-                  <label for="current-behavior">Comportement actuel</label>
-                  <input id="current-behavior" name="currentBehavior" type="text" placeholder="Ex. Aucun endpoint ne permet la consultation" required />
-                </div>
-              </div>
-              <div class="field full">
-                <label for="context">Contraintes existantes et fichiers pertinents <span>optionnel</span></label>
-                <textarea id="context" name="context" rows="3" placeholder="Ex. Préserver le contrat existant, utiliser CustomerService, voir CustomerController.java..." ></textarea>
-              </div>
-            </section>
-
-            <section class="spec-section">
-              <p class="section-number">03 / COMPORTEMENT</p>
-              <div class="field full">
-                <label for="expected-behavior">Comportement attendu</label>
-                <textarea id="expected-behavior" name="expectedBehavior" rows="5" placeholder="1. Quand ..., le système doit ...&#10;2. Si ..., le système doit ...&#10;3. Les données doivent ..." required></textarea>
-              </div>
-              <div class="field full">
-                <label for="acceptance">Critères d'acceptation</label>
-                <textarea id="acceptance" name="acceptance" rows="5" placeholder="- [ ] Cas nominal : ...&#10;- [ ] Cas limite : ...&#10;- [ ] Cas d'erreur : ...&#10;- [ ] Tests automatisés : ..." required></textarea>
-              </div>
-            </section>
-
-            <section class="spec-section">
-              <p class="section-number">04 / GARDE-FOUS</p>
-              <div class="field full">
-                <label for="technical-constraints">Contraintes techniques <span>optionnel</span></label>
-                <textarea id="technical-constraints" name="technicalConstraints" rows="4" placeholder="Langage ou framework, contrat API, performance, dépendances, sécurité, droits d'accès..." ></textarea>
-              </div>
-              <div class="field full">
-                <label for="out-of-scope">Hors périmètre <span>optionnel</span></label>
-                <textarea id="out-of-scope" name="outOfScope" rows="3" placeholder="Ce qui ne doit pas être modifié dans cette tâche." ></textarea>
-              </div>
-              <div class="field full">
-                <label for="validation">Validation attendue <span>optionnel</span></label>
-                <textarea id="validation" name="validation" rows="3" placeholder="Commande de test et résultat attendu." ></textarea>
-              </div>
-            </section>
-
-            <section class="spec-section delivery-section">
-              <p class="section-number">05 / LIVRAISON</p>
-              <div class="form-grid">
-                <div class="field">
-                  <label for="repository">Dépôt cible</label>
-                  <input id="repository" name="repository" type="url" value="http://gitea:3000/aiadmin/customer-api.git" required />
-                  <p class="hint">URL accessible depuis les conteneurs.</p>
-                </div>
-                <div class="field">
-                  <label for="branch">Branche de référence</label>
-                  <input id="branch" name="branch" type="text" value="main" required />
-                  <p class="hint">La branche à partir de laquelle le patch est préparé.</p>
-                </div>
-              </div>
-            </section>
-
-            <label class="mode-switch" for="dry-run">
-              <input id="dry-run" name="dry-run" type="checkbox" checked />
-              <span class="switch-track" aria-hidden="true"></span>
-              <span><strong>Mode simulation</strong><small>Produit un plan et un diff sans modifier le dépôt.</small></span>
-            </label>
-
-            <div class="actions">
-              <p id="form-message" class="form-message" aria-live="polite"></p>
-              <button id="submit-button" type="submit">Envoyer à l'usine <span aria-hidden="true">→</span></button>
-            </div>
+            <article class="form-card primary-card">
+              <div class="card-heading"><div><p class="eyebrow">DÉFINITION DU TICKET</p><h2>Ce que l'équipe doit livrer</h2></div><span class="required-note">* Obligatoire</span></div>
+              <div class="field"><label for="summary">Résumé <em>*</em></label><input id="summary" name="summary" type="text" maxlength="160" placeholder="Ex. Ajouter GET /customers/{id} avec réponse 404" required /><p class="hint">Exprimez une action précise, une fonctionnalité et son contexte.</p></div>
+              <div class="field no-margin"><label for="business-goal">Objectif métier <em>*</em></label><textarea id="business-goal" name="businessGoal" rows="3" placeholder="Quelle valeur est attendue et quel problème cette évolution résout-elle ?" required></textarea></div>
+            </article>
+            <article class="form-card">
+              <div class="card-heading compact"><div><p class="eyebrow">CONTEXTE</p><h2>Cadre de l'évolution</h2></div></div>
+              <div class="form-grid"><div class="field"><label for="scope">Application / domaine <em>*</em></label><input id="scope" name="scope" type="text" placeholder="Ex. Customer API, gestion des clients" required /></div><div class="field"><label for="current-behavior">Comportement actuel <em>*</em></label><input id="current-behavior" name="currentBehavior" type="text" placeholder="Ex. Aucun endpoint ne permet la consultation" required /></div></div>
+              <div class="field no-margin"><label for="context">Contraintes existantes et fichiers pertinents <span>Optionnel</span></label><textarea id="context" name="context" rows="3" placeholder="Ex. Préserver le contrat existant, utiliser CustomerService, voir CustomerController.java..."></textarea></div>
+            </article>
+            <article class="form-card">
+              <div class="card-heading compact"><div><p class="eyebrow">SPÉCIFICATION</p><h2>Comportement et qualité attendus</h2></div></div>
+              <div class="field"><label for="expected-behavior">Comportement attendu <em>*</em></label><textarea id="expected-behavior" name="expectedBehavior" rows="5" placeholder="1. Quand ..., le système doit ...&#10;2. Si ..., le système doit ...&#10;3. Les données doivent ..." required></textarea></div>
+              <div class="field"><label for="acceptance">Critères d'acceptation <em>*</em></label><textarea id="acceptance" name="acceptance" rows="5" placeholder="- [ ] Cas nominal : ...&#10;- [ ] Cas limite : ...&#10;- [ ] Cas d'erreur : ...&#10;- [ ] Tests automatisés : ..." required></textarea></div>
+              <details class="advanced-details"><summary>Ajouter des garde-fous et critères de validation</summary><div class="advanced-content"><div class="field"><label for="technical-constraints">Contraintes techniques <span>Optionnel</span></label><textarea id="technical-constraints" name="technicalConstraints" rows="4" placeholder="Langage ou framework, contrat API, performance, dépendances, sécurité, droits d'accès..."></textarea></div><div class="field"><label for="out-of-scope">Hors périmètre <span>Optionnel</span></label><textarea id="out-of-scope" name="outOfScope" rows="3" placeholder="Ce qui ne doit pas être modifié dans cette tâche."></textarea></div><div class="field no-margin"><label for="validation">Validation attendue <span>Optionnel</span></label><textarea id="validation" name="validation" rows="3" placeholder="Commande de test et résultat attendu."></textarea></div></div></details>
+            </article>
+            <article class="form-card execution-card">
+              <div class="card-heading compact"><div><p class="eyebrow">EXÉCUTION</p><h2>Où et comment traiter ce ticket</h2></div></div>
+              <div class="form-grid"><div class="field"><label for="repository">Dépôt cible <em>*</em></label><input id="repository" name="repository" type="url" value="http://gitea:3000/aiadmin/customer-api.git" required /></div><div class="field"><label for="branch">Branche de référence <em>*</em></label><input id="branch" name="branch" type="text" value="main" required /></div></div>
+              <section class="llm-choice" aria-labelledby="llm-mode-label"><div class="llm-choice-heading"><div><p class="eyebrow">MOTEUR IA</p><h3 id="llm-mode-label">Périmètre de traitement</h3></div><span class="privacy-badge">Contrôle explicite</span></div><label class="llm-slider" for="llm-mode"><span class="llm-label local-label">LLM local</span><input id="llm-mode" name="llm-mode" type="checkbox" role="switch" aria-describedby="llm-mode-description cloud-warning" /><span class="llm-track" aria-hidden="true"><span></span></span><span class="llm-label cloud-label">LLM cloud</span></label><p id="llm-mode-description" class="llm-description">Le code et la spécification restent dans l'environnement Docker local via Ollama.</p><p id="cloud-warning" class="cloud-warning" hidden>Le contexte du dépôt et cette spécification seront transmis à l'API OpenAI. N'utilisez ce mode que pour des données autorisées à sortir de votre environnement.</p></section>
+              <label class="mode-switch" for="dry-run"><input id="dry-run" name="dry-run" type="checkbox" checked /><span class="switch-track" aria-hidden="true"></span><span><strong>Exécuter en simulation</strong><small>Produit un plan et un diff sans modifier le dépôt.</small></span></label>
+            </article>
+            <div class="form-actions"><p id="form-message" class="form-message" aria-live="polite"></p><button id="submit-button" type="submit">Créer le ticket <span aria-hidden="true">→</span></button></div>
           </form>
         </section>
-
-        <aside class="status-panel" aria-live="polite">
-          <p class="eyebrow">FACTORY RUN</p>
-          <div id="empty-state" class="empty-state">
-            <span class="empty-mark">01</span>
-            <h2>En attente d'un ticket</h2>
-            <p>Après envoi, cette zone suivra la progression de l'exécution.</p>
-          </div>
-          <div id="task-status" class="task-status" hidden>
-            <div class="status-topline">
-              <span id="status-indicator" class="status-indicator"></span>
-              <span id="status-label">QUEUED</span>
-              <span id="task-id" class="task-id"></span>
-            </div>
-            <h2 id="task-summary"></h2>
-            <p id="task-detail" class="status-detail"></p>
-            <div class="progress-line"><span id="progress-bar"></span></div>
-            <ol id="steps" class="steps"></ol>
-            <a id="pr-link" class="pr-link" href="#" target="_blank" rel="noreferrer" hidden>Voir la pull request <span aria-hidden="true">↗</span></a>
-          </div>
+        <aside class="issue-sidebar">
+          <section class="sidebar-card guidance-card"><p class="eyebrow">AIDE À LA RÉDACTION</p><h2>Un ticket précis produit un meilleur patch.</h2><ul><li>Décrivez le cas nominal et les erreurs.</li><li>Énumérez les règles métier non négociables.</li><li>Indiquez les tests ou contrats à préserver.</li></ul></section>
+          <section class="status-panel" aria-live="polite"><div class="status-header"><p class="eyebrow">SUIVI D'EXÉCUTION</p><span class="live-dot"></span></div><div id="empty-state" class="empty-state"><span class="empty-mark">⌁</span><h2>Prêt à traiter</h2><p>Le détail de l'exécution apparaîtra ici dès la création du ticket.</p></div><div id="task-status" class="task-status" hidden><div class="status-topline"><span id="status-indicator" class="status-indicator"></span><span id="status-label">QUEUED</span><span id="task-llm-mode" class="task-llm-mode">LOCAL</span><span id="task-id" class="task-id"></span></div><h2 id="task-summary"></h2><p id="task-detail" class="status-detail"></p><div class="pipeline-summary"><span id="pipeline-progress">0/9 opérations terminées</span><span>PIPELINE</span></div><div class="progress-line"><span id="progress-bar"></span></div><div id="steps" class="pipeline-stages"></div><a id="pr-link" class="pr-link" href="#" target="_blank" rel="noreferrer" hidden>Voir la pull request <span aria-hidden="true">↗</span></a></div></section>
         </aside>
       </div>
+      </section>
+      <section id="executions-view" class="app-view executions-view" hidden>
+        <div class="executions-heading"><div><p class="issue-key">AI SOFTWARE FACTORY <span>·</span> SUIVI</p><h1>Exécutions</h1><p>Les tickets traités par l'usine, classés par dernière activité.</p></div><button id="refresh-executions" type="button">Actualiser</button></div>
+        <section class="executions-card" aria-labelledby="executions-list-title"><div class="executions-table-header"><span id="executions-list-title">Ticket</span><span>Mode</span><span>Étape active</span><span>Dernière activité</span><span>État</span></div><div id="execution-list" class="execution-list"></div><p id="execution-empty" class="execution-empty" hidden>Aucune exécution n'est disponible.</p></section>
+      </section>
     </main>
     <script src="/app.js"></script>
   </body>

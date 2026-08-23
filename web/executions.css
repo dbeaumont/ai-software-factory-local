@@ -1,0 +1,19 @@
+.executions-view { max-width: 1120px; }
+.executions-heading { display: flex; justify-content: space-between; align-items: end; margin: 10px 0 26px; }
+.executions-heading h1 { margin: 0 0 7px; font-size: 32px; letter-spacing: -.025em; }
+.executions-heading p:last-child { margin: 0; color: var(--muted); }
+.executions-heading button { border: 1px solid #0c66e4; border-radius: 3px; padding: 8px 12px; color: #0c66e4; background: #fff; cursor: pointer; font-weight: 600; }
+.executions-heading button:hover { background: var(--blue-soft); }
+.executions-card { overflow: hidden; border: 1px solid var(--line); border-radius: 5px; background: #fff; box-shadow: 0 1px 2px #091e420f; }
+.executions-table-header, .execution-row { display: grid; grid-template-columns: minmax(250px, 2fr) 95px minmax(150px, 1.2fr) 145px 105px; gap: 16px; align-items: center; padding: 13px 18px; }
+.executions-table-header { border-bottom: 1px solid var(--line); color: var(--muted); background: #fafbfc; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.execution-row { width: 100%; border: 0; border-bottom: 1px solid var(--line); color: var(--navy); background: #fff; cursor: pointer; text-align: left; }
+.execution-row:last-child { border-bottom: 0; }
+.execution-row:hover { background: #f4f8ff; }
+.execution-title { display: block; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.execution-key, .execution-date { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+.execution-mode, .execution-state { width: max-content; padding: 4px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+.execution-mode { color: #44546f; background: #ebecf0; }.execution-mode.cloud { color: #0055cc; background: #deebff; }
+.execution-state { color: var(--green); background: #dcfff1; }.execution-state.pending { color: #44546f; background: #ebecf0; }.execution-state.failed { color: var(--red); background: #ffebe6; }
+.execution-step { color: #44546f; font-size: 12px; }.execution-empty { margin: 0; padding: 34px; color: var(--muted); text-align: center; }
+@media (max-width: 760px) { .executions-heading { align-items: start; gap: 14px; flex-direction: column; }.executions-table-header { display: none; }.execution-row { grid-template-columns: 1fr auto; gap: 8px; padding: 14px; }.execution-row > :nth-child(2), .execution-row > :nth-child(4) { display: none; }.execution-step { grid-column: 1; }.execution-state { grid-column: 2; grid-row: 1; } }

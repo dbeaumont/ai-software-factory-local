@@ -1,0 +1,13 @@
+model_list:
+  - model_name: factory-code-local
+    litellm_params:
+      model: ollama/__OLLAMA_MODEL__
+      api_base: http://ollama:11434
+
+  - model_name: factory-code-cloud
+    litellm_params:
+      model: openai/__OPENAI_MODEL__
+      api_key: os.environ/OPENAI_API_KEY
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
