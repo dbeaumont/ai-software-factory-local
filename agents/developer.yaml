@@ -1,0 +1,5 @@
+name: Developer
+role: developer
+prompt: prompts/developer.md
+autonomy: A1
+human_gate: true

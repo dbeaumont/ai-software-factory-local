@@ -1,0 +1,5 @@
+name: Reviewer
+role: reviewer
+prompt: prompts/reviewer.md
+autonomy: A1
+human_gate: true

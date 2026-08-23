@@ -1,0 +1,12 @@
+{
+  "title": "AI Factory Orchestrator",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP requests",
+      "targets": [{"expr": "rate(http_server_requests_seconds_count[5m])", "legendFormat": "{{method}} {{uri}}"}],
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0}
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+name: Tester
+role: tester
+prompt: prompts/tester.md
+autonomy: A1
+human_gate: true

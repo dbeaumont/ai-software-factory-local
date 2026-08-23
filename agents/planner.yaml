@@ -1,0 +1,5 @@
+name: Planner
+role: planner
+prompt: prompts/planner.md
+autonomy: A1
+human_gate: true

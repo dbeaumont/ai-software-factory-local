@@ -1,0 +1,26 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ai-factory-orchestrator
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+ai-factory:
+  ollama-base-url: ${AI_FACTORY_OLLAMA_BASE_URL:http://localhost:11434}
+  ollama-model: ${AI_FACTORY_OLLAMA_MODEL:qwen2.5-coder:7b}
+  workspace-root: ${AI_FACTORY_WORKSPACE_ROOT:/tmp/ai-factory/tasks}
+  sandbox-image: ${AI_FACTORY_SANDBOX_IMAGE:ai-factory-sandbox:local}
+  gitea-base-url: ${AI_FACTORY_GITEA_BASE_URL:http://localhost:3000}
+  gitea-token: ${AI_FACTORY_GITEA_TOKEN:}
+  gitea-user: ${AI_FACTORY_GITEA_USER:aiadmin}
+  prompt-root: ${AI_FACTORY_PROMPT_ROOT:/opt/ai-factory/prompts}

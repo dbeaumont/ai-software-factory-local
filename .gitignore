@@ -1,0 +1,26 @@
+# Local configuration and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Maven build output
+**/target/
+
+# IDE settings
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+
+# Logs and temporary files
+*.log
+*.pid
+*.tmp
+*.swp
+
+# Operating system files
+.DS_Store
+Thumbs.db
