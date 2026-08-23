@@ -10,6 +10,7 @@ public record AiFactoryProperties(
         String cloudModel,
         boolean cloudEnabled,
         String workspaceRoot,
+        String workspaceVolume,
         String sandboxImage,
         String giteaBaseUrl,
         String giteaPublicBaseUrl,

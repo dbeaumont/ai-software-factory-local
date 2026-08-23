@@ -108,7 +108,7 @@ curl -s http://localhost:8088/api/tasks/<TASK_ID> | jq
 
 États principaux : `PLANNING`, `GENERATING_PATCH`, `APPLYING_PATCH`, `TESTING`, `SECURITY_SCANNING`, `REVIEWING`, `WAITING_APPROVAL`.
 
-Si le patch produit par le LLM n'est pas un diff valide, la tâche passe en `FAILED` et conserve les artefacts dans le volume `factory-workspace`. C'est volontaire : le prototype ne masque pas les échecs agentiques.
+Chaque patch est d'abord validé avec `git apply --check` dans le sandbox. En cas de diff invalide, l'usine demande une réécriture complète au modèle avec le diagnostic Git, puis valide cette seconde version avant toute modification du dépôt. Si elle est encore invalide, la tâche passe en `FAILED` et conserve `changes.patch` ainsi que `changes.invalid.patch` dans le volume `factory-workspace`. Les sandboxes remontent ce volume Docker nommé directement, ce qui évite les restrictions de partage de chemins de Docker Desktop sur macOS. C'est volontaire : le prototype ne masque pas les échecs agentiques.
 
 ### Approbation humaine et création de PR
 

@@ -31,10 +31,13 @@ cp -R sample-repo/. "$TMP/"
 rm -rf "$TMP"
 
 if [ -z "${GITEA_TOKEN:-}" ]; then
-  TOKEN_JSON=$(curl -fsS -u "$USER:$PASS" -H 'Content-Type: application/json' \
-    -d '{"name":"ai-factory-orchestrator","scopes":["write:repository","write:issue"]}' \
-    "http://localhost:$HTTP_PORT/api/v1/users/$USER/tokens" || true)
-  TOKEN=$(printf '%s' "$TOKEN_JSON" | sed -n 's/.*"sha1":"\([^"]*\)".*/\1/p')
+  TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"
+  TOKEN=$(docker compose exec -T --user git gitea \
+    gitea admin user generate-access-token \
+    --username "$USER" \
+    --token-name "$TOKEN_NAME" \
+    --scopes "write:repository,write:issue" \
+    --raw 2>/dev/null || true)
   if [ -n "$TOKEN" ]; then
     if grep -q '^GITEA_TOKEN=' .env; then
       python3 - "$TOKEN" <<'PY2'

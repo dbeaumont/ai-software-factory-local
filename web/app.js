@@ -12,6 +12,15 @@ const progressBar = document.querySelector('#progress-bar');
 const steps = document.querySelector('#steps');
 const pipelineProgress = document.querySelector('#pipeline-progress');
 const prLink = document.querySelector('#pr-link');
+const approveButton = document.querySelector('#approve-button');
+const proposalButton = document.querySelector('#proposal-button');
+const proposalDialog = document.querySelector('#proposal-dialog');
+const proposalCloseButton = document.querySelector('#proposal-close-button');
+const proposalPatch = document.querySelector('#proposal-patch');
+const proposalPlan = document.querySelector('#proposal-plan');
+const proposalTests = document.querySelector('#proposal-tests');
+const proposalSecurity = document.querySelector('#proposal-security');
+const proposalReview = document.querySelector('#proposal-review');
 const llmMode = document.querySelector('#llm-mode');
 const llmDescription = document.querySelector('#llm-mode-description');
 const cloudWarning = document.querySelector('#cloud-warning');
@@ -22,8 +31,20 @@ const viewLinks = document.querySelectorAll('[data-view]');
 const executionList = document.querySelector('#execution-list');
 const executionEmpty = document.querySelector('#execution-empty');
 const refreshExecutionsButton = document.querySelector('#refresh-executions');
+const debugFillButton = document.querySelector('#debug-fill-button');
+
+const ticketTemplate = {
+  summary: 'Ajouter GET /customers/{id}',
+  businessGoal: "Ajouter un service permettant de récupérer les détails d'un customer.\nPour le moment, la page retournée ne doit afficher que l'id du customer.",
+  scope: 'Customer API',
+  currentBehavior: "Il n'existe pas encore de consultation d'un customer.",
+  context: 'Utiliser CustomerController.java.',
+  expectedBehavior: "1. Given : Quand un GET /customers/{id} est soumis, le système doit exécuter un service qui renvoie uniquement le customer id.\n2. When : quand l'API GET /customers/{id} est soumise, elle doit renvoyer l'id du customer en réponse.\n3. Done : la réponse doit être un flux JSON contenant l'id du customer.",
+  acceptance: "- Cas nominal : la réponse JSON avec l'id du customer est affichée.\n- Cas d'erreur : lorsque l'id de customer demandé n'existe pas, une erreur 404 doit être retournée par l'API."
+};
 
 let activeTaskId;
+let activeTask;
 let pollTimer;
 let executionsPollTimer;
 
@@ -63,6 +84,7 @@ function showView(name) {
 function resetTicketDraft() {
   clearInterval(pollTimer);
   activeTaskId = undefined;
+  activeTask = undefined;
   form.reset();
   renderLlmMode();
   message.textContent = '';
@@ -81,7 +103,22 @@ function resetTicketDraft() {
   steps.replaceChildren();
   prLink.hidden = true;
   prLink.removeAttribute('href');
+  approveButton.hidden = true;
+  approveButton.disabled = false;
+  approveButton.innerHTML = 'Approuver et créer la pull request <span aria-hidden="true">→</span>';
+  proposalButton.hidden = true;
 }
+
+debugFillButton.addEventListener('click', () => {
+  Object.entries(ticketTemplate).forEach(([name, value]) => {
+    form.elements.namedItem(name).value = value;
+  });
+  llmMode.checked = false;
+  document.querySelector('#dry-run').checked = true;
+  renderLlmMode();
+  message.textContent = 'Modèle de ticket chargé. Vérifiez les valeurs avant envoi.';
+  document.querySelector('#summary').focus();
+});
 
 viewLinks.forEach((link) => link.addEventListener('click', (event) => {
   event.preventDefault();
@@ -254,6 +291,7 @@ function renderPipeline(task) {
 }
 
 function renderTask(task) {
+  activeTask = task;
   emptyState.hidden = true;
   taskStatus.hidden = false;
   statusPanel.classList.toggle('failed', task.status === 'FAILED');
@@ -264,9 +302,24 @@ function renderTask(task) {
   taskDetail.textContent = task.error || statusDescription(task.status, task.dryRun);
   progressBar.style.width = `${progress[task.status] || 10}%`;
   renderPipeline(task);
+  proposalButton.hidden = !task.patch || task.status === 'PR_CREATED';
+  approveButton.hidden = task.status !== 'WAITING_APPROVAL' || task.dryRun;
   prLink.hidden = !task.pullRequestUrl;
   if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);
 }
+
+proposalButton.addEventListener('click', () => {
+  if (!activeTask) return;
+  proposalPatch.textContent = activeTask.patch || 'Aucun diff généré.';
+  proposalPlan.textContent = activeTask.plan || 'Aucun plan généré.';
+  proposalTests.textContent = activeTask.testSummary || 'Aucun résultat de test disponible.';
+  proposalSecurity.textContent = activeTask.securitySummary || 'Aucun résultat de sécurité disponible.';
+  proposalReview.textContent = activeTask.review || 'Aucune revue IA disponible.';
+  if (typeof proposalDialog.showModal === 'function') proposalDialog.showModal();
+  else proposalDialog.open = true;
+});
+
+proposalCloseButton.addEventListener('click', () => proposalDialog.close());
 
 function statusDescription(status, dryRun) {
   if (status === 'WAITING_APPROVAL') return dryRun ? 'Simulation terminée. Le patch et la revue sont prêts à être consultés.' : 'Contrôles terminés. La tâche attend une approbation humaine.';
@@ -289,6 +342,24 @@ async function refreshTask() {
     clearInterval(pollTimer);
   }
 }
+
+approveButton.addEventListener('click', async () => {
+  if (!activeTaskId) return;
+  approveButton.disabled = true;
+  approveButton.textContent = 'Approbation en cours...';
+  try {
+    const response = await fetch(`/api/tasks/${activeTaskId}/approve`, { method: 'POST' });
+    const task = await response.json();
+    if (!response.ok) throw new Error(task.error || "L'approbation a échoué.");
+    renderTask(task);
+    clearInterval(pollTimer);
+    pollTimer = setInterval(refreshTask, 3000);
+  } catch (error) {
+    taskDetail.textContent = error.message;
+    approveButton.disabled = false;
+    approveButton.innerHTML = 'Réessayer l’approbation <span aria-hidden="true">→</span>';
+  }
+});
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();

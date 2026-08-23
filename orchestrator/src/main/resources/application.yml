@@ -22,6 +22,7 @@ ai-factory:
   cloud-model: ${AI_FACTORY_CLOUD_MODEL:factory-code-cloud}
   cloud-enabled: ${AI_FACTORY_CLOUD_ENABLED:false}
   workspace-root: ${AI_FACTORY_WORKSPACE_ROOT:/tmp/ai-factory/tasks}
+  workspace-volume: ${AI_FACTORY_WORKSPACE_VOLUME:ai-software-factory-local_factory-workspace}
   sandbox-image: ${AI_FACTORY_SANDBOX_IMAGE:ai-factory-sandbox:local}
   gitea-base-url: ${AI_FACTORY_GITEA_BASE_URL:http://localhost:3000}
   gitea-public-base-url: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL:http://localhost:3000}

@@ -19,6 +19,7 @@ public class SandboxService {
     }
 
     private String execute(Path workspace, String network, String script, Duration timeout) throws Exception {
+        String taskDirectory = workspace.getFileName().toString();
         List<String> cmd = new ArrayList<>(List.of(
                 "docker", "run", "--rm",
                 "--network", network,
@@ -27,9 +28,9 @@ public class SandboxService {
                 "--pids-limit", "512",
                 "--cap-drop", "ALL",
                 "--security-opt", "no-new-privileges",
-                "-v", workspace.toAbsolutePath() + ":/workspace",
+                "-v", props.workspaceVolume() + ":/factory-tasks",
                 "-v", "ai-factory-m2:/root/.m2",
-                "-w", "/workspace",
+                "-w", "/factory-tasks/" + taskDirectory,
                 props.sandboxImage(),
                 "bash", "-lc", script));
         return runner.run(cmd, null, timeout);
@@ -39,6 +40,10 @@ public class SandboxService {
         return execute(workspace, "none",
                 "git apply --check changes.patch && git apply changes.patch && git diff --check && git diff --stat",
                 Duration.ofMinutes(3));
+    }
+
+    public String checkPatch(Path workspace) throws Exception {
+        return execute(workspace, "none", "git apply --check changes.patch", Duration.ofMinutes(3));
     }
 
     public String test(Path workspace) throws Exception {

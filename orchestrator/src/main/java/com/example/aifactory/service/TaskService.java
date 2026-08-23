@@ -90,8 +90,7 @@ public class TaskService {
 
             s.transition(TaskStatus.GENERATING_PATCH, "Developer agent generating a unified diff");
             String rawPatch = llm.chat(s.request.effectiveLlmMode(), prompts.load("developer"), "REQUIREMENT:\n" + s.request.requirement() + "\n\nPLAN:\n" + s.plan + "\n\nREPOSITORY CONTEXT:\n" + context);
-            s.patch = stripFence(rawPatch);
-            Files.writeString(ws.resolve("changes.patch"), s.patch);
+            s.patch = validateAndRepairPatch(s, ws, rawPatch);
 
             if (!s.request.isDryRun()) {
                 s.transition(TaskStatus.APPLYING_PATCH, "Applying generated patch inside isolated Docker sandbox");
@@ -134,13 +133,35 @@ public class TaskService {
         }
     }
 
-    private static String stripFence(String s) {
+    private String validateAndRepairPatch(TaskState state, Path workspace, String rawPatch) throws Exception {
+        String patch = UnifiedDiffNormalizer.normalize(stripFence(rawPatch));
+        Files.writeString(workspace.resolve("changes.patch"), patch);
+
+        try {
+            sandbox.checkPatch(workspace);
+            return patch;
+        } catch (Exception validationFailure) {
+            Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
+            String repaired = llm.chat(state.request.effectiveLlmMode(), prompts.load("patch-repair"),
+                    "REQUIREMENT:\n" + state.request.requirement() + "\n\nPLAN:\n" + state.plan +
+                            "\n\nINVALID PATCH:\n" + patch + "\n\nGIT APPLY ERROR:\n" + validationFailure.getMessage());
+            patch = UnifiedDiffNormalizer.normalize(stripFence(repaired));
+            Files.writeString(workspace.resolve("changes.patch"), patch);
+            sandbox.checkPatch(workspace);
+            return patch;
+        }
+    }
+
+    static String stripFence(String s) {
         String out = s.strip();
-        if (out.startsWith("```")) {
-            int firstNewline = out.indexOf('\n');
+        int fenceStart = out.indexOf("```");
+        if (fenceStart >= 0) {
+            int firstNewline = out.indexOf('\n', fenceStart);
             if (firstNewline >= 0) out = out.substring(firstNewline + 1);
             if (out.endsWith("```")) out = out.substring(0, out.length() - 3);
         }
+        int diffStart = out.indexOf("diff --git ");
+        if (diffStart > 0) out = out.substring(diffStart);
         return out.strip();
     }
 

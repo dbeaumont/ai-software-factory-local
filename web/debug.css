@@ -1,0 +1,133 @@
+.debug-fill-button {
+  padding: 9px 13px;
+  border: 1px solid var(--blue);
+  border-radius: 3px;
+  color: var(--blue);
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.debug-fill-button:hover {
+  background: var(--blue-soft);
+}
+
+.approve-button {
+  width: 100%;
+  margin-top: 18px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 3px;
+  color: #fff;
+  background: var(--green);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.approve-button:hover:not(:disabled) {
+  background: #164b36;
+}
+
+.approve-button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.proposal-button {
+  width: 100%;
+  margin-top: 18px;
+  padding: 9px 12px;
+  border: 1px solid var(--blue);
+  border-radius: 3px;
+  color: var(--blue);
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.proposal-button:hover {
+  background: var(--blue-soft);
+}
+
+.approve-button + .pr-link {
+  margin-top: 18px;
+}
+
+.proposal-dialog {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: calc(100vh - 56px);
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--navy);
+  box-shadow: 0 16px 48px #091e4270;
+}
+
+.proposal-dialog::backdrop {
+  background: #091e4266;
+}
+
+.proposal-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 22px 26px;
+  border-bottom: 1px solid var(--line);
+}
+
+.proposal-dialog h2,
+.proposal-dialog h3 {
+  margin: 0;
+}
+
+.proposal-close-button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 3px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.proposal-close-button:hover {
+  color: var(--navy);
+  background: var(--paper);
+}
+
+.proposal-section,
+.proposal-details {
+  margin: 0;
+  padding: 20px 26px;
+  border-bottom: 1px solid var(--line);
+}
+
+.proposal-details summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.proposal-dialog pre {
+  overflow: auto;
+  max-height: 45vh;
+  margin: 13px 0 0;
+  padding: 15px;
+  border-radius: 4px;
+  color: #dfe1e6;
+  background: #172b4d;
+  font: 12px/1.55 "SFMono-Regular", Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .debug-fill-button {
+    width: 100%;
+  }
+}
