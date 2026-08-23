@@ -21,7 +21,7 @@ public class ProcessRunner {
         boolean done = p.waitFor(timeout.toSeconds(), TimeUnit.SECONDS);
         if (!done) {
             p.destroyForcibly();
-            throw new IllegalStateException("Command timeout: " + String.join(" ", command));
+            throw new IllegalStateException("Command timeout: " + commandForError(command));
         }
         String out;
         try {
@@ -30,8 +30,15 @@ public class ProcessRunner {
             throw new IllegalStateException("Cannot collect command output", e);
         }
         if (p.exitValue() != 0) {
-            throw new IllegalStateException("Command failed (" + p.exitValue() + "): " + String.join(" ", command) + "\n" + out);
+            throw new IllegalStateException("Command failed (" + p.exitValue() + "): " + commandForError(command) + "\n" + out);
         }
         return out;
+    }
+
+    static String commandForError(List<String> command) {
+        return command.stream()
+                .map(arg -> arg.startsWith("SONAR_TOKEN=") ? "SONAR_TOKEN=[REDACTED]" : arg)
+                .reduce((left, right) -> left + " " + right)
+                .orElse("");
     }
 }

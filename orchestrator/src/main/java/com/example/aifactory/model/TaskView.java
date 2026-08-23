@@ -15,6 +15,7 @@ public record TaskView(
         String plan,
         String patch,
         String testSummary,
+        String qualitySummary,
         String securitySummary,
         String review,
         String pullRequestUrl,

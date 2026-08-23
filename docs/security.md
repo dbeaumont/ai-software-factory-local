@@ -42,6 +42,8 @@ Deux profils réseau existent :
 - tests build/run déterministes ;
 - génération d'un SBOM CycloneDX avec Syft ;
 - scan vulnérabilités et secrets avec Trivy ;
+- résolution des dépendances Maven via le groupe public Nexus ;
+- analyse SonarQube des dépôts Maven lorsque `SONAR_TOKEN` est configuré ;
 - conservation des traces d'exécution dans le workspace.
 
 ### Réduction du risque par défaut
@@ -74,7 +76,7 @@ Les builds et scans rejoignent le réseau Docker `ai-factory-local`. Cela permet
 Le prototype ne met pas encore en place :
 
 - d'egress allow-list ;
-- de proxy d'artefacts obligatoire ;
+- de proxy d'artefacts pour Gradle ou npm ;
 - de segmentation réseau fine ;
 - de politique par type de tâche.
 
@@ -85,6 +87,8 @@ Le POC repose sur des secrets simples dans `.env`, notamment :
 - `OPENAI_API_KEY`
 - `LITELLM_MASTER_KEY`
 - `GITEA_TOKEN`
+- `SONAR_TOKEN`
+- `SONAR_ADMIN_PASSWORD`
 - `GITEA_ADMIN_PASSWORD`
 
 Risques :
@@ -139,6 +143,7 @@ Le mode cloud doit donc être réservé à des contextes compatibles avec la pol
 - utiliser une machine dédiée ;
 - ne brancher que des dépôts non sensibles ;
 - changer les credentials par défaut de Gitea ;
+- changer les credentials SonarQube utilisés par le bootstrap après son premier passage ;
 - limiter ou désactiver le mode cloud si inutile ;
 - nettoyer régulièrement les volumes Docker ;
 - ne jamais exposer les ports du POC sur Internet ;

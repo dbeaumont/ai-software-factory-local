@@ -12,6 +12,7 @@ public class TaskState {
     public String plan;
     public String patch;
     public String testSummary;
+    public String qualitySummary;
     public String securitySummary;
     public String review;
     public String pullRequestUrl;
@@ -40,7 +41,7 @@ public class TaskState {
 
     public synchronized TaskView view() {
         return new TaskView(id, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
-                request.isDryRun(), request.effectiveLlmMode(), workspace, plan, patch, testSummary, securitySummary, review,
+                request.isDryRun(), request.effectiveLlmMode(), workspace, plan, patch, testSummary, qualitySummary, securitySummary, review,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
     }
 }

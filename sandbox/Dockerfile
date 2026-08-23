@@ -14,5 +14,7 @@ RUN apt-get update \
        | tar -xz -C /usr/local/bin trivy \
     && trivy image --download-db-only
 
+COPY maven-settings.xml /opt/ai-factory/maven-settings.xml
+
 WORKDIR /workspace
 CMD ["bash"]

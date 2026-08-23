@@ -28,4 +28,6 @@ ai-factory:
   gitea-public-base-url: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL:http://localhost:3000}
   gitea-token: ${AI_FACTORY_GITEA_TOKEN:}
   gitea-user: ${AI_FACTORY_GITEA_USER:aiadmin}
+  sonarqube-url: ${AI_FACTORY_SONARQUBE_URL:http://sonarqube:9000}
+  sonar-token: ${AI_FACTORY_SONAR_TOKEN:}
   prompt-root: ${AI_FACTORY_PROMPT_ROOT:/opt/ai-factory/prompts}

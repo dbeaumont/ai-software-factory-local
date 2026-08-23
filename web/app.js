@@ -19,6 +19,7 @@ const proposalCloseButton = document.querySelector('#proposal-close-button');
 const proposalPatch = document.querySelector('#proposal-patch');
 const proposalPlan = document.querySelector('#proposal-plan');
 const proposalTests = document.querySelector('#proposal-tests');
+const proposalQuality = document.querySelector('#proposal-quality');
 const proposalSecurity = document.querySelector('#proposal-security');
 const proposalReview = document.querySelector('#proposal-review');
 const llmMode = document.querySelector('#llm-mode');
@@ -131,8 +132,8 @@ refreshExecutionsButton.addEventListener('click', loadExecutions);
 
 const progress = {
   QUEUED: 8, CLONING: 18, PLANNING: 32, GENERATING_PATCH: 47,
-  APPLYING_PATCH: 60, TESTING: 72, SECURITY_SCANNING: 82,
-  REVIEWING: 92, WAITING_APPROVAL: 100, APPROVED: 100,
+  APPLYING_PATCH: 60, TESTING: 70, QUALITY_SCANNING: 78, SECURITY_SCANNING: 86,
+  REVIEWING: 94, WAITING_APPROVAL: 100, APPROVED: 100,
   PR_CREATED: 100, FAILED: 100
 };
 
@@ -140,7 +141,7 @@ const pipelineStages = [
   { name: 'Préparation', jobs: [{ id: 'CLONING', label: 'Clonage du dépôt' }] },
   { name: 'Conception', jobs: [{ id: 'PLANNING', label: 'Planning' }] },
   { name: 'Développement', jobs: [{ id: 'GENERATING_PATCH', label: 'Génération du patch' }, { id: 'APPLYING_PATCH', label: 'Application du patch' }] },
-  { name: 'Validation', jobs: [{ id: 'TESTING', label: 'Build + tests' }, { id: 'SECURITY_SCANNING', label: 'Analyse sécurité' }] },
+  { name: 'Validation', jobs: [{ id: 'TESTING', label: 'Build + tests via Nexus' }, { id: 'QUALITY_SCANNING', label: 'Analyse SonarQube' }, { id: 'SECURITY_SCANNING', label: 'Analyse sécurité' }] },
   { name: 'Revue', jobs: [{ id: 'REVIEWING', label: 'Revue IA' }] },
   { name: 'Livraison', jobs: [{ id: 'WAITING_APPROVAL', label: 'Approbation humaine' }, { id: 'PR_CREATED', label: 'Création de la pull request' }] }
 ];
@@ -313,6 +314,7 @@ proposalButton.addEventListener('click', () => {
   proposalPatch.textContent = activeTask.patch || 'Aucun diff généré.';
   proposalPlan.textContent = activeTask.plan || 'Aucun plan généré.';
   proposalTests.textContent = activeTask.testSummary || 'Aucun résultat de test disponible.';
+  proposalQuality.textContent = activeTask.qualitySummary || 'Aucun résultat SonarQube disponible.';
   proposalSecurity.textContent = activeTask.securitySummary || 'Aucun résultat de sécurité disponible.';
   proposalReview.textContent = activeTask.review || 'Aucune revue IA disponible.';
   if (typeof proposalDialog.showModal === 'function') proposalDialog.showModal();

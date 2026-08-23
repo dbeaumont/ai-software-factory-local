@@ -20,8 +20,8 @@ La stack actuelle contient :
 | Tests | Maven / Gradle / npm selon le dépôt |
 | SBOM | Syft |
 | Scan sécurité | Trivy |
-| Observabilité optionnelle | Prometheus + Grafana |
-| Qualité/artefacts optionnels | SonarQube + Nexus |
+| Observabilité | Prometheus + Grafana |
+| Qualité et dépendances | SonarQube + Nexus |
 
 ## Ce que fait réellement le prototype
 
@@ -31,7 +31,7 @@ La stack actuelle contient :
 4. Le `Developer` génère un patch `unified diff`.
 5. Le patch est normalisé puis validé avec `git apply --check`.
 6. En cas d'échec, un second appel LLM tente une réparation complète du diff.
-7. Si `dryRun=false`, le patch est appliqué en sandbox puis les tests et scans sont exécutés.
+7. Si `dryRun=false`, le patch est appliqué en sandbox, les tests Maven passent par Nexus, SonarQube analyse la qualité, puis les scans sont exécutés.
 8. Le `Tester` et le `Reviewer` complètent l'analyse à partir des preuves déterministes.
 9. La tâche passe en `WAITING_APPROVAL`.
 10. Après `POST /api/tasks/{id}/approve`, l'orchestrateur crée une branche `ai-factory/<taskId>`, committe, pousse et ouvre une PR Gitea.
@@ -41,8 +41,7 @@ La stack actuelle contient :
 - Docker Desktop ou Docker Engine avec Compose v2
 - `make`, `curl`, `git`
 - `jq` recommandé pour les appels API
-- environ 16 Go de RAM pour le profil core
-- environ 24 Go ou plus pour `full` avec LLM local
+- environ 24 Go de RAM ou plus pour la stack complète avec LLM local
 
 ## Démarrage rapide
 
@@ -60,7 +59,7 @@ URLs principales :
 - Orchestrateur : `http://localhost:8088`
 - Ollama : `http://localhost:11434`
 
-Le bootstrap crée le compte Gitea de démonstration `aiadmin` et le dépôt `customer-api`, puis pousse le contenu de `sample-repo/`.
+Le bootstrap crée le compte Gitea de démonstration `aiadmin` et le dépôt `customer-api`, pousse le contenu de `sample-repo/`, puis génère les jetons Gitea et SonarQube manquants dans `.env`.
 
 ## Utilisation
 
@@ -127,6 +126,7 @@ Les statuts réellement utilisés sont :
 - `GENERATING_PATCH`
 - `APPLYING_PATCH`
 - `TESTING`
+- `QUALITY_SCANNING`
 - `SECURITY_SCANNING`
 - `REVIEWING`
 - `WAITING_APPROVAL`
@@ -177,20 +177,16 @@ curl -s -X POST http://localhost:8088/api/tasks \
   }'
 ```
 
-## Profil complet
+## Qualité et observabilité
 
-```bash
-make full
-```
-
-Services ajoutés :
+`make up` démarre aussi :
 
 - SonarQube : `http://localhost:9000`
 - Nexus : `http://localhost:8081`
 - Prometheus : `http://localhost:9090`
 - Grafana : `http://localhost:3001`
 
-Important : SonarQube et Nexus sont présents dans la stack mais ne sont pas encore branchés automatiquement dans le pipeline d'exécution.
+Nexus est le miroir Maven utilisé par les builds Maven du sandbox. SonarQube analyse les dépôts Maven en exécution complète lorsque `SONAR_TOKEN` est renseigné. `make bootstrap` génère ce jeton automatiquement s’il manque, à partir de `SONAR_ADMIN_LOGIN` et `SONAR_ADMIN_PASSWORD`, puis recrée l’orchestrateur. Sans jeton, l’étape de qualité est explicitement ignorée ; les autres contrôles restent exécutés.
 
 ## Commandes utiles
 

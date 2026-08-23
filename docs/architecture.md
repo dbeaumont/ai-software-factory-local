@@ -24,19 +24,17 @@ flowchart TB
   GITEA --> ORCH
   ORCH --> CTX[Repository Context Service]
   ORCH --> SANDBOX[Sandbox Docker éphémère]
+  SANDBOX -->|Maven mirror| NEXUS[Nexus]
   SANDBOX --> TESTS[Build et tests]
+  SANDBOX --> SONAR[SonarQube]
   SANDBOX --> SEC[Syft et Trivy]
   ORCH --> APPROVAL{Approbation humaine}
   APPROVAL -->|approve| PR[Branche, commit, push, PR]
   PROM[Prometheus] --> ORCH
   GRAF[Grafana] --> PROM
-  SONAR[SonarQube] -. profil full .-> ORCH
-  NEXUS[Nexus] -. profil full .-> SANDBOX
 ```
 
 ## Services Docker Compose
-
-### Socle core
 
 | Service | Rôle |
 |---|---|
@@ -47,15 +45,11 @@ flowchart TB
 | `orchestrator` | moteur principal du workflow |
 | `factory-web` | interface utilisateur |
 
-### Profil `full`
-
-| Service | Rôle |
-|---|---|
 | `sonar-db` | base PostgreSQL de SonarQube |
-| `sonarqube` | analyse qualité additionnelle |
-| `nexus` | dépôt/proxy d'artefacts |
+| `sonarqube` | analyse qualité des dépôts Maven avec `SONAR_TOKEN` |
+| `nexus` | miroir Maven `maven-public` pour les builds du sandbox |
 | `prometheus` | collecte de métriques |
-| `grafana` | visualisation |
+| `grafana` | visualisation HTTP et métriques métier des tâches |
 
 ## Flux réel d'une tâche
 
@@ -84,9 +78,10 @@ sequenceDiagram
   end
   alt dryRun=false
     O->>S: git apply + git diff --check
-    O->>S: build / tests
+    O->>S: build / tests Maven via Nexus
     O->>L: Tester(requirement + patch + logs)
     L-->>O: synthèse test
+    O->>S: analyse SonarQube (Maven + SONAR_TOKEN)
     O->>S: Syft + Trivy
   else dryRun=true
     O->>L: Tester(requirement + patch + "not executed")
@@ -137,8 +132,8 @@ En `dryRun=false` :
 - application du patch ;
 - contrôle `git diff --check` ;
 - lancement automatique des tests selon le dépôt :
-  - `./mvnw -B test`
-  - `mvn -B test`
+  - `./mvnw -B -s /opt/ai-factory/maven-settings.xml test`
+  - `mvn -B -s /opt/ai-factory/maven-settings.xml test`
   - `./gradlew test`
   - `npm test -- --runInBand`
 
@@ -148,7 +143,13 @@ En `dryRun=true` :
 - aucun test ni scan n'est exécuté ;
 - le `Tester` reçoit explicitement le fait que l'exécution déterministe a été ignorée.
 
-### 6. SBOM et sécurité
+### 6. Qualité SonarQube
+
+En exécution complète, un dépôt Maven est analysé par le plugin Maven SonarQube. L'analyse utilise `SONAR_TOKEN` et l'URL interne `http://sonarqube:9000`. Sans jeton, l'étape est marquée comme ignorée et le pipeline poursuit son exécution. Les dépôts Gradle et npm ne sont pas encore couverts par cette intégration.
+
+Le journal de l'analyse est écrit dans `.ai-factory/sonar.txt`.
+
+### 7. SBOM et sécurité
 
 En exécution complète :
 
@@ -160,9 +161,10 @@ Les artefacts utiles restent dans le workspace :
 - `.ai-factory/sbom.cdx.json`
 - `.ai-factory/trivy.txt`
 - `.ai-factory/test.txt`
+- `.ai-factory/sonar.txt` si une analyse est exécutée
 - `.ai-review.md`
 
-### 7. Revue et livraison
+### 8. Revue et livraison
 
 - le `Reviewer` reçoit requirement, plan, patch, synthèse de test et synthèse sécurité ;
 - la tâche passe en `WAITING_APPROVAL` ;
@@ -200,6 +202,7 @@ Retourne l'état complet de la tâche, dont :
 - `plan`
 - `patch`
 - `testSummary`
+- `qualitySummary`
 - `securitySummary`
 - `review`
 - `pullRequestUrl`
@@ -233,7 +236,7 @@ Expose les capacités de l'usine visibles par l'interface, actuellement :
 - les tâches ne sont pas stockées en base ;
 - un redémarrage de l'orchestrateur vide l'historique en mémoire ;
 - les workspaces sur disque restent dans le volume Docker tant qu'il n'est pas détruit ;
-- Gitea, Ollama et les services du profil `full` ont chacun leur propre volume Docker.
+- Gitea, Ollama, SonarQube, Nexus et Grafana ont chacun leur propre volume Docker.
 
 ## Écarts avec une cible industrielle
 

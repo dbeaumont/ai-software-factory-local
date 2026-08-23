@@ -23,7 +23,7 @@ Le comportement actuel est le suivant :
 - un `Developer` génère un `unified diff` ;
 - le diff est validé puis éventuellement réparé par un prompt dédié ;
 - en exécution complète, le patch est appliqué en sandbox ;
-- les tests, le SBOM et le scan Trivy sont exécutés ;
+- les tests Maven utilisent Nexus, SonarQube analyse les dépôts Maven, puis le SBOM et le scan Trivy sont exécutés ;
 - un `Tester` et un `Reviewer` synthétisent les preuves ;
 - la tâche attend une approbation humaine ;
 - après approbation, une branche, un commit, un push et une PR Gitea sont créés.
@@ -40,8 +40,12 @@ flowchart TB
     LLM -->|CLOUD| OPENAI[OpenAI]
     ORCH --> CTX[Repository Context Service]
     ORCH --> SB[Docker Sandbox]
+    SB --> NEXUS[Nexus Maven mirror]
     SB --> BUILD[Build et tests]
+    SB --> SONAR[SonarQube]
     SB --> SEC[Syft et Trivy]
+    ORCH --> PROM[Prometheus]
+    PROM --> GRAF[Grafana]
     BUILD --> REVIEW[Reviewer]
     SEC --> REVIEW
     REVIEW --> HUMAN{Approbation humaine}
@@ -59,7 +63,8 @@ flowchart TB
 | `agents/` | définition logique des agents |
 | `prompts/` | prompts Planner, Developer, Tester, Reviewer, Patch Repair |
 | `sample-repo/` | dépôt de démonstration poussé dans Gitea |
-| `scripts/bootstrap-gitea.sh` | initialisation Gitea + dépôt demo + token |
+| `scripts/bootstrap-gitea.sh` | initialisation Gitea, dépôt demo et jeton Gitea |
+| `scripts/bootstrap-sonar.sh` | attente de SonarQube et génération du jeton d'analyse |
 | `scripts/demo.sh` | soumission d'une tâche de démonstration |
 | `observability/` | Prometheus et Grafana |
 | `docs/` | documentation du prototype |
@@ -73,7 +78,7 @@ flowchart TB
 - `jq` recommandé ;
 - ressources mémoire suffisantes pour la stack locale.
 
-### Démarrage minimal
+### Démarrage
 
 ```bash
 make init
@@ -82,20 +87,7 @@ make model
 make bootstrap
 ```
 
-### Démarrage avec services additionnels
-
-```bash
-make full
-```
-
-Cela démarre aussi :
-
-- SonarQube ;
-- Nexus ;
-- Prometheus ;
-- Grafana.
-
-À ce stade, SonarQube et Nexus sont présents dans la stack mais pas encore intégrés automatiquement au pipeline.
+`make up` démarre tous les services, y compris SonarQube, Nexus, Prometheus et Grafana. Il n'existe plus de profil `full`. `make bootstrap` appelle `bootstrap-gitea.sh` puis `bootstrap-sonar.sh`, génère les jetons absents dans `.env`, puis recrée l'orchestrateur.
 
 ## 6. Variables de configuration importantes
 
@@ -115,6 +107,9 @@ GITEA_ADMIN_USER=aiadmin
 GITEA_ADMIN_PASSWORD=ChangeMe123!
 GITEA_ADMIN_EMAIL=aiadmin@example.local
 GITEA_TOKEN=
+SONAR_TOKEN=
+SONAR_ADMIN_LOGIN=admin
+SONAR_ADMIN_PASSWORD=admin
 ```
 
 Variables d'orchestration injectées dans le conteneur :
@@ -130,6 +125,8 @@ Variables d'orchestration injectées dans le conteneur :
 - `AI_FACTORY_GITEA_PUBLIC_BASE_URL`
 - `AI_FACTORY_GITEA_TOKEN`
 - `AI_FACTORY_GITEA_USER`
+- `AI_FACTORY_SONARQUBE_URL`
+- `AI_FACTORY_SONAR_TOKEN`
 
 ## 7. Modèle d'exécution LLM
 
@@ -304,6 +301,7 @@ Dans le workspace de tâche, on retrouve typiquement :
 - `changes.invalid.patch` en cas de première tentative invalide
 - `.ai-review.md`
 - `.ai-factory/test.txt`
+- `.ai-factory/sonar.txt` si l'analyse SonarQube est exécutée
 - `.ai-factory/trivy.txt`
 - `.ai-factory/sbom.cdx.json`
 
@@ -318,7 +316,7 @@ L'orchestrateur expose Actuator sur :
 - `/actuator/metrics`
 - `/actuator/prometheus`
 
-Prometheus et Grafana sont disponibles via le profil `full`.
+Prometheus collecte les métriques HTTP et les compteurs `ai_factory_tasks_submitted_total`, `ai_factory_tasks_completed_total` et `ai_factory_tasks_failed_total`. Grafana charge automatiquement le tableau de bord correspondant.
 
 ## 12. Ce que le prototype prouve
 
@@ -339,7 +337,7 @@ Le POC démontre déjà :
 - sandbox réellement durcie ;
 - contrôle fin des accès réseau ;
 - stockage et audit centralisés ;
-- intégration native de SonarQube et Nexus au pipeline ;
+- analyse SonarQube des dépôts Gradle et npm ;
 - planification distribuée ou scalabilité horizontale.
 
 ## 14. Suite logique d'industrialisation

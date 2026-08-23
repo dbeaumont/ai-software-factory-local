@@ -16,5 +16,7 @@ public record AiFactoryProperties(
         String giteaPublicBaseUrl,
         String giteaToken,
         String giteaUser,
+        String sonarqubeUrl,
+        String sonarToken,
         String promptRoot) {
 }

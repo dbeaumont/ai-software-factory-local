@@ -2,17 +2,23 @@ package com.example.aifactory.service;
 
 import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.*;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.*;
 import java.time.Duration;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class TaskService {
+    private static final Pattern PATCH_FILE = Pattern.compile("^\\+\\+\\+ b/(.+)$", Pattern.MULTILINE);
     private final Map<String, TaskState> tasks = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
     private final AiFactoryProperties props;
@@ -22,9 +28,13 @@ public class TaskService {
     private final LlmGatewayClient llm;
     private final SandboxService sandbox;
     private final GiteaService gitea;
+    private final Counter submittedTasks;
+    private final Counter completedTasks;
+    private final Counter failedTasks;
 
     public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextService contextService,
-                       PromptService prompts, LlmGatewayClient llm, SandboxService sandbox, GiteaService gitea) {
+                       PromptService prompts, LlmGatewayClient llm, SandboxService sandbox, GiteaService gitea,
+                       MeterRegistry metrics) {
         this.props = props;
         this.runner = runner;
         this.contextService = contextService;
@@ -32,6 +42,9 @@ public class TaskService {
         this.llm = llm;
         this.sandbox = sandbox;
         this.gitea = gitea;
+        this.submittedTasks = Counter.builder("ai_factory_tasks_submitted").description("Tasks submitted to the factory").register(metrics);
+        this.completedTasks = Counter.builder("ai_factory_tasks_completed").description("Tasks that completed validation").register(metrics);
+        this.failedTasks = Counter.builder("ai_factory_tasks_failed").description("Tasks that failed before approval").register(metrics);
     }
 
     public TaskView create(TaskRequest request) {
@@ -43,6 +56,7 @@ public class TaskService {
         String id = UUID.randomUUID().toString().substring(0, 8);
         TaskState state = new TaskState(id, request);
         tasks.put(id, state);
+        submittedTasks.increment();
         executor.submit(() -> runPipeline(state));
         return state.view();
     }
@@ -109,6 +123,9 @@ public class TaskService {
                 Files.createDirectories(ws.resolve(".ai-factory"));
                 Files.writeString(ws.resolve(".ai-factory/test.txt"), s.testSummary);
 
+                s.transition(TaskStatus.QUALITY_SCANNING, "Running SonarQube quality analysis");
+                s.qualitySummary = tail(sandbox.quality(ws), 12000);
+
                 s.transition(TaskStatus.SECURITY_SCANNING, "Generating SBOM and running Trivy");
                 s.securitySummary = tail(sandbox.security(ws), 12000);
             } else {
@@ -117,6 +134,8 @@ public class TaskService {
                         "REQUIREMENT:\n" + s.request.requirement() + "\n\nPATCH:\n" + s.patch +
                                 "\n\nDETERMINISTIC TEST EVIDENCE:\nNot executed because dryRun=true");
                 s.testSummary = "Deterministic execution skipped because dryRun=true.\n\n--- AI TESTER REVIEW ---\n" + testerReview;
+                s.transition(TaskStatus.QUALITY_SCANNING, "Dry-run: SonarQube analysis skipped");
+                s.qualitySummary = "Skipped because dryRun=true";
                 s.transition(TaskStatus.SECURITY_SCANNING, "Dry-run: security scans skipped");
                 s.securitySummary = "Skipped because dryRun=true";
             }
@@ -124,11 +143,14 @@ public class TaskService {
             s.transition(TaskStatus.REVIEWING, "Reviewer agent assessing plan, patch and deterministic evidence");
             s.review = llm.chat(s.request.effectiveLlmMode(), prompts.load("reviewer"),
                     "REQUIREMENT:\n" + s.request.requirement() + "\n\nPLAN:\n" + s.plan + "\n\nPATCH:\n" + s.patch +
-                            "\n\nTEST EVIDENCE:\n" + s.testSummary + "\n\nSECURITY EVIDENCE:\n" + s.securitySummary);
+                            "\n\nTEST EVIDENCE:\n" + s.testSummary + "\n\nQUALITY EVIDENCE:\n" + s.qualitySummary +
+                            "\n\nSECURITY EVIDENCE:\n" + s.securitySummary);
             Files.writeString(ws.resolve(".ai-review.md"), s.review);
 
             s.transition(TaskStatus.WAITING_APPROVAL, "Pipeline complete. Human approval required before commit/push/PR.");
+            completedTasks.increment();
         } catch (Exception e) {
+            failedTasks.increment();
             s.fail(e);
         }
     }
@@ -144,6 +166,7 @@ public class TaskService {
             Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
             String repaired = llm.chat(state.request.effectiveLlmMode(), prompts.load("patch-repair"),
                     "REQUIREMENT:\n" + state.request.requirement() + "\n\nPLAN:\n" + state.plan +
+                            "\n\nCURRENT FILE CONTENTS (authoritative):\n" + affectedFileContext(workspace, patch) +
                             "\n\nINVALID PATCH:\n" + patch + "\n\nGIT APPLY ERROR:\n" + validationFailure.getMessage());
             patch = UnifiedDiffNormalizer.normalize(stripFence(repaired));
             Files.writeString(workspace.resolve("changes.patch"), patch);
@@ -163,6 +186,23 @@ public class TaskService {
         int diffStart = out.indexOf("diff --git ");
         if (diffStart > 0) out = out.substring(diffStart);
         return out.strip();
+    }
+
+    private static String affectedFileContext(Path workspace, String patch) throws Exception {
+        LinkedHashSet<String> files = new LinkedHashSet<>();
+        Matcher matcher = PATCH_FILE.matcher(patch);
+        while (matcher.find()) files.add(matcher.group(1));
+
+        StringBuilder context = new StringBuilder();
+        for (String file : files) {
+            Path path = workspace.resolve(file).normalize();
+            if (!path.startsWith(workspace) || !Files.isRegularFile(path)) continue;
+            String content = Files.readString(path);
+            if (content.length() > 12_000) content = content.substring(0, 12_000) + "\n...[truncated]";
+            context.append("\n--- FILE: ").append(file).append(" ---\n").append(content).append('\n');
+            if (context.length() >= 40_000) break;
+        }
+        return context.isEmpty() ? "No patched files could be read from the workspace." : context.toString();
     }
 
     private static String tail(String s, int max) {

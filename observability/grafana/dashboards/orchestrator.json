@@ -7,6 +7,12 @@
       "title": "HTTP requests",
       "targets": [{"expr": "rate(http_server_requests_seconds_count[5m])", "legendFormat": "{{method}} {{uri}}"}],
       "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0}
+    },
+    {
+      "type": "stat",
+      "title": "Factory tasks",
+      "targets": [{"expr": "sum(ai_factory_tasks_submitted_total)", "legendFormat": "submitted"}, {"expr": "sum(ai_factory_tasks_completed_total)", "legendFormat": "validated"}, {"expr": "sum(ai_factory_tasks_failed_total)", "legendFormat": "failed"}],
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
     }
   ]
 }
