@@ -51,6 +51,29 @@ flowchart TB
 | `prometheus` | collecte de métriques |
 | `grafana` | visualisation HTTP et métriques métier des tâches |
 
+## Architecture de containers
+
+Tous les services sont reliés au réseau Docker `ai-factory-local`. Les flèches pleines représentent les dépendances déclarées dans `docker-compose.yml` ; les flèches pointillées représentent des appels réseau effectués à l'exécution.
+
+```mermaid
+flowchart TB
+  WEB[factory-web] -->|depends_on| ORCH[orchestrator]
+
+  ORCH -->|depends_on| GITEA[gitea]
+  GITEA -->|depends_on: healthy| GITEA_DB[(gitea-db<br/>PostgreSQL)]
+  ORCH -->|depends_on| LITELLM[litellm]
+  LITELLM -->|depends_on: healthy| OLLAMA[ollama]
+  ORCH -->|depends_on: healthy| NEXUS[nexus]
+
+  SONAR[sonarqube] -->|depends_on| SONAR_DB[(sonar-db<br/>PostgreSQL)]
+  GRAFANA[grafana] -->|depends_on| PROM[prometheus]
+
+  ORCH -.->|analyse de qualite| SONAR
+  PROM -.->|scrape des metriques| ORCH
+```
+
+Le sandbox n'est pas un service permanent de Compose : l'orchestrateur crée un conteneur `ai-factory-sandbox` à la demande via le socket Docker. Ce conteneur temporaire utilise Nexus comme miroir Maven et contacte SonarQube uniquement lors d'une exécution complete (`dryRun=false`).
+
 ## Flux réel d'une tâche
 
 ```mermaid
