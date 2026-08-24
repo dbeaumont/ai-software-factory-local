@@ -54,6 +54,14 @@ Deux profils réseau existent :
 - l'orchestrateur ne reçoit pas directement la clé OpenAI ;
 - la clé est injectée dans LiteLLM seulement.
 
+### Point d'entrée HTTP du front
+
+- `reverse-proxy` est le point d'entrée web du front sur `WEB_APP_PORT` ;
+- il sert `factory-web` sur `/` et relaie uniquement le préfixe `/api/` vers l'orchestrateur ;
+- le front appelle l'API par une URL relative, ce qui évite d'exposer au navigateur l'adresse interne du conteneur `orchestrator`.
+
+Le port de l'orchestrateur reste publié pour les appels API et diagnostics locaux du POC. Cette exposition devrait être supprimée ou restreinte dans une cible de production, afin que le reverse proxy devienne l'unique point d'entrée HTTP.
+
 ## Risques et limites actuels
 
 ### 1. `docker.sock` monté dans l'orchestrateur

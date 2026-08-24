@@ -15,9 +15,10 @@ L'architecture n'est pas une plateforme d'entreprise complète. Elle reproduit s
 
 ```mermaid
 flowchart TB
-  USER[Utilisateur] --> WEB[Factory Web]
   USER --> GITEA[Gitea]
-  WEB --> ORCH[Orchestrateur Spring Boot]
+  USER --> PROXY[Reverse proxy Nginx]
+  PROXY -->|/| WEB
+  PROXY -->|/api/| ORCH[Orchestrateur Spring Boot]
   ORCH --> LLM[LiteLLM]
   LLM -->|LOCAL| OLLAMA[Ollama]
   LLM -->|CLOUD| OPENAI[OpenAI]
@@ -43,7 +44,8 @@ flowchart TB
 | `ollama` | exécution locale du modèle |
 | `litellm` | alias de modèles et routage local/cloud |
 | `orchestrator` | moteur principal du workflow |
-| `factory-web` | interface utilisateur |
+| `factory-web` | interface utilisateur statique, servie derrière le reverse proxy |
+| `reverse-proxy` | point d'entrée HTTP : `/` vers `factory-web`, `/api/` vers `orchestrator` |
 
 | `sonar-db` | base PostgreSQL de SonarQube |
 | `sonarqube` | analyse qualité des dépôts Maven avec `SONAR_TOKEN` |
@@ -57,7 +59,8 @@ Tous les services sont reliés au réseau Docker `ai-factory-local`. Les flèche
 
 ```mermaid
 flowchart TB
-  WEB[factory-web] -->|depends_on| ORCH[orchestrator]
+  PROXY[reverse-proxy] -->|depends_on| WEB[factory-web]
+  PROXY -->|depends_on| ORCH[orchestrator]
 
   ORCH -->|depends_on| GITEA[gitea]
   GITEA -->|depends_on: healthy| GITEA_DB[(gitea-db<br/>PostgreSQL)]
@@ -68,6 +71,8 @@ flowchart TB
   SONAR[sonarqube] -->|depends_on| SONAR_DB[(sonar-db<br/>PostgreSQL)]
   GRAFANA[grafana] -->|depends_on| PROM[prometheus]
 
+  PROXY -.->|/api/| ORCH
+  PROXY -.->|/| WEB
   ORCH -.->|analyse de qualite| SONAR
   PROM -.->|scrape des metriques| ORCH
 ```
@@ -79,14 +84,17 @@ Le sandbox n'est pas un service permanent de Compose : l'orchestrateur crée un 
 ```mermaid
 sequenceDiagram
   actor U as Utilisateur
-  participant W as Factory Web / API
+  participant P as Reverse proxy
+  participant W as Factory Web
   participant O as Orchestrateur
   participant G as Gitea
   participant L as LiteLLM
   participant S as Sandbox Docker
 
-  U->>W: Ticket
-  W->>O: POST /api/tasks
+  U->>P: Ouvre l'interface
+  P->>W: GET /
+  U->>P: POST /api/tasks
+  P->>O: POST /api/tasks
   O->>G: git clone --depth 1 --branch <baseBranch>
   O->>O: collecte du contexte dépôt
   O->>L: Planner(requirement + contexte)

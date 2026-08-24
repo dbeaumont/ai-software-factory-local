@@ -17,7 +17,7 @@ Le prototype ne cherche pas encore à résoudre la gouvernance complète d'une p
 
 Le comportement actuel est le suivant :
 
-- le ticket est saisi depuis `factory-web` ou l'API ;
+- le ticket est saisi via le reverse proxy, qui sert `factory-web` et relaie l'API vers l'orchestrateur ;
 - l'orchestrateur clone le dépôt cible ;
 - un `Planner` génère un plan ;
 - un `Developer` génère un `unified diff` ;
@@ -32,9 +32,10 @@ Le comportement actuel est le suivant :
 
 ```mermaid
 flowchart TB
-    USER[Utilisateur] --> WEB[Factory Web]
+    USER[Utilisateur] --> PROXY[Reverse proxy Nginx]
+    PROXY -->|/| WEB[Factory Web]
+    PROXY -->|/api/| ORCH[Spring Boot Orchestrator]
     USER --> GIT[Gitea]
-    WEB --> ORCH[Spring Boot Orchestrator]
     ORCH --> LLM[LiteLLM]
     LLM -->|LOCAL| OLLAMA[Ollama]
     LLM -->|CLOUD| OPENAI[OpenAI]
@@ -57,6 +58,7 @@ flowchart TB
 | Répertoire ou service | Rôle |
 |---|---|
 | `web/` | interface ticket et suivi d'exécution |
+| `reverse-proxy/` | point d'entrée Nginx : sert le front via `/` et relaie `/api/` vers l'orchestrateur |
 | `orchestrator/` | API, orchestration, appels LLM, sandbox, PR |
 | `litellm/` | config LiteLLM et point d'entrée |
 | `sandbox/` | image d'exécution des patches, tests et scans |
@@ -87,7 +89,7 @@ make model
 make bootstrap
 ```
 
-`make up` démarre tous les services, y compris SonarQube, Nexus, Prometheus et Grafana. Il n'existe plus de profil `full`. `make bootstrap` appelle `bootstrap-gitea.sh` puis `bootstrap-sonar.sh`, génère les jetons absents dans `.env`, puis recrée l'orchestrateur.
+`make up` démarre tous les services, dont le reverse proxy, SonarQube, Nexus, Prometheus et Grafana. Le point d'entrée web et API est `http://localhost:${WEB_APP_PORT:-8080}` : `/` est servi par `factory-web` et `/api/` est relayé vers l'orchestrateur. Il n'existe plus de profil `full`. `make bootstrap` appelle `bootstrap-gitea.sh` puis `bootstrap-sonar.sh`, génère les jetons absents dans `.env`, puis recrée l'orchestrateur.
 
 ## 6. Variables de configuration importantes
 
@@ -264,7 +266,7 @@ Une approbation valide déclenche :
 
 ## 9. Interface utilisateur actuelle
 
-L'interface `factory-web` propose deux vues :
+L'interface `factory-web`, servie derrière le reverse proxy, propose deux vues. Les appels navigateur vers `/api/` sont transmis à l'orchestrateur par ce proxy :
 
 - `Ticket`
 - `Executions`

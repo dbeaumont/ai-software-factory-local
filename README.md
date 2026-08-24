@@ -10,7 +10,8 @@ La stack actuelle contient :
 
 | Fonction | Composant |
 |---|---|
-| Interface de saisie | `factory-web` |
+| Point d'entrée HTTP | `reverse-proxy` Nginx |
+| Interface de saisie | `factory-web`, servi par le reverse proxy |
 | Orchestration | Spring Boot 3.5 / Java 21 |
 | Passerelle LLM | LiteLLM |
 | Modèle local | Ollama |
@@ -54,9 +55,9 @@ make bootstrap
 
 URLs principales :
 
-- Factory Web : `http://localhost:8080`
+- Factory Web et API publique : `http://localhost:8080`
 - Gitea : `http://localhost:3000`
-- Orchestrateur : `http://localhost:8088`
+- Orchestrateur direct (diagnostic) : `http://localhost:8088`
 - Ollama : `http://localhost:11434`
 
 Le bootstrap crée le compte Gitea de démonstration `aiadmin` et le dépôt `customer-api`, pousse le contenu de `sample-repo/`, puis génère les jetons Gitea et SonarQube manquants dans `.env`.
@@ -65,7 +66,9 @@ Le bootstrap crée le compte Gitea de démonstration `aiadmin` et le dépôt `cu
 
 ### Depuis l'interface web
 
-L'interface `factory-web` permet de :
+L'interface `factory-web` est servie par le reverse proxy. Les requêtes du navigateur vers `/api/` sont relayées vers l'orchestrateur ; le navigateur n'accède donc pas directement au port de l'orchestrateur.
+
+L'interface permet de :
 
 - rédiger un ticket structuré ;
 - choisir le mode `LOCAL` ou `CLOUD` ;
@@ -81,7 +84,7 @@ Par défaut, une tâche est soumise en `dryRun=true`.
 Créer une tâche :
 
 ```bash
-curl -s -X POST http://localhost:8088/api/tasks \
+curl -s -X POST http://localhost:8080/api/tasks \
   -H 'Content-Type: application/json' \
   -d '{
     "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
@@ -95,25 +98,25 @@ curl -s -X POST http://localhost:8088/api/tasks \
 Lire une tâche :
 
 ```bash
-curl -s http://localhost:8088/api/tasks/<TASK_ID>
+curl -s http://localhost:8080/api/tasks/<TASK_ID>
 ```
 
 Lister les tâches :
 
 ```bash
-curl -s http://localhost:8088/api/tasks
+curl -s http://localhost:8080/api/tasks
 ```
 
 Approuver une tâche :
 
 ```bash
-curl -s -X POST http://localhost:8088/api/tasks/<TASK_ID>/approve
+curl -s -X POST http://localhost:8080/api/tasks/<TASK_ID>/approve
 ```
 
 Capacités exposées :
 
 ```bash
-curl -s http://localhost:8088/api/capabilities
+curl -s http://localhost:8080/api/capabilities
 ```
 
 ## États de tâche
@@ -166,7 +169,7 @@ make demo
 Exécuter le flux complet avec patch appliqué, tests et scans :
 
 ```bash
-curl -s -X POST http://localhost:8088/api/tasks \
+curl -s -X POST http://localhost:8080/api/tasks \
   -H 'Content-Type: application/json' \
   -d '{
     "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",

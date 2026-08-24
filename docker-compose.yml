@@ -106,9 +106,16 @@ services:
   factory-web:
     build:
       context: ./web
+    networks: [factory]
+
+  reverse-proxy:
+    image: nginx:1.27-alpine
     ports:
       - "${WEB_APP_PORT:-8080}:80"
+    volumes:
+      - ./reverse-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
+      - factory-web
       - orchestrator
     networks: [factory]
 
