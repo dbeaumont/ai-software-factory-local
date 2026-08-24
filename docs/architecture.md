@@ -55,11 +55,11 @@ flowchart TB
 
 ## Architecture de containers
 
-Tous les services sont reliés au réseau Docker `ai-factory-local`. Les flèches pleines représentent les dépendances déclarées dans `docker-compose.yml` ; les flèches pointillées représentent des appels réseau effectués à l'exécution.
+Tous les services sont reliés au réseau Docker `ai-factory-local`. Les flèches pleines représentent les dépendances déclarées dans `docker-compose.yml` ; les flèches pointillées représentent des appels réseau effectués à l'exécution. Le reverse proxy démarre avant `factory-web`, même s'il relaie ensuite les requêtes vers ce service.
 
 ```mermaid
 flowchart TB
-  PROXY[reverse-proxy] -->|depends_on| WEB[factory-web]
+  WEB[factory-web] -->|depends_on| PROXY[reverse-proxy]
   PROXY -->|depends_on| ORCH[orchestrator]
 
   ORCH -->|depends_on| GITEA[gitea]

@@ -89,7 +89,7 @@ make model
 make bootstrap
 ```
 
-`make up` démarre tous les services, dont le reverse proxy, SonarQube, Nexus, Prometheus et Grafana. Le point d'entrée web et API est `http://localhost:${WEB_APP_PORT:-8080}` : `/` est servi par `factory-web` et `/api/` est relayé vers l'orchestrateur. Il n'existe plus de profil `full`. `make bootstrap` appelle `bootstrap-gitea.sh` puis `bootstrap-sonar.sh`, génère les jetons absents dans `.env`, puis recrée l'orchestrateur.
+`make up` démarre tous les services, dont le reverse proxy, SonarQube, Nexus, Prometheus et Grafana. Compose démarre `reverse-proxy` après l'orchestrateur, puis `factory-web` après le proxy. Le point d'entrée web et API est `http://localhost:${WEB_APP_PORT:-8080}` : `/` est servi par `factory-web` et `/api/` est relayé vers l'orchestrateur. Il n'existe plus de profil `full`. `make bootstrap` appelle `bootstrap-gitea.sh` puis `bootstrap-sonar.sh`, génère les jetons absents dans `.env`, puis recrée l'orchestrateur.
 
 ## 6. Variables de configuration importantes
 
