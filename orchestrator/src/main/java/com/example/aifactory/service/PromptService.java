@@ -12,14 +12,26 @@ public class PromptService {
     private final Path root;
 
     public PromptService(AiFactoryProperties props) {
-        this.root = Path.of(props.promptRoot());
+        this(Path.of(requirePromptRoot(props.promptRoot())));
+    }
+
+    PromptService(Path root) {
+        this.root = root;
     }
 
     public String load(String name) {
+        Path prompt = root.resolve(name + ".md").toAbsolutePath().normalize();
         try {
-            return Files.readString(root.resolve(name + ".md"));
+            return Files.readString(prompt);
         } catch (IOException e) {
-            throw new IllegalStateException("Cannot load prompt " + name, e);
+            throw new IllegalStateException("Cannot load prompt " + name + " from " + prompt, e);
         }
+    }
+
+    private static String requirePromptRoot(String promptRoot) {
+        if (promptRoot == null || promptRoot.isBlank()) {
+            throw new IllegalStateException("AI_FACTORY_PROMPT_ROOT must be configured");
+        }
+        return promptRoot;
     }
 }
