@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1060" viewBox="0 0 1900 1060" role="img" aria-labelledby="title desc">
   <title id="title">Flux de l'AI Software Factory</title>
   <desc id="desc">Diagramme du flux de l'usine logicielle, avec les responsabilites manuelles et celles de l'orchestrateur.</desc>
   <defs>
@@ -30,15 +30,18 @@
       .arrow-label { font: 600 12px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #7a5b16; }
       .note { font: 500 13px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #5e6c84; }
       .badge { font: 700 11px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: .55px; }
+      .service-name { font: 700 14px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #172b4d; }
+      .service-desc { font: 500 11px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #5e6c84; }
+      .service-legend { font: 600 10px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #5e6c84; }
     </style>
   </defs>
 
-  <rect width="1600" height="1060" fill="url(#canvas)"/>
-  <circle cx="1490" cy="106" r="170" fill="#dbeafe" opacity=".42"/>
+  <rect width="1900" height="1060" fill="url(#canvas)"/>
+  <circle cx="1790" cy="106" r="170" fill="#dbeafe" opacity=".42"/>
   <circle cx="120" cy="980" r="200" fill="#d1fae5" opacity=".34"/>
 
-  <text x="800" y="64" text-anchor="middle" class="title">AI Software Factory</text>
-  <text x="800" y="94" text-anchor="middle" class="subtitle">Du besoin a la pull request, avec des controles techniques et une decision humaine</text>
+  <text x="950" y="64" text-anchor="middle" class="title">AI Software Factory</text>
+  <text x="950" y="94" text-anchor="middle" class="subtitle">Du besoin a la pull request, avec des controles techniques et une decision humaine</text>
 
   <!-- Manual input zone -->
   <rect x="126" y="130" width="1348" height="150" rx="20" fill="#eef4ff" stroke="#93b9f5" stroke-width="1.5"/>
@@ -65,16 +68,14 @@
   <text x="352" y="392" class="zone-sub">Les etapes s'executent en sequence. Les preuves techniques alimentent la revue.</text>
 
   <!-- flow lines behind cards -->
-  <path d="M314 516 H355" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M594 516 H635" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M874 516 H915" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M314 516 H434" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M594 516 H714" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M874 516 H994" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M1154 516 H1195" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M1314 594 V654 H1184" fill="none" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M1314 594 V715 H1184" fill="none" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M1015 714 H974" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M735 714 H694" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M455 714 H414" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M234 654 V594 H274" fill="none" stroke="#b7791f" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
-  <text x="128" y="638" class="arrow-label">diff invalide</text>
 
   <!-- 1 Context -->
   <g filter="url(#shadow)">
@@ -128,7 +129,8 @@
   <g filter="url(#shadow)"><rect x="734" y="654" width="240" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
   <rect x="754" y="674" width="37" height="24" rx="6" fill="#fff4de"/><text x="772.5" y="691" text-anchor="middle" class="card-num" fill="#974f0c">07</text>
   <text x="754" y="728" class="card-title">Tests et qualite</text>
-  <text x="754" y="752" class="card-tool">Maven / Gradle / npm  •  Nexus  •  SonarQube</text>
+  <text x="754" y="752" class="card-tool">Maven / Gradle / npm</text>
+  <text x="754" y="770" class="card-tool">Nexus  •  SonarQube</text>
 
   <!-- 8 Security -->
   <g filter="url(#shadow)"><rect x="454" y="654" width="240" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
@@ -157,4 +159,42 @@
   <text x="1057" y="919" class="card-title">Approuver la tache</text>
   <text x="1057" y="942" class="card-tool">POST /api/tasks/{id}/approve</text>
   <text x="1057" y="965" class="card-tool">Git : branche, commit, push  •  Gitea : pull request</text>
+
+  <!-- Service catalog -->
+  <rect x="1555" y="130" width="270" height="877" rx="20" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="1577" y="152" width="226" height="29" rx="14.5" fill="#334155"/>
+  <text x="1690" y="172" text-anchor="middle" class="badge" fill="#fff">SERVICES UTILISES</text>
+  <circle cx="1582" cy="207" r="5" fill="#0c66e4"/><text x="1593" y="211" class="service-legend">Conteneur</text>
+  <circle cx="1694" cy="207" r="5" fill="#b7791f"/><text x="1705" y="211" class="service-legend">Outil</text>
+  <circle cx="1582" cy="225" r="5" fill="#f5a623"/><text x="1593" y="229" class="service-legend">API externe</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="250" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="270" r="7" fill="#0c66e4"/><text x="1617" y="274" class="service-name">Gitea</text><text x="1617" y="291" class="service-desc">Depot, branches et pull requests</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="308" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="328" r="7" fill="#0c66e4"/><text x="1617" y="332" class="service-name">LiteLLM</text><text x="1617" y="349" class="service-desc">Routage des appels aux modeles</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="366" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="386" r="7" fill="#0c66e4"/><text x="1617" y="390" class="service-name">Ollama</text><text x="1617" y="407" class="service-desc">Execution des modeles locaux</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="424" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="444" r="7" fill="#b7791f"/><text x="1617" y="448" class="service-name">Syft</text><text x="1617" y="465" class="service-desc">Generation du SBOM CycloneDX</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="482" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="502" r="7" fill="#b7791f"/><text x="1617" y="506" class="service-name">Trivy</text><text x="1617" y="523" class="service-desc">Vulnerabilites et secrets</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="540" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="560" r="7" fill="#0c66e4"/><text x="1617" y="564" class="service-name">Docker Sandbox</text><text x="1617" y="581" class="service-desc">Patch, tests et controles isoles</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="598" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="618" r="7" fill="#0c66e4"/><text x="1617" y="622" class="service-name">Nexus</text><text x="1617" y="639" class="service-desc">Miroir et dependances Maven</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="656" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="676" r="7" fill="#0c66e4"/><text x="1617" y="680" class="service-name">SonarQube</text><text x="1617" y="697" class="service-desc">Analyse qualite des depots Maven</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="714" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="734" r="7" fill="#f5a623"/><text x="1617" y="738" class="service-name">API OpenAI</text><text x="1617" y="755" class="service-desc">Modele cloud a la demande</text>
+
+  <g filter="url(#soft-shadow)"><rect x="1577" y="772" width="226" height="50" rx="12" fill="#fff"/></g>
+  <circle cx="1600" cy="792" r="7" fill="#0c66e4"/><text x="1617" y="796" class="service-name">Prometheus / Grafana</text><text x="1617" y="813" class="service-desc">Metriques et tableaux de bord</text>
 </svg>

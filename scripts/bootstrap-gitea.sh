@@ -9,6 +9,10 @@ REVIEWER_USER="${GITEA_REVIEWER_USER:-reviewer}"
 REVIEWER_PASS="${GITEA_REVIEWER_PASSWORD:-ChangeMe123!}"
 REVIEWER_EMAIL="${GITEA_REVIEWER_EMAIL:-reviewer@example.local}"
 HTTP_PORT="${GITEA_HTTP_PORT:-3000}"
+TOKEN_ONLY=false
+if [ "${1:-}" = "--token-only" ]; then
+  TOKEN_ONLY=true
+fi
 
 set_env() {
   local key="$1"
@@ -32,37 +36,48 @@ PY
 }
 
 until docker compose exec -T --user git gitea gitea admin user list >/dev/null 2>&1; do sleep 2; done
-if ! docker compose exec -T --user git gitea gitea admin user list | grep -q "${USER}"; then
-  docker compose exec -T --user git gitea gitea admin user create --username "$USER" --password "$PASS" --email "$EMAIL" --admin --must-change-password=false
+if [ "$TOKEN_ONLY" = false ]; then
+  if ! docker compose exec -T --user git gitea gitea admin user list | grep -q "${USER}"; then
+    docker compose exec -T --user git gitea gitea admin user create --username "$USER" --password "$PASS" --email "$EMAIL" --admin --must-change-password=false
+  fi
+  if ! docker compose exec -T --user git gitea gitea admin user list | grep -q "${REVIEWER_USER}"; then
+    docker compose exec -T --user git gitea gitea admin user create --username "$REVIEWER_USER" --password "$REVIEWER_PASS" --email "$REVIEWER_EMAIL" --must-change-password=false
+  fi
+
+  if ! curl -fsS -u "$USER:$PASS" "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api" >/dev/null 2>&1; then
+    curl -fsS -u "$USER:$PASS" -H 'Content-Type: application/json' \
+      -d '{"name":"customer-api","private":false,"auto_init":false,"default_branch":"main"}' \
+      "http://localhost:$HTTP_PORT/api/v1/user/repos" >/dev/null
+  fi
+
+  # The PR author cannot approve their own PR, so grant a distinct reviewer write access.
+  curl -fsS -u "$USER:$PASS" -X PUT -H 'Content-Type: application/json' \
+    -d '{"permission":"write"}' \
+    "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api/collaborators/$REVIEWER_USER" >/dev/null
+
+  TMP=$(mktemp -d)
+  cp -R sample-repo/. "$TMP/"
+  (
+    cd "$TMP"
+    git init -b main >/dev/null
+    git add .
+    git -c user.name='Demo' -c user.email='demo@example.local' commit -m 'Initial demo app' >/dev/null
+    git remote add origin "http://$USER:$PASS@localhost:$HTTP_PORT/$USER/customer-api.git"
+    git push -u origin main --force >/dev/null
+  )
+  rm -rf "$TMP"
 fi
-if ! docker compose exec -T --user git gitea gitea admin user list | grep -q "${REVIEWER_USER}"; then
-  docker compose exec -T --user git gitea gitea admin user create --username "$REVIEWER_USER" --password "$REVIEWER_PASS" --email "$REVIEWER_EMAIL" --must-change-password=false
+
+TOKEN_VALID=false
+if [ -n "${GITEA_TOKEN:-}" ] && curl -fsS -H "Authorization: token $GITEA_TOKEN" \
+  "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api" >/dev/null 2>&1; then
+  TOKEN_VALID=true
+  echo "Gitea token already configured and valid."
+elif [ -n "${GITEA_TOKEN:-}" ]; then
+  echo "Existing Gitea token is invalid; generating a replacement."
 fi
 
-if ! curl -fsS -u "$USER:$PASS" "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api" >/dev/null 2>&1; then
-  curl -fsS -u "$USER:$PASS" -H 'Content-Type: application/json' \
-    -d '{"name":"customer-api","private":false,"auto_init":false,"default_branch":"main"}' \
-    "http://localhost:$HTTP_PORT/api/v1/user/repos" >/dev/null
-fi
-
-# The PR author cannot approve their own PR, so grant a distinct reviewer write access.
-curl -fsS -u "$USER:$PASS" -X PUT -H 'Content-Type: application/json' \
-  -d '{"permission":"write"}' \
-  "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api/collaborators/$REVIEWER_USER" >/dev/null
-
-TMP=$(mktemp -d)
-cp -R sample-repo/. "$TMP/"
-(
-  cd "$TMP"
-  git init -b main >/dev/null
-  git add .
-  git -c user.name='Demo' -c user.email='demo@example.local' commit -m 'Initial demo app' >/dev/null
-  git remote add origin "http://$USER:$PASS@localhost:$HTTP_PORT/$USER/customer-api.git"
-  git push -u origin main --force >/dev/null
-)
-rm -rf "$TMP"
-
-if [ -z "${GITEA_TOKEN:-}" ]; then
+if [ "$TOKEN_VALID" = false ]; then
   TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"
   TOKEN=$(docker compose exec -T --user git gitea \
     gitea admin user generate-access-token \
@@ -78,4 +93,6 @@ if [ -z "${GITEA_TOKEN:-}" ]; then
   fi
 fi
 
-echo "Demo repository ready: http://localhost:$HTTP_PORT/$USER/customer-api"
+if [ "$TOKEN_ONLY" = false ]; then
+  echo "Demo repository ready: http://localhost:$HTTP_PORT/$USER/customer-api"
+fi

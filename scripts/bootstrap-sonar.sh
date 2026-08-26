@@ -28,14 +28,17 @@ path.write_text("\n".join(lines) + "\n")
 PY
 }
 
-if [ -n "${SONAR_TOKEN:-}" ]; then
-  echo "SonarQube token already configured."
-  exit 0
-fi
-
 SONAR_URL="http://localhost:$SONAR_PORT"
 echo "Waiting for SonarQube to become ready..."
 until curl -fsS "$SONAR_URL/api/system/status" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'; do sleep 2; done
+
+if [ -n "${SONAR_TOKEN:-}" ]; then
+  if curl -fsS -u "$SONAR_TOKEN:" "$SONAR_URL/api/authentication/validate" 2>/dev/null | grep -Eq '"valid"[[:space:]]*:[[:space:]]*true'; then
+    echo "SonarQube token already configured and valid."
+    exit 0
+  fi
+  echo "Existing SonarQube token is invalid; generating a replacement."
+fi
 
 TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"
 TOKEN_RESPONSE=$(curl -sS -w '\n%{http_code}' -u "$SONAR_LOGIN:$SONAR_PASSWORD" \
