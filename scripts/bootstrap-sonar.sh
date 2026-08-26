@@ -3,9 +3,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && set -a && source .env && set +a
 
-SONAR_PORT="${SONAR_PORT:-9000}"
-SONAR_LOGIN="${SONAR_ADMIN_LOGIN:-admin}"
-SONAR_PASSWORD="${SONAR_ADMIN_PASSWORD:-admin}"
+SONAR_PORT="$SONAR_PORT"
+SONAR_LOGIN="$SONAR_ADMIN_LOGIN"
+SONAR_PASSWORD="$SONAR_ADMIN_PASSWORD"
 
 set_env() {
   local key="$1"
@@ -32,7 +32,7 @@ SONAR_URL="http://localhost:$SONAR_PORT"
 echo "Waiting for SonarQube to become ready..."
 until curl -fsS "$SONAR_URL/api/system/status" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'; do sleep 2; done
 
-if [ -n "${SONAR_TOKEN:-}" ]; then
+if [ -n "$SONAR_TOKEN" ]; then
   if curl -fsS -u "$SONAR_TOKEN:" "$SONAR_URL/api/authentication/validate" 2>/dev/null | grep -Eq '"valid"[[:space:]]*:[[:space:]]*true'; then
     echo "SonarQube token already configured and valid."
     exit 0
@@ -55,6 +55,6 @@ elif [ "$TOKEN_HTTP_STATUS" = "401" ]; then
   echo "The SonarQube volume keeps its password after .env changes. Update .env with the current password, then rerun make bootstrap."
   exit 1
 else
-  echo "Could not auto-generate a SonarQube token (HTTP ${TOKEN_HTTP_STATUS:-unknown})."
+  echo "Could not auto-generate a SonarQube token (HTTP $TOKEN_HTTP_STATUS)."
   exit 1
 fi

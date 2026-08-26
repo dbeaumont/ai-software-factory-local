@@ -156,7 +156,7 @@ const pipelineStages = [
   { name: 'Préparation', jobs: [{ id: 'CLONING', label: 'Clonage du dépôt' }] },
   { name: 'Conception', jobs: [{ id: 'PLANNING', label: 'Planning' }] },
   { name: 'Développement', jobs: [{ id: 'GENERATING_PATCH', label: 'Génération du patch' }, { id: 'APPLYING_PATCH', label: 'Application du patch' }] },
-  { name: 'Validation', jobs: [{ id: 'TESTING', label: 'Build + tests via Nexus' }, { id: 'QUALITY_SCANNING', label: 'Analyse SonarQube' }, { id: 'SECURITY_SCANNING', label: 'Analyse sécurité' }] },
+  { name: 'Validation', jobs: [{ id: 'TESTING', label: 'Build + tests via Artifactory' }, { id: 'QUALITY_SCANNING', label: 'Analyse SonarQube' }, { id: 'SECURITY_SCANNING', label: 'Analyse sécurité' }] },
   { name: 'Revue', jobs: [{ id: 'REVIEWING', label: 'Revue IA' }] },
   { name: 'Livraison', jobs: [{ id: 'WAITING_APPROVAL', label: 'Approbation humaine' }, { id: 'PR_CREATED', label: 'Création de la pull request' }] }
 ];

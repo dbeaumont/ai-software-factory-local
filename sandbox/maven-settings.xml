@@ -3,9 +3,9 @@
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
   <mirrors>
     <mirror>
-      <id>nexus-public</id>
-      <name>AI Factory Nexus public group</name>
-      <url>http://nexus:8081/repository/maven-public/</url>
+      <id>artifactory-maven-virtual</id>
+      <name>AI Factory Artifactory Maven virtual repository</name>
+      <url>http://artifactory:8082/artifactory/api/maven/maven-virtual/</url>
       <mirrorOf>*</mirrorOf>
     </mirror>
   </mirrors>

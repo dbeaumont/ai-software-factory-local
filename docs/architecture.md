@@ -24,7 +24,7 @@ flowchart TB
   ORCH --> GITEA[Gitea SCM]
   ORCH --> CTX[Repository Context Service]
   ORCH --> SANDBOX[Sandbox Docker éphémère]
-  SANDBOX -->|Miroir Maven| NEXUS[Nexus 3]
+  SANDBOX -->|Miroir Maven| ARTIFACTORY[Artifactory]
   SANDBOX --> TESTS[Build et tests]
   SANDBOX --> SONAR[SonarQube]
   SANDBOX --> SEC[Syft et Trivy]
@@ -47,7 +47,7 @@ flowchart TB
 | `reverse-proxy` | Point d'entrée HTTP unique (port 8080) : `/` vers `factory-web`, `/api/` vers `orchestrator` |
 | `sonar-db` | Base PostgreSQL 16 de SonarQube |
 | `sonarqube` | Analyse de la qualité de code pour les projets Maven (`SONAR_TOKEN`) |
-| `nexus` | Miroir Maven (`maven-public`) utilisé par le build dans la sandbox |
+| `artifactory` | Miroir Maven (`maven-virtual`) utilisé par le build dans la sandbox |
 | `prometheus` | Collecte des métriques Micrometer (`/actuator/prometheus`) |
 | `grafana` | Visualisation des métriques système et métier des tâches (port 3001) |
 
@@ -64,7 +64,7 @@ flowchart TB
   GITEA -->|depends_on: healthy| GITEA_DB[(gitea-db<br/>PostgreSQL)]
   ORCH -->|depends_on| LITELLM[litellm]
   LITELLM -->|depends_on: healthy| OLLAMA[ollama]
-  ORCH -->|depends_on: healthy| NEXUS[nexus]
+  ORCH -->|depends_on: healthy| ARTIFACTORY[artifactory]
 
   SONAR[sonarqube] -->|depends_on| SONAR_DB[(sonar-db<br/>PostgreSQL)]
   GRAFANA[grafana] -->|depends_on| PROM[prometheus]
@@ -107,7 +107,7 @@ sequenceDiagram
     O->>S: Re-validation (git apply --check)
   end
   O->>S: Application du patch + git diff --check
-  O->>S: Build & tests automatisés (Maven / Gradle / npm via Nexus)
+  O->>S: Build & tests automatisés (Maven / Gradle / npm via Artifactory)
   O->>L: Agent Tester (requirement + patch + logs de test)
   L-->>O: Synthèse de test (.ai-factory/test.txt)
   O->>S: Analyse SonarQube (Maven + SONAR_TOKEN)
@@ -253,7 +253,7 @@ Retourne les fonctionnalités système activées (ex: mode cloud disponible) :
 
 - L'état des tâches est conservé en mémoire dans l'orchestrateur.
 - Un redémarrage réinitialise l'historique API.
-- Les conteneurs Gitea, PostgreSQL, SonarQube, Nexus, Ollama et Grafana disposent de volumes Docker persistants.
+- Les conteneurs Gitea, PostgreSQL, SonarQube, Artifactory, Ollama et Grafana disposent de volumes Docker persistants.
 - Les espaces de travail sous `/workspace/tasks` restent présents sur le volume `factory-workspace`.
 
 ## Écarts avec une cible industrielle

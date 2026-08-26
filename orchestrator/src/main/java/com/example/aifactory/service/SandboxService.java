@@ -79,7 +79,7 @@ public class SandboxService {
         return execute(workspace, "ai-factory-local",
                 "mkdir -p .ai-factory && " +
                         "syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json >/dev/null && " +
-                        "trivy fs --skip-db-update --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 0 --format table . | tee .ai-factory/trivy.txt && " +
+                    "trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 0 --format table . | tee .ai-factory/trivy.txt && " +
                         "echo 'SBOM: .ai-factory/sbom.cdx.json'",
                 Duration.ofMinutes(10));
     }

@@ -41,7 +41,7 @@ Profils réseau de la sandbox :
 - Lancement déterministe des suites de tests automatisées (Maven, Gradle, npm) ;
 - Génération d'un inventaire logiciel SBOM au format CycloneDX JSON via Syft ;
 - Analyse des vulnérabilités logicielles et secrets avec Trivy ;
-- Transit des dépendances Maven par le miroir Nexus local (`ai-factory-m2` volume) ;
+- Transit des dépendances Maven par le miroir Artifactory local (`ai-factory-m2` volume) ;
 - Analyse de la qualité de code par SonarQube pour les projets Java/Maven ;
 - Conservation et isolation des traces d'exécution dans le workspace local sous `.ai-factory/`.
 
@@ -70,7 +70,7 @@ Le service `orchestrator` monte le socket Docker du hôte (`/var/run/docker.sock
 
 ### 2. Réseau interne partagé pour les builds
 
-Les builds et scans de la sandbox sont raccordés au réseau `ai-factory-local`. Bien que ce réseau soit interne à Compose, le sandbox a accès aux IP/ports des autres conteneurs de la stack (Gitea, SonarQube, Nexus, etc.).
+Les builds et scans de la sandbox sont raccordés au réseau `ai-factory-local`. Bien que ce réseau soit interne à Compose, le sandbox a accès aux IP/ports des autres conteneurs de la stack (Gitea, SonarQube, Artifactory, etc.).
 
 ### 3. Secrets locaux en texte clair
 

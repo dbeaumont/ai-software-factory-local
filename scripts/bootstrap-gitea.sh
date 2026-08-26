@@ -2,13 +2,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && set -a && source .env && set +a
-USER="${GITEA_ADMIN_USER:-aiadmin}"
-PASS="${GITEA_ADMIN_PASSWORD:-ChangeMe123!}"
-EMAIL="${GITEA_ADMIN_EMAIL:-aiadmin@example.local}"
-REVIEWER_USER="${GITEA_REVIEWER_USER:-reviewer}"
-REVIEWER_PASS="${GITEA_REVIEWER_PASSWORD:-ChangeMe123!}"
-REVIEWER_EMAIL="${GITEA_REVIEWER_EMAIL:-reviewer@example.local}"
-HTTP_PORT="${GITEA_HTTP_PORT:-3000}"
+USER="$GITEA_ADMIN_USER"
+PASS="$GITEA_ADMIN_PASSWORD"
+EMAIL="$GITEA_ADMIN_EMAIL"
+REVIEWER_USER="$GITEA_REVIEWER_USER"
+REVIEWER_PASS="$GITEA_REVIEWER_PASSWORD"
+REVIEWER_EMAIL="$GITEA_REVIEWER_EMAIL"
+HTTP_PORT="$GITEA_HTTP_PORT"
 TOKEN_ONLY=false
 if [ "${1:-}" = "--token-only" ]; then
   TOKEN_ONLY=true
@@ -69,11 +69,11 @@ if [ "$TOKEN_ONLY" = false ]; then
 fi
 
 TOKEN_VALID=false
-if [ -n "${GITEA_TOKEN:-}" ] && curl -fsS -H "Authorization: token $GITEA_TOKEN" \
+if [ -n "$GITEA_TOKEN" ] && curl -fsS -H "Authorization: token $GITEA_TOKEN" \
   "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api" >/dev/null 2>&1; then
   TOKEN_VALID=true
   echo "Gitea token already configured and valid."
-elif [ -n "${GITEA_TOKEN:-}" ]; then
+elif [ -n "$GITEA_TOKEN" ]; then
   echo "Existing Gitea token is invalid; generating a replacement."
 fi
 

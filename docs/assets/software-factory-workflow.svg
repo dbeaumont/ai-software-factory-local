@@ -130,7 +130,7 @@
   <rect x="754" y="674" width="37" height="24" rx="6" fill="#fff4de"/><text x="772.5" y="691" text-anchor="middle" class="card-num" fill="#974f0c">07</text>
   <text x="754" y="728" class="card-title">Tests et qualite</text>
   <text x="754" y="752" class="card-tool">Maven / Gradle / npm</text>
-  <text x="754" y="770" class="card-tool">Nexus  •  SonarQube</text>
+  <text x="754" y="770" class="card-tool">Artifactory  •  SonarQube</text>
 
   <!-- 8 Security -->
   <g filter="url(#shadow)"><rect x="454" y="654" width="240" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
@@ -187,7 +187,7 @@
   <circle cx="1600" cy="560" r="7" fill="#0c66e4"/><text x="1617" y="564" class="service-name">Docker Sandbox</text><text x="1617" y="581" class="service-desc">Patch, tests et controles isoles</text>
 
   <g filter="url(#soft-shadow)"><rect x="1577" y="598" width="226" height="50" rx="12" fill="#fff"/></g>
-  <circle cx="1600" cy="618" r="7" fill="#0c66e4"/><text x="1617" y="622" class="service-name">Nexus</text><text x="1617" y="639" class="service-desc">Miroir et dependances Maven</text>
+  <circle cx="1600" cy="618" r="7" fill="#0c66e4"/><text x="1617" y="622" class="service-name">Artifactory</text><text x="1617" y="639" class="service-desc">Miroir et dependances Maven</text>
 
   <g filter="url(#soft-shadow)"><rect x="1577" y="656" width="226" height="50" rx="12" fill="#fff"/></g>
   <circle cx="1600" cy="676" r="7" fill="#0c66e4"/><text x="1617" y="680" class="service-name">SonarQube</text><text x="1617" y="697" class="service-desc">Analyse qualite des depots Maven</text>

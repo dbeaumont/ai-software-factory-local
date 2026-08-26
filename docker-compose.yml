@@ -1,6 +1,8 @@
 name: ai-software-factory-local
 
+# All application services share this private Docker network; only explicitly mapped ports are exposed to the host.
 services:
+  # Source-control service and its dedicated persistent PostgreSQL database.
   gitea-db:
     image: postgres:16-alpine
     environment:
@@ -22,18 +24,18 @@ services:
       gitea-db:
         condition: service_healthy
     environment:
-      GITEA__database__DB_TYPE: postgres
-      GITEA__database__HOST: gitea-db:5432
-      GITEA__database__NAME: gitea
-      GITEA__database__USER: gitea
-      GITEA__database__PASSWD: gitea
-      GITEA__server__ROOT_URL: http://localhost:${GITEA_HTTP_PORT:-3000}/
-      GITEA__server__SSH_PORT: ${GITEA_SSH_PORT:-2222}
+      GITEA__database__DB_TYPE: ${GITEA_DB_TYPE}
+      GITEA__database__HOST: ${GITEA_DB_HOST}
+      GITEA__database__NAME: ${GITEA_DB_NAME}
+      GITEA__database__USER: ${GITEA_DB_USER}
+      GITEA__database__PASSWD: ${GITEA_DB_PASSWORD}
+      GITEA__server__ROOT_URL: ${GITEA_ROOT_URL}
+      GITEA__server__SSH_PORT: ${GITEA_SSH_PORT}
       GITEA__security__INSTALL_LOCK: "true"
       GITEA__service__DISABLE_REGISTRATION: "true"
     ports:
-      - "${GITEA_HTTP_PORT:-3000}:3000"
-      - "${GITEA_SSH_PORT:-2222}:22"
+      - "${GITEA_HTTP_PORT}:3000"
+      - "${GITEA_SSH_PORT}:22"
     volumes:
       - gitea-data:/data
     healthcheck:
@@ -43,6 +45,7 @@ services:
       retries: 30
     networks: [factory]
 
+  # Local LLM runtime. Model files are retained across stack restarts.
   ollama:
     image: ollama/ollama:0.11.4
     ports:
@@ -56,42 +59,49 @@ services:
       retries: 20
     networks: [factory]
 
+  # Model gateway; .vault supplies optional cloud credentials at runtime.
   litellm:
     build:
       context: ./litellm
+      args:
+        LITELLM_IMAGE: ${LITELLM_IMAGE}
     env_file:
       - .vault
     environment:
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5-coder:7b}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-dev-litellm-key}
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
     depends_on:
       ollama:
         condition: service_healthy
     networks: [factory]
 
+  # Spring Boot control plane. Its image pulls build dependencies through Artifactory using a BuildKit secret.
   orchestrator:
     build:
       context: ./orchestrator
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
+      secrets:
+        - artifactory_token
     environment:
-      AI_FACTORY_LLM_BASE_URL: http://litellm:4000/v1
-      AI_FACTORY_LLM_API_KEY: ${LITELLM_MASTER_KEY:-local-dev-litellm-key}
-      AI_FACTORY_LOCAL_MODEL: factory-code-local
-      AI_FACTORY_CLOUD_MODEL: factory-code-cloud
-      AI_FACTORY_CLOUD_ENABLED: ${AI_FACTORY_CLOUD_ENABLED:-false}
-      AI_FACTORY_WORKSPACE_ROOT: /workspace/tasks
-      AI_FACTORY_WORKSPACE_VOLUME: ai-software-factory-local_factory-workspace
-      AI_FACTORY_SANDBOX_IMAGE: ai-factory-sandbox:local
-      AI_FACTORY_GITEA_BASE_URL: http://gitea:3000
-      AI_FACTORY_GITEA_PUBLIC_BASE_URL: http://localhost:${GITEA_HTTP_PORT:-3000}
-      AI_FACTORY_GITEA_TOKEN: ${GITEA_TOKEN:-}
-      AI_FACTORY_GITEA_USER: ${GITEA_ADMIN_USER:-aiadmin}
-      AI_FACTORY_SONARQUBE_URL: http://sonarqube:9000
-      AI_FACTORY_SONAR_TOKEN: ${SONAR_TOKEN:-}
-      SPRING_PROFILES_ACTIVE: local
+      AI_FACTORY_LLM_BASE_URL: ${AI_FACTORY_LLM_BASE_URL}
+      AI_FACTORY_LLM_API_KEY: ${LITELLM_MASTER_KEY}
+      AI_FACTORY_LOCAL_MODEL: ${AI_FACTORY_LOCAL_MODEL}
+      AI_FACTORY_CLOUD_MODEL: ${AI_FACTORY_CLOUD_MODEL}
+      AI_FACTORY_CLOUD_ENABLED: ${AI_FACTORY_CLOUD_ENABLED}
+      AI_FACTORY_WORKSPACE_ROOT: ${AI_FACTORY_WORKSPACE_ROOT}
+      AI_FACTORY_WORKSPACE_VOLUME: ${AI_FACTORY_WORKSPACE_VOLUME}
+      AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
+      AI_FACTORY_GITEA_BASE_URL: ${AI_FACTORY_GITEA_BASE_URL}
+      AI_FACTORY_GITEA_PUBLIC_BASE_URL: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL}
+      AI_FACTORY_GITEA_TOKEN: ${GITEA_TOKEN}
+      AI_FACTORY_GITEA_USER: ${AI_FACTORY_GITEA_USER}
+      AI_FACTORY_SONARQUBE_URL: ${AI_FACTORY_SONARQUBE_URL}
+      AI_FACTORY_SONAR_TOKEN: ${SONAR_TOKEN}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
     ports:
-      - "${ORCHESTRATOR_PORT:-8088}:8080"
+      - "${ORCHESTRATOR_PORT}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - factory-workspace:/workspace/tasks
@@ -101,27 +111,35 @@ services:
         condition: service_healthy
       litellm:
         condition: service_started
-      nexus:
+      artifactory:
         condition: service_healthy
     networks: [factory]
 
+  # Static frontend served internally; reverse-proxy exposes the public web entry point.
   factory-web:
     build:
       context: ./web
+      args:
+        NPM_REGISTRY_URL: ${NPM_REGISTRY_URL}
+        NPM_REGISTRY_HOST: ${NPM_REGISTRY_HOST}
+      secrets:
+        - artifactory_token
     depends_on:
       - reverse-proxy
     networks: [factory]
 
+  # Public HTTP entry point: serves the frontend and forwards API requests to the orchestrator.
   reverse-proxy:
     image: nginx:1.27-alpine
     ports:
-      - "${WEB_APP_PORT:-8080}:80"
+      - "${WEB_APP_PORT}:80"
     volumes:
       - ./reverse-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - orchestrator
     networks: [factory]
 
+  # SonarQube and its dedicated persistent PostgreSQL database.
   sonar-db:
     image: postgres:16-alpine
     environment:
@@ -140,7 +158,7 @@ services:
       SONAR_JDBC_USERNAME: sonar
       SONAR_JDBC_PASSWORD: sonar
     ports:
-      - "${SONAR_PORT:-9000}:9000"
+      - "${SONAR_PORT}:9000"
     volumes:
       - sonar-data:/opt/sonarqube/data
       - sonar-logs:/opt/sonarqube/logs
@@ -152,32 +170,34 @@ services:
       retries: 40
     networks: [factory]
 
-  nexus:
-    image: sonatype/nexus3:3.82.0
+  # Local Maven proxy and cache used by sandbox builds; initialize maven-virtual in Artifactory before use.
+  artifactory:
+    image: releases-docker.jfrog.io/jfrog/artifactory-oss:7.104.6
     ports:
-      - "${NEXUS_PORT:-8081}:8081"
+      - "${ARTIFACTORY_PORT}:8082"
     volumes:
-      - nexus-data:/nexus-data
+      - artifactory-data:/var/opt/jfrog/artifactory
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/service/rest/v1/status >/dev/null"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/artifactory/api/system/ping >/dev/null"]
       interval: 15s
       timeout: 5s
-      retries: 40
+      retries: 60
     networks: [factory]
 
+  # Metrics collection and visualization for the orchestrator.
   prometheus:
     image: prom/prometheus:v3.5.0
     command: ["--config.file=/etc/prometheus/prometheus.yml"]
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "${PROMETHEUS_PORT}:9090"
     networks: [factory]
 
   grafana:
     image: grafana/grafana:12.1.1
     ports:
-      - "${GRAFANA_PORT:-3001}:3000"
+      - "${GRAFANA_PORT}:3000"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -186,10 +206,12 @@ services:
     networks: [factory]
 
 networks:
+  # Explicit name lets sandbox containers join the same network at runtime.
   factory:
     name: ai-factory-local
 
 volumes:
+  # Persistent service state. `factory-workspace` is shared with ephemeral task sandboxes.
   gitea-db-data:
   gitea-data:
   ollama-data:
@@ -198,5 +220,11 @@ volumes:
   sonar-data:
   sonar-logs:
   sonar-extensions:
-  nexus-data:
+  artifactory-data:
   grafana-data:
+
+secrets:
+  # Utilisé uniquement au build (Dockerfile: --mount=type=secret,id=artifactory_token)
+  # pour authentifier Maven auprès du miroir — jamais gravé dans l'image.
+  artifactory_token:
+    environment: ARTIFACTORY_TOKEN

@@ -3,7 +3,7 @@
 ## Fait
 
 - [x] Point d'entrée HTTP avec reverse proxy Nginx (`reverse-proxy` relayant `/` vers `factory-web` et `/api/` vers `orchestrator`)
-- [x] Intégration SonarQube et miroir Nexus pour la qualité et la résolution d'artefacts
+- [x] Intégration SonarQube et miroir Artifactory pour la qualité et la résolution d'artefacts
 - [x] Scans de sécurité déterministes (SBOM Syft CycloneDX + Trivy vulnérabilités & secrets)
 - [x] Boucle d'auto-réparation de diff (`PatchRepair`) lors de l'échec de `git apply --check`
 - [x] Observabilité complète avec métriques Micrometer, Prometheus v3.5 et tableau de bord Grafana v12.1

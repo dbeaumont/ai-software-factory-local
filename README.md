@@ -19,7 +19,7 @@ La stack actuelle contient :
 | SCM / PR | Gitea + PostgreSQL 16 |
 | Sandbox d'exécution | Conteneurs Docker éphémères (`ai-factory-sandbox:local`) |
 | Build et tests | Maven / Gradle / npm selon le dépôt |
-| Miroir d'artefacts | Nexus 3.82 (groupe Maven public) |
+| Miroir d'artefacts | JFrog Artifactory OSS (dépôt Maven virtuel) |
 | Qualité de code | SonarQube Community + PostgreSQL 16 |
 | SBOM | Syft (CycloneDX JSON) |
 | Scan sécurité | Trivy (vulnérabilités & secrets) |
@@ -35,7 +35,7 @@ La stack actuelle contient :
 6. Le patch est normalisé (`UnifiedDiffNormalizer`), puis validé avec `git apply --check` dans une sandbox sans réseau.
 7. En cas d'échec de validation du diff, l'agent `PatchRepair` tente une réparation complète en analysant les fichiers sources authoritative.
 8. Le patch est appliqué en sandbox, puis `git diff --check` et `git diff --stat` sont contrôlés.
-9. Les tests unitaires/d'intégration s'exécutent dans la sandbox (via Nexus pour Maven). L'agent `Tester` analyse les journaux de test.
+9. Les tests unitaires/d'intégration s'exécutent dans la sandbox (via Artifactory pour Maven). L'agent `Tester` analyse les journaux de test.
 10. L'analyse de qualité SonarQube est déclenchée (pour les projets Maven quand `SONAR_TOKEN` est présent).
 11. Syft génère un SBOM CycloneDX (`.ai-factory/sbom.cdx.json`) et Trivy scanne les vulnérabilités/secrets (`.ai-factory/trivy.txt`).
 12. L'agent `Reviewer` synthétise l'ensemble des preuves déterministes (plan, patch, tests, qualité, sécurité) dans `.ai-review.md`.
@@ -65,7 +65,7 @@ URLs principales :
 - Gitea : `http://localhost:3000` (dépôt démo : `http://localhost:3000/aiadmin/customer-api`)
 - Orchestrateur direct (diagnostic & Actuator) : `http://localhost:8088`
 - SonarQube : `http://localhost:9000`
-- Nexus : `http://localhost:8081`
+- Artifactory : `http://localhost:8082` (utilisateur `admin`, mot de passe `password`)
 - Prometheus : `http://localhost:9090`
 - Grafana : `http://localhost:3001`
 - Ollama API : `http://localhost:11434`
@@ -180,7 +180,7 @@ make demo
 ## Qualité et observabilité
 
 - **SonarQube** (`http://localhost:9000`) : Analyse de la qualité du code Java/Maven. Les jetons sont générés par `make bootstrap` ou `make tokens`.
-- **Nexus** (`http://localhost:8081`) : Miroir d'artefacts utilisé par le build Maven dans la sandbox (`maven-settings.xml`).
+- **Artifactory** (`http://localhost:8082`) : Miroir d'artefacts utilisé par le build Maven dans la sandbox (`maven-virtual`, configuré dans `maven-settings.xml`).
 - **Prometheus** (`http://localhost:9090`) : Collecte les métriques Micrometer depuis `/actuator/prometheus` de l'orchestrator (`ai_factory_tasks_submitted`, `ai_factory_tasks_completed`, `ai_factory_tasks_failed`).
 - **Grafana** (`http://localhost:3001`) : Tableau de bord de suivi pré-provisionné (`orchestrator.json`).
 
@@ -192,7 +192,7 @@ make demo
 | `make init` | Initialise `.env` et `.vault` à partir des exemples |
 | `make build` | Construit l'image sandbox et les services Compose |
 | `make up` | Démarre la stack complète en arrière-plan |
-| `make full` | Remet à zéro les données et démarre une stack entièrement bootstrappée |
+| `make all` | Remet à zéro les données et démarre une stack entièrement bootstrappée |
 | `make model` | Télécharge le modèle Ollama configuré |
 | `make bootstrap` | Initialise Gitea, SonarQube et génère les jetons d'accès |
 | `make tokens` | Régénère ou valide les jetons Gitea et SonarQube |

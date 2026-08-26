@@ -14,7 +14,7 @@ Le pipeline transforme un besoin exprime sous forme de ticket en Pull Request Gi
 | 6. Validation du patch | Vérifier l'applicabilité du diff sans accès réseau (`git apply --check`) | Sandbox Docker (`ai-factory-sandbox:local`) |
 | 7. Réparation de patch | Régénérer un diff unifié valide si la première version échoue à l'application | Agent `PatchRepair`, LiteLLM |
 | 8. Application en sandbox | Appliquer le patch et contrôler l'absence d'erreurs de format (`git diff --check`) | Sandbox Docker, Git |
-| 9. Tests automatisés | Exécuter la suite de tests (Maven via miroir Nexus, Gradle ou npm) et analyser les journaux | Maven / Gradle / npm, Nexus, Agent `Tester` |
+| 9. Tests automatisés | Exécuter la suite de tests (Maven via miroir Artifactory, Gradle ou npm) et analyser les journaux | Maven / Gradle / npm, Artifactory, Agent `Tester` |
 | 10. Analyse de qualité | Exécuter l'analyse qualimétrique du code source pour les projets Maven | SonarQube Scanner (`sonar-maven-plugin`) |
 | 11. Analyse de sécurité | Générer le SBOM CycloneDX et scanner les vulnérabilités et secrets | Syft (`sbom.cdx.json`), Trivy (`trivy.txt`) |
 | 12. Revue globale | Synthétiser le besoin, le plan, le patch et l'ensemble des preuves déterministes dans `.ai-review.md` | Agent `Reviewer`, LiteLLM |
