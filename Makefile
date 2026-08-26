@@ -11,6 +11,12 @@ SONAR_PORT ?= 9000
 NEXUS_PORT ?= 8081
 PROMETHEUS_PORT ?= 9090
 GRAFANA_PORT ?= 3001
+GITEA_ADMIN_USER ?= aiadmin
+GITEA_ADMIN_PASSWORD ?= ChangeMe123!
+SONAR_ADMIN_LOGIN ?= admin
+SONAR_ADMIN_PASSWORD ?= admin
+GRAFANA_ADMIN_USER ?= admin
+GRAFANA_ADMIN_PASSWORD ?= admin
 
 .PHONY: help init build up model bootstrap demo test package config status restart logs urls down clean
 
@@ -79,7 +85,7 @@ logs:
 urls:
 	@echo "Core"
 	@echo "  Factory web:  http://localhost:$(WEB_APP_PORT)"
-	@echo "  Gitea:        http://localhost:$(GITEA_HTTP_PORT)"
+	@echo "  Gitea:        http://localhost:$(GITEA_HTTP_PORT) (user: $(GITEA_ADMIN_USER), password: $(GITEA_ADMIN_PASSWORD))"
 	@echo "  Gitea API:    http://localhost:$(GITEA_HTTP_PORT)/api/v1"
 	@echo "  Gitea SSH:    ssh://git@localhost:$(GITEA_SSH_PORT)"
 	@echo "  Demo repo:    http://localhost:$(GITEA_HTTP_PORT)/$${GITEA_ADMIN_USER:-aiadmin}/customer-api"
@@ -93,10 +99,10 @@ urls:
 	@echo "  Health:       http://localhost:$(ORCHESTRATOR_PORT)/actuator/health"
 	@echo "  Metrics:      http://localhost:$(ORCHESTRATOR_PORT)/actuator/prometheus"
 	@echo "Quality, artifacts and observability"
-	@echo "  SonarQube:    http://localhost:$(SONAR_PORT)"
-	@echo "  Nexus:        http://localhost:$(NEXUS_PORT)"
+	@echo "  SonarQube:    http://localhost:$(SONAR_PORT) (user: $(SONAR_ADMIN_LOGIN), password: $(SONAR_ADMIN_PASSWORD))"
+	@echo "  Nexus:        http://localhost:$(NEXUS_PORT) (user: admin, initial password: docker compose exec nexus cat /nexus-data/admin.password)"
 	@echo "  Prometheus:   http://localhost:$(PROMETHEUS_PORT)"
-	@echo "  Grafana:      http://localhost:$(GRAFANA_PORT)"
+	@echo "  Grafana:      http://localhost:$(GRAFANA_PORT) (user: $(GRAFANA_ADMIN_USER), initial password: $(GRAFANA_ADMIN_PASSWORD))"
 
 clean:
 	docker compose down -v --remove-orphans
