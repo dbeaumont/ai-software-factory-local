@@ -5,6 +5,9 @@ cd "$(dirname "$0")/.."
 USER="${GITEA_ADMIN_USER:-aiadmin}"
 PASS="${GITEA_ADMIN_PASSWORD:-ChangeMe123!}"
 EMAIL="${GITEA_ADMIN_EMAIL:-aiadmin@example.local}"
+REVIEWER_USER="${GITEA_REVIEWER_USER:-reviewer}"
+REVIEWER_PASS="${GITEA_REVIEWER_PASSWORD:-ChangeMe123!}"
+REVIEWER_EMAIL="${GITEA_REVIEWER_EMAIL:-reviewer@example.local}"
 HTTP_PORT="${GITEA_HTTP_PORT:-3000}"
 
 set_env() {
@@ -32,12 +35,20 @@ until docker compose exec -T --user git gitea gitea admin user list >/dev/null 2
 if ! docker compose exec -T --user git gitea gitea admin user list | grep -q "${USER}"; then
   docker compose exec -T --user git gitea gitea admin user create --username "$USER" --password "$PASS" --email "$EMAIL" --admin --must-change-password=false
 fi
+if ! docker compose exec -T --user git gitea gitea admin user list | grep -q "${REVIEWER_USER}"; then
+  docker compose exec -T --user git gitea gitea admin user create --username "$REVIEWER_USER" --password "$REVIEWER_PASS" --email "$REVIEWER_EMAIL" --must-change-password=false
+fi
 
 if ! curl -fsS -u "$USER:$PASS" "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api" >/dev/null 2>&1; then
   curl -fsS -u "$USER:$PASS" -H 'Content-Type: application/json' \
     -d '{"name":"customer-api","private":false,"auto_init":false,"default_branch":"main"}' \
     "http://localhost:$HTTP_PORT/api/v1/user/repos" >/dev/null
 fi
+
+# The PR author cannot approve their own PR, so grant a distinct reviewer write access.
+curl -fsS -u "$USER:$PASS" -X PUT -H 'Content-Type: application/json' \
+  -d '{"permission":"write"}' \
+  "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api/collaborators/$REVIEWER_USER" >/dev/null
 
 TMP=$(mktemp -d)
 cp -R sample-repo/. "$TMP/"
