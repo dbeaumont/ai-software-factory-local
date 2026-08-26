@@ -38,14 +38,20 @@ echo "Waiting for SonarQube to become ready..."
 until curl -fsS "$SONAR_URL/api/system/status" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'; do sleep 2; done
 
 TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"
-TOKEN_RESPONSE=$(curl -fsS -u "$SONAR_LOGIN:$SONAR_PASSWORD" \
+TOKEN_RESPONSE=$(curl -sS -w '\n%{http_code}' -u "$SONAR_LOGIN:$SONAR_PASSWORD" \
   -X POST --data-urlencode "name=$TOKEN_NAME" \
   "$SONAR_URL/api/user_tokens/generate" 2>/dev/null || true)
-TOKEN=$(python3 -c 'import json, sys; print(json.load(sys.stdin).get("token", ""))' <<<"$TOKEN_RESPONSE" 2>/dev/null || true)
+TOKEN_HTTP_STATUS="${TOKEN_RESPONSE##*$'\n'}"
+TOKEN_BODY="${TOKEN_RESPONSE%$'\n'*}"
+TOKEN=$(python3 -c 'import json, sys; print(json.load(sys.stdin).get("token", ""))' <<<"$TOKEN_BODY" 2>/dev/null || true)
 if [ -n "$TOKEN" ]; then
   set_env "SONAR_TOKEN" "$TOKEN"
   echo "Generated SonarQube analysis token and saved it to .env"
+elif [ "$TOKEN_HTTP_STATUS" = "401" ]; then
+  echo "SonarQube authentication failed. SONAR_ADMIN_LOGIN and SONAR_ADMIN_PASSWORD in .env must match the existing SonarQube account."
+  echo "The SonarQube volume keeps its password after .env changes. Update .env with the current password, then rerun make bootstrap."
+  exit 1
 else
-  echo "Could not auto-generate a SonarQube token. Check SONAR_ADMIN_LOGIN and SONAR_ADMIN_PASSWORD in .env."
+  echo "Could not auto-generate a SonarQube token (HTTP ${TOKEN_HTTP_STATUS:-unknown})."
   exit 1
 fi
