@@ -2,158 +2,95 @@
 
 ## Statut du document
 
-Cette note décrit la posture de sécurité réelle du dépôt au 23 août 2026. Le projet reste un POC local. Il ne doit pas être exposé tel quel sur un réseau d'entreprise ou en production.
+Cette note décrit la posture de sécurité réelle du prototype local au 26 août 2026. Le projet est un POC (Proof of Concept) d'usine logicielle agentique. Il n'a pas vocation à être exposé tel quel sur un réseau d'entreprise non sécurisé ni en environnement de production.
 
 ## Hypothèses du POC
 
-- usage local sur poste de démonstration ou machine dédiée ;
-- utilisateurs de confiance ;
-- dépôts de démonstration ou de faible criticité ;
-- besoin principal : valider la chaîne agentique, pas tenir une posture de production.
+- Usage local sur poste de développement ou VM dédiée ;
+- Utilisateurs de confiance ayant un accès local ;
+- Dépôts de démonstration ou de faible criticité ;
+- Objectif principal : valider la chaîne agentique, le contrôle déterministe et l'ergonomie d'approbation.
 
 ## Contrôles actuellement présents
 
-### Validation humaine obligatoire
+### Validation humaine obligatoire (Human-in-the-loop)
 
-- aucun commit, push ou création de PR n'a lieu avant `POST /api/tasks/{id}/approve` ;
-- le prototype sépare explicitement génération et livraison.
+- Aucun commit, push ou création de Pull Request n'a lieu avant l'appel explicite de validation `POST /api/tasks/{id}/approve` (via l'IHM ou l'API REST).
+- Le prototype sépare formellement la phase de génération/validation locale et la phase de livraison vers le SCM.
 
-### Exécution isolée en sandbox
+### Exécution isolée en sandbox Docker
 
-Les étapes patch, tests et sécurité s'exécutent dans des conteneurs Docker éphémères avec :
+Les étapes de vérification du patch, d'exécution des tests, d'analyse qualimétrique et de scans de sécurité s'exécutent dans un conteneur Docker éphémère `ai-factory-sandbox:local` configuré avec des restrictions strictes :
 
-- `--rm`
-- `--memory 2g`
-- `--cpus 2`
-- `--pids-limit 512`
-- `--cap-drop ALL`
-- `--security-opt no-new-privileges`
+- `--rm` (destruction automatique du conteneur après exécution)
+- `--memory 2g` (limite mémoire de 2 Go)
+- `--cpus 2` (limite à 2 cœurs CPU)
+- `--pids-limit 512` (limitation du nombre de processus pour éviter les attaques fork-bomb)
+- `--cap-drop ALL` (suppression de toutes les capacités Linux du conteneur)
+- `--security-opt no-new-privileges` (interdiction d'élévation de privilèges)
 
-Deux profils réseau existent :
+Profils réseau de la sandbox :
 
-- validation du patch avec `--network none`
-- tests et scans avec le réseau Docker local `ai-factory-local`
+- **Validation du patch (`checkPatch` et `applyPatch`)** : exécutée avec `--network none` (isolation réseau totale).
+- **Builds, tests, SonarQube et Trivy** : exécutés sur le réseau interne Docker `ai-factory-local`.
 
 ### Contrôles déterministes
 
-- validation du diff via `git apply --check` ;
-- application du patch puis `git diff --check` ;
-- tests build/run déterministes ;
-- génération d'un SBOM CycloneDX avec Syft ;
-- scan vulnérabilités et secrets avec Trivy ;
-- résolution des dépendances Maven via le groupe public Nexus ;
-- analyse SonarQube des dépôts Maven lorsque `SONAR_TOKEN` est configuré ;
-- conservation des traces d'exécution dans le workspace.
+- Normalisation et validation de la syntaxe du patch unifié via `git apply --check` ;
+- Application du patch puis vérification de la propreté via `git diff --check` et `git diff --stat` ;
+- Lancement déterministe des suites de tests automatisées (Maven, Gradle, npm) ;
+- Génération d'un inventaire logiciel SBOM au format CycloneDX JSON via Syft ;
+- Analyse des vulnérabilités logicielles et secrets avec Trivy ;
+- Transit des dépendances Maven par le miroir Nexus local (`ai-factory-m2` volume) ;
+- Analyse de la qualité de code par SonarQube pour les projets Java/Maven ;
+- Conservation et isolation des traces d'exécution dans le workspace local sous `.ai-factory/`.
 
-### Réduction du risque par défaut
+### Réduction du risque et étanchéité des secrets
 
-- mode cloud désactivé par défaut ;
-- le navigateur ne reçoit jamais la clé OpenAI ;
-- l'orchestrateur ne reçoit pas directement la clé OpenAI ;
-- la clé est injectée dans LiteLLM seulement.
+- Mode cloud désactivé par défaut (`AI_FACTORY_CLOUD_ENABLED=false`) ;
+- Le navigateur n'a jamais accès à la clé OpenAI ni aux jetons d'administration ;
+- L'orchestrateur ne gère pas la clé OpenAI directement : elle est injectée de manière étanche dans le conteneur `litellm` via le fichier `.vault` ;
+- Les jetons d'accès `GITEA_TOKEN` et `SONAR_TOKEN` sont générés par le script de bootstrap et enregistrés localement dans `.env` ;
+- Avant la création de la Pull Request, tous les artefacts temporaires générés par l'IA (`.ai-plan.md`, `changes.patch`, `.ai-review.md`, `.ai-factory/`) sont systématiquement retirés de l'index Git (`git reset`).
 
-### Point d'entrée HTTP du front
+### Point d'entrée HTTP unique
 
-- `reverse-proxy` est le point d'entrée web du front sur `WEB_APP_PORT` ;
-- il sert `factory-web` sur `/` et relaie uniquement le préfixe `/api/` vers l'orchestrateur ;
-- le front appelle l'API par une URL relative, ce qui évite d'exposer au navigateur l'adresse interne du conteneur `orchestrator`.
-
-Le port de l'orchestrateur reste publié pour les appels API et diagnostics locaux du POC. Cette exposition devrait être supprimée ou restreinte dans une cible de production, afin que le reverse proxy devienne l'unique point d'entrée HTTP.
+- Le conteneur `reverse-proxy` (Nginx) est le point d'entrée HTTP sur le port `WEB_APP_PORT` (8080 par défaut).
+- Nginx sert l'application frontend `factory-web` sur `/` et relaie uniquement le préfixe `/api/` vers l'orchestrateur (`orchestrator`).
+- L'IHM communique exclusivement par des URLs relatives (`/api/tasks`), évitant d'exposer l'adresse interne des services au navigateur.
 
 ## Risques et limites actuels
 
 ### 1. `docker.sock` monté dans l'orchestrateur
 
-Le service `orchestrator` monte `/var/run/docker.sock`. En pratique, cela donne un contrôle très large sur le démon Docker de l'hôte. Pour un attaquant qui compromettrait l'orchestrateur, cela représente quasi un accès root sur la machine Docker.
+Le service `orchestrator` monte le socket Docker du hôte (`/var/run/docker.sock`) pour lancer les conteneurs sandbox à la demande. Une compromission de l'orchestrateur donnerait à un attaquant le contrôle du démon Docker hôte.
 
-Conséquence :
+- *Acceptable* dans un POC local isolé.
+- *Inacceptable* pour une cible de production (à remplacer par des Jobs Kubernetes ou une Sandbox API).
 
-- acceptable pour un POC local isolé ;
-- inacceptable pour une cible de production.
+### 2. Réseau interne partagé pour les builds
 
-### 2. Réseau permissif pour tests et scans
+Les builds et scans de la sandbox sont raccordés au réseau `ai-factory-local`. Bien que ce réseau soit interne à Compose, le sandbox a accès aux IP/ports des autres conteneurs de la stack (Gitea, SonarQube, Nexus, etc.).
 
-Les builds et scans rejoignent le réseau Docker `ai-factory-local`. Cela permet :
+### 3. Secrets locaux en texte clair
 
-- la résolution des dépendances ;
-- l'accès aux services internes de la stack ;
-- potentiellement une surface latérale plus large que souhaité.
+Le POC s'appuie sur des secrets stockés dans `.env` et `.vault` (notamment `GITEA_TOKEN`, `SONAR_TOKEN`, `VAULT_OPENAI_API_KEY`). Il convient de s'assurer que ces fichiers restent exclus de tout dépôt Git distant (déjà déclarés dans `.gitignore`).
 
-Le prototype ne met pas encore en place :
+### 4. Volatilité des données de l'orchestrateur
 
-- d'egress allow-list ;
-- de proxy d'artefacts pour Gradle ou npm ;
-- de segmentation réseau fine ;
-- de politique par type de tâche.
+L'historique des tâches est conservé en mémoire dans l'orchestrateur Spring Boot. Tout redémarrage remet à zéro la liste des tâches (les workspaces sur disque restent toutefois présents dans le volume `factory-workspace`).
 
-### 3. Secrets locaux
+### 5. Sorties des LLM par nature probabilistes
 
-Le POC repose sur des secrets simples dans `.env` et `.vault`, notamment :
+Même si la chaîne impose des filtres et une boucle de réparation de patch, les modèles de langage peuvent générer des modifications imperfectes. La validation déterministe (tests + SonarQube + Trivy) et la revue humaine préalable restent le dernier niveau de contrôle indispensable.
 
-- `VAULT_OPENAI_API_KEY` dans `.vault`
-- `LITELLM_MASTER_KEY`
-- `GITEA_TOKEN`
-- `SONAR_TOKEN`
-- `SONAR_ADMIN_PASSWORD`
-- `GITEA_ADMIN_PASSWORD`
+## Recommandations pour l'utilisation et la démo
 
-Risques :
-
-- fuite locale ;
-- partage involontaire du fichier ;
-- rotation non gouvernée ;
-- absence d'audit central.
-
-### 4. Tâches non persistées
-
-L'état des tâches est stocké en mémoire dans l'orchestrateur. Un redémarrage supprime l'historique applicatif exposé par l'API.
-
-Impact :
-
-- audit incomplet ;
-- reprise impossible ;
-- traçabilité partielle.
-
-### 5. Sorties LLM non fiables par nature
-
-Le système impose des contrôles, mais les sorties LLM peuvent toujours :
-
-- proposer un patch incorrect ;
-- produire un diff invalide ;
-- faire échouer les tests ;
-- générer une analyse inexacte côté `Tester` ou `Reviewer`.
-
-Le prototype ne doit donc pas être interprété comme une chaîne autonome de livraison.
-
-## Données qui sortent potentiellement de la machine
-
-### Mode `LOCAL`
-
-- requirement, contexte dépôt et preuves restent dans la stack Docker locale ;
-- les dépendances logicielles du build peuvent néanmoins être téléchargées depuis Internet si le dépôt l'exige.
-
-### Mode `CLOUD`
-
-Si `AI_FACTORY_CLOUD_ENABLED=true` et que la tâche choisit `llmMode=CLOUD`, les données suivantes sont envoyées au fournisseur LLM via LiteLLM :
-
-- requirement ;
-- contexte du dépôt ;
-- plan ;
-- patch ;
-- extraits de logs de test et de sécurité.
-
-Le mode cloud doit donc être réservé à des contextes compatibles avec la politique de données applicable.
-
-## Mesures minimales recommandées pour une démo
-
-- utiliser une machine dédiée ;
-- ne brancher que des dépôts non sensibles ;
-- changer les credentials par défaut de Gitea ;
-- changer les credentials SonarQube utilisés par le bootstrap après son premier passage ;
-- limiter ou désactiver le mode cloud si inutile ;
-- nettoyer régulièrement les volumes Docker ;
-- ne jamais exposer les ports du POC sur Internet ;
-- éviter d'utiliser des tokens à privilèges étendus.
+- Exécuter la stack sur un environnement local ou une VM dédiée ;
+- Utiliser uniquement des dépôts de démonstration ou non sensibles ;
+- Modifier les mots de passe par défaut de Gitea (`GITEA_ADMIN_PASSWORD`) et SonarQube ;
+- Ne jamais exposer les ports de la stack sur un réseau public sans filtrage ou VPN ;
+- Exclure le fichier `.vault` du contrôle de version (vérifié dans `.gitignore`).
 
 ## Cible industrielle recommandée
 

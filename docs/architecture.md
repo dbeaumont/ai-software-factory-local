@@ -4,28 +4,27 @@
 
 Le dépôt implémente un prototype local centré sur quatre idées :
 
-- un point d'entrée unique pour la demande de changement ;
-- une génération de patch par rôles LLM distincts ;
-- une exécution isolée avec contrôles déterministes ;
-- une validation humaine avant toute création de pull request.
+- un point d'entrée HTTP unique pour la demande de changement (`reverse-proxy`) ;
+- une génération de patch par rôles LLM distincts (`Planner`, `Developer`, `PatchRepair`, `Tester`, `Reviewer`) ;
+- une exécution isolée en sandbox Docker éphémère avec contrôles déterministes (tests, SonarQube, Syft, Trivy) ;
+- une validation humaine obligatoire avant toute création de pull request sur Gitea.
 
-L'architecture n'est pas une plateforme d'entreprise complète. Elle reproduit surtout les mécanismes de contrôle, pas encore la gouvernance ni l'isolation cible.
+L'architecture n'est pas une plateforme d'entreprise complète. Elle reproduit surtout les mécanismes de contrôle, d'isolation et d'orchestration agentique.
 
 ## Architecture logique
 
 ```mermaid
 flowchart TB
-  USER --> GITEA[Gitea]
-  USER --> PROXY[Reverse proxy Nginx]
-  PROXY -->|/| WEB
+  USER[Utilisateur] --> PROXY[Reverse proxy Nginx]
+  PROXY -->|/| WEB[factory-web UI]
   PROXY -->|/api/| ORCH[Orchestrateur Spring Boot]
   ORCH --> LLM[LiteLLM]
   LLM -->|LOCAL| OLLAMA[Ollama]
   LLM -->|CLOUD| OPENAI[OpenAI]
-  GITEA --> ORCH
+  ORCH --> GITEA[Gitea SCM]
   ORCH --> CTX[Repository Context Service]
   ORCH --> SANDBOX[Sandbox Docker éphémère]
-  SANDBOX -->|Maven mirror| NEXUS[Nexus]
+  SANDBOX -->|Miroir Maven| NEXUS[Nexus 3]
   SANDBOX --> TESTS[Build et tests]
   SANDBOX --> SONAR[SonarQube]
   SANDBOX --> SEC[Syft et Trivy]
@@ -39,23 +38,22 @@ flowchart TB
 
 | Service | Rôle |
 |---|---|
-| `gitea-db` | base PostgreSQL de Gitea |
-| `gitea` | dépôts Git, API, pull requests |
-| `ollama` | exécution locale du modèle |
-| `litellm` | alias de modèles et routage local/cloud |
-| `orchestrator` | moteur principal du workflow |
-| `factory-web` | interface utilisateur statique, servie derrière le reverse proxy |
-| `reverse-proxy` | point d'entrée HTTP : `/` vers `factory-web`, `/api/` vers `orchestrator` |
+| `gitea-db` | Base PostgreSQL 16 de Gitea |
+| `gitea` | Gestionnaire de dépôts Git, API REST, branches et Pull Requests (v1.23) |
+| `ollama` | Moteur d'exécution local du modèle LLM (`qwen2.5-coder:7b`) |
+| `litellm` | Passerelle OpenAI-compatible, alias de modèles et routage local/cloud |
+| `orchestrator` | Moteur principal du workflow (Spring Boot 3.5 / Java 21) |
+| `factory-web` | Interface utilisateur SPA HTML/JS/CSS, servie par Nginx |
+| `reverse-proxy` | Point d'entrée HTTP unique (port 8080) : `/` vers `factory-web`, `/api/` vers `orchestrator` |
+| `sonar-db` | Base PostgreSQL 16 de SonarQube |
+| `sonarqube` | Analyse de la qualité de code pour les projets Maven (`SONAR_TOKEN`) |
+| `nexus` | Miroir Maven (`maven-public`) utilisé par le build dans la sandbox |
+| `prometheus` | Collecte des métriques Micrometer (`/actuator/prometheus`) |
+| `grafana` | Visualisation des métriques système et métier des tâches (port 3001) |
 
-| `sonar-db` | base PostgreSQL de SonarQube |
-| `sonarqube` | analyse qualité des dépôts Maven avec `SONAR_TOKEN` |
-| `nexus` | miroir Maven `maven-public` pour les builds du sandbox |
-| `prometheus` | collecte de métriques |
-| `grafana` | visualisation HTTP et métriques métier des tâches |
+## Architecture de conteneurs
 
-## Architecture de containers
-
-Tous les services sont reliés au réseau Docker `ai-factory-local`. Les flèches pleines représentent les dépendances déclarées dans `docker-compose.yml` ; les flèches pointillées représentent des appels réseau effectués à l'exécution. Le reverse proxy démarre avant `factory-web`, même s'il relaie ensuite les requêtes vers ce service.
+Tous les services sont reliés au réseau Docker `ai-factory-local`. Le reverse proxy est le point d'accès frontal.
 
 ```mermaid
 flowchart TB
@@ -77,7 +75,7 @@ flowchart TB
   PROM -.->|scrape des metriques| ORCH
 ```
 
-Le sandbox n'est pas un service permanent de Compose : l'orchestrateur crée un conteneur `ai-factory-sandbox` à la demande via le socket Docker. Ce conteneur temporaire utilise Nexus comme miroir Maven et contacte SonarQube pour les dépôts Maven.
+Le sandbox n'est pas un service permanent dans Compose : l'orchestrateur instancie un conteneur éphémère `ai-factory-sandbox:local` à la demande via le socket `/var/run/docker.sock`. Ce conteneur réutilise le volume nommé `factory-workspace` pour accéder aux fichiers du dépôt et le volume `ai-factory-m2` pour le cache de dépendances Maven.
 
 ## Flux réel d'une tâche
 
@@ -91,102 +89,93 @@ sequenceDiagram
   participant L as LiteLLM
   participant S as Sandbox Docker
 
-  U->>P: Ouvre l'interface
-  P->>W: GET /
-  U->>P: POST /api/tasks
-  P->>O: POST /api/tasks
+  U->>P: Ouvre l'interface web (GET /)
+  P->>W: Sert l'application SPA
+  U->>P: Soumet un ticket (POST /api/tasks)
+  P->>O: Relaye POST /api/tasks
   O->>G: git clone --depth 1 --branch <baseBranch>
-  O->>O: collecte du contexte dépôt
-  O->>L: Planner(requirement + contexte)
-  L-->>O: plan
-  O->>L: Developer(requirement + plan + contexte)
-  L-->>O: unified diff
-  O->>S: git apply --check
+  O->>O: Collecte le contexte du dépôt
+  O->>L: Agent Planner (requirement + contexte)
+  L-->>O: Feuille de route (.ai-plan.md)
+  O->>L: Agent Developer (requirement + plan + contexte)
+  L-->>O: Patch unifié
+  O->>O: Normalisation du diff (UnifiedDiffNormalizer)
+  O->>S: Validation du patch (git apply --check)
   alt patch invalide
-    O->>L: Patch repair(requirement + plan + erreur git)
-    L-->>O: unified diff réparé
-    O->>S: git apply --check
+    O->>L: Agent PatchRepair (requirement + plan + fichiers authoritative + erreur git)
+    L-->>O: Patch unifié réparé
+    O->>S: Re-validation (git apply --check)
   end
-  O->>S: git apply + git diff --check
-  O->>S: build / tests Maven via Nexus
-  O->>L: Tester(requirement + patch + logs)
-  L-->>O: synthèse test
-  O->>S: analyse SonarQube (Maven + SONAR_TOKEN)
-  O->>S: Syft + Trivy
-  O->>L: Reviewer(requirement + plan + patch + evidence)
-  L-->>O: review
-  O-->>U: WAITING_APPROVAL
-  U->>O: POST /api/tasks/{id}/approve
-  O->>G: branch + commit + push + create PR
-  O-->>U: PR_CREATED
+  O->>S: Application du patch + git diff --check
+  O->>S: Build & tests automatisés (Maven / Gradle / npm via Nexus)
+  O->>L: Agent Tester (requirement + patch + logs de test)
+  L-->>O: Synthèse de test (.ai-factory/test.txt)
+  O->>S: Analyse SonarQube (Maven + SONAR_TOKEN)
+  O->>S: Syft (SBOM CycloneDX) + Trivy (scan vulnérabilités/secrets)
+  O->>L: Agent Reviewer (requirement + plan + patch + preuves)
+  L-->>O: Revue globale (.ai-review.md)
+  O-->>U: Statut WAITING_APPROVAL
+  U->>O: Approbation (POST /api/tasks/{id}/approve)
+  O->>G: git checkout -b ai-factory/<id> + git reset artefacts IA + commit + push + create PR
+  O-->>U: Statut PR_CREATED + URL de la Pull Request
 ```
 
 ## Pipeline détaillé
 
-### 1. Saisie et préparation
+### 1. Saisie et enregistrement
 
-- `factory-web` construit un texte de requirement structuré à partir du formulaire.
-- L'API `POST /api/tasks` crée une tâche en mémoire et lance le pipeline en asynchrone.
-- La branche par défaut est `main` si `baseBranch` est vide.
-- `llmMode` vaut `LOCAL` si le champ n'est pas fourni.
+- `factory-web` construit un besoin structuré à partir du formulaire de ticket (résumé, objectif métier, périmètre, comportement attendu, critères d'acceptation).
+- `POST /api/tasks` crée une tâche en mémoire avec une référence ticket de type `AF-%04d` (ex: `AF-0001`) et lance le pipeline asynchrone.
+- Par défaut, `baseBranch` vaut `main` et `llmMode` vaut `LOCAL`.
 
 ### 2. Contextualisation
 
-- l'orchestrateur clone le dépôt cible dans `AI_FACTORY_WORKSPACE_ROOT` ;
-- le workspace est également monté via le volume Docker nommé `factory-workspace` ;
-- le contexte est extrait à partir du dépôt cloné avant les appels LLM.
+- L'orchestrateur clone le dépôt dans `/workspace/tasks/<taskId>`.
+- Le volume Docker `factory-workspace` partage ce dossier avec la sandbox.
+- `RepositoryContextService` extrait l'arborescence, les fichiers de configuration de build (`pom.xml`, `build.gradle`, `package.json`) et le contenu des sources.
 
 ### 3. Génération du patch
 
-- le `Planner` produit `.ai-plan.md` ;
-- le `Developer` produit `changes.patch` ;
-- le patch est nettoyé des éventuels fences Markdown ;
-- seul un `unified diff` strict est accepté.
+- L'agent `Planner` analyse le besoin et produit `.ai-plan.md`.
+- L'agent `Developer` génère un `unified diff` strict.
+- `UnifiedDiffNormalizer` nettoie les fences Markdown et normalise les préfixes de chemins (`a/` et `b/`).
 
 ### 4. Validation et réparation du patch
 
-- `git apply --check changes.patch` est exécuté en sandbox sans réseau ;
-- si la validation échoue, le patch initial est conservé dans `changes.invalid.patch` ;
-- un prompt de réparation demande au modèle de régénérer un diff complet ;
-- si la seconde validation échoue, la tâche passe en `FAILED`.
+- `SandboxService.checkPatch` valide le diff sans réseau via `git apply --check changes.patch`.
+- En cas d'erreur de validation, le patch initial est conservé dans `changes.invalid.patch`.
+- L'agent `PatchRepair` reçoit le besoin, le plan, les contenus réels des fichiers impactés et le message d'erreur `git apply`.
+- Le diff réparé est re-validé. Si cette seconde validation échoue, la tâche passe en `FAILED`.
 
-### 5. Exécution déterministe
+### 5. Exécution déterministe en sandbox
 
-- application du patch ;
-- contrôle `git diff --check` ;
-- lancement automatique des tests selon le dépôt :
-  - `./mvnw -B -s /opt/ai-factory/maven-settings.xml test`
-  - `mvn -B -s /opt/ai-factory/maven-settings.xml test`
-  - `./gradlew test`
-  - `npm test -- --runInBand`
+- Le diff est appliqué (`git apply changes.patch`).
+- Contrôle de conformité (`git diff --check` et `git diff --stat`).
+- Exécution automatique du build et des tests selon le dépôt :
+  - Maven wrapper : `./mvnw -B -s /opt/ai-factory/maven-settings.xml test`
+  - Maven système : `mvn -B -s /opt/ai-factory/maven-settings.xml test`
+  - Gradle : `./gradlew test`
+  - Node.js : `npm test -- --runInBand`
+- L'agent `Tester` analyse les journaux bruts pour produire une synthèse d'évaluation.
 
-### 6. Qualité SonarQube
+### 6. Analyse de qualité SonarQube
 
-En exécution complète, un dépôt Maven est analysé par le plugin Maven SonarQube. L'analyse utilise `SONAR_TOKEN` et l'URL interne `http://sonarqube:9000`. Sans jeton, l'étape est marquée comme ignorée et le pipeline poursuit son exécution. Les dépôts Gradle et npm ne sont pas encore couverts par cette intégration.
-
-Le journal de l'analyse est écrit dans `.ai-factory/sonar.txt`.
+- Pour les projets Maven, l'analyse qualimétrique est exécutée avec le plugin `sonar-maven-plugin:sonar`.
+- L'analyse utilise `SONAR_TOKEN` et l'URL interne `http://sonarqube:9000`.
+- Si `SONAR_TOKEN` n'est pas configuré, l'étape est marquée comme ignorée sans bloquer le pipeline.
+- Les résultats sont enregistrés dans `.ai-factory/sonar.txt`.
 
 ### 7. SBOM et sécurité
 
-En exécution complète :
-
-- `syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json`
-- `trivy fs --skip-db-update --scanners vuln,secret --severity HIGH,CRITICAL`
-
-Les artefacts utiles restent dans le workspace :
-
-- `.ai-factory/sbom.cdx.json`
-- `.ai-factory/trivy.txt`
-- `.ai-factory/test.txt`
-- `.ai-factory/sonar.txt` si une analyse est exécutée
-- `.ai-review.md`
+- **Syft** : Génération d'un SBOM au format CycloneDX JSON (`.ai-factory/sbom.cdx.json`).
+- **Trivy** : Scan de vulnérabilités et de secrets en mode filesystem sans mise à jour externe de la base (`.ai-factory/trivy.txt`).
 
 ### 8. Revue et livraison
 
-- le `Reviewer` reçoit requirement, plan, patch, synthèse de test et synthèse sécurité ;
-- la tâche passe en `WAITING_APPROVAL` ;
-- l'approbation déclenche commit, push et création de PR ;
-- les fichiers de travail IA sont exclus du commit via `git reset -- .ai-plan.md changes.patch .ai-review.md .ai-factory`.
+- L'agent `Reviewer` synthétise le plan, le patch, la revue de test, le rapport SonarQube et le rapport Trivy dans `.ai-review.md`.
+- La tâche bascule en `WAITING_APPROVAL`.
+- L'utilisateur approuve la tâche via `POST /api/tasks/{id}/approve`.
+- L'orchestrateur crée la branche `ai-factory/<taskId>`, exclut du commit les artefacts de travail IA (`.ai-plan.md`, `changes.patch`, `.ai-review.md`, `.ai-factory/`), committe, pousse les sources modifiées sur Gitea, puis ouvre une Pull Request via l'API REST de Gitea.
 
 ## API exposée
 
@@ -194,74 +183,82 @@ Les artefacts utiles restent dans le workspace :
 
 Crée une tâche et retourne `202 Accepted`.
 
-Exemple :
-
+Exemple de requête :
 ```json
 {
   "repositoryUrl": "http://gitea:3000/aiadmin/customer-api.git",
   "baseBranch": "main",
-  "requirement": "Add GET /customers/{id} with 404 and tests",
+  "requirement": "Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
   "llmMode": "LOCAL"
 }
 ```
 
 ### `GET /api/tasks`
 
-Liste les tâches connues en mémoire.
+Liste les tâches gérées en mémoire par l'orchestrateur.
 
 ### `GET /api/tasks/{id}`
 
-Retourne l'état complet de la tâche, dont :
+Retourne l'état complet d'une tâche (`TaskView`) :
 
-- `status`
-- `workspace`
-- `plan`
-- `patch`
-- `testSummary`
-- `qualitySummary`
-- `securitySummary`
-- `review`
-- `pullRequestUrl`
-- `error`
-- `steps`
-- `createdAt`
-- `updatedAt`
+```json
+{
+  "id": "a1b2c3d4",
+  "ticketNumber": "AF-0001",
+  "status": "WAITING_APPROVAL",
+  "repositoryUrl": "http://gitea:3000/aiadmin/customer-api.git",
+  "baseBranch": "main",
+  "requirement": "Add GET /customers/{id}...",
+  "llmMode": "LOCAL",
+  "workspace": "/workspace/tasks/a1b2c3d4",
+  "plan": "...",
+  "patch": "...",
+  "testSummary": "...",
+  "qualitySummary": "...",
+  "securitySummary": "...",
+  "review": "...",
+  "pullRequestUrl": null,
+  "error": null,
+  "steps": [
+    { "step": "CLONING", "status": "OK", "summary": "Cloning repository", "timestamp": "2026-08-26T10:00:00Z" }
+  ],
+  "createdAt": "2026-08-26T10:00:00Z",
+  "updatedAt": "2026-08-26T10:03:00Z"
+}
+```
 
 ### `POST /api/tasks/{id}/approve`
 
-Valide une tâche en attente et déclenche la création de PR.
-
-Contraintes :
-
-- la tâche doit être en `WAITING_APPROVAL` ;
-- `GITEA_TOKEN` doit être configuré.
+Approuve une tâche en attente et déclenche la livraison vers Gitea (`202 Accepted`).
 
 ### `GET /api/capabilities`
 
-Expose les capacités de l'usine visibles par l'interface, actuellement :
-
+Retourne les fonctionnalités système activées (ex: mode cloud disponible) :
 ```json
 {
   "cloudEnabled": false
 }
 ```
 
+## Métriques et observabilité
+
+- L'orchestrateur expose un endpoint Prometheus sur `/actuator/prometheus` (sur le port interne 8080).
+- Compteurs Micrometer enregistrés :
+  - `ai_factory_tasks_submitted`
+  - `ai_factory_tasks_completed`
+  - `ai_factory_tasks_failed`
+- Grafana propose un tableau de bord pré-configuré (`orchestrator.json`).
+
 ## Données et persistance
 
-- les tâches ne sont pas stockées en base ;
-- un redémarrage de l'orchestrateur vide l'historique en mémoire ;
-- les workspaces sur disque restent dans le volume Docker tant qu'il n'est pas détruit ;
-- Gitea, Ollama, SonarQube, Nexus et Grafana ont chacun leur propre volume Docker.
+- L'état des tâches est conservé en mémoire dans l'orchestrateur.
+- Un redémarrage réinitialise l'historique API.
+- Les conteneurs Gitea, PostgreSQL, SonarQube, Nexus, Ollama et Grafana disposent de volumes Docker persistants.
+- Les espaces de travail sous `/workspace/tasks` restent présents sur le volume `factory-workspace`.
 
 ## Écarts avec une cible industrielle
 
-- pas de scheduler distribué ;
-- pas de file de messages ;
-- pas de contrôle d'accès centralisé ;
-- pas d'identité workload ;
-- pas de sandbox Kubernetes ;
-- pas de politique réseau fine ;
-- pas de gouvernance des prompts, modèles ou outils ;
-- pas de séparation stricte entre control plane et execution plane.
-
-Le prototype reste utile pour valider la chaîne d'exécution, la qualité des patches et les points de friction du workflow agentique.
+- Pas de scheduler distribué ni de file de messages (type RabbitMQ / Kafka) ;
+- Pas de persistance des tâches dans une base de données de contrôle ;
+- Accès au socket Docker (`/var/run/docker.sock`) par l'orchestrateur ;
+- Absence de RBAC / SSO centralisé pour l'API de l'orchestrateur.

@@ -1,25 +1,24 @@
 # Fonctionnement de l'usine logicielle
 
-Le pipeline transforme un besoin en pull request, avec des controles
-deterministes et une approbation humaine avant toute publication.
+Le pipeline transforme un besoin exprime sous forme de ticket en Pull Request Gitea, avec un ensemble de contrôles déterministes et une approbation humaine préalable obligatoire.
 
 ![Diagramme du flux de l'usine logicielle](assets/software-factory-workflow.svg)
 
-| Etape | Objectif | Outils utilises |
+| Étape | Objectif | Outils et composants |
 |---|---|---|
-| 1. Besoin | Saisir le ticket et le mode LLM | `factory-web` |
-| 2. Tache | Exposer l'API et lancer le workflow | Nginx, Spring Boot |
-| 3. Contexte | Cloner le depot cible et en extraire le contexte | Gitea, Git, orchestrateur |
-| 4. Plan | Definir les modifications a effectuer | Agent Planner, LiteLLM, Ollama ou OpenAI |
-| 5. Patch | Produire un `unified diff` | Agent Developer, LiteLLM, Ollama ou OpenAI |
-| 6. Validation | Verifier que le diff est applicable | `git apply --check`, sandbox Docker sans reseau |
-| Reparation | Regenerer un diff complet si necessaire | Agent Patch Repair, LiteLLM |
-| 7. Sandbox | Appliquer le patch dans un environnement temporaire | Docker, Git |
-| 8. Tests et qualite | Executer les tests et l'analyse de qualite | Maven, Gradle ou npm, Nexus, SonarQube |
-| 9. Securite | Produire le SBOM et rechercher vulnerabilites et secrets | Syft, Trivy |
-| 10. Revue | Interpreter les preuves techniques | Agents Tester et Reviewer, LiteLLM, Ollama ou OpenAI |
-| 11. Decision | Autoriser explicitement la livraison | API Spring Boot, intervention humaine |
-| 12. Livraison | Creer la branche, le commit, le push et la PR | Git, Gitea |
+| 1. Saisie du besoin | Rédiger le ticket structuré et choisir le mode LLM (`LOCAL` / `CLOUD`) | `factory-web` (SPA), Nginx |
+| 2. Création de la tâche | Attribuer une référence (`AF-0001`), instancier l'état en mémoire et démarrer le pipeline asynchrone | `orchestrator` (Spring Boot / API REST) |
+| 3. Analyse du contexte | Cloner le dépôt Git cible et extraire la structure du projet | Gitea, Git, `RepositoryContextService` |
+| 4. Planification | Générer une feuille de route détaillée (`.ai-plan.md`) | Agent `Planner`, LiteLLM (Ollama ou OpenAI) |
+| 5. Développement | Produire un patch unifié (`unified diff`) à partir du besoin et du plan | Agent `Developer`, `UnifiedDiffNormalizer` |
+| 6. Validation du patch | Vérifier l'applicabilité du diff sans accès réseau (`git apply --check`) | Sandbox Docker (`ai-factory-sandbox:local`) |
+| 7. Réparation de patch | Régénérer un diff unifié valide si la première version échoue à l'application | Agent `PatchRepair`, LiteLLM |
+| 8. Application en sandbox | Appliquer le patch et contrôler l'absence d'erreurs de format (`git diff --check`) | Sandbox Docker, Git |
+| 9. Tests automatisés | Exécuter la suite de tests (Maven via miroir Nexus, Gradle ou npm) et analyser les journaux | Maven / Gradle / npm, Nexus, Agent `Tester` |
+| 10. Analyse de qualité | Exécuter l'analyse qualimétrique du code source pour les projets Maven | SonarQube Scanner (`sonar-maven-plugin`) |
+| 11. Analyse de sécurité | Générer le SBOM CycloneDX et scanner les vulnérabilités et secrets | Syft (`sbom.cdx.json`), Trivy (`trivy.txt`) |
+| 12. Revue globale | Synthétiser le besoin, le plan, le patch et l'ensemble des preuves déterministes dans `.ai-review.md` | Agent `Reviewer`, LiteLLM |
+| 13. Décision humaine | Examiner la proposition et autoriser la livraison (`POST /api/tasks/{id}/approve`) | API Spring Boot, IHM `factory-web` |
+| 14. Livraison SCM | Basculer sur une branche dédiée, nettoyer les fichiers temporaires IA, committer, pousser et créer la PR | Git, Gitea REST API |
 
-Le modele est joignable localement avec Ollama ou, si active, dans le cloud via
-OpenAI. LiteLLM reste le point de passage unique des appels de modeles.
+Le modèle de langage est sollicité localement via Ollama (`qwen2.5-coder:7b`) ou dans le cloud via OpenAI (`gpt-5.6`) lorsque le mode cloud est activé. LiteLLM constitue le point de passage unique et homogène pour tous les appels de modèles.

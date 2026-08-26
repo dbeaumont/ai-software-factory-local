@@ -2,7 +2,7 @@
 
 Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. Le dépôt matérialise un flux contrôlé de type :
 
-`requirement -> plan -> patch -> validation du diff -> sandbox -> tests -> SBOM -> scan sécurité -> review -> approbation humaine -> pull request`
+`requirement -> plan -> patch -> validation du diff -> réparation si besoin -> sandbox -> tests -> SonarQube -> SBOM Syft -> scan Trivy -> review IA -> approbation humaine -> pull request Gitea`
 
 ## Vue d'ensemble
 
@@ -10,39 +10,45 @@ La stack actuelle contient :
 
 | Fonction | Composant |
 |---|---|
-| Point d'entrée HTTP | `reverse-proxy` Nginx |
-| Interface de saisie | `factory-web`, servi par le reverse proxy |
-| Orchestration | Spring Boot 3.5 / Java 21 |
-| Passerelle LLM | LiteLLM |
-| Modèle local | Ollama |
-| Modèle cloud optionnel | OpenAI via LiteLLM |
-| SCM / PR | Gitea + PostgreSQL |
-| Sandbox d'exécution | conteneurs Docker éphémères |
-| Tests | Maven / Gradle / npm selon le dépôt |
-| SBOM | Syft |
-| Scan sécurité | Trivy |
-| Observabilité | Prometheus + Grafana |
-| Qualité et dépendances | SonarQube + Nexus |
+| Point d'entrée HTTP | `reverse-proxy` Nginx (port 8080) |
+| Interface de saisie & suivi | `factory-web` (SPA HTML/JS/CSS servie par Nginx) |
+| Orchestration | Spring Boot 3.5 / Java 21 (`orchestrator`) |
+| Passerelle LLM | LiteLLM (port 4000 interne) |
+| Modèle local | Ollama (`qwen2.5-coder:7b` par défaut) |
+| Modèle cloud optionnel | OpenAI via LiteLLM (`gpt-5.6` configurable) |
+| SCM / PR | Gitea + PostgreSQL 16 |
+| Sandbox d'exécution | Conteneurs Docker éphémères (`ai-factory-sandbox:local`) |
+| Build et tests | Maven / Gradle / npm selon le dépôt |
+| Miroir d'artefacts | Nexus 3.82 (groupe Maven public) |
+| Qualité de code | SonarQube Community + PostgreSQL 16 |
+| SBOM | Syft (CycloneDX JSON) |
+| Scan sécurité | Trivy (vulnérabilités & secrets) |
+| Observabilité | Prometheus v3.5 + Grafana 12.1 (métriques Micrometer/Actuator) |
 
 ## Ce que fait réellement le prototype
 
-1. L'utilisateur soumet un ticket depuis l'interface web ou `POST /api/tasks`.
-2. L'orchestrateur clone le dépôt cible sur la branche demandée.
-3. Le `Planner` produit un plan à partir du besoin et du contexte du dépôt.
-4. Le `Developer` génère un patch `unified diff`.
-5. Le patch est normalisé puis validé avec `git apply --check`.
-6. En cas d'échec, un second appel LLM tente une réparation complète du diff.
-7. Le patch est appliqué en sandbox, les tests Maven passent par Nexus, SonarQube analyse la qualité, puis les scans sont exécutés.
-8. Le `Tester` et le `Reviewer` complètent l'analyse à partir des preuves déterministes.
-9. La tâche passe en `WAITING_APPROVAL`.
-10. Après `POST /api/tasks/{id}/approve`, l'orchestrateur crée une branche `ai-factory/<taskId>`, committe, pousse et ouvre une PR Gitea.
+1. L'utilisateur soumet un ticket depuis l'interface web (`factory-web`) ou via l'API REST `POST /api/tasks`.
+2. L'orchestrateur attribue une référence unique (`AF-0001`, etc.) et clone le dépôt cible de manière asynchrone.
+3. Le service de contexte extrait la structure et le contenu du projet.
+4. L'agent `Planner` produit une feuille de route (`.ai-plan.md`).
+5. L'agent `Developer` génère un patch `unified diff`.
+6. Le patch est normalisé (`UnifiedDiffNormalizer`), puis validé avec `git apply --check` dans une sandbox sans réseau.
+7. En cas d'échec de validation du diff, l'agent `PatchRepair` tente une réparation complète en analysant les fichiers sources authoritative.
+8. Le patch est appliqué en sandbox, puis `git diff --check` et `git diff --stat` sont contrôlés.
+9. Les tests unitaires/d'intégration s'exécutent dans la sandbox (via Nexus pour Maven). L'agent `Tester` analyse les journaux de test.
+10. L'analyse de qualité SonarQube est déclenchée (pour les projets Maven quand `SONAR_TOKEN` est présent).
+11. Syft génère un SBOM CycloneDX (`.ai-factory/sbom.cdx.json`) et Trivy scanne les vulnérabilités/secrets (`.ai-factory/trivy.txt`).
+12. L'agent `Reviewer` synthétise l'ensemble des preuves déterministes (plan, patch, tests, qualité, sécurité) dans `.ai-review.md`.
+13. La tâche passe au statut `WAITING_APPROVAL`.
+14. Après approbation humaine (`POST /api/tasks/{id}/approve`), l'orchestrateur bascule sur une branche `ai-factory/<taskId>`, exclut les artefacts de travail IA (`git reset`), committe, pousse vers Gitea et ouvre une Pull Request.
 
 ## Pré-requis
 
 - Docker Desktop ou Docker Engine avec Compose v2
-- `make`, `curl`, `git`
-- `jq` recommandé pour les appels API
-- environ 24 Go de RAM ou plus pour la stack complète avec LLM local
+- `make`, `curl`, `git`, `bash`
+- Python 3 (pour les scripts de bootstrap)
+- `jq` recommandé pour manipuler les réponses API
+- Environ 24 Go de RAM recommandés pour la stack complète avec LLM local
 
 ## Démarrage rapide
 
@@ -55,26 +61,32 @@ make bootstrap
 
 URLs principales :
 
-- Factory Web et API publique : `http://localhost:8080`
-- Gitea : `http://localhost:3000`
-- Orchestrateur direct (diagnostic) : `http://localhost:8088`
-- Ollama : `http://localhost:11434`
+- Interface Web & API publique : `http://localhost:8080`
+- Gitea : `http://localhost:3000` (dépôt démo : `http://localhost:3000/aiadmin/customer-api`)
+- Orchestrateur direct (diagnostic & Actuator) : `http://localhost:8088`
+- SonarQube : `http://localhost:9000`
+- Nexus : `http://localhost:8081`
+- Prometheus : `http://localhost:9090`
+- Grafana : `http://localhost:3001`
+- Ollama API : `http://localhost:11434`
 
-Le bootstrap crée le compte Gitea de démonstration `aiadmin` et le dépôt `customer-api`, pousse le contenu de `sample-repo/`, puis génère les jetons Gitea et SonarQube manquants dans `.env`.
+Le script `make bootstrap` initialise le compte Gitea `aiadmin`, le compte reviewer `reviewer`, le dépôt de démonstration `customer-api`, pousse le contenu de `sample-repo/`, et génère automatiquement les jetons `GITEA_TOKEN` et `SONAR_TOKEN` dans le fichier `.env`.
 
 ## Utilisation
 
 ### Depuis l'interface web
 
-L'interface `factory-web` est servie par le reverse proxy. Les requêtes du navigateur vers `/api/` sont relayées vers l'orchestrateur ; le navigateur n'accède donc pas directement au port de l'orchestrateur.
+L'interface `factory-web` est servie par le reverse proxy Nginx. Les appels API vers `/api/` sont redirigés de manière transparente vers l'orchestrateur.
 
 L'interface permet de :
 
-- rédiger un ticket structuré ;
-- choisir le mode `LOCAL` ou `CLOUD` ;
-- suivre l'exécution en temps réel ;
-- consulter l'historique des tâches ;
-- approuver une tâche en attente.
+- rédiger un ticket structuré (résumé, objectif métier, périmètre, comportement actuel/attendu, critères d'acceptation) ;
+- utiliser le bouton de pré-remplissage de démo ("Charger le modèle de ticket") ;
+- choisir le mode `LOCAL` (Ollama) ou `CLOUD` (OpenAI via LiteLLM) ;
+- suivre la progression en temps réel (stepper, logs, progression) ;
+- consulter l'historique complet des exécutions (vue "Exécutions") ;
+- inspecter la proposition (plan, patch, logs de tests, SonarQube, Trivy, revue IA) ;
+- approuver la tâche et déclencher la PR.
 
 ### Depuis l'API
 
@@ -91,7 +103,7 @@ curl -s -X POST http://localhost:8080/api/tasks \
   }'
 ```
 
-Lire une tâche :
+Consulter une tâche :
 
 ```bash
 curl -s http://localhost:8080/api/tasks/<TASK_ID>
@@ -109,7 +121,7 @@ Approuver une tâche :
 curl -s -X POST http://localhost:8080/api/tasks/<TASK_ID>/approve
 ```
 
-Capacités exposées :
+Vérifier les capacités de l'usine :
 
 ```bash
 curl -s http://localhost:8080/api/capabilities
@@ -117,87 +129,83 @@ curl -s http://localhost:8080/api/capabilities
 
 ## États de tâche
 
-Les statuts réellement utilisés sont :
+Les 13 statuts du cycle de vie d'une tâche sont :
 
-- `QUEUED`
-- `CLONING`
-- `PLANNING`
-- `GENERATING_PATCH`
-- `APPLYING_PATCH`
-- `TESTING`
-- `QUALITY_SCANNING`
-- `SECURITY_SCANNING`
-- `REVIEWING`
-- `WAITING_APPROVAL`
-- `APPROVED`
-- `PR_CREATED`
-- `FAILED`
-
-`/api/tasks/{id}` retourne aussi le plan, le patch, les résumés de test et de sécurité, la review IA, l'erreur éventuelle, l'URL de PR et l'historique des étapes.
+1. `QUEUED` : Tâche enregistrée en mémoire.
+2. `CLONING` : Clonage du dépôt Git.
+3. `PLANNING` : Analyse du besoin et génération de la feuille de route par l'agent Planner.
+4. `GENERATING_PATCH` : Génération du patch par l'agent Developer.
+5. `APPLYING_PATCH` : Validation (`git apply --check`), réparation si nécessaire, et application du diff dans la sandbox.
+6. `TESTING` : Exécution des tests automatisés dans la sandbox et analyse par l'agent Tester.
+7. `QUALITY_SCANNING` : Analyse de qualité de code SonarQube.
+8. `SECURITY_SCANNING` : Génération du SBOM CycloneDX (Syft) et scan vulnérabilités/secrets (Trivy).
+9. `REVIEWING` : Synthèse globale des preuves déterministes par l'agent Reviewer.
+10. `WAITING_APPROVAL` : En attente de l'approbation humaine.
+11. `APPROVED` : Validation humaine enregistrée.
+12. `PR_CREATED` : Branche créée, commit effectué, push réalisé et Pull Request ouverte sur Gitea.
+13. `FAILED` : Échec rencontré à l'une des étapes (diff invalide non réparable, erreur de build, etc.).
 
 ## Modes LLM
 
-Le routage LLM passe toujours par LiteLLM :
+Le routage des modèles s'effectue via LiteLLM :
 
-- `LOCAL` -> alias `factory-code-local` -> Ollama
-- `CLOUD` -> alias `factory-code-cloud` -> OpenAI
+- `LOCAL` -> modèle `factory-code-local` -> Ollama (`qwen2.5-coder:7b`)
+- `CLOUD` -> modèle `factory-code-cloud` -> OpenAI (`gpt-5.6`)
 
-Le mode cloud n'est accepté que si `AI_FACTORY_CLOUD_ENABLED=true`.
+Le mode cloud n'est accessible que si `AI_FACTORY_CLOUD_ENABLED=true` dans `.env`.
 
-Variables `.env` principales :
+Variables de configuration principales :
 
 ```bash
 OLLAMA_MODEL=qwen2.5-coder:7b
-OPENAI_MODEL=gpt-5.6-luna
-OPENAI_API_KEY=${VAULT_OPENAI_API_KEY:-}
+OPENAI_MODEL=gpt-5.6
 AI_FACTORY_CLOUD_ENABLED=false
 LITELLM_MASTER_KEY=local-dev-litellm-key
 ```
 
-Placez la clé OpenAI locale dans `.vault` sous la variable `VAULT_OPENAI_API_KEY`. Ce fichier est ignoré par Git et est chargé uniquement par LiteLLM.
+Pour utiliser le mode cloud, placez votre clé OpenAI dans le fichier `.vault` :
+```bash
+VAULT_OPENAI_API_KEY=sk-...
+```
+Ce fichier est exclu du contrôle de version Git et est chargé de façon sécurisée par le conteneur LiteLLM.
 
 ## Démonstration
 
-Envoyer une tâche de démonstration :
+Lancer une tâche de démo pré-configurée :
 
 ```bash
 make demo
 ```
 
-Exécuter le flux complet avec patch appliqué, tests et scans :
-
-```bash
-curl -s -X POST http://localhost:8080/api/tasks \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
-    "baseBranch":"main",
-    "requirement":"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
-    "llmMode":"LOCAL"
-  }'
-```
-
 ## Qualité et observabilité
 
-`make up` démarre aussi :
+- **SonarQube** (`http://localhost:9000`) : Analyse de la qualité du code Java/Maven. Les jetons sont générés par `make bootstrap` ou `make tokens`.
+- **Nexus** (`http://localhost:8081`) : Miroir d'artefacts utilisé par le build Maven dans la sandbox (`maven-settings.xml`).
+- **Prometheus** (`http://localhost:9090`) : Collecte les métriques Micrometer depuis `/actuator/prometheus` de l'orchestrator (`ai_factory_tasks_submitted`, `ai_factory_tasks_completed`, `ai_factory_tasks_failed`).
+- **Grafana** (`http://localhost:3001`) : Tableau de bord de suivi pré-provisionné (`orchestrator.json`).
 
-- SonarQube : `http://localhost:9000`
-- Nexus : `http://localhost:8081`
-- Prometheus : `http://localhost:9090`
-- Grafana : `http://localhost:3001`
+## Commandes Make disponibles
 
-Nexus est le miroir Maven utilisé par les builds Maven du sandbox. SonarQube analyse les dépôts Maven en exécution complète lorsque `SONAR_TOKEN` est renseigné. `make bootstrap` génère ce jeton automatiquement s’il manque, à partir de `SONAR_ADMIN_LOGIN` et `SONAR_ADMIN_PASSWORD`, puis recrée l’orchestrateur. Sans jeton, l’étape de qualité est explicitement ignorée ; les autres contrôles restent exécutés.
-
-## Commandes utiles
-
-```bash
-make help
-make status
-make logs
-make restart
-make urls
-make test
-make down
+| Commande | Description |
+|---|---|
+| `make help` | Affiche l'aide des commandes Make |
+| `make init` | Initialise `.env` et `.vault` à partir des exemples |
+| `make build` | Construit l'image sandbox et les services Compose |
+| `make up` | Démarre la stack complète en arrière-plan |
+| `make full` | Remet à zéro les données et démarre une stack entièrement bootstrappée |
+| `make model` | Télécharge le modèle Ollama configuré |
+| `make bootstrap` | Initialise Gitea, SonarQube et génère les jetons d'accès |
+| `make tokens` | Régénère ou valide les jetons Gitea et SonarQube |
+| `make demo` | Soumet une tâche de démo à l'orchestrateur |
+| `make test` | Exécute les tests unitaires de l'orchestrateur |
+| `make package` | Compile et empaquette l'orchestrateur Java (sans tests) |
+| `make config` | Valide et affiche la configuration Compose |
+| `make status` | Affiche l'état des conteneurs |
+| `make restart` | Redémarre l'orchestrateur |
+| `make logs` | Suit les journaux de l'orchestrateur |
+| `make urls` | Liste toutes les URLs de services et points d'accès |
+| `make down` | Arrête la stack Compose |
+| `make clean` | Arrête la stack et supprime tous les volumes (destructif) |
 make clean
 ```
 

@@ -6,105 +6,139 @@ SHELL := /bin/bash
 
 export VAULT_OPENAI_API_KEY
 
+# Couleurs pour l'affichage
+GREEN  := \033[0;32m
+YELLOW := \033[1;33m
+BLUE   := \033[0;34m
+CYAN   := \033[0;36m
+RED    := \033[0;31m
+NC     := \033[0m
+
 .PHONY: help init build up full model bootstrap tokens demo test package config status restart logs urls down clean
 
 help:
-	@echo "AI Software Factory local prototype"
-	@echo "  make init       - create .env and .vault from their examples"
-	@echo "  make build      - build orchestrator + sandbox images"
-	@echo "  make up         - start the complete local factory stack"
-	@echo "  make full       - reset data and start a fully bootstrapped local factory"
-	@echo "  make model      - pull configured Ollama model"
-	@echo "  make bootstrap  - initialize demo Gitea repository and service tokens"
-	@echo "  make tokens     - validate or regenerate local Gitea and SonarQube tokens"
-	@echo "  make demo       - submit an AI task against the demo repository"
-	@echo "  make test       - run orchestrator tests"
-	@echo "  make package    - package orchestrator without tests"
-	@echo "  make config     - validate and render Docker Compose configuration"
-	@echo "  make status     - show containers"
-	@echo "  make restart    - restart the orchestrator"
-	@echo "  make logs       - follow orchestrator logs"
-	@echo "  make urls       - list available service and API URLs"
-	@echo "  make down       - stop stack"
-	@echo "  make clean      - stop and remove volumes (destructive)"
+	@echo -e "$(YELLOW)AI Software Factory local prototype - Commandes :$(NC)"
+	@echo -e "  $(CYAN)make init$(NC)       - create .env and .vault from their examples"
+	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
+	@echo -e "  $(CYAN)make up$(NC)         - start the complete local factory stack"
+	@echo -e "  $(CYAN)make full$(NC)       - reset data and start a fully bootstrapped local factory"
+	@echo -e "  $(CYAN)make model$(NC)      - pull configured Ollama model"
+	@echo -e "  $(CYAN)make bootstrap$(NC)  - initialize demo Gitea repository and service tokens"
+	@echo -e "  $(CYAN)make tokens$(NC)     - validate or regenerate local Gitea and SonarQube tokens"
+	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
+	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator tests"
+	@echo -e "  $(CYAN)make package$(NC)    - package orchestrator without tests"
+	@echo -e "  $(CYAN)make config$(NC)     - validate and render Docker Compose configuration"
+	@echo -e "  $(CYAN)make status$(NC)     - show containers"
+	@echo -e "  $(CYAN)make restart$(NC)    - restart the orchestrator"
+	@echo -e "  $(CYAN)make logs$(NC)       - follow orchestrator logs"
+	@echo -e "  $(CYAN)make urls$(NC)       - list available service and API URLs"
+	@echo -e "  $(CYAN)make down$(NC)       - stop stack"
+	@echo -e "  $(CYAN)make clean$(NC)      - stop and remove volumes (destructive)"
 
 init:
 	@test -f .env || cp .env.example .env
 	@test -f .vault || cp .vault.example .vault
-	@echo ".env and .vault ready"
+	@echo -e "$(GREEN).env and .vault ready$(NC)"
 
 build:
+	@echo -e "$(BLUE)Building sandbox and orchestrator images...$(NC)"
 	docker build -t ai-factory-sandbox:local ./sandbox
 	docker compose build orchestrator factory-web
+	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build
+	@echo -e "$(BLUE)Starting local factory stack...$(NC)"
 	docker compose up -d
-	$(MAKE) urls
+	@echo -e "$(GREEN)Stack started!$(NC)"
+	@$(MAKE) urls
 
 full:
+	@echo -e "$(YELLOW)Resetting and bootstrapping complete factory...$(NC)"
 	$(MAKE) clean
 	$(MAKE) up
 	$(MAKE) model
 	$(MAKE) bootstrap
+	@echo -e "$(GREEN)Full factory ready!$(NC)"
 
 model:
+	@echo -e "$(BLUE)Pulling Ollama model $(OLLAMA_MODEL)...$(NC)"
 	docker compose exec ollama ollama pull $(OLLAMA_MODEL)
+	@echo -e "$(GREEN)Model $(OLLAMA_MODEL) pulled!$(NC)"
 
 bootstrap: init
+	@echo -e "$(BLUE)Bootstrapping Gitea and SonarQube...$(NC)"
 	./scripts/bootstrap-gitea.sh
 	./scripts/bootstrap-sonar.sh
 	docker compose up -d --force-recreate orchestrator
+	@echo -e "$(GREEN)Bootstrap complete!$(NC)"
 
 tokens: init
+	@echo -e "$(BLUE)Updating Gitea and SonarQube tokens...$(NC)"
 	./scripts/bootstrap-gitea.sh --token-only
 	./scripts/bootstrap-sonar.sh
 	docker compose up -d --force-recreate orchestrator
+	@echo -e "$(GREEN)Tokens updated!$(NC)"
 
 demo:
+	@echo -e "$(BLUE)Submitting demo task...$(NC)"
 	./scripts/demo.sh
 
 test:
+	@echo -e "$(BLUE)Running orchestrator tests...$(NC)"
 	if [ -x ./mvnw ]; then ./mvnw -f orchestrator/pom.xml test; else mvn -f orchestrator/pom.xml test; fi
 
 package:
+	@echo -e "$(BLUE)Packaging orchestrator...$(NC)"
 	if [ -x ./mvnw ]; then ./mvnw -f orchestrator/pom.xml package -DskipTests; else mvn -f orchestrator/pom.xml package -DskipTests; fi
 
 config:
+	@echo -e "$(BLUE)Validating Docker Compose configuration...$(NC)"
 	docker compose config >/dev/null
+	@echo -e "$(GREEN)Configuration is valid!$(NC)"
 
 restart:
+	@echo -e "$(YELLOW)Restarting orchestrator...$(NC)"
 	docker compose restart orchestrator
+	@echo -e "$(GREEN)Orchestrator restarted!$(NC)"
 
 status:
 	docker compose ps
 
 down:
+	@echo -e "$(YELLOW)Stopping local factory stack...$(NC)"
 	docker compose down
+	@echo -e "$(GREEN)Stack stopped!$(NC)"
 
 logs:
 	docker compose logs -f orchestrator
 
 urls:
-	@echo "Core"
-	@echo "  Factory web:  http://localhost:$(WEB_APP_PORT)"
-	@echo "  Gitea:        http://localhost:$(GITEA_HTTP_PORT) (user: $(GITEA_REVIEWER_USER), password: $(GITEA_REVIEWER_PASSWORD))"
-	@echo "  Gitea API:    http://localhost:$(GITEA_HTTP_PORT)/api/v1"
-	@echo "  Gitea SSH:    ssh://git@localhost:$(GITEA_SSH_PORT)"
-	@echo "  Demo repo:    http://localhost:$(GITEA_HTTP_PORT)/$(GITEA_ADMIN_USER)/customer-api"
-	@echo "  Ollama API:   http://localhost:$(OLLAMA_PORT)"
-	@echo "  Orchestrator: http://localhost:$(ORCHESTRATOR_PORT)"
-	@echo "  Tasks API:    http://localhost:$(ORCHESTRATOR_PORT)/api/tasks"
-	@echo "  Create task:  POST http://localhost:$(ORCHESTRATOR_PORT)/api/tasks"
-	@echo "  Task detail:  GET  http://localhost:$(ORCHESTRATOR_PORT)/api/tasks/<TASK_ID>"
-	@echo "  Approve task: POST http://localhost:$(ORCHESTRATOR_PORT)/api/tasks/<TASK_ID>/approve"
-	@echo "  Actuator:     http://localhost:$(ORCHESTRATOR_PORT)/actuator"
-	@echo "  Health:       http://localhost:$(ORCHESTRATOR_PORT)/actuator/health"
-	@echo "  Metrics:      http://localhost:$(ORCHESTRATOR_PORT)/actuator/prometheus"
-	@echo "Quality, artifacts and observability"
-	@echo "  SonarQube:    http://localhost:$(SONAR_PORT) (user: $(SONAR_ADMIN_LOGIN), password: $(SONAR_ADMIN_PASSWORD))"
-	@echo "  Nexus:        http://localhost:$(NEXUS_PORT) (user: $(NEXUS_ADMIN_USER), initial password: docker compose exec nexus cat /nexus-data/admin.password)"
-	@echo "  Prometheus:   http://localhost:$(PROMETHEUS_PORT)"
-	@echo "  Grafana:      http://localhost:$(GRAFANA_PORT) (user: $(GRAFANA_ADMIN_USER), initial password: $(GRAFANA_ADMIN_PASSWORD))"
+	@echo ""
+	@echo -e "$(YELLOW)Core Services:$(NC)"
+	@echo -e "  - Factory web:  $(GREEN)http://localhost:$(WEB_APP_PORT)$(NC)"
+	@echo -e "  - Gitea:        $(GREEN)http://localhost:$(GITEA_HTTP_PORT)$(NC) (user: $(GITEA_REVIEWER_USER), password: $(GITEA_REVIEWER_PASSWORD))"
+	@echo -e "  - Gitea API:    $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/api/v1$(NC)"
+	@echo -e "  - Gitea SSH:    $(GREEN)ssh://git@localhost:$(GITEA_SSH_PORT)$(NC)"
+	@echo -e "  - Demo repo:    $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/$(GITEA_ADMIN_USER)/customer-api$(NC)"
+	@echo -e "  - Ollama API:   $(GREEN)http://localhost:$(OLLAMA_PORT)$(NC)"
+	@echo -e "  - Orchestrator: $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)$(NC)"
+	@echo -e "  - Tasks API:    $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks$(NC)"
+	@echo -e "  - Create task:  POST $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks$(NC)"
+	@echo -e "  - Task detail:  GET  $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks/<TASK_ID>$(NC)"
+	@echo -e "  - Approve task: POST $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks/<TASK_ID>/approve$(NC)"
+	@echo -e "  - Actuator:     $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/actuator$(NC)"
+	@echo -e "  - Health:       $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/actuator/health$(NC)"
+	@echo -e "  - Metrics:      $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/actuator/prometheus$(NC)"
+	@echo ""
+	@echo -e "$(YELLOW)Quality, Artifacts & Observability:$(NC)"
+	@echo -e "  - SonarQube:    $(GREEN)http://localhost:$(SONAR_PORT)$(NC) (user: $(SONAR_ADMIN_LOGIN), password: $(SONAR_ADMIN_PASSWORD))"
+	@echo -e "  - Nexus:        $(GREEN)http://localhost:$(NEXUS_PORT)$(NC) (user: $(NEXUS_ADMIN_USER), initial password: docker compose exec nexus cat /nexus-data/admin.password)"
+	@echo -e "  - Prometheus:   $(GREEN)http://localhost:$(PROMETHEUS_PORT)$(NC)"
+	@echo -e "  - Grafana:      $(GREEN)http://localhost:$(GRAFANA_PORT)$(NC) (user: $(GRAFANA_ADMIN_USER), initial password: $(GRAFANA_ADMIN_PASSWORD))"
+	@echo ""
 
 clean:
+	@echo -e "$(RED)Cleaning stack and removing volumes...$(NC)"
 	docker compose down -v --remove-orphans
+	@echo -e "$(GREEN)Clean complete!$(NC)"
