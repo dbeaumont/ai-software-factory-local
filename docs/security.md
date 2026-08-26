@@ -86,11 +86,11 @@ Le prototype ne met pas encore en place :
 - de segmentation réseau fine ;
 - de politique par type de tâche.
 
-### 3. Secrets en `.env`
+### 3. Secrets locaux
 
-Le POC repose sur des secrets simples dans `.env`, notamment :
+Le POC repose sur des secrets simples dans `.env` et `.vault`, notamment :
 
-- `OPENAI_API_KEY`
+- `VAULT_OPENAI_API_KEY` dans `.vault`
 - `LITELLM_MASTER_KEY`
 - `GITEA_TOKEN`
 - `SONAR_TOKEN`

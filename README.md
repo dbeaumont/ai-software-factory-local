@@ -149,10 +149,12 @@ Variables `.env` principales :
 ```bash
 OLLAMA_MODEL=qwen2.5-coder:7b
 OPENAI_MODEL=gpt-5.6-luna
-OPENAI_API_KEY=
+OPENAI_API_KEY=${VAULT_OPENAI_API_KEY:-}
 AI_FACTORY_CLOUD_ENABLED=false
 LITELLM_MASTER_KEY=local-dev-litellm-key
 ```
+
+Placez la clé OpenAI locale dans `.vault` sous la variable `VAULT_OPENAI_API_KEY`. Ce fichier est ignoré par Git et est chargé uniquement par LiteLLM.
 
 ## Démonstration
 

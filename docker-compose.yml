@@ -59,6 +59,8 @@ services:
   litellm:
     build:
       context: ./litellm
+    env_file:
+      - .vault
     environment:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5-coder:7b}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6}

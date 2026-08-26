@@ -1,6 +1,9 @@
 SHELL := /bin/bash
 
+-include .vault
 -include .env
+
+export VAULT_OPENAI_API_KEY
 
 ORCHESTRATOR_PORT ?= 8088
 WEB_APP_PORT ?= 8080
@@ -18,13 +21,14 @@ SONAR_ADMIN_PASSWORD ?= admin
 GRAFANA_ADMIN_USER ?= admin
 GRAFANA_ADMIN_PASSWORD ?= admin
 
-.PHONY: help init build up model bootstrap demo test package config status restart logs urls down clean
+.PHONY: help init build up full model bootstrap demo test package config status restart logs urls down clean
 
 help:
 	@echo "AI Software Factory local prototype"
-	@echo "  make init       - create .env from .env.example"
+	@echo "  make init       - create .env and .vault from their examples"
 	@echo "  make build      - build orchestrator + sandbox images"
 	@echo "  make up         - start the complete local factory stack"
+	@echo "  make full       - reset data and start a fully bootstrapped local factory"
 	@echo "  make model      - pull configured Ollama model"
 	@echo "  make bootstrap  - initialize demo Gitea repository and service tokens"
 	@echo "  make demo       - submit an AI task against the demo repository"
@@ -40,7 +44,8 @@ help:
 
 init:
 	@test -f .env || cp .env.example .env
-	@echo ".env ready"
+	@test -f .vault || cp .vault.example .vault
+	@echo ".env and .vault ready"
 
 build:
 	docker build -t ai-factory-sandbox:local ./sandbox
@@ -49,6 +54,12 @@ build:
 up: init build
 	docker compose up -d
 	$(MAKE) urls
+
+full:
+	$(MAKE) clean
+	$(MAKE) up
+	$(MAKE) model
+	$(MAKE) bootstrap
 
 model:
 	docker compose exec ollama ollama pull $${OLLAMA_MODEL:-qwen2.5-coder:7b}
