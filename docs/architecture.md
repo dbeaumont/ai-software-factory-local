@@ -77,7 +77,7 @@ flowchart TB
   PROM -.->|scrape des metriques| ORCH
 ```
 
-Le sandbox n'est pas un service permanent de Compose : l'orchestrateur crée un conteneur `ai-factory-sandbox` à la demande via le socket Docker. Ce conteneur temporaire utilise Nexus comme miroir Maven et contacte SonarQube uniquement lors d'une exécution complete (`dryRun=false`).
+Le sandbox n'est pas un service permanent de Compose : l'orchestrateur crée un conteneur `ai-factory-sandbox` à la demande via le socket Docker. Ce conteneur temporaire utilise Nexus comme miroir Maven et contacte SonarQube pour les dépôts Maven.
 
 ## Flux réel d'une tâche
 
@@ -107,17 +107,12 @@ sequenceDiagram
     L-->>O: unified diff réparé
     O->>S: git apply --check
   end
-  alt dryRun=false
-    O->>S: git apply + git diff --check
-    O->>S: build / tests Maven via Nexus
-    O->>L: Tester(requirement + patch + logs)
-    L-->>O: synthèse test
-    O->>S: analyse SonarQube (Maven + SONAR_TOKEN)
-    O->>S: Syft + Trivy
-  else dryRun=true
-    O->>L: Tester(requirement + patch + "not executed")
-    L-->>O: synthèse test
-  end
+  O->>S: git apply + git diff --check
+  O->>S: build / tests Maven via Nexus
+  O->>L: Tester(requirement + patch + logs)
+  L-->>O: synthèse test
+  O->>S: analyse SonarQube (Maven + SONAR_TOKEN)
+  O->>S: Syft + Trivy
   O->>L: Reviewer(requirement + plan + patch + evidence)
   L-->>O: review
   O-->>U: WAITING_APPROVAL
@@ -133,7 +128,6 @@ sequenceDiagram
 - `factory-web` construit un texte de requirement structuré à partir du formulaire.
 - L'API `POST /api/tasks` crée une tâche en mémoire et lance le pipeline en asynchrone.
 - La branche par défaut est `main` si `baseBranch` est vide.
-- `dryRun` vaut `true` si le champ n'est pas fourni.
 - `llmMode` vaut `LOCAL` si le champ n'est pas fourni.
 
 ### 2. Contextualisation
@@ -158,8 +152,6 @@ sequenceDiagram
 
 ### 5. Exécution déterministe
 
-En `dryRun=false` :
-
 - application du patch ;
 - contrôle `git diff --check` ;
 - lancement automatique des tests selon le dépôt :
@@ -167,12 +159,6 @@ En `dryRun=false` :
   - `mvn -B -s /opt/ai-factory/maven-settings.xml test`
   - `./gradlew test`
   - `npm test -- --runInBand`
-
-En `dryRun=true` :
-
-- aucun patch n'est appliqué ;
-- aucun test ni scan n'est exécuté ;
-- le `Tester` reçoit explicitement le fait que l'exécution déterministe a été ignorée.
 
 ### 6. Qualité SonarQube
 
@@ -215,7 +201,6 @@ Exemple :
   "repositoryUrl": "http://gitea:3000/aiadmin/customer-api.git",
   "baseBranch": "main",
   "requirement": "Add GET /customers/{id} with 404 and tests",
-  "dryRun": true,
   "llmMode": "LOCAL"
 }
 ```
@@ -249,7 +234,6 @@ Valide une tâche en attente et déclenche la création de PR.
 Contraintes :
 
 - la tâche doit être en `WAITING_APPROVAL` ;
-- `dryRun` doit être `false` ;
 - `GITEA_TOKEN` doit être configuré.
 
 ### `GET /api/capabilities`

@@ -32,7 +32,7 @@ La stack actuelle contient :
 4. Le `Developer` génère un patch `unified diff`.
 5. Le patch est normalisé puis validé avec `git apply --check`.
 6. En cas d'échec, un second appel LLM tente une réparation complète du diff.
-7. Si `dryRun=false`, le patch est appliqué en sandbox, les tests Maven passent par Nexus, SonarQube analyse la qualité, puis les scans sont exécutés.
+7. Le patch est appliqué en sandbox, les tests Maven passent par Nexus, SonarQube analyse la qualité, puis les scans sont exécutés.
 8. Le `Tester` et le `Reviewer` complètent l'analyse à partir des preuves déterministes.
 9. La tâche passe en `WAITING_APPROVAL`.
 10. Après `POST /api/tasks/{id}/approve`, l'orchestrateur crée une branche `ai-factory/<taskId>`, committe, pousse et ouvre une PR Gitea.
@@ -72,12 +72,9 @@ L'interface permet de :
 
 - rédiger un ticket structuré ;
 - choisir le mode `LOCAL` ou `CLOUD` ;
-- activer ou non `dry-run` ;
 - suivre l'exécution en temps réel ;
 - consulter l'historique des tâches ;
-- approuver une tâche non dry-run en attente.
-
-Par défaut, une tâche est soumise en `dryRun=true`.
+- approuver une tâche en attente.
 
 ### Depuis l'API
 
@@ -90,7 +87,6 @@ curl -s -X POST http://localhost:8080/api/tasks \
     "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
     "baseBranch":"main",
     "requirement":"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
-    "dryRun":true,
     "llmMode":"LOCAL"
   }'
 ```
@@ -160,7 +156,7 @@ LITELLM_MASTER_KEY=local-dev-litellm-key
 
 ## Démonstration
 
-Envoyer une tâche de démonstration en dry-run :
+Envoyer une tâche de démonstration :
 
 ```bash
 make demo
@@ -175,7 +171,6 @@ curl -s -X POST http://localhost:8080/api/tasks \
     "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
     "baseBranch":"main",
     "requirement":"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
-    "dryRun":false,
     "llmMode":"LOCAL"
   }'
 ```
@@ -216,7 +211,6 @@ make clean
 - montage de `/var/run/docker.sock` dans l'orchestrateur ;
 - pas de sandbox Kubernetes ni d'egress allow-list ;
 - approbation humaine obligatoire avant push/PR ;
-- `dryRun=true` par défaut pour réduire le risque.
 
 ## Documentation complémentaire
 

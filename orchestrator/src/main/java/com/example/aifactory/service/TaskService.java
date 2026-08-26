@@ -76,7 +76,6 @@ public class TaskService {
         TaskState state = tasks.get(id);
         if (state == null) throw new IllegalArgumentException("Unknown task " + id);
         if (state.status != TaskStatus.WAITING_APPROVAL) throw new IllegalStateException("Task is not waiting for approval");
-        if (state.request.isDryRun()) throw new IllegalStateException("A dry-run task cannot be approved. Re-submit it with dryRun=false.");
         state.transition(TaskStatus.APPROVED, "Human approval recorded");
         executor.submit(() -> {
             try {
@@ -109,39 +108,23 @@ public class TaskService {
             String rawPatch = llm.chat(s.request.effectiveLlmMode(), prompts.load("developer"), "REQUIREMENT:\n" + s.request.requirement() + "\n\nPLAN:\n" + s.plan + "\n\nREPOSITORY CONTEXT:\n" + context);
             s.patch = validateAndRepairPatch(s, ws, rawPatch);
 
-            if (!s.request.isDryRun()) {
-                s.transition(TaskStatus.APPLYING_PATCH, "Applying generated patch inside isolated Docker sandbox");
-                sandbox.applyPatch(ws);
-            } else {
-                s.transition(TaskStatus.APPLYING_PATCH, "Dry-run: patch generated but not applied");
-            }
+            s.transition(TaskStatus.APPLYING_PATCH, "Applying generated patch inside isolated Docker sandbox");
+            sandbox.applyPatch(ws);
 
-            if (!s.request.isDryRun()) {
-                s.transition(TaskStatus.TESTING, "Running deterministic build and tests in sandbox");
-                String deterministicTests = tail(sandbox.test(ws), 12000);
-                String testerReview = llm.chat(s.request.effectiveLlmMode(), prompts.load("tester"),
-                        "REQUIREMENT:\n" + s.request.requirement() + "\n\nPATCH:\n" + s.patch +
-                                "\n\nDETERMINISTIC TEST EVIDENCE:\n" + deterministicTests);
-                s.testSummary = deterministicTests + "\n\n--- AI TESTER REVIEW ---\n" + testerReview;
-                Files.createDirectories(ws.resolve(".ai-factory"));
-                Files.writeString(ws.resolve(".ai-factory/test.txt"), s.testSummary);
+            s.transition(TaskStatus.TESTING, "Running deterministic build and tests in sandbox");
+            String deterministicTests = tail(sandbox.test(ws), 12000);
+            String testerReview = llm.chat(s.request.effectiveLlmMode(), prompts.load("tester"),
+                    "REQUIREMENT:\n" + s.request.requirement() + "\n\nPATCH:\n" + s.patch +
+                            "\n\nDETERMINISTIC TEST EVIDENCE:\n" + deterministicTests);
+            s.testSummary = deterministicTests + "\n\n--- AI TESTER REVIEW ---\n" + testerReview;
+            Files.createDirectories(ws.resolve(".ai-factory"));
+            Files.writeString(ws.resolve(".ai-factory/test.txt"), s.testSummary);
 
-                s.transition(TaskStatus.QUALITY_SCANNING, "Running SonarQube quality analysis");
-                s.qualitySummary = tail(sandbox.quality(ws), 12000);
+            s.transition(TaskStatus.QUALITY_SCANNING, "Running SonarQube quality analysis");
+            s.qualitySummary = tail(sandbox.quality(ws), 12000);
 
-                s.transition(TaskStatus.SECURITY_SCANNING, "Generating SBOM and running Trivy");
-                s.securitySummary = tail(sandbox.security(ws), 12000);
-            } else {
-                s.transition(TaskStatus.TESTING, "Dry-run: deterministic tests skipped; Tester agent reviews the proposed patch");
-                String testerReview = llm.chat(s.request.effectiveLlmMode(), prompts.load("tester"),
-                        "REQUIREMENT:\n" + s.request.requirement() + "\n\nPATCH:\n" + s.patch +
-                                "\n\nDETERMINISTIC TEST EVIDENCE:\nNot executed because dryRun=true");
-                s.testSummary = "Deterministic execution skipped because dryRun=true.\n\n--- AI TESTER REVIEW ---\n" + testerReview;
-                s.transition(TaskStatus.QUALITY_SCANNING, "Dry-run: SonarQube analysis skipped");
-                s.qualitySummary = "Skipped because dryRun=true";
-                s.transition(TaskStatus.SECURITY_SCANNING, "Dry-run: security scans skipped");
-                s.securitySummary = "Skipped because dryRun=true";
-            }
+            s.transition(TaskStatus.SECURITY_SCANNING, "Generating SBOM and running Trivy");
+            s.securitySummary = tail(sandbox.security(ws), 12000);
 
             s.transition(TaskStatus.REVIEWING, "Reviewer agent assessing plan, patch and deterministic evidence");
             s.review = llm.chat(s.request.effectiveLlmMode(), prompts.load("reviewer"),

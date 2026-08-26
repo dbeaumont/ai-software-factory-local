@@ -131,7 +131,6 @@ debugFillButton.addEventListener('click', () => {
     form.elements.namedItem(name).value = value;
   });
   llmMode.checked = false;
-  document.querySelector('#dry-run').checked = true;
   renderLlmMode();
   message.textContent = 'Modèle de ticket chargé. Vérifiez les valeurs avant envoi.';
   document.querySelector('#summary').focus();
@@ -265,7 +264,7 @@ function isFinished(status) {
 function jobState(task, job, knownSteps) {
   if (job.id === task.status) return 'running';
   const actual = knownSteps.get(job.id);
-  if (actual) return actual.summary?.toLowerCase().includes('dry-run') ? 'skipped' : 'done';
+  if (actual) return 'done';
   if (job.id === 'WAITING_APPROVAL' && ['APPROVED', 'PR_CREATED'].includes(task.status)) return 'done';
   if (task.status === 'FAILED') return 'pending';
   const currentIndex = pipelineJobs.findIndex((item) => item.id === task.status);
@@ -323,11 +322,11 @@ function renderTask(task) {
   ticketKey.textContent = `Ticket ${displayTicketNumber(task)}`;
   ticketTitle.textContent = taskTitle(task);
   taskSummary.textContent = taskTitle(task);
-  taskDetail.textContent = task.error || statusDescription(task.status, task.dryRun);
+  taskDetail.textContent = task.error || statusDescription(task.status);
   progressBar.style.width = `${progress[task.status] || 10}%`;
   renderPipeline(task);
   proposalButton.hidden = !task.patch || task.status === 'PR_CREATED';
-  approveButton.hidden = task.status !== 'WAITING_APPROVAL' || task.dryRun;
+  approveButton.hidden = task.status !== 'WAITING_APPROVAL';
   prLink.hidden = !task.pullRequestUrl;
   if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);
 }
@@ -346,8 +345,8 @@ proposalButton.addEventListener('click', () => {
 
 proposalCloseButton.addEventListener('click', () => proposalDialog.close());
 
-function statusDescription(status, dryRun) {
-  if (status === 'WAITING_APPROVAL') return dryRun ? 'Simulation terminée. Le patch et la revue sont prêts à être consultés.' : 'Contrôles terminés. La tâche attend une approbation humaine.';
+function statusDescription(status) {
+  if (status === 'WAITING_APPROVAL') return 'Contrôles terminés. La tâche attend une approbation humaine.';
   if (status === 'PR_CREATED') return 'La pull request a été créée dans Gitea.';
   if (status === 'FAILED') return 'L’exécution s’est arrêtée. Consultez l’erreur remontée par l’usine.';
   return 'L’usine traite votre ticket. Cette vue se met à jour automatiquement.';
@@ -389,7 +388,6 @@ approveButton.addEventListener('click', async () => {
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(form));
-  const dryRun = document.querySelector('#dry-run').checked;
   const selectedLlmMode = llmMode.checked ? 'CLOUD' : 'LOCAL';
   message.textContent = '';
   submitButton.disabled = true;
@@ -402,7 +400,6 @@ form.addEventListener('submit', async (event) => {
         repositoryUrl: data.repository,
         baseBranch: data.branch,
         requirement: buildRequirement(data),
-        dryRun,
         llmMode: selectedLlmMode
       })
     });

@@ -16,7 +16,6 @@ Cette note décrit la posture de sécurité réelle du dépôt au 23 août 2026.
 ### Validation humaine obligatoire
 
 - aucun commit, push ou création de PR n'a lieu avant `POST /api/tasks/{id}/approve` ;
-- une tâche `dryRun=true` ne peut pas être approuvée ;
 - le prototype sépare explicitement génération et livraison.
 
 ### Exécution isolée en sandbox
@@ -38,7 +37,7 @@ Deux profils réseau existent :
 ### Contrôles déterministes
 
 - validation du diff via `git apply --check` ;
-- application du patch puis `git diff --check` en exécution complète ;
+- application du patch puis `git diff --check` ;
 - tests build/run déterministes ;
 - génération d'un SBOM CycloneDX avec Syft ;
 - scan vulnérabilités et secrets avec Trivy ;
@@ -48,7 +47,6 @@ Deux profils réseau existent :
 
 ### Réduction du risque par défaut
 
-- `dryRun=true` par défaut ;
 - mode cloud désactivé par défaut ;
 - le navigateur ne reçoit jamais la clé OpenAI ;
 - l'orchestrateur ne reçoit pas directement la clé OpenAI ;

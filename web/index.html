@@ -16,7 +16,7 @@
   <body>
     <header class="topbar">
       <a class="brand" href="/" aria-label="AI Software Factory"><img class="brand-mark" src="/icons/factory-circuit.svg" alt="" />AI Factory</a>
-      <nav class="topnav" aria-label="Navigation principale"><a href="#ticket" data-view="ticket" class="active">Tickets</a><a href="#executions" data-view="executions">Exécutions</a><a href="http://localhost:3000" target="_blank" rel="noreferrer">Dépôts</a></nav>
+      <nav class="topnav" aria-label="Navigation principale"><a href="#ticket" data-view="ticket" class="active">Tickets</a><a href="#executions" data-view="executions">Exécutions</a><a href="http://localhost:3000" target="_blank" rel="noreferrer">Dépôts</a><a href="http://localhost:8081" target="_blank" rel="noreferrer">Nexus</a><a href="http://localhost:9000" target="_blank" rel="noreferrer">SonarQube</a><a href="http://localhost:3001" target="_blank" rel="noreferrer">Grafana</a></nav>
       <div class="topbar-actions"><span class="environment"><i></i> LOCAL</span><button class="create-button" type="button" onclick="document.querySelector('#summary').focus()">Créer</button></div>
     </header>
     <main class="app-main">
@@ -48,7 +48,6 @@
               <div class="card-heading compact"><div><p class="eyebrow">EXÉCUTION</p><h2>Où et comment traiter ce ticket</h2></div></div>
               <div class="form-grid"><div class="field"><label for="repository">Dépôt cible <em>*</em></label><input id="repository" name="repository" type="url" value="http://gitea:3000/aiadmin/customer-api.git" required /></div><div class="field"><label for="branch">Branche de référence <em>*</em></label><input id="branch" name="branch" type="text" value="main" required /></div></div>
               <section class="llm-choice" aria-labelledby="llm-mode-label"><div class="llm-choice-heading"><div><p class="eyebrow">MOTEUR IA</p><h3 id="llm-mode-label">Périmètre de traitement</h3></div><span class="privacy-badge">Contrôle explicite</span></div><label class="llm-slider" for="llm-mode"><span class="llm-label local-label">LLM local</span><input id="llm-mode" name="llm-mode" type="checkbox" role="switch" aria-describedby="llm-mode-description cloud-warning" /><span class="llm-track" aria-hidden="true"><span></span></span><span class="llm-label cloud-label">LLM cloud</span></label><p id="llm-mode-description" class="llm-description">Le code et la spécification restent dans l'environnement Docker local via Ollama.</p><p id="cloud-warning" class="cloud-warning" hidden>Le contexte du dépôt et cette spécification seront transmis à l'API OpenAI. N'utilisez ce mode que pour des données autorisées à sortir de votre environnement.</p></section>
-              <label class="mode-switch" for="dry-run"><input id="dry-run" name="dry-run" type="checkbox" checked /><span class="switch-track" aria-hidden="true"></span><span><strong>Exécuter en simulation</strong><small>Produit un plan et un diff sans modifier le dépôt.</small></span></label>
             </article>
             <div class="form-actions"><p id="form-message" class="form-message" aria-live="polite"></p><button id="debug-fill-button" class="debug-fill-button" type="button">Préremplir le modèle</button><button id="submit-button" type="submit">Créer le ticket <span aria-hidden="true">→</span></button></div>
           </form>

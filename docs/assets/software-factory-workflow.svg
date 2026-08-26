@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060" role="img" aria-labelledby="title desc">
+  <title id="title">Flux de l'AI Software Factory</title>
+  <desc id="desc">Diagramme du flux de l'usine logicielle, avec les responsabilites manuelles et celles de l'orchestrateur.</desc>
+  <defs>
+    <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7faff"/>
+      <stop offset="1" stop-color="#f5f9f8"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0c66e4"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#172b4d" flood-opacity=".10"/>
+    </filter>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#172b4d" flood-opacity=".08"/>
+    </filter>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto">
+      <path d="M1,1 L10,5.5 L1,10" fill="none" stroke="#6b778c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .title { font: 700 34px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #172b4d; }
+      .subtitle { font: 400 17px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #5e6c84; }
+      .zone-title { font: 700 16px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: 1.2px; }
+      .zone-sub { font: 500 13px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #5e6c84; }
+      .card-num { font: 700 12px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: .7px; }
+      .card-title { font: 700 18px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #172b4d; }
+      .card-tool { font: 500 13px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #44546f; }
+      .arrow-label { font: 600 12px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #7a5b16; }
+      .note { font: 500 13px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #5e6c84; }
+      .badge { font: 700 11px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: .55px; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1060" fill="url(#canvas)"/>
+  <circle cx="1490" cy="106" r="170" fill="#dbeafe" opacity=".42"/>
+  <circle cx="120" cy="980" r="200" fill="#d1fae5" opacity=".34"/>
+
+  <text x="800" y="64" text-anchor="middle" class="title">AI Software Factory</text>
+  <text x="800" y="94" text-anchor="middle" class="subtitle">Du besoin a la pull request, avec des controles techniques et une decision humaine</text>
+
+  <!-- Manual input zone -->
+  <rect x="126" y="130" width="1348" height="150" rx="20" fill="#eef4ff" stroke="#93b9f5" stroke-width="1.5"/>
+  <rect x="154" y="152" width="145" height="29" rx="14.5" fill="#0c66e4"/>
+  <text x="226" y="172" text-anchor="middle" class="badge" fill="#fff">MANUEL</text>
+  <text x="320" y="174" class="zone-title" fill="#0c66e4">Expression du besoin</text>
+  <text x="320" y="198" class="zone-sub">La personne decrit le resultat attendu et choisit le mode LLM.</text>
+  <g filter="url(#soft-shadow)">
+    <rect x="1040" y="151" width="388" height="90" rx="13" fill="#fff"/>
+  </g>
+  <rect x="1060" y="172" width="46" height="46" rx="12" fill="#dbeafe"/>
+  <path d="M1074 185h18M1074 194h18M1074 203h11" stroke="#0c66e4" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="1122" y="184" class="card-title">Creer une tache</text>
+  <text x="1122" y="207" class="card-tool">factory-web  •  Nginx  •  API Spring Boot</text>
+
+  <!-- Connector manual to orchestrator -->
+  <path d="M1234 241 L1234 323" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Orchestrator zone -->
+  <rect x="74" y="324" width="1452" height="502" rx="24" fill="#fff" stroke="#a9c5b9" stroke-width="1.5"/>
+  <rect x="102" y="347" width="226" height="30" rx="15" fill="#216e4e"/>
+  <text x="215" y="368" text-anchor="middle" class="badge" fill="#fff">ORCHESTRATEUR</text>
+  <text x="352" y="369" class="zone-title" fill="#216e4e">Pipeline automatise et trace</text>
+  <text x="352" y="392" class="zone-sub">Les etapes s'executent en sequence. Les preuves techniques alimentent la revue.</text>
+
+  <!-- flow lines behind cards -->
+  <path d="M314 516 H355" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M594 516 H635" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M874 516 H915" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M1154 516 H1195" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M1314 594 V654 H1184" fill="none" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M1015 714 H974" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M735 714 H694" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M455 714 H414" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M234 654 V594 H274" fill="none" stroke="#b7791f" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+  <text x="128" y="638" class="arrow-label">diff invalide</text>
+
+  <!-- 1 Context -->
+  <g filter="url(#shadow)">
+    <rect x="154" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#bcd5ff" stroke-width="1.5"/>
+  </g>
+  <rect x="174" y="458" width="37" height="24" rx="6" fill="#e9f2ff"/>
+  <text x="192.5" y="475" text-anchor="middle" class="card-num" fill="#0c66e4">01</text>
+  <text x="174" y="513" class="card-title">Contexte</text>
+  <text x="174" y="538" class="card-tool">Clone la branche</text>
+  <text x="174" y="559" class="card-tool">et lit le depot</text>
+  <text x="174" y="581" class="card-tool" fill="#0c66e4">Gitea  •  Git</text>
+
+  <!-- 2 Plan -->
+  <g filter="url(#shadow)"><rect x="434" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
+  <rect x="454" y="458" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="472.5" y="475" text-anchor="middle" class="card-num" fill="#16806b">02</text>
+  <text x="454" y="513" class="card-title">Plan</text>
+  <text x="454" y="538" class="card-tool">Agent Planner</text>
+  <text x="454" y="559" class="card-tool">LiteLLM  •  LLM</text>
+  <text x="454" y="581" class="card-tool">Ollama ou OpenAI</text>
+
+  <!-- 3 Patch -->
+  <g filter="url(#shadow)"><rect x="714" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
+  <rect x="734" y="458" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="752.5" y="475" text-anchor="middle" class="card-num" fill="#16806b">03</text>
+  <text x="734" y="513" class="card-title">Patch</text>
+  <text x="734" y="538" class="card-tool">Agent Developer</text>
+  <text x="734" y="559" class="card-tool">LiteLLM  •  LLM</text>
+  <text x="734" y="581" class="card-tool">unified diff</text>
+
+  <!-- 4 Validate -->
+  <g filter="url(#shadow)"><rect x="994" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
+  <rect x="1014" y="458" width="37" height="24" rx="6" fill="#fff4de"/><text x="1032.5" y="475" text-anchor="middle" class="card-num" fill="#974f0c">04</text>
+  <text x="1014" y="513" class="card-title">Validation</text>
+  <text x="1014" y="538" class="card-tool">git apply --check</text>
+  <text x="1014" y="559" class="card-tool">Sandbox Docker</text>
+  <text x="1014" y="581" class="card-tool">sans reseau</text>
+
+  <!-- 5 Repair -->
+  <g filter="url(#shadow)"><rect x="1194" y="438" width="240" height="156" rx="15" fill="#fffaf0" stroke="#f1c97c" stroke-width="1.5"/></g>
+  <rect x="1214" y="458" width="37" height="24" rx="6" fill="#fff4de"/><text x="1232.5" y="475" text-anchor="middle" class="card-num" fill="#974f0c">05</text>
+  <text x="1214" y="513" class="card-title">Reparation si besoin</text>
+  <text x="1214" y="538" class="card-tool">Agent Patch Repair  •  LiteLLM</text>
+  <text x="1214" y="560" class="card-tool">Regeneration complete du diff</text>
+
+  <!-- 6 Sandbox -->
+  <g filter="url(#shadow)"><rect x="1014" y="654" width="170" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
+  <rect x="1034" y="674" width="37" height="24" rx="6" fill="#fff4de"/><text x="1052.5" y="691" text-anchor="middle" class="card-num" fill="#974f0c">06</text>
+  <text x="1034" y="728" class="card-title">Sandbox</text>
+  <text x="1034" y="752" class="card-tool">Docker  •  Git</text>
+
+  <!-- 7 Tests -->
+  <g filter="url(#shadow)"><rect x="734" y="654" width="240" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
+  <rect x="754" y="674" width="37" height="24" rx="6" fill="#fff4de"/><text x="772.5" y="691" text-anchor="middle" class="card-num" fill="#974f0c">07</text>
+  <text x="754" y="728" class="card-title">Tests et qualite</text>
+  <text x="754" y="752" class="card-tool">Maven / Gradle / npm  •  Nexus  •  SonarQube</text>
+
+  <!-- 8 Security -->
+  <g filter="url(#shadow)"><rect x="454" y="654" width="240" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
+  <rect x="474" y="674" width="37" height="24" rx="6" fill="#fff4de"/><text x="492.5" y="691" text-anchor="middle" class="card-num" fill="#974f0c">08</text>
+  <text x="474" y="728" class="card-title">Securite</text>
+  <text x="474" y="752" class="card-tool">SBOM Syft  •  Scan Trivy</text>
+
+  <!-- 9 Review -->
+  <g filter="url(#shadow)"><rect x="154" y="654" width="260" height="122" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
+  <rect x="174" y="674" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="192.5" y="691" text-anchor="middle" class="card-num" fill="#16806b">09</text>
+  <text x="174" y="728" class="card-title">Revue des preuves</text>
+  <text x="174" y="752" class="card-tool">Agents Tester + Reviewer  •  LiteLLM</text>
+
+  <!-- Connector to human approval -->
+  <path d="M284 776 V865" stroke="#6b778c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Manual approval zone -->
+  <rect x="126" y="865" width="1348" height="142" rx="20" fill="#faf5ff" stroke="#cbb5f4" stroke-width="1.5"/>
+  <rect x="154" y="888" width="145" height="29" rx="14.5" fill="#7c3aed"/>
+  <text x="226" y="908" text-anchor="middle" class="badge" fill="#fff">MANUEL</text>
+  <text x="320" y="910" class="zone-title" fill="#6d28d9">Decision de livraison</text>
+  <text x="320" y="934" class="zone-sub">La personne consulte les resultats, puis autorise ou bloque la publication.</text>
+  <g filter="url(#soft-shadow)"><rect x="972" y="884" width="456" height="104" rx="14" fill="#fff"/></g>
+  <rect x="994" y="908" width="46" height="46" rx="12" fill="#ede9fe"/>
+  <path d="M1007 931l8 8 14-17" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1057" y="919" class="card-title">Approuver la tache</text>
+  <text x="1057" y="942" class="card-tool">POST /api/tasks/{id}/approve</text>
+  <text x="1057" y="965" class="card-tool">Git : branche, commit, push  •  Gitea : pull request</text>
+</svg>

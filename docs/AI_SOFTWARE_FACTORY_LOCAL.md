@@ -166,7 +166,6 @@ La requête attend :
   "repositoryUrl": "http://gitea:3000/aiadmin/customer-api.git",
   "baseBranch": "main",
   "requirement": "Add GET /customers/{id} with 404 and tests",
-  "dryRun": true,
   "llmMode": "LOCAL"
 }
 ```
@@ -174,7 +173,6 @@ La requête attend :
 Valeurs implicites :
 
 - `baseBranch` -> `main`
-- `dryRun` -> `true`
 - `llmMode` -> `LOCAL`
 
 ### États utilisés
@@ -225,20 +223,11 @@ Si `git apply --check` échoue :
 
 #### Application et exécution
 
-Si `dryRun=false` :
-
 - application du patch en sandbox ;
 - `git diff --check` ;
 - tests ;
 - synthèse `Tester` ;
 - SBOM + Trivy.
-
-Si `dryRun=true` :
-
-- pas d'application du patch ;
-- pas de tests ;
-- pas de scan ;
-- synthèse `Tester` basée uniquement sur le requirement et le patch proposé.
 
 #### Revue finale
 
@@ -275,7 +264,6 @@ Fonctionnalités visibles :
 
 - formulaire structuré pour le besoin ;
 - sélection `LOCAL` ou `CLOUD` ;
-- case `dry-run` ;
 - suivi temps réel de la progression ;
 - historique des exécutions ;
 - consultation du plan, patch, tests, sécurité et review ;
@@ -327,7 +315,6 @@ Le POC démontre déjà :
 - un pipeline agentique cohérent ;
 - un usage concret des rôles IA ;
 - la nécessité d'un contrôle strict du format de patch ;
-- l'intérêt du `dry-run` comme mode d'exploration sûr ;
 - la valeur d'une approbation humaine avant livraison.
 
 ## 13. Ce qu'il ne résout pas encore

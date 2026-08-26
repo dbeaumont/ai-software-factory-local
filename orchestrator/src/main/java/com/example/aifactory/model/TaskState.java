@@ -43,7 +43,7 @@ public class TaskState {
 
     public synchronized TaskView view() {
         return new TaskView(id, ticketNumber, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
-                request.isDryRun(), request.effectiveLlmMode(), workspace, plan, patch, testSummary, qualitySummary, securitySummary, review,
+                request.effectiveLlmMode(), workspace, plan, patch, testSummary, qualitySummary, securitySummary, review,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
     }
 }
