@@ -7,3 +7,4 @@ COPY pipeline.css /usr/share/nginx/html/pipeline.css
 COPY executions.css /usr/share/nginx/html/executions.css
 COPY debug.css /usr/share/nginx/html/debug.css
 COPY app.js /usr/share/nginx/html/app.js
+COPY icons /usr/share/nginx/html/icons

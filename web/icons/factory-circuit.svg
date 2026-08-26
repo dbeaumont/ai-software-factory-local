@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">AI Software Factory icon</title>
+  <desc id="desc">A factory outline with circuit nodes on a blue rounded square.</desc>
+  <defs>
+    <linearGradient id="bg" x1="20" y1="16" x2="108" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1D7AF5" />
+      <stop offset="1" stop-color="#0055CC" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#bg)" />
+  <path
+    d="M28 92V58L44 44L58 58L72 44L86 58H100V92Z"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="10"
+  />
+  <path
+    d="M42 71H90M60 71V54M74 71V82M90 71V54"
+    fill="none"
+    stroke="#9ED8FF"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="8"
+  />
+  <circle cx="42" cy="71" r="7" fill="#9ED8FF" stroke="#FFFFFF" stroke-width="3" />
+  <circle cx="60" cy="54" r="7" fill="#9ED8FF" stroke="#FFFFFF" stroke-width="3" />
+  <circle cx="74" cy="82" r="7" fill="#9ED8FF" stroke="#FFFFFF" stroke-width="3" />
+  <circle cx="90" cy="54" r="7" fill="#9ED8FF" stroke="#FFFFFF" stroke-width="3" />
+</svg>
