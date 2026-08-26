@@ -51,12 +51,13 @@ public class SandboxService {
     }
 
     public String test(Path workspace) throws Exception {
-        return execute(workspace, "ai-factory",
+        return execute(workspace, props.sandboxNetwork(),
                 "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B -s /opt/ai-factory/maven-settings.xml test; " +
                         "elif [ -f pom.xml ]; then mvn -B -s /opt/ai-factory/maven-settings.xml test; " +
                         "elif [ -f gradlew ]; then chmod +x gradlew; ./gradlew test; " +
                         "elif [ -f package.json ]; then npm test -- --runInBand; " +
                         "else echo 'No supported build file found'; exit 2; fi",
+                mavenEnvironment(),
                 Duration.ofMinutes(15));
     }
 
@@ -64,23 +65,30 @@ public class SandboxService {
         if (props.sonarToken() == null || props.sonarToken().isBlank()) {
             return "Skipped because AI_FACTORY_SONAR_TOKEN is not configured.";
         }
-        return execute(workspace, "ai-factory",
+        return execute(workspace, props.sandboxNetwork(),
                 "if [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
                         "mvn -B -s /opt/ai-factory/maven-settings.xml " +
                         "org.sonarsource.scanner.maven:sonar-maven-plugin:sonar " +
                         "-Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_TOKEN\" " +
                         "| tee .ai-factory/sonar.txt; " +
                         "else echo 'Skipped: SonarQube analysis currently supports Maven repositories only.'; fi",
-                List.of("SONAR_HOST_URL=" + props.sonarqubeUrl(), "SONAR_TOKEN=" + props.sonarToken()),
+                List.of("SONAR_HOST_URL=" + props.sonarqubeUrl(), "SONAR_TOKEN=" + props.sonarToken(),
+                        "MAVEN_MIRROR_URL=" + props.mavenMirrorUrl(),
+                        "ARTIFACTORY_TOKEN=" + props.artifactoryToken()),
                 Duration.ofMinutes(15));
     }
 
     public String security(Path workspace) throws Exception {
-        return execute(workspace, "ai-factory",
+        return execute(workspace, props.sandboxNetwork(),
                 "mkdir -p .ai-factory && " +
                         "syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json >/dev/null && " +
                     "trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 0 --format table . | tee .ai-factory/trivy.txt && " +
                         "echo 'SBOM: .ai-factory/sbom.cdx.json'",
                 Duration.ofMinutes(10));
+    }
+
+    private List<String> mavenEnvironment() {
+        return List.of("MAVEN_MIRROR_URL=" + props.mavenMirrorUrl(),
+                "ARTIFACTORY_TOKEN=" + props.artifactoryToken());
     }
 }

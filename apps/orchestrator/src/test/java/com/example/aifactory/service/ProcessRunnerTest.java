@@ -15,4 +15,12 @@ class ProcessRunnerTest {
         assertTrue(command.contains("SONAR_TOKEN=[REDACTED]"));
         assertFalse(command.contains("secret-value"));
     }
+
+    @Test
+    void redactsArtifactoryTokenFromCommandErrors() {
+        String command = ProcessRunner.commandForError(List.of("docker", "run", "ARTIFACTORY_TOKEN=secret-value"));
+
+        assertTrue(command.contains("ARTIFACTORY_TOKEN=[REDACTED]"));
+        assertFalse(command.contains("secret-value"));
+    }
 }

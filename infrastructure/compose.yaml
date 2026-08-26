@@ -93,6 +93,9 @@ services:
       AI_FACTORY_WORKSPACE_ROOT: ${AI_FACTORY_WORKSPACE_ROOT}
       AI_FACTORY_WORKSPACE_VOLUME: ${AI_FACTORY_WORKSPACE_VOLUME}
       AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
+      AI_FACTORY_SANDBOX_NETWORK: ${AI_FACTORY_SANDBOX_NETWORK}
+      MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
+      ARTIFACTORY_TOKEN: ${ARTIFACTORY_TOKEN}
       AI_FACTORY_GITEA_BASE_URL: ${AI_FACTORY_GITEA_BASE_URL}
       AI_FACTORY_GITEA_PUBLIC_BASE_URL: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL}
       AI_FACTORY_GITEA_TOKEN: ${GITEA_TOKEN}
@@ -187,7 +190,7 @@ services:
       retries: 20
     networks: [factory]
 
-  # Local Maven proxy and cache used by sandbox builds; initialize maven-virtual in Artifactory before use.
+  # Local artifact repository used for local artifact storage.
   artifactory:
     image: releases-docker.jfrog.io/jfrog/artifactory-oss:7.104.6
     # Security keys and the database password come from .vault and must remain
@@ -246,6 +249,7 @@ volumes:
   gitea-data:
   ollama-data:
   factory-workspace:
+    name: ${AI_FACTORY_WORKSPACE_VOLUME}
   sonar-db-data:
   sonar-data:
   sonar-logs:

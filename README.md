@@ -192,7 +192,7 @@ make demo
 ## Qualité et observabilité
 
 - **SonarQube** (`http://localhost:9000`) : Analyse de la qualité du code Java/Maven. Les jetons sont générés par `make bootstrap` ou `make tokens`.
-- **Artifactory** (`http://localhost:8082`) : Miroir d'artefacts utilisé par le build Maven dans la sandbox (`maven-virtual`, configuré dans `maven-settings.xml`).
+- **Artifactory** (`http://localhost:8082`) : Dépôt d'artefacts local. Les builds Maven des sandboxes utilisent le miroir explicite `MAVEN_MIRROR_URL`.
 - **Prometheus** (`http://localhost:9090`) : Collecte les métriques Micrometer depuis `/actuator/prometheus` de l'orchestrator (`ai_factory_tasks_submitted`, `ai_factory_tasks_completed`, `ai_factory_tasks_failed`).
 - **Grafana** (`http://localhost:3001`) : Tableau de bord de suivi pré-provisionné (`orchestrator.json`).
 

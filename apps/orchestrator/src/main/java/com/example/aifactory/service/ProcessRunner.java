@@ -37,7 +37,8 @@ public class ProcessRunner {
 
     static String commandForError(List<String> command) {
         return command.stream()
-                .map(arg -> arg.startsWith("SONAR_TOKEN=") ? "SONAR_TOKEN=[REDACTED]" : arg)
+                .map(arg -> arg.startsWith("SONAR_TOKEN=") ? "SONAR_TOKEN=[REDACTED]"
+                        : arg.startsWith("ARTIFACTORY_TOKEN=") ? "ARTIFACTORY_TOKEN=[REDACTED]" : arg)
                 .reduce((left, right) -> left + " " + right)
                 .orElse("");
     }

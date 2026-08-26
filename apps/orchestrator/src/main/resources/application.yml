@@ -24,6 +24,9 @@ ai-factory:
   workspace-root: ${AI_FACTORY_WORKSPACE_ROOT}
   workspace-volume: ${AI_FACTORY_WORKSPACE_VOLUME}
   sandbox-image: ${AI_FACTORY_SANDBOX_IMAGE}
+  sandbox-network: ${AI_FACTORY_SANDBOX_NETWORK}
+  maven-mirror-url: ${MAVEN_MIRROR_URL}
+  artifactory-token: ${ARTIFACTORY_TOKEN}
   gitea-base-url: ${AI_FACTORY_GITEA_BASE_URL}
   gitea-public-base-url: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL}
   gitea-token: ${AI_FACTORY_GITEA_TOKEN}
