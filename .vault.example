@@ -1,2 +1,3 @@
 # Copy this file to .vault and set provider secrets. Never commit .vault.
 OPENAI_API_KEY=
+

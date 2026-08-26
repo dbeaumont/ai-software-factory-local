@@ -170,13 +170,42 @@ services:
       retries: 40
     networks: [factory]
 
+  # Artifactory OSS requires PostgreSQL; embedded Derby is no longer supported.
+  artifactory-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${ARTIFACTORY_DB_USER}
+      POSTGRES_PASSWORD: ${ARTIFACTORY_DB_PASSWORD}
+      POSTGRES_DB: ${ARTIFACTORY_DB_NAME}
+    volumes:
+      - artifactory-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [factory]
+
   # Local Maven proxy and cache used by sandbox builds; initialize maven-virtual in Artifactory before use.
   artifactory:
     image: releases-docker.jfrog.io/jfrog/artifactory-oss:7.104.6
+    # Security keys and the database password come from .vault and must remain
+    # stable while the Artifactory data volume exists.
+    env_file:
+      - .vault
+    environment:
+      JF_SHARED_DATABASE_TYPE: postgresql
+      JF_SHARED_DATABASE_DRIVER: org.postgresql.Driver
+      JF_SHARED_DATABASE_URL: jdbc:postgresql://artifactory-db:5432/${ARTIFACTORY_DB_NAME}
+      JF_SHARED_DATABASE_USERNAME: ${ARTIFACTORY_DB_USER}
+      JF_SHARED_DATABASE_PASSWORD: ${ARTIFACTORY_DB_PASSWORD}
     ports:
       - "${ARTIFACTORY_PORT}:8082"
     volumes:
       - artifactory-data:/var/opt/jfrog/artifactory
+    depends_on:
+      artifactory-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/artifactory/api/system/ping >/dev/null"]
       interval: 15s
@@ -221,6 +250,7 @@ volumes:
   sonar-logs:
   sonar-extensions:
   artifactory-data:
+  artifactory-db-data:
   grafana-data:
 
 secrets:
