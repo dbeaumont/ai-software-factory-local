@@ -15,7 +15,7 @@ NC     := \033[0m
 .PHONY: help init build up all model bootstrap tokens demo test package config status restart logs urls down clean
 
 help:
-	@echo -e "$(YELLOW)AI Software Factory local prototype - Commandes :$(NC)"
+	@echo -e "$(YELLOW)AI Software Factory prototype - Commandes :$(NC)"
 	@echo -e "  $(CYAN)make init$(NC)       - create .env and .vault from their examples"
 	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
 	@echo -e "  $(CYAN)make up$(NC)         - start the complete local factory stack"

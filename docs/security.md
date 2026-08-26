@@ -32,7 +32,7 @@ Les étapes de vérification du patch, d'exécution des tests, d'analyse qualim�
 Profils réseau de la sandbox :
 
 - **Validation du patch (`checkPatch` et `applyPatch`)** : exécutée avec `--network none` (isolation réseau totale).
-- **Builds, tests, SonarQube et Trivy** : exécutés sur le réseau interne Docker `ai-factory-local`.
+- **Builds, tests, SonarQube et Trivy** : exécutés sur le réseau interne Docker `ai-factory`.
 
 ### Contrôles déterministes
 
@@ -70,7 +70,7 @@ Le service `orchestrator` monte le socket Docker du hôte (`/var/run/docker.sock
 
 ### 2. Réseau interne partagé pour les builds
 
-Les builds et scans de la sandbox sont raccordés au réseau `ai-factory-local`. Bien que ce réseau soit interne à Compose, le sandbox a accès aux IP/ports des autres conteneurs de la stack (Gitea, SonarQube, Artifactory, etc.).
+Les builds et scans de la sandbox sont raccordés au réseau `ai-factory`. Bien que ce réseau soit interne à Compose, le sandbox a accès aux IP/ports des autres conteneurs de la stack (Gitea, SonarQube, Artifactory, etc.).
 
 ### 3. Secrets locaux en texte clair
 

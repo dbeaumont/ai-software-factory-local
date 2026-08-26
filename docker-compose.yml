@@ -1,4 +1,4 @@
-name: ai-software-factory-local
+name: ai-software-factory
 
 # All application services share this private Docker network; only explicitly mapped ports are exposed to the host.
 services:
@@ -237,7 +237,7 @@ services:
 networks:
   # Explicit name lets sandbox containers join the same network at runtime.
   factory:
-    name: ai-factory-local
+    name: ai-factory-network
 
 volumes:
   # Persistent service state. `factory-workspace` is shared with ephemeral task sandboxes.

@@ -53,7 +53,7 @@ flowchart TB
 
 ## Architecture de conteneurs
 
-Tous les services sont reliés au réseau Docker `ai-factory-local`. Le reverse proxy est le point d'accès frontal.
+Tous les services sont reliés au réseau Docker `ai-factory`. Le reverse proxy est le point d'accès frontal.
 
 ```mermaid
 flowchart TB

@@ -51,7 +51,7 @@ public class SandboxService {
     }
 
     public String test(Path workspace) throws Exception {
-        return execute(workspace, "ai-factory-local",
+        return execute(workspace, "ai-factory",
                 "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B -s /opt/ai-factory/maven-settings.xml test; " +
                         "elif [ -f pom.xml ]; then mvn -B -s /opt/ai-factory/maven-settings.xml test; " +
                         "elif [ -f gradlew ]; then chmod +x gradlew; ./gradlew test; " +
@@ -64,7 +64,7 @@ public class SandboxService {
         if (props.sonarToken() == null || props.sonarToken().isBlank()) {
             return "Skipped because AI_FACTORY_SONAR_TOKEN is not configured.";
         }
-        return execute(workspace, "ai-factory-local",
+        return execute(workspace, "ai-factory",
                 "if [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
                         "mvn -B -s /opt/ai-factory/maven-settings.xml " +
                         "org.sonarsource.scanner.maven:sonar-maven-plugin:sonar " +
@@ -76,7 +76,7 @@ public class SandboxService {
     }
 
     public String security(Path workspace) throws Exception {
-        return execute(workspace, "ai-factory-local",
+        return execute(workspace, "ai-factory",
                 "mkdir -p .ai-factory && " +
                         "syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json >/dev/null && " +
                     "trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 0 --format table . | tee .ai-factory/trivy.txt && " +

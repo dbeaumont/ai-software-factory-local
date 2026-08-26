@@ -1,6 +1,6 @@
 # Customer API demo
 
-Minimal Spring Boot repository used by the local AI Software Factory prototype.
+Minimal Spring Boot repository used by the AI Software Factory prototype.
 
 Current API:
 - `GET /customers`

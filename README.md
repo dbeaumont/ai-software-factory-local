@@ -1,4 +1,4 @@
-# AI Software Factory Local
+# AI Software Factory
 
 Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. Le dépôt matérialise un flux contrôlé de type :
 
