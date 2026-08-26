@@ -3,6 +3,7 @@ package com.example.aifactory.service;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TaskServiceTest {
     @Test
@@ -28,5 +29,22 @@ class TaskServiceTest {
 
         assertEquals("@@ -17,4 +18,9 @@ class CustomerControllerTest {", UnifiedDiffNormalizer.normalize(patch).lines().findFirst().orElseThrow());
         assertEquals('\n', UnifiedDiffNormalizer.normalize(patch).charAt(UnifiedDiffNormalizer.normalize(patch).length() - 1));
+    }
+
+    @Test
+    void generatesSequentialTicketNumbers() {
+        TestableTaskService service = new TestableTaskService();
+        String first = service.nextTicketNumber();
+        String second = service.nextTicketNumber();
+
+        assertTrue(first.matches("AF-\\d{4}"));
+        assertEquals("AF-0001", first);
+        assertEquals("AF-0002", second);
+    }
+
+    private static final class TestableTaskService extends TaskService {
+        private TestableTaskService() {
+            super(null, null, null, null, null, null, null, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+        }
     }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 
 public record TaskView(
         String id,
+        String ticketNumber,
         TaskStatus status,
         String repositoryUrl,
         String baseBranch,

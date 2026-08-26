@@ -6,6 +6,8 @@ const taskStatus = document.querySelector('#task-status');
 const statusPanel = document.querySelector('.status-panel');
 const statusLabel = document.querySelector('#status-label');
 const taskId = document.querySelector('#task-id');
+const ticketKey = document.querySelector('#ticket-key');
+const ticketTitle = document.querySelector('#ticket-title');
 const taskSummary = document.querySelector('#task-summary');
 const taskDetail = document.querySelector('#task-detail');
 const progressBar = document.querySelector('#progress-bar');
@@ -27,6 +29,7 @@ const llmDescription = document.querySelector('#llm-mode-description');
 const cloudWarning = document.querySelector('#cloud-warning');
 const taskLlmMode = document.querySelector('#task-llm-mode');
 const llmChoice = document.querySelector('.llm-choice');
+const breadcrumbs = document.querySelector('#breadcrumbs');
 const views = document.querySelectorAll('.app-view');
 const viewLinks = document.querySelectorAll('[data-view]');
 const executionList = document.querySelector('#execution-list');
@@ -79,7 +82,18 @@ loadCapabilities();
 function showView(name) {
   views.forEach((view) => { view.hidden = view.id !== `${name}-view`; });
   viewLinks.forEach((link) => link.classList.toggle('active', link.dataset.view === name));
+  renderBreadcrumbs(name);
   if (name === 'executions') loadExecutions();
+}
+
+function renderBreadcrumbs(name) {
+  if (name === 'executions') {
+    breadcrumbs.innerHTML = '<a href="/">AI Software Factory</a><span>/</span><strong>Exécutions</strong>';
+    document.title = 'AI Factory | Exécutions';
+    return;
+  }
+  breadcrumbs.innerHTML = '<a href="/">AI Software Factory</a><span>/</span><strong>Tickets</strong>';
+  document.title = 'AI Factory | Tickets';
 }
 
 function resetTicketDraft() {
@@ -97,6 +111,8 @@ function resetTicketDraft() {
   statusLabel.textContent = 'QUEUED';
   taskLlmMode.textContent = 'LOCAL';
   taskId.textContent = '';
+  ticketKey.innerHTML = 'AF-NEW <span>·</span> DEMANDE DE LIVRAISON';
+  ticketTitle.textContent = "Créer un ticket pour l'usine";
   taskSummary.textContent = '';
   taskDetail.textContent = '';
   progressBar.style.width = '8%';
@@ -166,6 +182,10 @@ function taskTitle(task) {
   return task.requirement.match(/^Titre : (.*)$/m)?.[1] || 'Ticket sans titre';
 }
 
+function displayTicketNumber(task) {
+  return task.ticketNumber || `#${task.id.slice(0, 8)}`;
+}
+
 function activeStep(task) {
   if (task.status === 'APPROVED') return 'Création de la pull request';
   return pipelineJobs.find((job) => job.id === task.status)?.label || task.status.replaceAll('_', ' ');
@@ -188,8 +208,9 @@ function renderExecutionList(tasks) {
     row.type = 'button';
     row.className = 'execution-row';
     const title = document.createElement('span');
-    title.innerHTML = `<span class="execution-title"></span><span class="execution-key">#${task.id}</span>`;
+    title.innerHTML = `<span class="execution-title"></span><span class="execution-key"></span>`;
     title.querySelector('.execution-title').textContent = taskTitle(task);
+    title.querySelector('.execution-key').textContent = displayTicketNumber(task);
     const mode = document.createElement('span');
     mode.className = `execution-mode ${(task.llmMode || 'LOCAL').toLowerCase()}`;
     mode.textContent = task.llmMode || 'LOCAL';
@@ -298,7 +319,9 @@ function renderTask(task) {
   statusPanel.classList.toggle('failed', task.status === 'FAILED');
   statusLabel.textContent = task.status.replaceAll('_', ' ');
   taskLlmMode.textContent = task.llmMode || 'LOCAL';
-  taskId.textContent = `#${task.id.slice(0, 8)}`;
+  taskId.textContent = displayTicketNumber(task);
+  ticketKey.textContent = `Ticket ${displayTicketNumber(task)}`;
+  ticketTitle.textContent = taskTitle(task);
   taskSummary.textContent = taskTitle(task);
   taskDetail.textContent = task.error || statusDescription(task.status, task.dryRun);
   progressBar.style.width = `${progress[task.status] || 10}%`;
@@ -389,7 +412,7 @@ form.addEventListener('submit', async (event) => {
     renderTask(task);
     clearInterval(pollTimer);
     pollTimer = setInterval(refreshTask, 3000);
-    message.textContent = `Ticket ${task.id.slice(0, 8)} envoyé.`;
+    message.textContent = `Ticket ${displayTicketNumber(task)} envoyé.`;
     loadExecutions();
   } catch (error) {
     message.textContent = error.message;

@@ -6,6 +6,7 @@ import java.util.List;
 
 public class TaskState {
     public final String id;
+    public final String ticketNumber;
     public final TaskRequest request;
     public TaskStatus status = TaskStatus.QUEUED;
     public String workspace;
@@ -21,8 +22,9 @@ public class TaskState {
     public final Instant createdAt = Instant.now();
     public Instant updatedAt = Instant.now();
 
-    public TaskState(String id, TaskRequest request) {
+    public TaskState(String id, String ticketNumber, TaskRequest request) {
         this.id = id;
+        this.ticketNumber = ticketNumber;
         this.request = request;
     }
 
@@ -40,7 +42,7 @@ public class TaskState {
     }
 
     public synchronized TaskView view() {
-        return new TaskView(id, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
+        return new TaskView(id, ticketNumber, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
                 request.isDryRun(), request.effectiveLlmMode(), workspace, plan, patch, testSummary, qualitySummary, securitySummary, review,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
     }

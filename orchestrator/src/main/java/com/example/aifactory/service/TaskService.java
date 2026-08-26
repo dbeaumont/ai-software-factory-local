@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,6 +22,7 @@ public class TaskService {
     private static final Pattern PATCH_FILE = Pattern.compile("^\\+\\+\\+ b/(.+)$", Pattern.MULTILINE);
     private final Map<String, TaskState> tasks = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private final AtomicInteger ticketSequence = new AtomicInteger(1);
     private final AiFactoryProperties props;
     private final ProcessRunner runner;
     private final RepositoryContextService contextService;
@@ -54,7 +56,8 @@ public class TaskService {
             throw new IllegalArgumentException("Cloud LLM is disabled by configuration");
         }
         String id = UUID.randomUUID().toString().substring(0, 8);
-        TaskState state = new TaskState(id, request);
+        String ticketNumber = nextTicketNumber();
+        TaskState state = new TaskState(id, ticketNumber, request);
         tasks.put(id, state);
         submittedTasks.increment();
         executor.submit(() -> runPipeline(state));
@@ -207,5 +210,9 @@ public class TaskService {
 
     private static String tail(String s, int max) {
         return s.length() <= max ? s : "...[truncated]...\n" + s.substring(s.length() - max);
+    }
+
+    String nextTicketNumber() {
+        return "AF-%04d".formatted(ticketSequence.getAndIncrement());
     }
 }

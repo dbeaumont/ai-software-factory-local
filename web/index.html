@@ -16,10 +16,10 @@
       <div class="topbar-actions"><span class="environment"><i></i> LOCAL</span><button class="create-button" type="button" onclick="document.querySelector('#summary').focus()">Créer</button></div>
     </header>
     <main class="app-main">
-      <nav class="breadcrumbs" aria-label="Fil d'Ariane"><a href="/">AI Software Factory</a><span>/</span><a href="#ticket-title">Demandes</a><span>/</span><strong>Nouveau ticket</strong></nav>
+      <nav id="breadcrumbs" class="breadcrumbs" aria-label="Fil d'Ariane"><a href="/">AI Software Factory</a><span>/</span><strong>Tickets</strong></nav>
       <section id="ticket-view" class="app-view">
       <section class="issue-heading">
-        <div class="issue-icon" aria-hidden="true">✦</div><div><p class="issue-key">AF-NEW <span>·</span> DEMANDE DE LIVRAISON</p><h1 id="ticket-title">Créer un ticket pour l'usine</h1><p>Transformez une spécification métier en plan, patch, contrôles et pull request.</p></div>
+        <div class="issue-icon" aria-hidden="true">✦</div><div><p id="ticket-key" class="issue-key">AF-NEW <span>·</span> DEMANDE DE LIVRAISON</p><h1 id="ticket-title">Créer un ticket pour l'usine</h1><p>Transformez une spécification métier en plan, patch, contrôles et pull request.</p></div>
       </section>
       <div class="issue-layout">
         <section class="issue-main" aria-label="Formulaire de création de ticket">
