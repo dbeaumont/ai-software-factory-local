@@ -11,6 +11,7 @@ BLUE   := \033[0;34m
 CYAN   := \033[0;36m
 RED    := \033[0;31m
 NC     := \033[0m
+COMPOSE := docker compose --env-file .env -f infrastructure/compose.yaml
 
 .PHONY: help init build up all model bootstrap tokens demo test package config status restart logs urls down clean
 
@@ -48,13 +49,13 @@ build:
 		--build-arg TRIVY_VERSION="$(TRIVY_VERSION)" \
 		--build-arg SYFT_VERSION="$(SYFT_VERSION)" \
 		--build-arg TRIVY_PRELOAD_DB="$(TRIVY_PRELOAD_DB)" \
-		-t ai-factory-sandbox:local ./sandbox
-	docker compose build orchestrator factory-web
+		-t ai-factory-sandbox:local ./infrastructure/sandbox
+	$(COMPOSE) build orchestrator factory-web
 	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build
 	@echo -e "$(BLUE)Starting local factory stack...$(NC)"
-	docker compose up -d
+	$(COMPOSE) up -d
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls
 
@@ -68,21 +69,21 @@ all:
 
 model:
 	@echo -e "$(BLUE)Pulling Ollama model $(OLLAMA_MODEL)...$(NC)"
-	docker compose exec ollama ollama pull $(OLLAMA_MODEL)
+	$(COMPOSE) exec ollama ollama pull $(OLLAMA_MODEL)
 	@echo -e "$(GREEN)Model $(OLLAMA_MODEL) pulled!$(NC)"
 
 bootstrap: init
 	@echo -e "$(BLUE)Bootstrapping Gitea and SonarQube...$(NC)"
 	./scripts/bootstrap-gitea.sh
 	./scripts/bootstrap-sonar.sh
-	docker compose up -d --force-recreate orchestrator
+	$(COMPOSE) up -d --force-recreate orchestrator
 	@echo -e "$(GREEN)Bootstrap complete!$(NC)"
 
 tokens: init
 	@echo -e "$(BLUE)Updating Gitea and SonarQube tokens...$(NC)"
 	./scripts/bootstrap-gitea.sh --token-only
 	./scripts/bootstrap-sonar.sh
-	docker compose up -d --force-recreate orchestrator
+	$(COMPOSE) up -d --force-recreate orchestrator
 	@echo -e "$(GREEN)Tokens updated!$(NC)"
 
 demo:
@@ -91,32 +92,32 @@ demo:
 
 test:
 	@echo -e "$(BLUE)Running orchestrator tests...$(NC)"
-	if [ -x ./mvnw ]; then ./mvnw -f orchestrator/pom.xml test; else mvn -f orchestrator/pom.xml test; fi
+	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw -f apps/orchestrator/pom.xml test; else mvn -f apps/orchestrator/pom.xml test; fi
 
 package:
 	@echo -e "$(BLUE)Packaging orchestrator...$(NC)"
-	if [ -x ./mvnw ]; then ./mvnw -f orchestrator/pom.xml package -DskipTests; else mvn -f orchestrator/pom.xml package -DskipTests; fi
+	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw -f apps/orchestrator/pom.xml package -DskipTests; else mvn -f apps/orchestrator/pom.xml package -DskipTests; fi
 
 config:
 	@echo -e "$(BLUE)Validating Docker Compose configuration...$(NC)"
-	docker compose config >/dev/null
+	$(COMPOSE) config >/dev/null
 	@echo -e "$(GREEN)Configuration is valid!$(NC)"
 
 restart:
 	@echo -e "$(YELLOW)Restarting orchestrator...$(NC)"
-	docker compose restart orchestrator
+	$(COMPOSE) restart orchestrator
 	@echo -e "$(GREEN)Orchestrator restarted!$(NC)"
 
 status:
-	docker compose ps
+	$(COMPOSE) ps
 
 down:
 	@echo -e "$(YELLOW)Stopping local factory stack...$(NC)"
-	docker compose down
+	$(COMPOSE) down
 	@echo -e "$(GREEN)Stack stopped!$(NC)"
 
 logs:
-	docker compose logs -f orchestrator
+	$(COMPOSE) logs -f orchestrator
 
 urls:
 	@echo ""
@@ -145,5 +146,5 @@ urls:
 
 clean:
 	@echo -e "$(RED)Cleaning stack and removing volumes...$(NC)"
-	docker compose down -v --remove-orphans
+	$(COMPOSE) down -v --remove-orphans
 	@echo -e "$(GREEN)Clean complete!$(NC)"

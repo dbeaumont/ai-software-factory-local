@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && set -a && source .env && set +a
+COMPOSE=(docker compose --env-file .env -f infrastructure/compose.yaml)
 USER="$GITEA_ADMIN_USER"
 PASS="$GITEA_ADMIN_PASSWORD"
 EMAIL="$GITEA_ADMIN_EMAIL"
@@ -35,13 +36,13 @@ path.write_text("\n".join(lines) + "\n")
 PY
 }
 
-until docker compose exec -T --user git gitea gitea admin user list >/dev/null 2>&1; do sleep 2; done
+until "${COMPOSE[@]}" exec -T --user git gitea gitea admin user list >/dev/null 2>&1; do sleep 2; done
 if [ "$TOKEN_ONLY" = false ]; then
-  if ! docker compose exec -T --user git gitea gitea admin user list | grep -q "${USER}"; then
-    docker compose exec -T --user git gitea gitea admin user create --username "$USER" --password "$PASS" --email "$EMAIL" --admin --must-change-password=false
+  if ! "${COMPOSE[@]}" exec -T --user git gitea gitea admin user list | grep -q "${USER}"; then
+    "${COMPOSE[@]}" exec -T --user git gitea gitea admin user create --username "$USER" --password "$PASS" --email "$EMAIL" --admin --must-change-password=false
   fi
-  if ! docker compose exec -T --user git gitea gitea admin user list | grep -q "${REVIEWER_USER}"; then
-    docker compose exec -T --user git gitea gitea admin user create --username "$REVIEWER_USER" --password "$REVIEWER_PASS" --email "$REVIEWER_EMAIL" --must-change-password=false
+  if ! "${COMPOSE[@]}" exec -T --user git gitea gitea admin user list | grep -q "${REVIEWER_USER}"; then
+    "${COMPOSE[@]}" exec -T --user git gitea gitea admin user create --username "$REVIEWER_USER" --password "$REVIEWER_PASS" --email "$REVIEWER_EMAIL" --admin --must-change-password=false
   fi
 
   if ! curl -fsS -u "$USER:$PASS" "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api" >/dev/null 2>&1; then
@@ -56,7 +57,7 @@ if [ "$TOKEN_ONLY" = false ]; then
     "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api/collaborators/$REVIEWER_USER" >/dev/null
 
   TMP=$(mktemp -d)
-  cp -R sample-repo/. "$TMP/"
+  cp -R examples/customer-api/. "$TMP/"
   (
     cd "$TMP"
     git init -b main >/dev/null
@@ -79,7 +80,7 @@ fi
 
 if [ "$TOKEN_VALID" = false ]; then
   TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"
-  TOKEN=$(docker compose exec -T --user git gitea \
+  TOKEN=$("${COMPOSE[@]}" exec -T --user git gitea \
     gitea admin user generate-access-token \
     --username "$USER" \
     --token-name "$TOKEN_NAME" \

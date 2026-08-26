@@ -4,6 +4,18 @@ Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. Le 
 
 `requirement -> plan -> patch -> validation du diff -> réparation si besoin -> sandbox -> tests -> SonarQube -> SBOM Syft -> scan Trivy -> review IA -> approbation humaine -> pull request Gitea`
 
+## Organisation du dépôt
+
+| Répertoire | Contenu |
+|---|---|
+| `apps/` | Applications exécutables : orchestrateur et interface web |
+| `resources/` | Ressources métier versionnées : prompts, profils d'agents et modèle de ticket |
+| `infrastructure/` | Compose, proxy, LiteLLM, sandbox et observabilité |
+| `examples/` | Dépôts d'exemple utilisés pour les démonstrations |
+| `scripts/` | Automatisation du bootstrap et de la démonstration |
+
+Les commandes `make` restent lancées depuis la racine ; elles utilisent `infrastructure/compose.yaml`.
+
 ## Vue d'ensemble
 
 La stack actuelle contient :
@@ -70,7 +82,7 @@ URLs principales :
 - Grafana : `http://localhost:3001`
 - Ollama API : `http://localhost:11434`
 
-Le script `make bootstrap` initialise le compte Gitea `aiadmin`, le compte reviewer `reviewer`, le dépôt de démonstration `customer-api`, pousse le contenu de `sample-repo/`, et génère automatiquement les jetons `GITEA_TOKEN` et `SONAR_TOKEN` dans le fichier `.env`.
+Le script `make bootstrap` initialise le compte Gitea `aiadmin`, le compte reviewer `reviewer`, le dépôt de démonstration `customer-api`, pousse le contenu de `examples/customer-api/`, et génère automatiquement les jetons `GITEA_TOKEN` et `SONAR_TOKEN` dans le fichier `.env`.
 
 ## Utilisation
 
