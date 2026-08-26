@@ -1,6 +1,7 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.config.AiFactoryProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.nio.file.Path;
 public class PromptService {
     private final Path root;
 
+    @Autowired
     public PromptService(AiFactoryProperties props) {
         this(Path.of(requirePromptRoot(props.promptRoot())));
     }

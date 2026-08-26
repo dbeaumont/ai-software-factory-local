@@ -77,6 +77,17 @@ async function loadCapabilities() {
   }
 }
 
+async function readApiResponse(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) return response.json();
+
+  const body = await response.text();
+  if (!response.ok) {
+    throw new Error(`Le service a répondu avec HTTP ${response.status}${body ? '.' : ''}`);
+  }
+  throw new Error('Le service a renvoyé une réponse inattendue.');
+}
+
 loadCapabilities();
 
 function showView(name) {
@@ -357,7 +368,7 @@ async function refreshTask() {
   try {
     const response = await fetch(`/api/tasks/${activeTaskId}`);
     if (!response.ok) throw new Error('Impossible de suivre cette tâche.');
-    const task = await response.json();
+    const task = await readApiResponse(response);
     renderTask(task);
     loadExecutions();
     if (isFinished(task.status)) clearInterval(pollTimer);
@@ -373,7 +384,7 @@ approveButton.addEventListener('click', async () => {
   approveButton.textContent = 'Approbation en cours...';
   try {
     const response = await fetch(`/api/tasks/${activeTaskId}/approve`, { method: 'POST' });
-    const task = await response.json();
+    const task = await readApiResponse(response);
     if (!response.ok) throw new Error(task.error || "L'approbation a échoué.");
     renderTask(task);
     clearInterval(pollTimer);
@@ -403,7 +414,7 @@ form.addEventListener('submit', async (event) => {
         llmMode: selectedLlmMode
       })
     });
-    const task = await response.json();
+    const task = await readApiResponse(response);
     if (!response.ok) throw new Error(task.error || 'La création du ticket a échoué.');
     activeTaskId = task.id;
     renderTask(task);
