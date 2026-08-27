@@ -110,11 +110,11 @@ function showView(name) {
 function renderBreadcrumbs(name) {
   if (name === 'executions') {
     breadcrumbs.innerHTML = '<a href="/">AI Software Factory</a><span>/</span><strong>Exécutions</strong>';
-    document.title = 'AI Factory | Exécutions';
+    document.title = 'AI Software Factory | Exécutions';
     return;
   }
   breadcrumbs.innerHTML = '<a href="/">AI Software Factory</a><span>/</span><strong>Tickets</strong>';
-  document.title = 'AI Factory | Tickets';
+  document.title = 'AI Software Factory | Tickets';
 }
 
 function resetTicketDraft() {
