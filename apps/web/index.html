@@ -12,11 +12,22 @@
     <link rel="stylesheet" href="/pipeline.css" />
     <link rel="stylesheet" href="/executions.css" />
     <link rel="stylesheet" href="/debug.css" />
+    <style>
+      .topnav-menu { position: relative; display: flex; align-items: stretch; }
+      .topnav-menu summary { display: grid; place-items: center; padding: 0 13px; color: var(--navy); font-size: 13px; cursor: pointer; list-style: none; }
+      .topnav-menu summary::-webkit-details-marker { display: none; }
+      .topnav-menu summary:hover { color: var(--blue); background: var(--blue-soft); }
+      .topnav-submenu { position: absolute; top: calc(100% - 1px); left: 0; min-width: 150px; padding: 5px 0; border: 1px solid var(--line); background: #fff; box-shadow: 0 4px 10px #091e4226; }
+      .topnav-submenu a { display: block; padding: 10px 14px; white-space: nowrap; }
+      .topnav-submenu a:hover { background: var(--blue-soft); }
+      .topnav { flex: 1; }
+      .topnav .about-link { margin-left: auto; }
+    </style>
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="/" aria-label="AI Software Factory"><img class="brand-mark" src="/icons/factory-circuit.svg" alt="" />AI Factory</a>
-      <nav class="topnav" aria-label="Navigation principale"><a href="#ticket" data-view="ticket" class="active">Tickets</a><a href="#executions" data-view="executions">Exécutions</a><a href="http://localhost:3000" target="_blank" rel="noreferrer">Dépôts</a><a href="http://localhost:8082" target="_blank" rel="noreferrer">Artifactory</a><a href="http://localhost:9000" target="_blank" rel="noreferrer">SonarQube</a><a href="http://localhost:3001" target="_blank" rel="noreferrer">Grafana</a></nav>
+      <nav class="topnav" aria-label="Navigation principale"><a href="#ticket" data-view="ticket" class="active">Tickets</a><a href="#executions" data-view="executions">Exécutions</a><details class="topnav-menu"><summary>Documentation</summary><div class="topnav-submenu"><a href="/workflow.html">Workflow</a></div></details><a href="http://localhost:3000" target="_blank" rel="noreferrer">Dépôts</a><a href="http://localhost:8082" target="_blank" rel="noreferrer">Artifactory</a><a href="http://localhost:9000" target="_blank" rel="noreferrer">SonarQube</a><a href="http://localhost:3001" target="_blank" rel="noreferrer">Grafana</a><a class="about-link" href="/about.html">About</a></nav>
     </header>
     <main class="app-main">
       <nav id="breadcrumbs" class="breadcrumbs" aria-label="Fil d'Ariane"><a href="/">AI Software Factory</a><span>/</span><strong>Tickets</strong></nav>

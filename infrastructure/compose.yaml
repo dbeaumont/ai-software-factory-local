@@ -129,6 +129,8 @@ services:
         NPM_REGISTRY_HOST: ${NPM_REGISTRY_HOST}
       secrets:
         - artifactory_token
+    volumes:
+      - ../docs/assets:/usr/share/nginx/html/docs/assets:ro
     depends_on:
       - reverse-proxy
     networks: [factory]

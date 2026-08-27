@@ -9,6 +9,10 @@ COPY pipeline.css /usr/share/nginx/html/pipeline.css
 COPY executions.css /usr/share/nginx/html/executions.css
 COPY debug.css /usr/share/nginx/html/debug.css
 COPY app.js /usr/share/nginx/html/app.js
+COPY workflow.html /usr/share/nginx/html/workflow.html
+COPY workflow.css /usr/share/nginx/html/workflow.css
+COPY about.html /usr/share/nginx/html/about.html
+COPY about.css /usr/share/nginx/html/about.css
 COPY icons /usr/share/nginx/html/icons
 
 EXPOSE 80
