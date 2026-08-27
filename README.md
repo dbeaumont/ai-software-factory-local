@@ -181,6 +181,13 @@ VAULT_OPENAI_API_KEY=sk-...
 ```
 Ce fichier est exclu du contrôle de version Git et est chargé de façon sécurisée par le conteneur LiteLLM.
 
+Si un proxy d'entreprise intercepte le trafic HTTPS et présente un certificat interne, LiteLLM ajoute au démarrage la chaîne présentée par `api.openai.com:443` à son bundle de confiance. Pour employer un autre endpoint, configurez dans `.env` :
+```bash
+OPENAI_CA_CERT_HOST=api.openai.com:443
+```
+Cette étape n'est exécutée que lorsqu'une clé OpenAI est configurée et la vérification TLS reste active.
+Les certificats d'interception historiques qui n'ont pas d'Authority Key Identifier restent compatibles avec Python 3.13 ; la chaîne, la signature et le nom d'hôte restent vérifiés.
+
 ## Démonstration
 
 Lancer une tâche de démo pré-configurée :

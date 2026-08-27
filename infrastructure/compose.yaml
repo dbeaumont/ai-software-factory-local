@@ -70,6 +70,7 @@ services:
     environment:
       OLLAMA_MODEL: ${OLLAMA_MODEL}
       OPENAI_MODEL: ${OPENAI_MODEL}
+      OPENAI_CA_CERT_HOST: ${OPENAI_CA_CERT_HOST:-api.openai.com:443}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
     depends_on:
       ollama:

@@ -6,6 +6,7 @@ FROM ${LITELLM_IMAGE}
 # The entrypoint expands runtime environment variables in this template before LiteLLM starts.
 COPY config.template.yaml /app/config.template.yaml
 COPY entrypoint.sh /app/entrypoint.sh
+COPY sitecustomize.py /app/python/sitecustomize.py
 
 RUN chmod +x /app/entrypoint.sh
 
