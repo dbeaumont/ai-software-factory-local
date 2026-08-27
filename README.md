@@ -27,7 +27,7 @@ La stack actuelle contient :
 | Orchestration | Spring Boot 3.5 / Java 21 (`orchestrator`) |
 | Passerelle LLM | LiteLLM (port 4000 interne) |
 | Modèle local | Ollama (`qwen2.5-coder:7b` par défaut) |
-| Modèle cloud optionnel | OpenAI via LiteLLM (`gpt-5.6` configurable) |
+| Modèle cloud optionnel | OpenAI via LiteLLM (`gpt-5.6-luna` configurable) |
 | SCM / PR | Gitea + PostgreSQL 16 |
 | Sandbox d'exécution | Conteneurs Docker éphémères (`ai-factory-sandbox:local`) |
 | Build et tests | Maven / Gradle / npm selon le dépôt |
@@ -93,10 +93,11 @@ L'interface `factory-web` est servie par le reverse proxy Nginx. Les appels API 
 L'interface permet de :
 
 - rédiger un ticket structuré (résumé, objectif métier, périmètre, comportement actuel/attendu, critères d'acceptation) ;
-- utiliser le bouton de pré-remplissage de démo ("Charger le modèle de ticket") ;
+- utiliser le bouton de pré-remplissage de démo ("Préremplir le modèle") ;
 - choisir le mode `LOCAL` (Ollama) ou `CLOUD` (OpenAI via LiteLLM) ;
 - suivre la progression en temps réel (stepper, logs, progression) ;
 - consulter l'historique complet des exécutions (vue "Exécutions") ;
+- ouvrir le menu "Documentation" puis "Workflow" pour afficher le diagramme du pipeline ;
 - inspecter la proposition (plan, patch, logs de tests, SonarQube, Trivy, revue IA) ;
 - approuver la tâche et déclencher la PR.
 
@@ -162,7 +163,7 @@ Les 13 statuts du cycle de vie d'une tâche sont :
 Le routage des modèles s'effectue via LiteLLM :
 
 - `LOCAL` -> modèle `factory-code-local` -> Ollama (`qwen2.5-coder:7b`)
-- `CLOUD` -> modèle `factory-code-cloud` -> OpenAI (`gpt-5.6`)
+- `CLOUD` -> modèle `factory-code-cloud` -> OpenAI (`gpt-5.6-luna` par défaut)
 
 Le mode cloud n'est accessible que si `AI_FACTORY_CLOUD_ENABLED=true` dans `.env`.
 
@@ -170,7 +171,7 @@ Variables de configuration principales :
 
 ```bash
 OLLAMA_MODEL=qwen2.5-coder:7b
-OPENAI_MODEL=gpt-5.6
+OPENAI_MODEL=gpt-5.6-luna
 AI_FACTORY_CLOUD_ENABLED=false
 LITELLM_MASTER_KEY=local-dev-litellm-key
 ```
@@ -243,6 +244,6 @@ make clean
 
 ## Documentation complémentaire
 
-- [Vue détaillée du prototype](docs/AI_SOFTWARE_FACTORY_LOCAL.md)
+- [Fonctionnement et workflow](docs/workflow.md)
 - [Architecture](docs/architecture.md)
 - [Sécurité](docs/security.md)

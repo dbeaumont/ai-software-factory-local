@@ -21,4 +21,4 @@ Le pipeline transforme un besoin exprime sous forme de ticket en Pull Request Gi
 | 13. Décision humaine | Examiner la proposition et autoriser la livraison (`POST /api/tasks/{id}/approve`) | API Spring Boot, IHM `factory-web` |
 | 14. Livraison SCM | Basculer sur une branche dédiée, nettoyer les fichiers temporaires IA, committer, pousser et créer la PR | Git, Gitea REST API |
 
-Le modèle de langage est sollicité localement via Ollama (`qwen2.5-coder:7b`) ou dans le cloud via OpenAI (`gpt-5.6`) lorsque le mode cloud est activé. LiteLLM constitue le point de passage unique et homogène pour tous les appels de modèles.
+Le modèle de langage est sollicité localement via Ollama (`qwen2.5-coder:7b`) ou dans le cloud via OpenAI (`gpt-5.6-luna` par défaut) lorsque le mode cloud est activé. LiteLLM constitue le point de passage unique et homogène pour tous les appels de modèles.
