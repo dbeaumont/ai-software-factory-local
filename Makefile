@@ -13,9 +13,14 @@ RED    := \033[0;31m
 NC     := \033[0m
 COMPOSE := docker compose --env-file .env -f infrastructure/compose.yaml
 
+define log-target
+	@echo -e "$(CYAN)[target: $@]$(NC)"
+endef
+
 .PHONY: help init build up all model bootstrap tokens demo test package config status restart logs urls down clean
 
 help:
+	$(log-target)
 	@echo -e "$(YELLOW)AI Software Factory prototype - Commandes :$(NC)"
 	@echo -e "  $(CYAN)make init$(NC)       - create .env and .vault from their examples"
 	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
@@ -36,11 +41,13 @@ help:
 	@echo -e "  $(CYAN)make clean$(NC)      - stop and remove volumes (destructive)"
 
 init:
+	$(log-target)
 	@test -f .env || cp .env.example .env
 	@test -f .vault || cp .vault.example .vault
 	@echo -e "$(GREEN).env and .vault ready$(NC)"
 
 build:
+	$(log-target)
 	@echo -e "$(BLUE)Building sandbox and orchestrator images...$(NC)"
 	@test -n "$(SYFT_VERSION)" || (echo "SYFT_VERSION must be defined in .env" >&2; exit 1)
 	@test -n "$(TRIVY_VERSION)" || (echo "TRIVY_VERSION must be defined in .env" >&2; exit 1)
@@ -54,12 +61,14 @@ build:
 	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build
+	$(log-target)
 	@echo -e "$(BLUE)Starting local factory stack...$(NC)"
 	$(COMPOSE) up -d
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls
 
 all:
+	$(log-target)
 	@echo -e "$(YELLOW)Resetting and bootstrapping complete factory...$(NC)"
 	$(MAKE) clean
 	$(MAKE) up
@@ -68,11 +77,13 @@ all:
 	@echo -e "$(GREEN)Full factory ready!$(NC)"
 
 model:
+	$(log-target)
 	@echo -e "$(BLUE)Pulling Ollama model $(OLLAMA_MODEL)...$(NC)"
 	$(COMPOSE) exec ollama ollama pull $(OLLAMA_MODEL)
 	@echo -e "$(GREEN)Model $(OLLAMA_MODEL) pulled!$(NC)"
 
 bootstrap: init
+	$(log-target)
 	@echo -e "$(BLUE)Bootstrapping Gitea and SonarQube...$(NC)"
 	./scripts/bootstrap-gitea.sh
 	./scripts/bootstrap-sonar.sh
@@ -80,6 +91,7 @@ bootstrap: init
 	@echo -e "$(GREEN)Bootstrap complete!$(NC)"
 
 tokens: init
+	$(log-target)
 	@echo -e "$(BLUE)Updating Gitea and SonarQube tokens...$(NC)"
 	./scripts/bootstrap-gitea.sh --token-only
 	./scripts/bootstrap-sonar.sh
@@ -87,39 +99,48 @@ tokens: init
 	@echo -e "$(GREEN)Tokens updated!$(NC)"
 
 demo:
+	$(log-target)
 	@echo -e "$(BLUE)Submitting demo task...$(NC)"
 	./scripts/demo.sh
 
 test:
+	$(log-target)
 	@echo -e "$(BLUE)Running orchestrator tests...$(NC)"
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw -f apps/orchestrator/pom.xml test; else mvn -f apps/orchestrator/pom.xml test; fi
 
 package:
+	$(log-target)
 	@echo -e "$(BLUE)Packaging orchestrator...$(NC)"
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw -f apps/orchestrator/pom.xml package -DskipTests; else mvn -f apps/orchestrator/pom.xml package -DskipTests; fi
 
 config:
+	$(log-target)
 	@echo -e "$(BLUE)Validating Docker Compose configuration...$(NC)"
 	$(COMPOSE) config >/dev/null
 	@echo -e "$(GREEN)Configuration is valid!$(NC)"
 
 restart:
+	$(log-target)
 	@echo -e "$(YELLOW)Restarting orchestrator...$(NC)"
 	$(COMPOSE) restart orchestrator
 	@echo -e "$(GREEN)Orchestrator restarted!$(NC)"
 
 status:
+	$(log-target)
 	$(COMPOSE) ps
 
 down:
+	$(log-target)
 	@echo -e "$(YELLOW)Stopping local factory stack...$(NC)"
 	$(COMPOSE) down
 	@echo -e "$(GREEN)Stack stopped!$(NC)"
 
 logs:
+	$(log-target)
 	$(COMPOSE) logs -f orchestrator
 
 urls:
+	$(log-target)
 	@echo ""
 	@echo -e "$(YELLOW)Core Services:$(NC)"
 	@echo -e "  - Factory web:  $(GREEN)http://localhost:$(WEB_APP_PORT)$(NC)"
@@ -145,6 +166,7 @@ urls:
 	@echo ""
 
 clean:
+	$(log-target)
 	@echo -e "$(RED)Cleaning stack and removing volumes...$(NC)"
 	$(COMPOSE) down -v --remove-orphans
 	@echo -e "$(GREEN)Clean complete!$(NC)"
