@@ -55,6 +55,12 @@ public class TaskService {
         if (request.effectiveLlmMode() == LlmMode.CLOUD && !props.cloudEnabled()) {
             throw new IllegalArgumentException("Cloud LLM is disabled by configuration");
         }
+        if (request.effectiveLlmMode() == LlmMode.CLOUD) {
+            CloudAvailability availability = llm.cloudAvailability();
+            if (!availability.available()) {
+                throw new IllegalStateException(availability.error());
+            }
+        }
         String id = UUID.randomUUID().toString().substring(0, 8);
         String ticketNumber = nextTicketNumber();
         TaskState state = new TaskState(id, ticketNumber, request);

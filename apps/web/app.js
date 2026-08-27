@@ -27,6 +27,7 @@ const proposalReview = document.querySelector('#proposal-review');
 const llmMode = document.querySelector('#llm-mode');
 const llmDescription = document.querySelector('#llm-mode-description');
 const cloudWarning = document.querySelector('#cloud-warning');
+const cloudUnavailable = document.querySelector('#cloud-unavailable');
 const taskLlmMode = document.querySelector('#task-llm-mode');
 const llmChoice = document.querySelector('.llm-choice');
 const breadcrumbs = document.querySelector('#breadcrumbs');
@@ -71,6 +72,15 @@ async function loadCapabilities() {
     if (!capabilities.cloudEnabled) {
       llmMode.disabled = true;
       llmDescription.textContent = 'Le mode cloud est désactivé par la configuration de cette usine.';
+      return;
+    }
+    if (!capabilities.cloudAvailable) {
+      llmMode.checked = false;
+      llmMode.disabled = true;
+      llmDescription.textContent = 'Le mode cloud est temporairement indisponible.';
+      cloudUnavailable.textContent = capabilities.cloudError || 'L’API LLM externe est inaccessible.';
+      cloudUnavailable.hidden = false;
+      renderLlmMode();
     }
   } catch {
     // The local mode remains available when the status endpoint is temporarily unavailable.
