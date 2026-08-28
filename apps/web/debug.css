@@ -52,6 +52,23 @@
   background: var(--blue-soft);
 }
 
+.review-button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--amber);
+  border-radius: 3px;
+  color: var(--amber);
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.review-button:hover {
+  background: #fff7d6;
+}
+
 .approve-button + .pr-link {
   margin-top: 18px;
 }
@@ -125,6 +142,47 @@
   font: 12px/1.55 "SFMono-Regular", Consolas, monospace;
   white-space: pre-wrap;
 }
+
+.review-decision {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.review-decision.reject,
+.review-decision.invalid { color: var(--red); }
+.review-decision.accept { color: var(--green); }
+.review-decision.accept_with_comments { color: var(--amber); }
+
+.review-findings {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.review-findings > p,
+.review-human-points {
+  margin: 14px 0 0;
+  color: #44546f;
+  line-height: 1.5;
+}
+
+.review-finding {
+  padding: 14px;
+  border-left: 4px solid #b6c2cf;
+  border-radius: 3px;
+  background: var(--paper);
+}
+
+.review-finding.severity-blocker,
+.review-finding.severity-major { border-left-color: var(--red); }
+.review-finding.severity-minor { border-left-color: var(--amber); }
+.review-finding h4,
+.review-finding h5 { margin: 0; }
+.review-finding h5 { margin-top: 12px; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+.review-finding p { margin: 8px 0 0; color: #44546f; line-height: 1.45; }
+.review-finding ul { margin: 6px 0 0; padding-left: 20px; color: #44546f; line-height: 1.45; }
+.review-human-points { padding-left: 20px; }
 
 @media (max-width: 640px) {
   .debug-fill-button {

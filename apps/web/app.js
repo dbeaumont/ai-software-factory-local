@@ -16,6 +16,7 @@ const pipelineProgress = document.querySelector('#pipeline-progress');
 const prLink = document.querySelector('#pr-link');
 const approveButton = document.querySelector('#approve-button');
 const proposalButton = document.querySelector('#proposal-button');
+const reviewButton = document.querySelector('#review-button');
 const proposalDialog = document.querySelector('#proposal-dialog');
 const proposalCloseButton = document.querySelector('#proposal-close-button');
 const proposalPatch = document.querySelector('#proposal-patch');
@@ -24,6 +25,12 @@ const proposalTests = document.querySelector('#proposal-tests');
 const proposalQuality = document.querySelector('#proposal-quality');
 const proposalSecurity = document.querySelector('#proposal-security');
 const proposalReview = document.querySelector('#proposal-review');
+const reviewDialog = document.querySelector('#review-dialog');
+const reviewCloseButton = document.querySelector('#review-close-button');
+const reviewDecision = document.querySelector('#review-decision');
+const reviewFindings = document.querySelector('#review-findings');
+const reviewHumanPoints = document.querySelector('#review-human-points');
+const reviewRaw = document.querySelector('#review-raw');
 const llmMode = document.querySelector('#llm-mode');
 const llmDescription = document.querySelector('#llm-mode-description');
 const cloudWarning = document.querySelector('#cloud-warning');
@@ -160,6 +167,7 @@ function resetTicketDraft() {
   approveButton.disabled = false;
   approveButton.innerHTML = 'Approuver et créer la pull request <span aria-hidden="true">→</span>';
   proposalButton.hidden = true;
+  reviewButton.hidden = true;
 }
 
 function requirementValue(requirement, startMarker, endMarkers) {
@@ -411,6 +419,7 @@ function renderTask(task) {
   progressBar.style.width = `${progress[task.status] || 10}%`;
   renderPipeline(task);
   proposalButton.hidden = !task.patch || task.status === 'PR_CREATED';
+  reviewButton.hidden = !task.review;
   approveButton.hidden = task.status !== 'WAITING_APPROVAL';
   prLink.hidden = !task.pullRequestUrl;
   if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);
@@ -429,6 +438,92 @@ proposalButton.addEventListener('click', () => {
 });
 
 proposalCloseButton.addEventListener('click', () => proposalDialog.close());
+
+function reviewValue(value, fallback) {
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function reviewList(values, emptyMessage) {
+  if (!Array.isArray(values) || values.length === 0) {
+    const item = document.createElement('li');
+    item.textContent = emptyMessage;
+    return [item];
+  }
+  return values.map((value) => {
+    const item = document.createElement('li');
+    item.textContent = reviewValue(value, 'Information non précisée.');
+    return item;
+  });
+}
+
+function parseReviewerReport(review) {
+  const value = (review || '').trim();
+  if (!value.startsWith('```')) return JSON.parse(value);
+  const firstLineEnd = value.indexOf('\n');
+  if (firstLineEnd < 0) return JSON.parse(value);
+  const json = value.slice(firstLineEnd + 1).replace(/\n?```\s*$/, '').trim();
+  return JSON.parse(json);
+}
+
+function renderReviewDetails(review) {
+  reviewRaw.textContent = review || 'Aucune revue IA disponible.';
+  reviewFindings.replaceChildren();
+  reviewHumanPoints.replaceChildren();
+
+  try {
+    const report = parseReviewerReport(review);
+    const decision = reviewValue(report.decision, 'DÉCISION NON PRÉCISÉE');
+    reviewDecision.textContent = `Décision du reviewer : ${decision}`;
+    reviewDecision.className = `review-decision ${decision.toLowerCase()}`;
+
+    const findings = Array.isArray(report.findings) ? report.findings : [];
+    if (findings.length === 0) {
+      const empty = document.createElement('p');
+      empty.textContent = 'Aucun constat bloquant ou commentaire n’a été remonté.';
+      reviewFindings.append(empty);
+    } else {
+      findings.forEach((finding, index) => {
+        const details = finding && typeof finding === 'object' ? finding : {};
+        const item = document.createElement('article');
+        const severity = reviewValue(details.severity, 'non précisée');
+        const severityClass = severity.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+        item.className = `review-finding severity-${severityClass}`;
+        const title = document.createElement('h4');
+        title.textContent = `${index + 1}. ${severity.toUpperCase()} — ${reviewValue(details.file, 'Fichier non précisé')}`;
+        const rule = document.createElement('p');
+        rule.textContent = `Motif : ${reviewValue(details.rule, 'Règle non précisée.')}`;
+        const fix = document.createElement('p');
+        fix.textContent = `Correctif recommandé : ${reviewValue(details.fix, 'Aucun correctif précisé.')}`;
+        item.append(title, rule, fix);
+        if (Array.isArray(details.evidence) && details.evidence.length > 0) {
+          const evidenceTitle = document.createElement('h5');
+          evidenceTitle.textContent = 'Éléments examinés';
+          const evidence = document.createElement('ul');
+          evidence.append(...reviewList(details.evidence, 'Aucun élément fourni.'));
+          item.append(evidenceTitle, evidence);
+        }
+        reviewFindings.append(item);
+      });
+    }
+    reviewHumanPoints.append(...reviewList(report.human_review_points, 'Aucun point de revue humaine signalé.'));
+  } catch {
+    reviewDecision.textContent = 'La réponse du reviewer ne respecte pas le format structuré attendu.';
+    reviewDecision.className = 'review-decision invalid';
+    const explanation = document.createElement('p');
+    explanation.textContent = 'Consultez la réponse brute ci-dessous pour le détail disponible.';
+    reviewFindings.append(explanation);
+    reviewHumanPoints.append(...reviewList([], 'Aucun point de revue humaine structuré.'));
+  }
+}
+
+reviewButton.addEventListener('click', () => {
+  if (!activeTask?.review) return;
+  renderReviewDetails(activeTask.review);
+  if (typeof reviewDialog.showModal === 'function') reviewDialog.showModal();
+  else reviewDialog.open = true;
+});
+
+reviewCloseButton.addEventListener('click', () => reviewDialog.close());
 
 function statusDescription(status) {
   if (status === 'WAITING_APPROVAL') return 'Contrôles terminés. La tâche attend une approbation humaine.';
