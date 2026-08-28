@@ -13,3 +13,10 @@ Do not include Markdown fences, prose, explanations, commands, ellipses, or part
 Do not modify generated/build output. Keep the patch minimal and preserve required automated tests. Repair the
 diff format and context only; do not broaden scope, add dependencies, alter access control, or introduce a
 new file not required by the invalid patch and supplied plan.
+
+HUNK INTEGRITY (binding)
+- Every context line (prefix ` `) must exist exactly, in order, in the supplied current file. Never invent a
+  blank context line. A new blank line must have prefix `+`; a removed one must have prefix `-`.
+- The old hunk range starts at the first supplied source line used by that hunk, not at the line after it.
+- Recalculate both hunk counts from the emitted lines. Do not preserve a hunk header, context line, or
+  no-newline marker from INVALID_PATCH unless it matches the authoritative current file.

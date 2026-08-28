@@ -30,6 +30,7 @@ const cloudWarning = document.querySelector('#cloud-warning');
 const cloudUnavailable = document.querySelector('#cloud-unavailable');
 const taskLlmMode = document.querySelector('#task-llm-mode');
 const llmChoice = document.querySelector('.llm-choice');
+const advancedDetails = document.querySelector('.advanced-details');
 const breadcrumbs = document.querySelector('#breadcrumbs');
 const views = document.querySelectorAll('.app-view');
 const viewLinks = document.querySelectorAll('[data-view]');
@@ -122,6 +123,7 @@ function resetTicketDraft() {
   activeTaskId = undefined;
   activeTask = undefined;
   form.reset();
+  delete form.dataset.taskId;
   renderLlmMode();
   message.textContent = '';
   submitButton.disabled = false;
@@ -145,6 +147,54 @@ function resetTicketDraft() {
   approveButton.disabled = false;
   approveButton.innerHTML = 'Approuver et créer la pull request <span aria-hidden="true">→</span>';
   proposalButton.hidden = true;
+}
+
+function requirementValue(requirement, startMarker, endMarkers) {
+  const start = requirement.indexOf(startMarker);
+  if (start < 0) return '';
+
+  const contentStart = start + startMarker.length;
+  const end = endMarkers
+    .map((marker) => requirement.indexOf(marker, contentStart))
+    .filter((index) => index >= 0)
+    .reduce((closest, index) => Math.min(closest, index), requirement.length);
+  return requirement.slice(contentStart, end).trim();
+}
+
+function restoreTicketFields(task) {
+  if (!task?.id || form.dataset.taskId === task.id) return;
+
+  const requirement = task.requirement || '';
+  const values = {
+    summary: requirementValue(requirement, 'Titre : ', ['\n']),
+    businessGoal: requirementValue(requirement, 'Objectif métier :\n', ['\n\nContexte :\n']),
+    scope: requirementValue(requirement, 'Contexte :\n- Application / domaine concerné : ', ['\n- Comportement actuel : ']),
+    currentBehavior: requirementValue(requirement, '- Comportement actuel : ', ['\n\nComportement attendu :\n']),
+    expectedBehavior: requirementValue(requirement, 'Comportement attendu :\n', ["\n\nCritères d'acceptation :\n"]),
+    acceptance: requirementValue(requirement, "Critères d'acceptation :\n", [
+      '\n\nContraintes existantes et fichiers pertinents :\n',
+      '\n\nContraintes techniques :\n',
+      '\n\nHors périmètre :\n',
+      '\n\nValidation attendue :\n'
+    ]),
+    context: requirementValue(requirement, 'Contraintes existantes et fichiers pertinents :\n', [
+      '\n\nContraintes techniques :\n', '\n\nHors périmètre :\n', '\n\nValidation attendue :\n'
+    ]),
+    technicalConstraints: requirementValue(requirement, 'Contraintes techniques :\n', ['\n\nHors périmètre :\n', '\n\nValidation attendue :\n']),
+    outOfScope: requirementValue(requirement, 'Hors périmètre :\n', ['\n\nValidation attendue :\n']),
+    validation: requirementValue(requirement, 'Validation attendue :\n', [])
+  };
+
+  Object.entries(values).forEach(([name, value]) => {
+    const field = form.elements.namedItem(name);
+    if (field) field.value = value;
+  });
+  form.elements.namedItem('repository').value = task.repositoryUrl || '';
+  form.elements.namedItem('branch').value = task.baseBranch || 'main';
+  llmMode.checked = task.llmMode === 'CLOUD';
+  advancedDetails.open = Boolean(values.technicalConstraints || values.outOfScope || values.validation);
+  form.dataset.taskId = task.id;
+  renderLlmMode();
 }
 
 debugFillButton.addEventListener('click', () => {
@@ -334,6 +384,7 @@ function renderPipeline(task) {
 
 function renderTask(task) {
   activeTask = task;
+  restoreTicketFields(task);
   emptyState.hidden = true;
   taskStatus.hidden = false;
   statusPanel.classList.toggle('failed', task.status === 'FAILED');

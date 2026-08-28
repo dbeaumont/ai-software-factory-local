@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 @Service
 public class TaskService {
     private static final Pattern PATCH_FILE = Pattern.compile("^\\+\\+\\+ b/(.+)$", Pattern.MULTILINE);
+    private static final int MAX_PATCH_REPAIR_ATTEMPTS = 2;
     private final Map<String, TaskState> tasks = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
     private final AtomicInteger ticketSequence = new AtomicInteger(1);
@@ -161,22 +162,25 @@ public class TaskService {
 
     private String validateAndRepairPatch(TaskState state, Path workspace, String rawPatch) throws Exception {
         String patch = UnifiedDiffNormalizer.normalize(stripFence(rawPatch));
-        Files.writeString(workspace.resolve("changes.patch"), patch);
-
-        try {
-            sandbox.checkPatch(workspace);
-            return patch;
-        } catch (Exception validationFailure) {
-            Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
-            String repaired = chat(state, "patch-repair", untrusted("REQUIREMENT", state.request.requirement()) +
-                    untrusted("PLAN", state.plan) + untrusted("CURRENT_FILE_CONTENTS", affectedFileContext(workspace, patch)) +
-                    untrusted("INVALID_PATCH", patch) + untrusted("GIT_APPLY_ERROR", validationFailure.getMessage()));
-            writeRunMetadata(workspace, state);
-            patch = UnifiedDiffNormalizer.normalize(stripFence(repaired));
+        for (int repairAttempt = 0; repairAttempt <= MAX_PATCH_REPAIR_ATTEMPTS; repairAttempt++) {
             Files.writeString(workspace.resolve("changes.patch"), patch);
-            sandbox.checkPatch(workspace);
-            return patch;
+            try {
+                sandbox.checkPatch(workspace);
+                return patch;
+            } catch (Exception validationFailure) {
+                if (repairAttempt == MAX_PATCH_REPAIR_ATTEMPTS) {
+                    throw validationFailure;
+                }
+                Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
+                String repaired = chat(state, "patch-repair", untrusted("REQUIREMENT", state.request.requirement()) +
+                        untrusted("PLAN", state.plan) + untrusted("CURRENT_FILE_CONTENTS", affectedFileContext(workspace, patch)) +
+                        untrusted("INVALID_PATCH", patch) + untrusted("GIT_APPLY_ERROR", validationFailure.getMessage()) +
+                        untrusted("REPAIR_ATTEMPT", Integer.toString(repairAttempt + 1)));
+                writeRunMetadata(workspace, state);
+                patch = UnifiedDiffNormalizer.normalize(stripFence(repaired));
+            }
         }
+        throw new IllegalStateException("Patch validation exited unexpectedly");
     }
 
     static String stripFence(String s) {
