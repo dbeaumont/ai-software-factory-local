@@ -172,7 +172,7 @@ Variables de configuration principales :
 ```bash
 OLLAMA_MODEL=qwen2.5-coder:7b
 OPENAI_MODEL=gpt-5.6-luna
-AI_FACTORY_CLOUD_ENABLED=false
+AI_FACTORY_CLOUD_ENABLED=true
 LITELLM_MASTER_KEY=local-dev-litellm-key
 ```
 
@@ -226,7 +226,6 @@ make demo
 | `make urls` | Liste toutes les URLs de services et points d'accès |
 | `make down` | Arrête la stack Compose |
 | `make clean` | Arrête la stack et supprime tous les volumes (destructif) |
-make clean
 ```
 
 ## Limites actuelles
@@ -244,6 +243,6 @@ make clean
 
 ## Documentation complémentaire
 
-- [Fonctionnement et workflow](docs/workflow.md)
-- [Architecture](docs/architecture.md)
-- [Sécurité](docs/security.md)
+- [Fonctionnement et workflow](docs/proto-workflow.md)
+- [Architecture](docs/proto-architecture.md)
+- [Sécurité](docs/proto-security.md)

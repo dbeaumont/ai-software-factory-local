@@ -32,7 +32,7 @@ Les étapes de vérification du patch, d'exécution des tests, d'analyse qualim�
 Profils réseau de la sandbox :
 
 - **Validation du patch (`checkPatch` et `applyPatch`)** : exécutée avec `--network none` (isolation réseau totale).
-- **Builds, tests, SonarQube et Trivy** : exécutés sur le réseau interne Docker `ai-factory`.
+- **Builds, tests, SonarQube et Trivy** : exécutés sur le réseau interne Docker `ai-factory-network`.
 
 ### Contrôles déterministes
 
@@ -47,7 +47,7 @@ Profils réseau de la sandbox :
 
 ### Réduction du risque et étanchéité des secrets
 
-- Mode cloud désactivé par défaut (`AI_FACTORY_CLOUD_ENABLED=false`) ;
+- Mode cloud activé par défaut (`AI_FACTORY_CLOUD_ENABLED=true`) ;
 - Le navigateur n'a jamais accès à la clé OpenAI ni aux jetons d'administration ;
 - L'orchestrateur ne gère pas la clé OpenAI directement : elle est injectée de manière étanche dans le conteneur `litellm` via le fichier `.vault` ;
 - Les jetons d'accès `GITEA_TOKEN` et `SONAR_TOKEN` sont générés par le script de bootstrap et enregistrés localement dans `.env` ;
@@ -70,7 +70,7 @@ Le service `orchestrator` monte le socket Docker du hôte (`/var/run/docker.sock
 
 ### 2. Réseau interne partagé pour les builds
 
-Les builds et scans de la sandbox sont raccordés au réseau `ai-factory`. Bien que ce réseau soit interne à Compose, le sandbox a accès aux IP/ports des autres conteneurs de la stack (Gitea, SonarQube, Artifactory, etc.).
+Les builds et scans de la sandbox sont raccordés au réseau `ai-factory-network`. Bien que ce réseau soit interne à Compose, le sandbox a accès aux IP/ports des autres conteneurs de la stack (Gitea, SonarQube, Artifactory, etc.).
 
 ### 3. Secrets locaux en texte clair
 

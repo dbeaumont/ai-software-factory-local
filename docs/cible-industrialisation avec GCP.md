@@ -8,7 +8,7 @@
 
 ## 1. Synthèse exécutive
 
-Le dépôt constitue déjà un **bon prototype d’agent de développement asynchrone piloté par des preuves**. Il ne se contente pas de générer du code : il transforme un ticket en plan puis en patch, vérifie le diff, tente une réparation, exécute les tests dans une sandbox, produit des analyses SonarQube, Syft et Trivy, sollicite une revue IA, impose une approbation humaine, puis crée une Pull Request. Cette chaîne est décrite dans le [README](https://github.com/dbeaumont/ai-software-factory-local/blob/main/README.md), l’[architecture](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/architecture.md) et le [workflow](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/workflow.md).
+Le dépôt constitue déjà un **bon prototype d’agent de développement asynchrone piloté par des preuves**. Il ne se contente pas de générer du code : il transforme un ticket en plan puis en patch, vérifie le diff, tente une réparation, exécute les tests dans une sandbox, produit des analyses SonarQube, Syft et Trivy, sollicite une revue IA, impose une approbation humaine, puis crée une Pull Request. Cette chaîne est décrite dans le [README](https://github.com/dbeaumont/ai-software-factory-local/blob/main/README.md), l’[architecture](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-architecture.md) et le [workflow](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-workflow.md).
 
 Son positionnement est cohérent avec l’évolution du marché : les assistants dans l’IDE deviennent des **agents asynchrones capables de prendre un ticket, travailler dans un environnement éphémère et proposer une PR**. GitHub Copilot, GitLab Duo, Amazon Q Developer et Gemini Code Assist convergent vers des agents spécialisés, des règles d’entreprise, des outils structurés, MCP, des revues automatiques et une gouvernance centralisée.
 
@@ -56,10 +56,10 @@ L’analyse du dépôt s’appuie en particulier sur :
 
 - le [README](https://github.com/dbeaumont/ai-software-factory-local/blob/main/README.md) ;
 - [`infrastructure/compose.yaml`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/infrastructure/compose.yaml) ;
-- [`docs/architecture.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/architecture.md) ;
-- [`docs/security.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/security.md) ;
-- [`docs/workflow.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/workflow.md) ;
-- [`docs/modernisation.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/modernisation.md) ;
+- [`docs/proto-architecture.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-architecture.md) ;
+- [`docs/proto-security.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-security.md) ;
+- [`docs/proto-workflow.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-workflow.md) ;
+- [`docs/cible-industrialisation avec GCP.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/cible-industrialisation%20avec%20GCP.md) ;
 - le `pom.xml` de l’orchestrateur Spring Boot 3.5 / Java 21.
 
 L’état de l’art est fondé prioritairement sur la documentation des éditeurs et des standards ouverts. Les offres changent rapidement ; les principes d’architecture proposés cherchent donc à limiter la dépendance à un modèle ou à un fournisseur particulier.
@@ -122,7 +122,7 @@ Le `Reviewer` synthétise des résultats provenant de Git, des tests, de SonarQu
 
 #### Une sandbox déjà contrainte
 
-La [note de sécurité](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/security.md) mentionne limites CPU/mémoire/PID, suppression des capacités Linux, `no-new-privileges` et réseau coupé pour la validation de patch. Ces principes devront être transposés à GKE et renforcés.
+La [note de sécurité](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-security.md) mentionne limites CPU/mémoire/PID, suppression des capacités Linux, `no-new-privileges` et réseau coupé pour la validation de patch. Ces principes devront être transposés à GKE et renforcés.
 
 #### Une abstraction de modèles
 
@@ -775,10 +775,9 @@ Le premier investissement ne doit donc pas être un agent supplémentaire. Il do
 ### Dépôt analysé
 
 - [AI Software Factory — README](https://github.com/dbeaumont/ai-software-factory-local/blob/main/README.md)
-- [Architecture du prototype](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/architecture.md)
-- [Sécurité du prototype](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/security.md)
-- [Workflow](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/workflow.md)
-- [Modernisation existante](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/modernisation.md)
+- [Architecture du prototype](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-architecture.md)
+- [Sécurité du prototype](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-security.md)
+- [Workflow](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-workflow.md)
 - [Docker Compose](https://github.com/dbeaumont/ai-software-factory-local/blob/main/infrastructure/compose.yaml)
 
 ### Marché, standards et GCP
