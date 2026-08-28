@@ -20,6 +20,16 @@
       .topnav-submenu { position: absolute; top: calc(100% - 1px); left: 0; min-width: 150px; padding: 5px 0; border: 1px solid var(--line); background: #fff; box-shadow: 0 4px 10px #091e4226; }
       .topnav-submenu a { display: block; padding: 10px 14px; white-space: nowrap; }
       .topnav-submenu a:hover { background: var(--blue-soft); }
+      .tools-launcher { position: relative; display: flex; align-items: stretch; }
+      .tools-launcher summary { display: grid; width: 52px; place-items: center; color: var(--navy); cursor: pointer; list-style: none; }
+      .tools-launcher summary::-webkit-details-marker { display: none; }
+      .tools-launcher summary:hover, .tools-launcher[open] summary { color: var(--blue); background: var(--blue-soft); }
+      .tools-launcher-icon { width: 20px; height: 20px; }
+      .tools-menu { position: absolute; top: calc(100% - 1px); left: 0; display: grid; grid-template-columns: repeat(2, 88px); gap: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 0 0 5px 5px; background: #fff; box-shadow: 0 4px 10px #091e4226; }
+      .tool-link { display: grid; width: 88px; height: 82px; padding: 8px 4px; place-items: center; grid-template-rows: 42px auto; border: 1px solid transparent; border-radius: 4px; color: var(--navy); text-decoration: none; }
+      .tool-link:hover { border-color: #bcd5ff; background: var(--blue-soft); }
+      .tool-link img { width: 36px; height: 36px; object-fit: contain; }
+      .tool-link span { font-size: 11px; font-weight: 700; }
       .topnav { flex: 1; }
       .topnav .about-link { margin-left: auto; }
     </style>
@@ -27,7 +37,8 @@
   <body>
     <header class="topbar">
       <a class="brand" href="/" aria-label="AI Software Factory"><img class="brand-mark" src="/icons/factory-circuit.svg" alt="" />AI Software Factory</a>
-      <nav class="topnav" aria-label="Navigation principale"><a href="#ticket" data-view="ticket" class="active">Tickets</a><a href="#executions" data-view="executions">Exécutions</a><details class="topnav-menu"><summary>Documentation</summary><div class="topnav-submenu"><a href="/workflow.html">Workflow</a></div></details><a href="http://localhost:3000" target="_blank" rel="noreferrer">Dépôts</a><a href="http://localhost:8082" target="_blank" rel="noreferrer">Artifactory</a><a href="http://localhost:9000" target="_blank" rel="noreferrer">SonarQube</a><a href="http://localhost:3001" target="_blank" rel="noreferrer">Grafana</a><a class="about-link" href="/about.html">About</a></nav>
+      <details class="tools-launcher"><summary aria-label="Ouvrir les outils" title="Outils"><svg class="tools-launcher-icon" viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="6" height="6" rx="1" fill="currentColor"/><rect x="12" y="2" width="6" height="6" rx="1" fill="currentColor"/><rect x="2" y="12" width="6" height="6" rx="1" fill="currentColor"/><rect x="12" y="12" width="6" height="6" rx="1" fill="currentColor"/></svg></summary><div class="tools-menu"><a class="tool-link" href="http://localhost:3000" target="_blank" rel="noreferrer" title="Dépôts — Gitea"><img src="https://cdn.jsdelivr.net/npm/simple-icons@16.21.0/icons/gitea.svg" alt="" /><span>Dépôts</span></a><a class="tool-link" href="http://localhost:8082" target="_blank" rel="noreferrer" title="Artifactory"><img src="https://cdn.jsdelivr.net/npm/simple-icons@16.21.0/icons/jfrog.svg" alt="" /><span>Artifactory</span></a><a class="tool-link" href="http://localhost:9000" target="_blank" rel="noreferrer" title="SonarQube"><img src="https://cdn.jsdelivr.net/npm/simple-icons@16.21.0/icons/sonar.svg" alt="" /><span>SonarQube</span></a><a class="tool-link" href="http://localhost:3001" target="_blank" rel="noreferrer" title="Grafana"><img src="https://cdn.jsdelivr.net/npm/simple-icons@16.21.0/icons/grafana.svg" alt="" /><span>Grafana</span></a></div></details>
+      <nav class="topnav" aria-label="Navigation principale"><a href="#ticket" data-view="ticket" class="active">Tickets</a><a href="#executions" data-view="executions">Exécutions</a><details class="topnav-menu"><summary>Documentation</summary><div class="topnav-submenu"><a href="/workflow.html">Workflow</a></div></details><a class="about-link" href="/about.html">About</a></nav>
     </header>
     <main class="app-main">
       <nav id="breadcrumbs" class="breadcrumbs" aria-label="Fil d'Ariane"><a href="/">AI Software Factory</a><span>/</span><strong>Tickets</strong></nav>
