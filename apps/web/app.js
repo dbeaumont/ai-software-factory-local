@@ -65,7 +65,10 @@ function renderLlmMode() {
 
 llmMode.addEventListener('change', renderLlmMode);
 
-async function loadCapabilities() {
+const CAPABILITIES_RETRY_DELAY_MS = 3_000;
+const MAX_CAPABILITIES_RETRIES = 2;
+
+async function loadCapabilities(attempt = 0) {
   try {
     const response = await fetch('/api/capabilities');
     if (!response.ok) return;
@@ -75,6 +78,13 @@ async function loadCapabilities() {
       llmDescription.textContent = 'Le mode cloud est désactivé par la configuration de cette usine.';
       return;
     }
+    if (capabilities.cloudAvailable) {
+      llmMode.disabled = false;
+      cloudUnavailable.hidden = true;
+      renderLlmMode();
+      return;
+    }
+
     if (!capabilities.cloudAvailable) {
       llmMode.checked = false;
       llmMode.disabled = true;
@@ -82,6 +92,9 @@ async function loadCapabilities() {
       cloudUnavailable.textContent = capabilities.cloudError || 'L’API LLM externe est inaccessible.';
       cloudUnavailable.hidden = false;
       renderLlmMode();
+      if (attempt < MAX_CAPABILITIES_RETRIES) {
+        window.setTimeout(() => loadCapabilities(attempt + 1), CAPABILITIES_RETRY_DELAY_MS);
+      }
     }
   } catch {
     // The local mode remains available when the status endpoint is temporarily unavailable.

@@ -75,6 +75,14 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
+    healthcheck:
+      # LiteLLM needs a few seconds after its process starts to load its model
+      # configuration and begin listening on port 4000.
+      test: ["CMD-SHELL", "python -c \"import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:4000/health', headers={'Authorization': 'Bearer ' + os.environ['LITELLM_MASTER_KEY']}); urllib.request.urlopen(request, timeout=20)\""]
+      interval: 5s
+      timeout: 25s
+      retries: 12
+      start_period: 5s
     networks: [factory]
 
   # Spring Boot control plane. Its image pulls build dependencies through Artifactory using a BuildKit secret.
@@ -115,7 +123,7 @@ services:
       gitea:
         condition: service_healthy
       litellm:
-        condition: service_started
+        condition: service_healthy
       artifactory:
         condition: service_healthy
     networks: [factory]
