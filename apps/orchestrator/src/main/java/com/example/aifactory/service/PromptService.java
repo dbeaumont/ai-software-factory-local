@@ -7,6 +7,9 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 @Service
 public class PromptService {
@@ -27,6 +30,20 @@ public class PromptService {
             return Files.readString(prompt);
         } catch (IOException e) {
             throw new IllegalStateException("Cannot load prompt " + name + " from " + prompt, e);
+        }
+    }
+
+    /**
+     * Returns an immutable identifier for the exact prompt content used by a run.
+     * The content itself is deliberately not copied into task metadata.
+     */
+    public String fingerprint(String name) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(load(name).getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
         }
     }
 

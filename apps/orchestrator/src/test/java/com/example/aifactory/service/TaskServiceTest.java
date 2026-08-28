@@ -1,5 +1,6 @@
 package com.example.aifactory.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,9 +43,16 @@ class TaskServiceTest {
         assertEquals("AF-0002", second);
     }
 
+    @Test
+    void requiresAQualityGateInsteadOfTreatingSkippedAnalysisAsSuccess() {
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> TaskService.requireQualityGate("Skipped because AI_FACTORY_SONAR_TOKEN is not configured."));
+    }
+
     private static final class TestableTaskService extends TaskService {
         private TestableTaskService() {
-            super(null, null, null, null, null, null, null, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            super(null, null, null, null, null, new AgentResponseValidator(new ObjectMapper()), null, null,
+                    new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
         }
     }
 }

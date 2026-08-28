@@ -28,6 +28,7 @@ public class TaskService {
     private final RepositoryContextService contextService;
     private final PromptService prompts;
     private final LlmGatewayClient llm;
+    private final AgentResponseValidator agentResponses;
     private final SandboxService sandbox;
     private final GiteaService gitea;
     private final Counter submittedTasks;
@@ -35,13 +36,14 @@ public class TaskService {
     private final Counter failedTasks;
 
     public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextService contextService,
-                       PromptService prompts, LlmGatewayClient llm, SandboxService sandbox, GiteaService gitea,
+                       PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses, SandboxService sandbox, GiteaService gitea,
                        MeterRegistry metrics) {
         this.props = props;
         this.runner = runner;
         this.contextService = contextService;
         this.prompts = prompts;
         this.llm = llm;
+        this.agentResponses = agentResponses;
         this.sandbox = sandbox;
         this.gitea = gitea;
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted").description("Tasks submitted to the factory").register(metrics);
@@ -104,14 +106,21 @@ public class TaskService {
 
             s.transition(TaskStatus.CLONING, "Cloning repository");
             runner.run(List.of("git", "clone", "--depth", "1", "--branch", s.request.effectiveBranch(), s.request.repositoryUrl(), ws.toString()), null, Duration.ofMinutes(2));
+            s.sourceCommit = runner.run(List.of("git", "rev-parse", "HEAD"), ws, Duration.ofSeconds(10)).strip();
+            s.model = llm.modelName(s.request.effectiveLlmMode());
             String context = contextService.collect(ws);
+            writeRunMetadata(ws, s);
 
             s.transition(TaskStatus.PLANNING, "Planner agent analyzing requirement and repository context");
-            s.plan = llm.chat(s.request.effectiveLlmMode(), prompts.load("planner"), "REQUIREMENT:\n" + s.request.requirement() + "\n\nREPOSITORY CONTEXT:\n" + context);
+            s.plan = chat(s, "planner", untrusted("REQUIREMENT", s.request.requirement()) + untrusted("REPOSITORY_CONTEXT", context));
+            agentResponses.requireImplementablePlan(s.plan);
             Files.writeString(ws.resolve(".ai-plan.md"), s.plan);
+            writeRunMetadata(ws, s);
 
             s.transition(TaskStatus.GENERATING_PATCH, "Developer agent generating a unified diff");
-            String rawPatch = llm.chat(s.request.effectiveLlmMode(), prompts.load("developer"), "REQUIREMENT:\n" + s.request.requirement() + "\n\nPLAN:\n" + s.plan + "\n\nREPOSITORY CONTEXT:\n" + context);
+            String rawPatch = chat(s, "developer", untrusted("REQUIREMENT", s.request.requirement()) +
+                    untrusted("PLAN", s.plan) + untrusted("REPOSITORY_CONTEXT", context));
+            writeRunMetadata(ws, s);
             s.patch = validateAndRepairPatch(s, ws, rawPatch);
 
             s.transition(TaskStatus.APPLYING_PATCH, "Applying generated patch inside isolated Docker sandbox");
@@ -119,25 +128,28 @@ public class TaskService {
 
             s.transition(TaskStatus.TESTING, "Running deterministic build and tests in sandbox");
             String deterministicTests = tail(sandbox.test(ws), 12000);
-            String testerReview = llm.chat(s.request.effectiveLlmMode(), prompts.load("tester"),
-                    "REQUIREMENT:\n" + s.request.requirement() + "\n\nPATCH:\n" + s.patch +
-                            "\n\nDETERMINISTIC TEST EVIDENCE:\n" + deterministicTests);
+            String testerReview = chat(s, "tester", untrusted("REQUIREMENT", s.request.requirement()) +
+                    untrusted("PATCH", s.patch) + untrusted("DETERMINISTIC_TEST_EVIDENCE", deterministicTests));
+            agentResponses.requireTesterReport(testerReview);
+            writeRunMetadata(ws, s);
             s.testSummary = deterministicTests + "\n\n--- AI TESTER REVIEW ---\n" + testerReview;
             Files.createDirectories(ws.resolve(".ai-factory"));
             Files.writeString(ws.resolve(".ai-factory/test.txt"), s.testSummary);
 
             s.transition(TaskStatus.QUALITY_SCANNING, "Running SonarQube quality analysis");
             s.qualitySummary = tail(sandbox.quality(ws), 12000);
+            requireQualityGate(s.qualitySummary);
 
             s.transition(TaskStatus.SECURITY_SCANNING, "Generating SBOM and running Trivy");
             s.securitySummary = tail(sandbox.security(ws), 12000);
 
             s.transition(TaskStatus.REVIEWING, "Reviewer agent assessing plan, patch and deterministic evidence");
-            s.review = llm.chat(s.request.effectiveLlmMode(), prompts.load("reviewer"),
-                    "REQUIREMENT:\n" + s.request.requirement() + "\n\nPLAN:\n" + s.plan + "\n\nPATCH:\n" + s.patch +
-                            "\n\nTEST EVIDENCE:\n" + s.testSummary + "\n\nQUALITY EVIDENCE:\n" + s.qualitySummary +
-                            "\n\nSECURITY EVIDENCE:\n" + s.securitySummary);
+            s.review = chat(s, "reviewer", untrusted("REQUIREMENT", s.request.requirement()) + untrusted("PLAN", s.plan) +
+                    untrusted("PATCH", s.patch) + untrusted("TEST_EVIDENCE", s.testSummary) +
+                    untrusted("QUALITY_EVIDENCE", s.qualitySummary) + untrusted("SECURITY_EVIDENCE", s.securitySummary));
+            agentResponses.requireReviewAllowsApproval(s.review);
             Files.writeString(ws.resolve(".ai-review.md"), s.review);
+            writeRunMetadata(ws, s);
 
             s.transition(TaskStatus.WAITING_APPROVAL, "Pipeline complete. Human approval required before commit/push/PR.");
             completedTasks.increment();
@@ -156,10 +168,10 @@ public class TaskService {
             return patch;
         } catch (Exception validationFailure) {
             Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
-            String repaired = llm.chat(state.request.effectiveLlmMode(), prompts.load("patch-repair"),
-                    "REQUIREMENT:\n" + state.request.requirement() + "\n\nPLAN:\n" + state.plan +
-                            "\n\nCURRENT FILE CONTENTS (authoritative):\n" + affectedFileContext(workspace, patch) +
-                            "\n\nINVALID PATCH:\n" + patch + "\n\nGIT APPLY ERROR:\n" + validationFailure.getMessage());
+            String repaired = chat(state, "patch-repair", untrusted("REQUIREMENT", state.request.requirement()) +
+                    untrusted("PLAN", state.plan) + untrusted("CURRENT_FILE_CONTENTS", affectedFileContext(workspace, patch)) +
+                    untrusted("INVALID_PATCH", patch) + untrusted("GIT_APPLY_ERROR", validationFailure.getMessage()));
+            writeRunMetadata(workspace, state);
             patch = UnifiedDiffNormalizer.normalize(stripFence(repaired));
             Files.writeString(workspace.resolve("changes.patch"), patch);
             sandbox.checkPatch(workspace);
@@ -199,6 +211,35 @@ public class TaskService {
 
     private static String tail(String s, int max) {
         return s.length() <= max ? s : "...[truncated]...\n" + s.substring(s.length() - max);
+    }
+
+    static void requireQualityGate(String qualityEvidence) {
+        if (qualityEvidence == null || qualityEvidence.startsWith("Skipped")) {
+            throw new IllegalStateException("Required deterministic quality gate did not run");
+        }
+    }
+
+    private String chat(TaskState state, String promptName, String untrustedInput) {
+        state.promptFingerprints.put(promptName, prompts.fingerprint(promptName));
+        return llm.chat(state.request.effectiveLlmMode(), prompts.load(promptName), untrustedInput);
+    }
+
+    private static String untrusted(String label, String content) {
+        return "\n<" + label + " trust=\"untrusted\">\n" + (content == null ? "" : content)
+                + "\n</" + label + ">\n";
+    }
+
+    private static void writeRunMetadata(Path workspace, TaskState state) throws Exception {
+        Files.createDirectories(workspace.resolve(".ai-factory"));
+        String prompts = state.promptFingerprints.entrySet().stream()
+                .map(entry -> "    \"" + entry.getKey() + "\": \"" + entry.getValue() + "\"")
+                .collect(java.util.stream.Collectors.joining(",\n"));
+        String metadata = "{\n" +
+                "  \"ticket_number\": \"" + state.ticketNumber + "\",\n" +
+                "  \"source_commit\": \"" + state.sourceCommit + "\",\n" +
+                "  \"model\": \"" + state.model + "\",\n" +
+                "  \"prompts\": {\n" + prompts + "\n  }\n}\n";
+        Files.writeString(workspace.resolve(".ai-factory/run-metadata.json"), metadata);
     }
 
     String nextTicketNumber() {

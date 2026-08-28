@@ -69,7 +69,7 @@ public class SandboxService {
                 "if [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
                         "mvn -B -s /opt/ai-factory/maven-settings.xml " +
                         "org.sonarsource.scanner.maven:sonar-maven-plugin:sonar " +
-                        "-Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_TOKEN\" " +
+                        "-Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_TOKEN\" -Dsonar.qualitygate.wait=true " +
                         "| tee .ai-factory/sonar.txt; " +
                         "else echo 'Skipped: SonarQube analysis currently supports Maven repositories only.'; fi",
                 List.of("SONAR_HOST_URL=" + props.sonarqubeUrl(), "SONAR_TOKEN=" + props.sonarToken(),
@@ -80,9 +80,9 @@ public class SandboxService {
 
     public String security(Path workspace) throws Exception {
         return execute(workspace, props.sandboxNetwork(),
-                "mkdir -p .ai-factory && " +
+                "set -o pipefail && mkdir -p .ai-factory && " +
                         "syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json >/dev/null && " +
-                    "trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 0 --format table . | tee .ai-factory/trivy.txt && " +
+                        "trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1 --format table . | tee .ai-factory/trivy.txt && " +
                         "echo 'SBOM: .ai-factory/sbom.cdx.json'",
                 Duration.ofMinutes(10));
     }

@@ -85,6 +85,10 @@ public class LlmGatewayClient {
         return content.asText();
     }
 
+    public String modelName(LlmMode mode) {
+        return mode == LlmMode.CLOUD ? props.cloudModel() : props.localModel();
+    }
+
     private void addAuthorization(HttpHeaders headers) {
         if (props.llmApiKey() != null && !props.llmApiKey().isBlank()) {
             headers.setBearerAuth(props.llmApiKey());

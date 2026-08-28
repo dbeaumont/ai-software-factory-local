@@ -47,10 +47,10 @@ La stack actuelle contient :
 6. Le patch est normalisé (`UnifiedDiffNormalizer`), puis validé avec `git apply --check` dans une sandbox sans réseau.
 7. En cas d'échec de validation du diff, l'agent `PatchRepair` tente une réparation complète en analysant les fichiers sources authoritative.
 8. Le patch est appliqué en sandbox, puis `git diff --check` et `git diff --stat` sont contrôlés.
-9. Les tests unitaires/d'intégration s'exécutent dans la sandbox (via Artifactory pour Maven). L'agent `Tester` analyse les journaux de test.
-10. L'analyse de qualité SonarQube est déclenchée (pour les projets Maven quand `SONAR_TOKEN` est présent).
-11. Syft génère un SBOM CycloneDX (`.ai-factory/sbom.cdx.json`) et Trivy scanne les vulnérabilités/secrets (`.ai-factory/trivy.txt`).
-12. L'agent `Reviewer` synthétise l'ensemble des preuves déterministes (plan, patch, tests, qualité, sécurité) dans `.ai-review.md`.
+9. Les tests unitaires/d'intégration s'exécutent dans la sandbox (via Artifactory pour Maven). L'agent `Tester` analyse les journaux de test avec un contrat JSON validé.
+10. L'analyse de qualité SonarQube est déclenchée ; son quality gate est bloquant. En l'absence de jeton ou pour un type de projet non encore pris en charge, le run échoue au lieu de considérer le contrôle comme réussi.
+11. Syft génère un SBOM CycloneDX (`.ai-factory/sbom.cdx.json`) et Trivy scanne les vulnérabilités/secrets (`.ai-factory/trivy.txt`) ; une détection HIGH ou CRITICAL est bloquante.
+12. L'agent `Reviewer` synthétise les preuves dans `.ai-review.md` avec un contrat JSON validé. Un rejet ou un finding `blocker` bloque le run.
 13. La tâche passe au statut `WAITING_APPROVAL`.
 14. Après approbation humaine (`POST /api/tasks/{id}/approve`), l'orchestrateur bascule sur une branche `ai-factory/<taskId>`, exclut les artefacts de travail IA (`git reset`), committe, pousse vers Gitea et ouvre une Pull Request.
 
@@ -240,6 +240,10 @@ make demo
 - montage de `/var/run/docker.sock` dans l'orchestrateur ;
 - pas de sandbox Kubernetes ni d'egress allow-list ;
 - approbation humaine obligatoire avant push/PR ;
+
+Les règles de confiance des prompts, la validation des contrats de sortie et les gates de tests, qualité et
+sécurité ont été renforcés dans le prototype. Ils ne remplacent pas le SSO/RBAC, un moteur de policy-as-code,
+ni une sandbox de production : ces limites restent bloquantes pour un usage entreprise exposé.
 
 ## Documentation complémentaire
 

@@ -2,7 +2,9 @@ package com.example.aifactory.model;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TaskState {
     public final String id;
@@ -10,6 +12,9 @@ public class TaskState {
     public final TaskRequest request;
     public TaskStatus status = TaskStatus.QUEUED;
     public String workspace;
+    public String sourceCommit;
+    public String model;
+    public final Map<String, String> promptFingerprints = new LinkedHashMap<>();
     public String plan;
     public String patch;
     public String testSummary;
@@ -43,7 +48,7 @@ public class TaskState {
 
     public synchronized TaskView view() {
         return new TaskView(id, ticketNumber, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
-                request.effectiveLlmMode(), workspace, plan, patch, testSummary, qualitySummary, securitySummary, review,
+                request.effectiveLlmMode(), workspace, sourceCommit, model, Map.copyOf(promptFingerprints), plan, patch, testSummary, qualitySummary, securitySummary, review,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
     }
 }

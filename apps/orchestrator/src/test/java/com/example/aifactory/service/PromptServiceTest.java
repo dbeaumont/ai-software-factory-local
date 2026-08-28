@@ -32,4 +32,13 @@ class PromptServiceTest {
         assertTrue(error.getMessage().contains("planner"));
         assertTrue(error.getMessage().contains("missing"));
     }
+
+    @Test
+    void fingerprintsPromptContentWithSha256() throws Exception {
+        Files.writeString(tempDir.resolve("planner.md"), "planner prompt");
+
+        String fingerprint = new PromptService(tempDir).fingerprint("planner");
+
+        assertEquals("69cc103c237202f84d942f4a37d00fea422474aae1a6ef4e04a851874d72d7fe", fingerprint);
+    }
 }
