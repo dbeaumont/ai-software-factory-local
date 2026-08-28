@@ -2,7 +2,7 @@
 
 Le pipeline transforme un besoin exprime sous forme de ticket en Pull Request Gitea, avec un ensemble de contrôles déterministes et une approbation humaine préalable obligatoire.
 
-![Diagramme du flux de l'usine logicielle](assets/software-factory-workflow.svg)
+![Diagramme du flux de l'usine logicielle](assets/proto-software-factory-workflow.svg)
 
 | Sujet | Étape | Objectif | Outils et composants |
 |---|---|---|---|

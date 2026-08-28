@@ -2,7 +2,7 @@
 
 ## Diagramme d’architecture cible
 
-![Diagramme d'architecture GCP de l'usine logicielle](architecture-cible-gcp-ai-software-factory.svg)
+![Diagramme d'architecture GCP de l'usine logicielle](assets/cible-architecture-cible-gcp-ai-software-factory.svg)
 
 Le diagramme représente la cible industrialisée de l’usine. Le **plan de contrôle de confiance** orchestre et audite les travaux, tandis que le code produit par l’IA est exécuté dans un **plan de sandbox séparé, éphémère et considéré comme non fiable**. L’usine s’arrête à la création d’une Pull Request accompagnée d’un dossier de preuves. La CI/CD d’entreprise conserve la responsabilité du build de référence, de la promotion et du déploiement.
 
