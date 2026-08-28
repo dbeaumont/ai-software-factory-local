@@ -45,6 +45,7 @@ const executionList = document.querySelector('#execution-list');
 const executionEmpty = document.querySelector('#execution-empty');
 const refreshExecutionsButton = document.querySelector('#refresh-executions');
 const debugFillButton = document.querySelector('#debug-fill-button');
+const headerMenus = document.querySelectorAll('.topnav-menu, .tools-launcher');
 
 const ticketTemplate = {
   summary: 'Ajouter GET /customers/{id}',
@@ -60,6 +61,12 @@ let activeTaskId;
 let activeTask;
 let pollTimer;
 let executionsPollTimer;
+
+headerMenus.forEach((menu) => {
+  menu.addEventListener('mouseleave', () => {
+    menu.open = false;
+  });
+});
 
 function renderLlmMode() {
   const cloud = llmMode.checked;
