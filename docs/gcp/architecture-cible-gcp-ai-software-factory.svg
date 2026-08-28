@@ -1,0 +1,230 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3200" height="3100" viewBox="0 0 3200 3100">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#202124" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#5f6368"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#1a73e8"/>
+    </marker>
+    <style>
+      .title{font:700 42px 'DejaVu Sans',Arial,sans-serif;fill:#202124}
+      .subtitle{font:400 20px 'DejaVu Sans',Arial,sans-serif;fill:#5f6368}
+      .boundary{font:700 23px 'DejaVu Sans',Arial,sans-serif;fill:#fff}
+      .panel-title{font:700 21px 'DejaVu Sans',Arial,sans-serif}
+      .panel-sub{font:400 15px 'DejaVu Sans',Arial,sans-serif;fill:#5f6368}
+      .node-title{font:700 17px 'DejaVu Sans',Arial,sans-serif;fill:#202124}
+      .service-prefix{font:600 13px 'DejaVu Sans',Arial,sans-serif;fill:#5f6368}
+      .service{font:700 15px 'DejaVu Sans',Arial,sans-serif;fill:#1a73e8}
+      .detail{font:400 13px 'DejaVu Sans',Arial,sans-serif;fill:#5f6368}
+      .edge-label{font:600 13px 'DejaVu Sans',Arial,sans-serif;fill:#5f6368}
+      .legend{font:400 15px 'DejaVu Sans',Arial,sans-serif;fill:#3c4043}
+      .flow{fill:none;stroke:#1a73e8;stroke-width:4;marker-end:url(#arrowBlue)}
+      .link{fill:none;stroke:#5f6368;stroke-width:3;marker-end:url(#arrow)}
+      .support{fill:none;stroke:#7b8188;stroke-width:2.5;stroke-dasharray:10 8;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect width="3200" height="3100" fill="#fff"/>
+  <text x="1600" y="62" text-anchor="middle" class="title">AI Software Factory — Architecture cible GCP</text>
+  <text x="1600" y="100" text-anchor="middle" class="subtitle">Chaque fonction indique son service Google Cloud sous-jacent · flux orthogonaux routés dans des couloirs dédiés</text>
+
+  <!-- Acteurs externes -->
+  <g filter="url(#shadow)">
+    <rect x="160" y="135" width="520" height="95" rx="18" fill="#fff" stroke="#1a73e8" stroke-width="3"/>
+    <text x="420" y="173" text-anchor="middle" class="node-title">Utilisateur entreprise</text>
+    <text x="420" y="199" text-anchor="middle" class="detail">Développeur · Product Owner · Reviewer</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="860" y="135" width="520" height="95" rx="18" fill="#fff" stroke="#1a73e8" stroke-width="3"/>
+    <text x="1120" y="173" text-anchor="middle" class="node-title">Identité d’entreprise</text>
+    <text x="1120" y="199" text-anchor="middle" class="detail">IdP SAML / OIDC · MFA · groupes</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="2520" y="135" width="520" height="95" rx="18" fill="#fff" stroke="#5f6368" stroke-width="3"/>
+    <text x="2780" y="173" text-anchor="middle" class="node-title">Système de tickets</text>
+    <text x="2780" y="199" text-anchor="middle" class="detail">Jira · GitHub Issues · GitLab Issues</text>
+  </g>
+
+  <!-- Boundary GCP -->
+  <rect x="40" y="280" width="3120" height="2395" rx="28" fill="#f8fafd" stroke="#4285f4" stroke-width="4" stroke-dasharray="15 9"/>
+  <rect x="135" y="258" width="450" height="48" rx="12" fill="#4285f4"/>
+  <text x="160" y="290" class="boundary">Organisation Google Cloud</text>
+
+  <!-- Accès -->
+  <g filter="url(#shadow)"><rect x="110" y="335" width="2980" height="235" rx="22" fill="#e8f0fe" stroke="#4285f4" stroke-width="3"/></g>
+  <text x="185" y="375" class="panel-title" fill="#174ea6">1 — ACCÈS ENTREPRISE</text>
+  <text x="185" y="401" class="panel-sub">Entrée unique, identité humaine, WAF et exposition contrôlée de l’IHM et de l’API</text>
+
+  <g><rect x="180" y="435" width="520" height="105" rx="16" fill="#fff" stroke="#4285f4" stroke-width="2.5"/>
+    <text x="440" y="466" text-anchor="middle" class="node-title">Point d’entrée HTTPS</text><text x="440" y="489" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="440" y="516" text-anchor="middle" class="service">Cloud Load Balancing</text></g>
+  <g><rect x="900" y="435" width="520" height="105" rx="16" fill="#fff" stroke="#4285f4" stroke-width="2.5"/>
+    <text x="1160" y="466" text-anchor="middle" class="node-title">WAF, SSO et accès contextuel</text><text x="1160" y="489" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="1160" y="516" text-anchor="middle" class="service">Cloud Armor + Identity-Aware Proxy</text></g>
+  <g><rect x="1620" y="435" width="520" height="105" rx="16" fill="#fff" stroke="#4285f4" stroke-width="2.5"/>
+    <text x="1880" y="466" text-anchor="middle" class="node-title">Interface Factory Web</text><text x="1880" y="489" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="1880" y="516" text-anchor="middle" class="service">Cloud Run</text></g>
+  <g><rect x="2340" y="435" width="520" height="105" rx="16" fill="#fff" stroke="#4285f4" stroke-width="2.5"/>
+    <text x="2600" y="466" text-anchor="middle" class="node-title">Entrée API et quotas</text><text x="2600" y="489" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="2600" y="516" text-anchor="middle" class="service">API Gateway</text></g>
+
+  <!-- Control plane -->
+  <g filter="url(#shadow)"><rect x="110" y="615" width="2980" height="440" rx="22" fill="#eef4ff" stroke="#1a73e8" stroke-width="3"/></g>
+  <text x="185" y="655" class="panel-title" fill="#174ea6">2 — PLAN DE CONTRÔLE DE CONFIANCE · PROJET AI-FACTORY-CONTROL-PROD</text>
+  <text x="185" y="681" class="panel-sub">Services stateless, workflow durable, persistance et décisions de politique — aucun code généré n’est exécuté ici</text>
+
+  <g><rect x="2340" y="720" width="520" height="120" rx="16" fill="#fff" stroke="#1a73e8" stroke-width="2.5"/>
+    <text x="2600" y="752" text-anchor="middle" class="node-title">API Orchestrateur Spring Boot</text><text x="2600" y="776" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="2600" y="803" text-anchor="middle" class="service">Cloud Run</text><text x="2600" y="824" text-anchor="middle" class="detail">Stateless · REST · événements métier</text></g>
+  <g><rect x="1540" y="720" width="520" height="120" rx="16" fill="#fff" stroke="#1a73e8" stroke-width="2.5"/>
+    <text x="1800" y="752" text-anchor="middle" class="node-title">Orchestration durable</text><text x="1800" y="776" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="1800" y="803" text-anchor="middle" class="service">Google Cloud Workflows</text><text x="1800" y="824" text-anchor="middle" class="detail">Retries · reprise · attente humaine</text></g>
+  <g><rect x="2340" y="890" width="520" height="120" rx="16" fill="#fff" stroke="#1a73e8" stroke-width="2.5"/>
+    <text x="2600" y="922" text-anchor="middle" class="node-title">État des tâches et audit métier</text><text x="2600" y="946" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="2600" y="973" text-anchor="middle" class="service">Cloud SQL for PostgreSQL</text><text x="2600" y="994" text-anchor="middle" class="detail">HA · PITR · tasks · runs · approvals</text></g>
+  <g><rect x="900" y="890" width="520" height="120" rx="16" fill="#fff" stroke="#1a73e8" stroke-width="2.5"/>
+    <text x="1160" y="922" text-anchor="middle" class="node-title">File de travaux et backpressure</text><text x="1160" y="946" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="1160" y="973" text-anchor="middle" class="service">Pub/Sub + Cloud Tasks</text><text x="1160" y="994" text-anchor="middle" class="detail">Découplage · quotas · dead-letter</text></g>
+  <g><rect x="220" y="890" width="520" height="120" rx="16" fill="#fff" stroke="#1a73e8" stroke-width="2.5"/>
+    <text x="480" y="922" text-anchor="middle" class="node-title">Policy-as-code et score R0–R4</text><text x="480" y="946" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="480" y="973" text-anchor="middle" class="service">Cloud Run hébergeant OPA</text><text x="480" y="994" text-anchor="middle" class="detail">Chemins sensibles · risque · approbations</text></g>
+
+  <!-- AI plane -->
+  <g filter="url(#shadow)"><rect x="110" y="1100" width="2980" height="480" rx="22" fill="#f5efff" stroke="#a142f4" stroke-width="3"/></g>
+  <text x="185" y="1140" class="panel-title" fill="#6a1b9a">3 — PLAN IA ET CONTEXTE · PROJET AI-FACTORY-AI-PROD</text>
+  <text x="185" y="1166" class="panel-sub">Contexte figé par commit, gateway multi-modèles, protection des entrées/sorties et évaluation continue</text>
+
+  <g><rect x="150" y="1210" width="500" height="125" rx="16" fill="#fff" stroke="#a142f4" stroke-width="2.5"/>
+    <text x="400" y="1242" text-anchor="middle" class="node-title">Construction du contexte</text><text x="400" y="1266" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="400" y="1293" text-anchor="middle" class="service">Cloud Run Jobs</text><text x="400" y="1315" text-anchor="middle" class="detail">Commit immuable · parsing · citations</text></g>
+  <g><rect x="750" y="1210" width="500" height="125" rx="16" fill="#fff" stroke="#a142f4" stroke-width="2.5"/>
+    <text x="1000" y="1242" text-anchor="middle" class="node-title">Index hybride du code</text><text x="1000" y="1266" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="1000" y="1293" text-anchor="middle" class="service">AlloyDB + Vertex AI Vector Search</text><text x="1000" y="1315" text-anchor="middle" class="detail">Lexical · symbolique · sémantique</text></g>
+  <g><rect x="1350" y="1210" width="500" height="125" rx="16" fill="#fff" stroke="#a142f4" stroke-width="2.5"/>
+    <text x="1600" y="1242" text-anchor="middle" class="node-title">Gateway de modèles</text><text x="1600" y="1266" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="1600" y="1293" text-anchor="middle" class="service">Cloud Run hébergeant LiteLLM</text><text x="1600" y="1315" text-anchor="middle" class="detail">Routage · budgets · quotas · fallback</text></g>
+  <g><rect x="1950" y="1210" width="500" height="125" rx="16" fill="#fff" stroke="#a142f4" stroke-width="2.5"/>
+    <text x="2200" y="1242" text-anchor="middle" class="node-title">Filtrage IA et données sensibles</text><text x="2200" y="1266" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="2200" y="1293" text-anchor="middle" class="service">Model Armor + Sensitive Data Protection</text><text x="2200" y="1315" text-anchor="middle" class="detail">Prompt injection · secrets · sorties</text></g>
+  <g><rect x="2550" y="1210" width="500" height="125" rx="16" fill="#fff" stroke="#a142f4" stroke-width="2.5"/>
+    <text x="2800" y="1242" text-anchor="middle" class="node-title">Modèles génératifs approuvés</text><text x="2800" y="1266" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="2800" y="1293" text-anchor="middle" class="service">Vertex AI · Gemini / Model Garden</text><text x="2800" y="1315" text-anchor="middle" class="detail">Modèles versionnés par usage et données</text></g>
+  <g><rect x="1350" y="1395" width="500" height="125" rx="16" fill="#fff" stroke="#a142f4" stroke-width="2.5"/>
+    <text x="1600" y="1427" text-anchor="middle" class="node-title">Registry agents, prompts et outils</text><text x="1600" y="1451" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="1600" y="1478" text-anchor="middle" class="service">Firestore + Cloud Storage</text><text x="1600" y="1500" text-anchor="middle" class="detail">Versions · schémas JSON · permissions</text></g>
+  <g><rect x="1950" y="1395" width="500" height="125" rx="16" fill="#fff" stroke="#a142f4" stroke-width="2.5"/>
+    <text x="2200" y="1427" text-anchor="middle" class="node-title">Évaluation et promotion IA</text><text x="2200" y="1451" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="2200" y="1478" text-anchor="middle" class="service">Vertex AI Gen AI Evaluation</text><text x="2200" y="1500" text-anchor="middle" class="detail">Benchmarks · sécurité · canary</text></g>
+
+  <!-- Sandbox -->
+  <g filter="url(#shadow)"><rect x="110" y="1625" width="2980" height="465" rx="22" fill="#fff1f0" stroke="#ea4335" stroke-width="3"/></g>
+  <text x="185" y="1665" class="panel-title" fill="#b3261e">4 — EXÉCUTION NON FIABLE · PROJET AI-FACTORY-SANDBOX-PROD</text>
+  <text x="185" y="1691" class="panel-sub">Flux principal de droite à gauche : une identité, un réseau et un workspace éphémères par tentative</text>
+
+  <g><rect x="2550" y="1740" width="500" height="125" rx="16" fill="#fff" stroke="#ea4335" stroke-width="2.5"/>
+    <text x="2800" y="1772" text-anchor="middle" class="node-title">Contrôleur de sandbox</text><text x="2800" y="1796" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="2800" y="1823" text-anchor="middle" class="service">Cloud Run</text><text x="2800" y="1845" text-anchor="middle" class="detail">Valide le manifeste d’exécution</text></g>
+  <g><rect x="1950" y="1740" width="500" height="125" rx="16" fill="#fff" stroke="#ea4335" stroke-width="2.5"/>
+    <text x="2200" y="1772" text-anchor="middle" class="node-title">Job de code isolé</text><text x="2200" y="1796" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="2200" y="1823" text-anchor="middle" class="service">GKE Standard · Agent Sandbox / gVisor</text><text x="2200" y="1845" text-anchor="middle" class="detail">Non-root · quotas · filesystem jetable</text></g>
+  <g><rect x="1350" y="1740" width="500" height="125" rx="16" fill="#fff" stroke="#ea4335" stroke-width="2.5"/>
+    <text x="1600" y="1772" text-anchor="middle" class="node-title">Patch, build, tests et scans</text><text x="1600" y="1796" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="1600" y="1823" text-anchor="middle" class="service">GKE Agent Sandbox</text><text x="1600" y="1845" text-anchor="middle" class="detail">Git · Maven · npm · Sonar · Syft · Trivy</text></g>
+  <g><rect x="750" y="1740" width="500" height="125" rx="16" fill="#fff" stroke="#ea4335" stroke-width="2.5"/>
+    <text x="1000" y="1772" text-anchor="middle" class="node-title">Collecte du dossier de preuves</text><text x="1000" y="1796" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="1000" y="1823" text-anchor="middle" class="service">Cloud Storage</text><text x="1000" y="1845" text-anchor="middle" class="detail">Diff · logs · tests · SBOM · rapports</text></g>
+  <g><rect x="150" y="1740" width="500" height="125" rx="16" fill="#fff" stroke="#ea4335" stroke-width="2.5"/>
+    <text x="400" y="1772" text-anchor="middle" class="node-title">Approbation et livraison SCM</text><text x="400" y="1796" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="400" y="1823" text-anchor="middle" class="service">Cloud Run + IAM + IAP</text><text x="400" y="1845" text-anchor="middle" class="detail">RBAC · décision humaine · PR idempotente</text></g>
+  <g><rect x="1950" y="1915" width="500" height="125" rx="16" fill="#fff" stroke="#ea4335" stroke-width="2.5"/>
+    <text x="2200" y="1947" text-anchor="middle" class="node-title">Egress privé et allow-list</text><text x="2200" y="1971" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="2200" y="1998" text-anchor="middle" class="service">Secure Web Proxy + Cloud NAT</text><text x="2200" y="2020" text-anchor="middle" class="detail">SCM · miroirs · SonarQube uniquement</text></g>
+
+  <!-- Trust and evidence -->
+  <g filter="url(#shadow)"><rect x="110" y="2135" width="2980" height="265" rx="22" fill="#edf8f0" stroke="#34a853" stroke-width="3"/></g>
+  <text x="185" y="2175" class="panel-title" fill="#137333">5 — CHAÎNE DE CONFIANCE ET AUDIT · PROJET AI-FACTORY-SECURITY-PROD</text>
+
+  <g><rect x="150" y="2210" width="500" height="145" rx="16" fill="#fff" stroke="#34a853" stroke-width="2.5"/>
+    <text x="400" y="2243" text-anchor="middle" class="node-title">Signature et attestations</text><text x="400" y="2267" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="400" y="2294" text-anchor="middle" class="service">Cloud KMS + Binary Authorization</text><text x="400" y="2316" text-anchor="middle" class="detail">Cosign · provenance SLSA · politiques</text></g>
+  <g><rect x="750" y="2210" width="500" height="145" rx="16" fill="#fff" stroke="#34a853" stroke-width="2.5"/>
+    <text x="1000" y="2243" text-anchor="middle" class="node-title">Stockage immuable des preuves</text><text x="1000" y="2267" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="1000" y="2294" text-anchor="middle" class="service">Cloud Storage · Object Versioning</text><text x="1000" y="2316" text-anchor="middle" class="detail">Rétention · hash · accès audité</text></g>
+  <g><rect x="1350" y="2210" width="500" height="145" rx="16" fill="#fff" stroke="#34a853" stroke-width="2.5"/>
+    <text x="1600" y="2243" text-anchor="middle" class="node-title">Images, SBOM et vulnérabilités</text><text x="1600" y="2267" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="1600" y="2294" text-anchor="middle" class="service">Artifact Registry + Artifact Analysis</text><text x="1600" y="2316" text-anchor="middle" class="detail">Digests · scans · métadonnées</text></g>
+  <g><rect x="1950" y="2210" width="500" height="145" rx="16" fill="#fff" stroke="#34a853" stroke-width="2.5"/>
+    <text x="2200" y="2243" text-anchor="middle" class="node-title">Posture et détection de menaces</text><text x="2200" y="2267" text-anchor="middle" class="service-prefix">SERVICE GOOGLE CLOUD</text><text x="2200" y="2294" text-anchor="middle" class="service">Security Command Center</text><text x="2200" y="2316" text-anchor="middle" class="detail">Findings · risques IA · alertes</text></g>
+  <g><rect x="2550" y="2210" width="500" height="145" rx="16" fill="#fff" stroke="#34a853" stroke-width="2.5"/>
+    <text x="2800" y="2243" text-anchor="middle" class="node-title">Journal d’audit centralisé</text><text x="2800" y="2267" text-anchor="middle" class="service-prefix">SERVICES GOOGLE CLOUD</text><text x="2800" y="2294" text-anchor="middle" class="service">Cloud Audit Logs + Cloud Logging</text><text x="2800" y="2316" text-anchor="middle" class="detail">Identités · actions · décisions</text></g>
+
+  <!-- Transverse -->
+  <rect x="110" y="2445" width="2980" height="185" rx="22" fill="#f1f3f4" stroke="#80868b" stroke-width="2.5"/>
+  <text x="185" y="2483" class="panel-title" fill="#3c4043">6 — CAPACITÉS TRANSVERSES APPLIQUÉES À TOUS LES PROJETS</text>
+  <g><rect x="190" y="2510" width="520" height="88" rx="14" fill="#fff" stroke="#80868b" stroke-width="2"/>
+    <text x="450" y="2542" text-anchor="middle" class="node-title">Identités sans clé</text><text x="450" y="2573" text-anchor="middle" class="service">IAM + Workload Identity Federation</text></g>
+  <g><rect x="760" y="2510" width="520" height="88" rx="14" fill="#fff" stroke="#80868b" stroke-width="2"/>
+    <text x="1020" y="2542" text-anchor="middle" class="node-title">Secrets et périmètres de données</text><text x="1020" y="2573" text-anchor="middle" class="service">Secret Manager + VPC Service Controls</text></g>
+  <g><rect x="1330" y="2510" width="520" height="88" rx="14" fill="#fff" stroke="#80868b" stroke-width="2"/>
+    <text x="1590" y="2542" text-anchor="middle" class="node-title">Traces, logs et SLO</text><text x="1590" y="2573" text-anchor="middle" class="service">Cloud Trace + Logging + Monitoring</text></g>
+  <g><rect x="1900" y="2510" width="520" height="88" rx="14" fill="#fff" stroke="#80868b" stroke-width="2"/>
+    <text x="2160" y="2542" text-anchor="middle" class="node-title">Métriques Kubernetes et applicatives</text><text x="2160" y="2573" text-anchor="middle" class="service">Managed Service for Prometheus</text></g>
+  <g><rect x="2470" y="2510" width="520" height="88" rx="14" fill="#fff" stroke="#80868b" stroke-width="2"/>
+    <text x="2730" y="2542" text-anchor="middle" class="node-title">FinOps, qualité et indicateurs DORA</text><text x="2730" y="2573" text-anchor="middle" class="service">BigQuery + Looker Studio</text></g>
+
+  <!-- Entreprise -->
+  <g filter="url(#shadow)"><rect x="40" y="2750" width="3120" height="245" rx="24" fill="#fff" stroke="#5f6368" stroke-width="3"/></g>
+  <text x="130" y="2790" class="panel-title" fill="#3c4043">SYSTÈMES D’ENTREPRISE EXISTANTS — HORS PÉRIMÈTRE D’HÉBERGEMENT DE L’USINE</text>
+  <text x="130" y="2816" class="panel-sub">L’usine crée la Pull Request et les preuves ; la CI/CD officielle construit, atteste, promeut et déploie</text>
+  <g><rect x="150" y="2850" width="500" height="105" rx="16" fill="#f8f9fa" stroke="#5f6368" stroke-width="2"/>
+    <text x="400" y="2884" text-anchor="middle" class="node-title">SCM et Pull Request</text><text x="400" y="2911" text-anchor="middle" class="detail">GitHub Enterprise · GitLab · Gitea</text><text x="400" y="2935" text-anchor="middle" class="service-prefix">SERVICE EXISTANT / NON DUPLIQUÉ</text></g>
+  <g><rect x="750" y="2850" width="500" height="105" rx="16" fill="#f8f9fa" stroke="#5f6368" stroke-width="2"/>
+    <text x="1000" y="2884" text-anchor="middle" class="node-title">Qualité et dépendances</text><text x="1000" y="2911" text-anchor="middle" class="detail">SonarQube · Artifactory</text><text x="1000" y="2935" text-anchor="middle" class="service-prefix">SERVICES D’ENTREPRISE</text></g>
+  <g><rect x="1350" y="2850" width="500" height="105" rx="16" fill="#f8f9fa" stroke="#5f6368" stroke-width="2"/>
+    <text x="1600" y="2884" text-anchor="middle" class="node-title">CI officielle</text><text x="1600" y="2911" text-anchor="middle" class="detail">Cloud Build · GitHub Actions · GitLab CI</text><text x="1600" y="2935" text-anchor="middle" class="service-prefix">BUILD DE RÉFÉRENCE</text></g>
+  <g><rect x="1950" y="2850" width="500" height="105" rx="16" fill="#f8f9fa" stroke="#5f6368" stroke-width="2"/>
+    <text x="2200" y="2884" text-anchor="middle" class="node-title">Artefacts promus</text><text x="2200" y="2911" text-anchor="middle" class="detail">Provenance · signature · SBOM</text><text x="2200" y="2935" text-anchor="middle" class="service-prefix">CHAÎNE DE CONFIANCE OFFICIELLE</text></g>
+  <g><rect x="2550" y="2850" width="500" height="105" rx="16" fill="#f8f9fa" stroke="#5f6368" stroke-width="2"/>
+    <text x="2800" y="2884" text-anchor="middle" class="node-title">Déploiement applicatif</text><text x="2800" y="2911" text-anchor="middle" class="detail">Cloud Deploy ou CD d’entreprise</text><text x="2800" y="2935" text-anchor="middle" class="service-prefix">HORS RESPONSABILITÉ DE L’AGENT</text></g>
+
+  <!-- Flux : acteurs et accès -->
+  <path d="M420 230 V250 H55 V488 H180" class="flow"/>
+  <path d="M1120 230 V405 H1160 V435" class="support"/>
+  <path d="M2780 230 H3175 V780 H2860" class="support"/>
+  <text x="3158" y="610" class="edge-label" transform="rotate(-90 3158 610)">Ticket ou événement SCM</text>
+  <path d="M700 488 H900" class="flow"/>
+  <path d="M1420 488 H1620" class="flow"/>
+  <path d="M2140 488 H2340" class="flow"/>
+
+  <!-- Flux : accès vers contrôle, droite vers gauche -->
+  <path d="M2600 540 V720" class="flow"/>
+  <path d="M2340 780 H2060" class="flow"/>
+  <path d="M2600 840 V890" class="link"/>
+  <path d="M1800 840 V865 H1160 V890" class="link"/>
+  <path d="M900 950 H740" class="link"/>
+
+  <!-- Décision de politique vers l’approbation en utilisant le couloir gauche -->
+  <path d="M220 950 H75 V2070 H400 V1865" class="support"/>
+
+  <!-- Workflow vers le plan IA via le couloir entre bandes -->
+  <path d="M1800 840 V1075 H95 V1273 H150" class="flow"/>
+
+  <!-- Flux IA gauche vers droite -->
+  <path d="M650 1273 H750" class="flow"/>
+  <path d="M1250 1273 H1350" class="flow"/>
+  <path d="M1850 1273 H1950" class="flow"/>
+  <path d="M2450 1273 H2550" class="flow"/>
+  <path d="M1600 1395 V1335" class="support"/>
+  <path d="M2200 1395 V1365 H2800 V1335" class="support"/>
+
+  <!-- Vertex vers sandbox dans le couloir droit -->
+  <path d="M2800 1335 V1740" class="flow"/>
+
+  <!-- Flux sandbox droite vers gauche -->
+  <path d="M2550 1803 H2450" class="flow"/>
+  <path d="M1950 1803 H1850" class="flow"/>
+  <path d="M1350 1803 H1250" class="flow"/>
+  <path d="M750 1803 H650" class="flow"/>
+  <path d="M2200 1865 V1915" class="link"/>
+
+  <!-- Preuves vers la chaîne de confiance : connexions verticales alignées -->
+  <path d="M1000 1865 V2070 H1300 V2283 H1250" class="link"/>
+  <path d="M1600 1865 V2070 H1900 V2283 H1850" class="link"/>
+  <path d="M750 2283 H650" class="support"/>
+  <path d="M2800 1865 V2070 H3120 V2283 H3050" class="support"/>
+
+  <!-- Sortie vers SCM en contournant toutes les zones par la gauche -->
+  <path d="M150 1803 H65 V2903 H150" class="flow"/>
+  <text x="78" y="2715" class="edge-label" transform="rotate(-90 78 2715)">Pull Request approuvée + dossier de preuves</text>
+
+  <!-- Chaîne CI/CD externe -->
+  <path d="M650 2903 H750" class="flow"/>
+  <path d="M1250 2903 H1350" class="flow"/>
+  <path d="M1850 2903 H1950" class="link"/>
+  <path d="M2450 2903 H2550" class="link"/>
+
+  <!-- Légende -->
+  <line x1="170" y1="3050" x2="250" y2="3050" class="flow"/><text x="275" y="3056" class="legend">Flux fonctionnel principal</text>
+  <line x1="760" y1="3050" x2="840" y2="3050" class="link"/><text x="865" y="3056" class="legend">Dépendance technique locale</text>
+  <line x1="1410" y1="3050" x2="1490" y2="3050" class="support"/><text x="1515" y="3056" class="legend">Contrôle ou preuve transverse</text>
+  <circle cx="2180" cy="3050" r="9" fill="#ea4335"/><text x="2205" y="3056" class="legend">Zone d’exécution non fiable</text>
+  <circle cx="2690" cy="3050" r="9" fill="#34a853"/><text x="2715" y="3056" class="legend">Chaîne de confiance</text>
+</svg>

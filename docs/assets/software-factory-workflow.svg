@@ -25,6 +25,7 @@
       .zone-title { font: 700 16px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: 1.2px; }
       .zone-sub { font: 500 13px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #5e6c84; }
       .card-num { font: 700 12px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: .7px; }
+      .subject { font: 700 9px 'Avenir Next', 'Trebuchet MS', sans-serif; letter-spacing: .45px; }
       .card-title { font: 700 18px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #172b4d; }
       .card-tool { font: 500 13px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #44546f; }
       .arrow-label { font: 600 12px 'Avenir Next', 'Trebuchet MS', sans-serif; fill: #7a5b16; }
@@ -47,8 +48,10 @@
   <rect x="126" y="130" width="1348" height="150" rx="20" fill="#eef4ff" stroke="#93b9f5" stroke-width="1.5"/>
   <rect x="154" y="152" width="145" height="29" rx="14.5" fill="#0c66e4"/>
   <text x="226" y="172" text-anchor="middle" class="badge" fill="#fff">MANUEL</text>
-  <text x="320" y="174" class="zone-title" fill="#0c66e4">Expression du besoin</text>
-  <text x="320" y="198" class="zone-sub">La personne decrit le resultat attendu et choisit le mode LLM.</text>
+  <rect x="320" y="152" width="104" height="29" rx="14.5" fill="#dbeafe"/>
+  <text x="372" y="172" text-anchor="middle" class="badge" fill="#0c66e4">PRÉPARATION</text>
+  <text x="444" y="174" class="zone-title" fill="#0c66e4">Expression du besoin</text>
+  <text x="444" y="198" class="zone-sub">La personne decrit le resultat attendu et choisit le mode LLM.</text>
   <g filter="url(#soft-shadow)">
     <rect x="1040" y="151" width="388" height="90" rx="13" fill="#fff"/>
   </g>
@@ -83,6 +86,8 @@
   </g>
   <rect x="174" y="458" width="37" height="24" rx="6" fill="#e9f2ff"/>
   <text x="192.5" y="475" text-anchor="middle" class="card-num" fill="#0c66e4">01</text>
+  <rect x="220" y="458" width="80" height="24" rx="6" fill="#e9f2ff"/>
+  <text x="260" y="475" text-anchor="middle" class="subject" fill="#0c66e4">PRÉPARATION</text>
   <text x="174" y="513" class="card-title">Contexte</text>
   <text x="174" y="538" class="card-tool">Clone la branche</text>
   <text x="174" y="559" class="card-tool">et lit le depot</text>
@@ -91,6 +96,7 @@
   <!-- 2 Plan -->
   <g filter="url(#shadow)"><rect x="434" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
   <rect x="454" y="458" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="472.5" y="475" text-anchor="middle" class="card-num" fill="#16806b">02</text>
+  <rect x="500" y="458" width="80" height="24" rx="6" fill="#e8f7f3"/><text x="540" y="475" text-anchor="middle" class="subject" fill="#16806b">CONCEPTION</text>
   <text x="454" y="513" class="card-title">Plan</text>
   <text x="454" y="538" class="card-tool">Agent Planner</text>
   <text x="454" y="559" class="card-tool">LiteLLM  •  LLM</text>
@@ -99,35 +105,40 @@
   <!-- 3 Patch -->
   <g filter="url(#shadow)"><rect x="714" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
   <rect x="734" y="458" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="752.5" y="475" text-anchor="middle" class="card-num" fill="#16806b">03</text>
+  <rect x="780" y="458" width="80" height="24" rx="6" fill="#e8f7f3"/><text x="820" y="475" text-anchor="middle" class="subject" fill="#16806b">DÉVELOPPEMENT</text>
   <text x="734" y="513" class="card-title">Patch</text>
   <text x="734" y="538" class="card-tool">Agent Developer</text>
   <text x="734" y="559" class="card-tool">LiteLLM  •  LLM</text>
   <text x="734" y="581" class="card-tool">unified diff</text>
 
   <!-- 4 Validate -->
-  <g filter="url(#shadow)"><rect x="994" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
-  <rect x="1014" y="458" width="37" height="24" rx="6" fill="#fff4de"/><text x="1032.5" y="475" text-anchor="middle" class="card-num" fill="#974f0c">04</text>
+  <g filter="url(#shadow)"><rect x="994" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
+  <rect x="1014" y="458" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="1032.5" y="475" text-anchor="middle" class="card-num" fill="#16806b">04</text>
+  <rect x="1060" y="458" width="80" height="24" rx="6" fill="#e8f7f3"/><text x="1100" y="475" text-anchor="middle" class="subject" fill="#16806b">DÉVELOPPEMENT</text>
   <text x="1014" y="513" class="card-title">Validation</text>
   <text x="1014" y="538" class="card-tool">git apply --check</text>
   <text x="1014" y="559" class="card-tool">Sandbox Docker</text>
   <text x="1014" y="581" class="card-tool">sans reseau</text>
 
   <!-- 5 Repair -->
-  <g filter="url(#shadow)"><rect x="1194" y="438" width="240" height="156" rx="15" fill="#fffaf0" stroke="#f1c97c" stroke-width="1.5"/></g>
-  <rect x="1214" y="458" width="37" height="24" rx="6" fill="#fff4de"/><text x="1232.5" y="475" text-anchor="middle" class="card-num" fill="#974f0c">05</text>
+  <g filter="url(#shadow)"><rect x="1194" y="438" width="240" height="156" rx="15" fill="#f1fbf7" stroke="#9ad4c1" stroke-width="1.5"/></g>
+  <rect x="1214" y="458" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="1232.5" y="475" text-anchor="middle" class="card-num" fill="#16806b">05</text>
+  <rect x="1260" y="458" width="104" height="24" rx="6" fill="#e8f7f3"/><text x="1312" y="475" text-anchor="middle" class="subject" fill="#16806b">DÉVELOPPEMENT</text>
   <text x="1214" y="513" class="card-title">Reparation si besoin</text>
   <text x="1214" y="538" class="card-tool">Agent Patch Repair  •  LiteLLM</text>
   <text x="1214" y="560" class="card-tool">Regeneration complete du diff</text>
 
   <!-- 6 Sandbox -->
-  <g filter="url(#shadow)"><rect x="1014" y="654" width="170" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
-  <rect x="1034" y="674" width="37" height="24" rx="6" fill="#fff4de"/><text x="1052.5" y="691" text-anchor="middle" class="card-num" fill="#974f0c">06</text>
+  <g filter="url(#shadow)"><rect x="1014" y="654" width="170" height="122" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
+  <rect x="1034" y="674" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="1052.5" y="691" text-anchor="middle" class="card-num" fill="#16806b">06</text>
+  <rect x="1080" y="674" width="90" height="24" rx="6" fill="#e8f7f3"/><text x="1125" y="691" text-anchor="middle" class="subject" fill="#16806b">DÉVELOPPEMENT</text>
   <text x="1034" y="728" class="card-title">Sandbox</text>
   <text x="1034" y="752" class="card-tool">Docker  •  Git</text>
 
   <!-- 7 Tests -->
   <g filter="url(#shadow)"><rect x="734" y="654" width="240" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
   <rect x="754" y="674" width="37" height="24" rx="6" fill="#fff4de"/><text x="772.5" y="691" text-anchor="middle" class="card-num" fill="#974f0c">07</text>
+  <rect x="800" y="674" width="80" height="24" rx="6" fill="#fff4de"/><text x="840" y="691" text-anchor="middle" class="subject" fill="#974f0c">VALIDATION</text>
   <text x="754" y="728" class="card-title">Tests et qualite</text>
   <text x="754" y="752" class="card-tool">Maven / Gradle / npm</text>
   <text x="754" y="770" class="card-tool">Artifactory  •  SonarQube</text>
@@ -135,12 +146,14 @@
   <!-- 8 Security -->
   <g filter="url(#shadow)"><rect x="454" y="654" width="240" height="122" rx="15" fill="#fff" stroke="#f1c97c" stroke-width="1.5"/></g>
   <rect x="474" y="674" width="37" height="24" rx="6" fill="#fff4de"/><text x="492.5" y="691" text-anchor="middle" class="card-num" fill="#974f0c">08</text>
+  <rect x="520" y="674" width="80" height="24" rx="6" fill="#fff4de"/><text x="560" y="691" text-anchor="middle" class="subject" fill="#974f0c">VALIDATION</text>
   <text x="474" y="728" class="card-title">Securite</text>
   <text x="474" y="752" class="card-tool">SBOM Syft  •  Scan Trivy</text>
 
   <!-- 9 Review -->
   <g filter="url(#shadow)"><rect x="154" y="654" width="260" height="122" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
   <rect x="174" y="674" width="37" height="24" rx="6" fill="#e8f7f3"/><text x="192.5" y="691" text-anchor="middle" class="card-num" fill="#16806b">09</text>
+  <rect x="220" y="674" width="64" height="24" rx="6" fill="#e8f7f3"/><text x="252" y="691" text-anchor="middle" class="subject" fill="#16806b">REVUE</text>
   <text x="174" y="728" class="card-title">Revue des preuves</text>
   <text x="174" y="752" class="card-tool">Agents Tester + Reviewer  •  LiteLLM</text>
 
@@ -151,8 +164,12 @@
   <rect x="126" y="865" width="1348" height="142" rx="20" fill="#faf5ff" stroke="#cbb5f4" stroke-width="1.5"/>
   <rect x="154" y="888" width="145" height="29" rx="14.5" fill="#7c3aed"/>
   <text x="226" y="908" text-anchor="middle" class="badge" fill="#fff">MANUEL</text>
-  <text x="320" y="910" class="zone-title" fill="#6d28d9">Decision de livraison</text>
-  <text x="320" y="934" class="zone-sub">La personne consulte les resultats, puis autorise ou bloque la publication.</text>
+  <rect x="320" y="888" width="98" height="29" rx="14.5" fill="#ede9fe"/>
+  <text x="369" y="908" text-anchor="middle" class="badge" fill="#6d28d9">VALIDATION</text>
+  <rect x="428" y="888" width="94" height="29" rx="14.5" fill="#ede9fe"/>
+  <text x="475" y="908" text-anchor="middle" class="badge" fill="#6d28d9">LIVRAISON</text>
+  <text x="542" y="910" class="zone-title" fill="#6d28d9">Decision de livraison</text>
+  <text x="542" y="934" class="zone-sub">La personne consulte les resultats, puis autorise ou bloque la publication.</text>
   <g filter="url(#soft-shadow)"><rect x="972" y="884" width="456" height="104" rx="14" fill="#fff"/></g>
   <rect x="994" y="908" width="46" height="46" rx="12" fill="#ede9fe"/>
   <path d="M1007 931l8 8 14-17" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
