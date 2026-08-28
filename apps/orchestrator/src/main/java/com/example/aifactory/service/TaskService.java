@@ -4,6 +4,8 @@ import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.*;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.*;
@@ -21,6 +23,7 @@ import java.util.regex.Pattern;
 public class TaskService {
     private static final Pattern PATCH_FILE = Pattern.compile("^\\+\\+\\+ b/(.+)$", Pattern.MULTILINE);
     private static final int MAX_PATCH_REPAIR_ATTEMPTS = 2;
+    private static final Logger log = LoggerFactory.getLogger(TaskService.class);
     private final Map<String, TaskState> tasks = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
     private final AtomicInteger ticketSequence = new AtomicInteger(1);
@@ -69,6 +72,7 @@ public class TaskService {
         TaskState state = new TaskState(id, ticketNumber, request);
         tasks.put(id, state);
         submittedTasks.increment();
+        log.info("Task {} ({}) accepted: mode={}, branch={}", id, ticketNumber, request.effectiveLlmMode(), request.effectiveBranch());
         executor.submit(() -> runPipeline(state));
         return state.view();
     }
@@ -85,6 +89,7 @@ public class TaskService {
         TaskState state = tasks.get(id);
         if (state == null) throw new IllegalArgumentException("Unknown task " + id);
         if (state.status != TaskStatus.WAITING_APPROVAL) throw new IllegalStateException("Task is not waiting for approval");
+        log.info("Task {} ({}) approved by the delivery workflow", state.id, state.ticketNumber);
         state.transition(TaskStatus.APPROVED, "Human approval recorded");
         executor.submit(() -> {
             try {
@@ -92,6 +97,7 @@ public class TaskService {
                 String prUrl = gitea.commitPushAndCreatePr(workspace, state.request.repositoryUrl(), state.request.effectiveBranch(), state.id, state.request.requirement());
                 state.pullRequestUrl = prUrl;
                 state.transition(TaskStatus.PR_CREATED, "Pull request created: " + prUrl);
+                log.info("Task {} ({}) created pull request", state.id, state.ticketNumber);
             } catch (Exception e) { state.fail(e); }
         });
         return state.view();
@@ -104,11 +110,13 @@ public class TaskService {
             Path ws = root.resolve(s.id).toAbsolutePath();
             Files.createDirectories(ws);
             s.workspace = ws.toString();
+            log.info("Task {} ({}) workspace initialized", s.id, s.ticketNumber);
 
             s.transition(TaskStatus.CLONING, "Cloning repository");
             runner.run(List.of("git", "clone", "--depth", "1", "--branch", s.request.effectiveBranch(), s.request.repositoryUrl(), ws.toString()), null, Duration.ofMinutes(2));
             s.sourceCommit = runner.run(List.of("git", "rev-parse", "HEAD"), ws, Duration.ofSeconds(10)).strip();
             s.model = llm.modelName(s.request.effectiveLlmMode());
+            log.info("Task {} ({}) cloned source commit {} using model {}", s.id, s.ticketNumber, s.sourceCommit, s.model);
             String context = contextService.collect(ws);
             writeRunMetadata(ws, s);
 
@@ -154,6 +162,7 @@ public class TaskService {
 
             s.transition(TaskStatus.WAITING_APPROVAL, "Pipeline complete. Human approval required before commit/push/PR.");
             completedTasks.increment();
+            log.info("Task {} ({}) completed all automated stages and awaits approval", s.id, s.ticketNumber);
         } catch (Exception e) {
             failedTasks.increment();
             s.fail(e);
@@ -171,6 +180,8 @@ public class TaskService {
                 if (repairAttempt == MAX_PATCH_REPAIR_ATTEMPTS) {
                     throw validationFailure;
                 }
+                log.warn("Task {} ({}) patch validation failed; starting repair attempt {}/{}: {}",
+                        state.id, state.ticketNumber, repairAttempt + 1, MAX_PATCH_REPAIR_ATTEMPTS, validationFailure.getMessage());
                 Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
                 String repaired = chat(state, "patch-repair", untrusted("REQUIREMENT", state.request.requirement()) +
                         untrusted("PLAN", state.plan) + untrusted("CURRENT_FILE_CONTENTS", affectedFileContext(workspace, patch)) +
@@ -224,8 +235,14 @@ public class TaskService {
     }
 
     private String chat(TaskState state, String promptName, String untrustedInput) {
-        state.promptFingerprints.put(promptName, prompts.fingerprint(promptName));
-        return llm.chat(state.request.effectiveLlmMode(), prompts.load(promptName), untrustedInput);
+        String fingerprint = prompts.fingerprint(promptName);
+        state.promptFingerprints.put(promptName, fingerprint);
+        log.info("Task {} ({}) invoking {} agent with prompt sha256={}",
+                state.id, state.ticketNumber, promptName, fingerprint.substring(0, 12));
+        String response = llm.chat(state.request.effectiveLlmMode(), prompts.load(promptName), untrustedInput);
+        log.info("Task {} ({}) {} agent completed; response_chars={}",
+                state.id, state.ticketNumber, promptName, response.length());
+        return response;
     }
 
     private static String untrusted(String label, String content) {

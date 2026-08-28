@@ -6,7 +6,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class TaskState {
+    private static final Logger log = LoggerFactory.getLogger(TaskState.class);
     public final String id;
     public final String ticketNumber;
     public final TaskRequest request;
@@ -37,6 +41,7 @@ public class TaskState {
         this.status = newStatus;
         this.updatedAt = Instant.now();
         this.steps.add(new AgentStep(newStatus.name(), "OK", summary, this.updatedAt));
+        log.info("Task {} ({}) transitioned to {}: {}", id, ticketNumber, newStatus, summary);
     }
 
     public synchronized void fail(Exception ex) {
@@ -44,11 +49,18 @@ public class TaskState {
         this.error = ex.getMessage();
         this.updatedAt = Instant.now();
         this.steps.add(new AgentStep("FAILED", "ERROR", ex.toString(), this.updatedAt));
+        log.error("Task {} ({}) failed while in {}: {}", id, ticketNumber, status, conciseMessage(ex));
     }
 
     public synchronized TaskView view() {
         return new TaskView(id, ticketNumber, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
                 request.effectiveLlmMode(), workspace, sourceCommit, model, Map.copyOf(promptFingerprints), plan, patch, testSummary, qualitySummary, securitySummary, review,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
+    }
+
+    private static String conciseMessage(Exception ex) {
+        String message = ex.getMessage();
+        if (message == null || message.isBlank()) return ex.getClass().getSimpleName();
+        return message.length() <= 2_000 ? message : message.substring(0, 2_000) + "...[truncated]";
     }
 }
