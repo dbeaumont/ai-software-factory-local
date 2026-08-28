@@ -79,7 +79,7 @@ all:
 model:
 	$(log-target)
 	@echo -e "$(BLUE)Pulling Ollama model $(OLLAMA_MODEL)...$(NC)"
-	$(COMPOSE) exec ollama ollama pull $(OLLAMA_MODEL)
+#	$(COMPOSE) exec ollama ollama pull $(OLLAMA_MODEL)
 	@echo -e "$(GREEN)Model $(OLLAMA_MODEL) pulled!$(NC)"
 
 bootstrap: init

@@ -7,6 +7,8 @@ import com.example.aifactory.service.LlmGatewayClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @RestController
 @RequestMapping("/api")
@@ -20,8 +22,11 @@ public class FactoryController {
     }
 
     @GetMapping("/capabilities")
-    public FactoryCapabilities capabilities() {
-        CloudAvailability cloud = llm.cloudAvailability();
-        return new FactoryCapabilities(props.cloudEnabled(), cloud.available(), cloud.error());
+    public Mono<FactoryCapabilities> capabilities() {
+        return Mono.fromCallable(() -> {
+                    CloudAvailability cloud = llm.cloudAvailability();
+                    return new FactoryCapabilities(props.cloudEnabled(), cloud.available(), cloud.error());
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }

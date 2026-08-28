@@ -5,6 +5,8 @@ import com.example.aifactory.model.TaskView;
 import com.example.aifactory.service.TaskService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
@@ -17,7 +19,10 @@ public class TaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public TaskView create(@RequestBody TaskRequest request) { return tasks.create(request); }
+    public Mono<TaskView> create(@RequestBody TaskRequest request) {
+        return Mono.fromCallable(() -> tasks.create(request))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
 
     @GetMapping
     public List<TaskView> list() { return tasks.list(); }

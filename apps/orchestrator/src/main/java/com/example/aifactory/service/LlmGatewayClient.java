@@ -4,6 +4,8 @@ import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.CloudAvailability;
 import com.example.aifactory.model.LlmMode;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import java.util.Map;
 @Service
 public class LlmGatewayClient {
     private static final Duration CLOUD_AVAILABILITY_CACHE_TTL = Duration.ofSeconds(30);
+    private static final Logger log = LoggerFactory.getLogger(LlmGatewayClient.class);
     private final AiFactoryProperties props;
     private final WebClient client;
     private volatile CloudAvailability cachedCloudAvailability;
@@ -46,7 +49,7 @@ public class LlmGatewayClient {
                     .headers(this::addAuthorization)
                     .bodyValue(body)
                     .retrieve()
-                    .bodyToMono(Void.class)
+                    .toBodilessEntity()
                     .block(Duration.ofSeconds(20));
                     cachedCloudAvailability = CloudAvailability.reachable();
         } catch (WebClientResponseException e) {
@@ -54,6 +57,7 @@ public class LlmGatewayClient {
                     "L'accès à l'API LLM externe est refusé (HTTP %d). Vérifiez la politique réseau ou les droits du modèle."
                             .formatted(e.getStatusCode().value()));
         } catch (Exception e) {
+            log.warn("Cloud availability probe failed: {}: {}", e.getClass().getSimpleName(), e.getMessage());
             cachedCloudAvailability = CloudAvailability.unavailable(
                     "L'API LLM externe est inaccessible. Vérifiez la connexion réseau et le certificat du proxy.");
         }
