@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AgentResponseValidatorTest {
@@ -24,6 +25,20 @@ class AgentResponseValidatorTest {
     void rejectsReviewerRejection() {
         assertThrows(IllegalStateException.class,
                 () -> validator.requireReviewAllowsApproval("{\"decision\":\"REJECT\"}"));
+    }
+
+    @Test
+    void summarizesReviewerFindingsForSafeOperationalLogging() {
+        AgentResponseValidator.ReviewSummary review = validator.summarizeReview("""
+                {"decision":"REJECT","findings":[
+                  {"file":"CustomerController.java","severity":"major","rule":"Missing access-control policy","fix":"Declare the endpoint policy"},
+                  {"file":"CustomerControllerTest.java","severity":"minor","rule":"Missing edge-case coverage","fix":"Add tests"}
+                ]}
+                """);
+
+        assertEquals("REJECT", review.decision());
+        assertEquals("blocker=0, major=1, minor=1", review.findingCounts());
+        assertEquals("Missing access-control policy", review.findings().getFirst().rule());
     }
 
     @Test

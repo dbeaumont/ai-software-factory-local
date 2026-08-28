@@ -156,7 +156,9 @@ public class TaskService {
             s.review = chat(s, "reviewer", untrusted("REQUIREMENT", s.request.requirement()) + untrusted("PLAN", s.plan) +
                     untrusted("PATCH", s.patch) + untrusted("TEST_EVIDENCE", s.testSummary) +
                     untrusted("QUALITY_EVIDENCE", s.qualitySummary) + untrusted("SECURITY_EVIDENCE", s.securitySummary));
-            agentResponses.requireReviewAllowsApproval(s.review);
+            AgentResponseValidator.ReviewSummary reviewSummary = agentResponses.summarizeReview(s.review);
+            logReviewerDecision(s, reviewSummary);
+            agentResponses.requireReviewAllowsApproval(reviewSummary);
             Files.writeString(ws.resolve(".ai-review.md"), s.review);
             writeRunMetadata(ws, s);
 
@@ -167,6 +169,27 @@ public class TaskService {
             failedTasks.increment();
             s.fail(e);
         }
+    }
+
+    private void logReviewerDecision(TaskState state, AgentResponseValidator.ReviewSummary review) {
+        if (review.findings().isEmpty()) {
+            log.info("Task {} ({}) reviewer decision={}; no findings reported",
+                    state.id, state.ticketNumber, review.decision());
+            return;
+        }
+        log.warn("Task {} ({}) reviewer decision={}; findings: {}",
+                state.id, state.ticketNumber, review.decision(), review.findingCounts());
+        for (int index = 0; index < review.findings().size(); index++) {
+            AgentResponseValidator.ReviewFinding finding = review.findings().get(index);
+            log.warn("Task {} ({}) reviewer finding {}/{}: severity={}, file={}, rule={}, recommended_fix={}",
+                    state.id, state.ticketNumber, index + 1, review.findings().size(),
+                    logField(finding.severity()), logField(finding.file()), logField(finding.rule()), logField(finding.fix()));
+        }
+    }
+
+    private static String logField(String value) {
+        String normalized = value == null ? "" : value.replaceAll("[\\r\\n\\t]+", " ").strip();
+        return normalized.length() <= 400 ? normalized : normalized.substring(0, 397) + "...";
     }
 
     private String validateAndRepairPatch(TaskState state, Path workspace, String rawPatch) throws Exception {
