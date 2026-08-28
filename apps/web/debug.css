@@ -35,7 +35,8 @@
   opacity: .65;
 }
 
-.proposal-button {
+.proposal-button,
+.review-button {
   width: 100%;
   margin-top: 18px;
   padding: 9px 12px;
@@ -48,25 +49,9 @@
   font-weight: 700;
 }
 
-.proposal-button:hover {
-  background: var(--blue-soft);
-}
-
-.review-button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 9px 12px;
-  border: 1px solid var(--amber);
-  border-radius: 3px;
-  color: var(--amber);
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-}
-
+.proposal-button:hover,
 .review-button:hover {
-  background: #fff7d6;
+  background: var(--blue-soft);
 }
 
 .approve-button + .pr-link {
