@@ -263,14 +263,14 @@ Objectif : rendre les décisions vérifiables avant d'ajouter des dépendances o
 
 **Gate du lot 0**
 
-- [ ] Les contrats, frontières, risques, propriétaires, baseline et règles de rollback sont approuvés ; aucune implémentation serveur ne commence avant ce gate.
+- [x] Les contrats, frontières, risques, propriétaires, baseline et règles de rollback sont approuvés ; aucune implémentation serveur ne commence avant ce gate. _(Gate `APPROVED` dans `docs/mcp/GATE-MCP-LOT-0.md` sur le commit `2dd5442e83a0241d33b78472dc1e9e94085b339f` par le `Product Owner AI Software Factory`, le `Représentant RSSI` et le `Responsable Exploitation`. Autorisation limitée au POC local et aux restrictions consignées.)_
 
 ### Lot 1 — Socle client MCP dans l'orchestrateur (`MCP-020` à `MCP-039`)
 
 Objectif : introduire MCP sans modifier les verdicts du pipeline.
 
 - [x] **MCP-020** — Ajouter le BOM et le client MCP WebFlux choisis dans `apps/orchestrator/pom.xml`, avec versions épinglées.
-- [ ] **MCP-021** — Ajouter `McpClientProperties` : serveurs, URI, audience, timeouts, limites, retry et activation par feature flag.
+- [x] **MCP-021** — Ajouter `McpClientProperties` : serveurs, URI, audience, timeouts, limites, retry et activation par feature flag. _(Configuration typée et validée fail-fast dans `McpClientProperties`, reliée à `application.yml`, Compose et `.env.example` ; audiences, timeouts, limites et politiques de retry documentés dans `docs/mcp/MCP-021-configuration-client.md`.)_
 - [x] **MCP-022** — Créer `McpServerRegistry` avec allow-list statique locale ; interdire toute URL fournie par un ticket, dépôt ou modèle. _(Implémenté sous forme de connexion Spring statique et sélection par nom dans `SpringMcpToolInvoker`.)_
 - [x] **MCP-023** — Créer un adaptateur `FactoryToolClient` indépendant du SDK MCP afin de ne pas propager les types du protocole dans le domaine du workflow. _(Port `McpToolInvoker`.)_
 - [ ] **MCP-024** — Implémenter négociation de capacités/version au démarrage et health state `READY/DEGRADED/INCOMPATIBLE` par serveur.

@@ -43,6 +43,36 @@ ai-factory:
     sandbox-server-name: sandbox-execution-mcp
     sandbox-poll-interval: ${AI_FACTORY_MCP_SANDBOX_POLL_INTERVAL:250ms}
     sandbox-poll-timeout: ${AI_FACTORY_MCP_SANDBOX_POLL_TIMEOUT:20m}
+    client:
+      enabled: ${AI_FACTORY_MCP_CLIENT_ENABLED:${AI_FACTORY_MCP_ENABLED:false}}
+      request-timeout: ${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}
+      max-response-bytes: ${AI_FACTORY_MCP_MAX_RESPONSE_BYTES:65536}
+      max-inflight-per-server: ${AI_FACTORY_MCP_MAX_INFLIGHT_PER_SERVER:16}
+      max-inflight-per-task: ${AI_FACTORY_MCP_MAX_INFLIGHT_PER_TASK:4}
+      retry:
+        read-only:
+          max-attempts: ${AI_FACTORY_MCP_READ_RETRY_MAX_ATTEMPTS:3}
+          initial-backoff: ${AI_FACTORY_MCP_READ_RETRY_INITIAL_BACKOFF:200ms}
+          max-backoff: ${AI_FACTORY_MCP_READ_RETRY_MAX_BACKOFF:2s}
+          multiplier: ${AI_FACTORY_MCP_READ_RETRY_MULTIPLIER:2.0}
+          jitter: ${AI_FACTORY_MCP_READ_RETRY_JITTER:0.2}
+        effectful:
+          max-attempts: ${AI_FACTORY_MCP_EFFECT_RETRY_MAX_ATTEMPTS:2}
+          initial-backoff: ${AI_FACTORY_MCP_EFFECT_RETRY_INITIAL_BACKOFF:500ms}
+          max-backoff: ${AI_FACTORY_MCP_EFFECT_RETRY_MAX_BACKOFF:2s}
+          multiplier: ${AI_FACTORY_MCP_EFFECT_RETRY_MULTIPLIER:2.0}
+          jitter: ${AI_FACTORY_MCP_EFFECT_RETRY_JITTER:0.2}
+      servers:
+        repository-context:
+          enabled: ${AI_FACTORY_MCP_ENABLED:false}
+          uri: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_URL:http://repository-context-mcp:8091}
+          audience: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_AUDIENCE:repository-context-mcp}
+          request-timeout: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_TIMEOUT:${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}}
+        sandbox-execution:
+          enabled: ${AI_FACTORY_MCP_SANDBOX_ENABLED:false}
+          uri: ${AI_FACTORY_MCP_SANDBOX_URL:http://sandbox-execution-mcp:8092}
+          audience: ${AI_FACTORY_MCP_SANDBOX_AUDIENCE:sandbox-execution-mcp}
+          request-timeout: ${AI_FACTORY_MCP_SANDBOX_REQUEST_TIMEOUT:${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}}
   llm-base-url: ${AI_FACTORY_LLM_BASE_URL}
   llm-api-key: ${AI_FACTORY_LLM_API_KEY}
   local-model: ${AI_FACTORY_LOCAL_MODEL}
