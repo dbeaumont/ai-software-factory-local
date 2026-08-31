@@ -42,6 +42,7 @@ ai-factory:
     max-concurrent-jobs: ${AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS:2}
     max-jobs: ${AI_FACTORY_SANDBOX_MAX_JOBS:500}
     job-retention: ${AI_FACTORY_SANDBOX_JOB_RETENTION:P7D}
+    heartbeat-interval: ${AI_FACTORY_SANDBOX_HEARTBEAT_INTERVAL:PT15S}
     max-output-chars: ${AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS:65536}
     max-patch-bytes: ${AI_FACTORY_SANDBOX_MAX_PATCH_BYTES:1048576}
     maven-mirror-url: ${MAVEN_MIRROR_URL:}

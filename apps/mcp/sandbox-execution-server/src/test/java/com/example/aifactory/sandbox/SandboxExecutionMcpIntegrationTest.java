@@ -93,7 +93,11 @@ class SandboxExecutionMcpIntegrationTest {
                 .jsonPath("$.result.tools[?(@.name == 'sandbox.run_tests')]").exists()
                 .jsonPath("$.result.tools[?(@.name == 'sandbox.cancel_execution')]").exists()
                 .jsonPath("$.result.tools[?(@.name == 'sandbox.run_tests')].inputSchema.additionalProperties")
-                .isEqualTo(false);
+                .isEqualTo(false)
+                .jsonPath("$.result.tools[?(@.name == 'sandbox.get_execution')].inputSchema.properties.output_cursor")
+                .exists()
+                .jsonPath("$.result.tools[?(@.name == 'sandbox.get_execution')].inputSchema.properties.output_limit")
+                .exists();
 
         client.post().uri("/mcp")
                 .header("MCP-Protocol-Version", "2025-06-18")
@@ -116,7 +120,8 @@ class SandboxExecutionMcpIntegrationTest {
                 .expectBody()
                 .jsonPath("$.result.isError").isEqualTo(false)
                 .jsonPath("$.result.content[0].text").value(containsString("\"execution_id\""))
-                .jsonPath("$.result.content[0].text").value(containsString("\"created_at\":\""));
+                .jsonPath("$.result.content[0].text").value(containsString("\"created_at\":\""))
+                .jsonPath("$.result.content[0].text").value(containsString("\"heartbeat_at\":\""));
 
         client.post().uri("/mcp")
                 .header("MCP-Protocol-Version", "2025-06-18")

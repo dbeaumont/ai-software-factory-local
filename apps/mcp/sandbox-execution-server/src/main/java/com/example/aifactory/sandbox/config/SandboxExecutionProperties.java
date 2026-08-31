@@ -15,6 +15,7 @@ public record SandboxExecutionProperties(
         int maxConcurrentJobs,
         int maxJobs,
         Duration jobRetention,
+        Duration heartbeatInterval,
         int maxOutputChars,
         long maxPatchBytes,
         String mavenMirrorUrl,
@@ -30,6 +31,8 @@ public record SandboxExecutionProperties(
         if (maxConcurrentJobs < 1 || maxConcurrentJobs > 32 || maxJobs < maxConcurrentJobs
                 || jobRetention == null || jobRetention.compareTo(Duration.ofMinutes(1)) < 0
                 || jobRetention.compareTo(Duration.ofDays(365)) > 0
+                || heartbeatInterval == null || heartbeatInterval.compareTo(Duration.ofSeconds(1)) < 0
+                || heartbeatInterval.compareTo(Duration.ofMinutes(5)) > 0
                 || maxOutputChars < 1024 || maxOutputChars > 1_048_576
                 || maxPatchBytes < 1 || maxPatchBytes > 10_485_760) {
             throw new IllegalArgumentException("invalid sandbox limits");

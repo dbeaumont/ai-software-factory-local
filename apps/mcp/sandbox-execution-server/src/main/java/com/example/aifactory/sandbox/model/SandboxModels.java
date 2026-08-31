@@ -51,9 +51,14 @@ public final class SandboxModels {
             Verdict verdict,
             @JsonProperty("exit_code") Integer exitCode,
             String output,
+            @JsonProperty("output_cursor") int outputCursor,
+            @JsonProperty("next_output_cursor") Integer nextOutputCursor,
+            @JsonProperty("output_total_chars") int outputTotalChars,
+            @JsonProperty("output_truncated") boolean outputTruncated,
             String error,
             @JsonProperty("created_at") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant createdAt,
             @JsonProperty("started_at") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant startedAt,
-            @JsonProperty("completed_at") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant completedAt) {
+            @JsonProperty("completed_at") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant completedAt,
+            @JsonProperty("heartbeat_at") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant heartbeatAt) {
     }
 }

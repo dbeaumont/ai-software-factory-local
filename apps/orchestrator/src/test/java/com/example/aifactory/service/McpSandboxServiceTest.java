@@ -10,6 +10,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -34,6 +36,19 @@ class McpSandboxServiceTest {
         assertEquals("a".repeat(40), invoker.startArguments.get("source_commit"));
         assertTrue(invoker.startArguments.containsKey("idempotency_key"));
         assertTrue(invoker.startArguments.containsKey("patch_digest"));
+        assertEquals(16_384, invoker.lastLookupArguments.get("output_limit"));
+    }
+
+    @Test
+    void reassemblesBoundedPaginatedOutput() throws Exception {
+        String expected = "page-" + "x".repeat(40_000);
+        FakeInvoker invoker = new FakeInvoker("PASSED", 0, expected);
+        McpSandboxService service = service(invoker, true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+
+        String output = service.test(workspace, "task-1", "a".repeat(40));
+
+        assertEquals(expected, output);
+        assertTrue(invoker.pollCalls.get() >= 4);
     }
 
     @Test
@@ -47,6 +62,18 @@ class McpSandboxServiceTest {
 
         assertTrue(error.getMessage().contains("rejected"));
         assertTrue(error.getMessage().contains("tests failed"));
+    }
+
+    @Test
+    void failsClosedOnAStaleRunningHeartbeat() {
+        FakeInvoker invoker = new FakeInvoker("PASSED", 0, "unused");
+        invoker.heartbeatAt = Instant.EPOCH;
+        McpSandboxService service = service(invoker, true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.test(workspace, "task-1", "a".repeat(40)));
+
+        assertTrue(error.getMessage().contains("heartbeat is stale"));
     }
 
     private static McpSandboxService service(McpToolInvoker invoker, boolean enabled,
@@ -67,6 +94,8 @@ class McpSandboxServiceTest {
         private final AtomicInteger startCalls = new AtomicInteger();
         private final AtomicInteger pollCalls = new AtomicInteger();
         private Map<String, Object> startArguments;
+        private Map<String, Object> lastLookupArguments;
+        private Instant heartbeatAt = Instant.now();
 
         private FakeInvoker(String verdict, int exitCode, String output) {
             this.verdict = verdict;
@@ -81,11 +110,24 @@ class McpSandboxServiceTest {
                 startArguments = arguments;
                 return mapper.valueToTree(Map.of("execution_id", "1".repeat(32), "status", "ACCEPTED"));
             }
+            lastLookupArguments = arguments;
             if (pollCalls.incrementAndGet() == 1) {
-                return mapper.valueToTree(Map.of("status", "RUNNING"));
+                return mapper.valueToTree(Map.of(
+                        "status", "RUNNING", "heartbeat_at", heartbeatAt.toString()));
             }
-            return mapper.valueToTree(Map.of(
-                    "status", "SUCCEEDED", "verdict", verdict, "exit_code", exitCode, "output", output));
+            int cursor = ((Number) arguments.getOrDefault("output_cursor", 0)).intValue();
+            int limit = ((Number) arguments.getOrDefault("output_limit", 4_096)).intValue();
+            int end = Math.min(output.length(), cursor + limit);
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("status", "SUCCEEDED");
+            response.put("verdict", verdict);
+            response.put("exit_code", exitCode);
+            response.put("output", output.substring(cursor, end));
+            response.put("output_cursor", cursor);
+            response.put("output_total_chars", output.length());
+            response.put("output_truncated", false);
+            response.put("next_output_cursor", end < output.length() ? end : null);
+            return mapper.valueToTree(response);
         }
 
         @Override

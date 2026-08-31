@@ -209,6 +209,12 @@ Les états terminaux expirent depuis leur `completed_at` après `AI_FACTORY_SAND
 valeur autorisée de 1 minute à 365 jours). La purge du snapshot, du handle et de sa clé d'idempotence s'effectue au
 démarrage, avant les opérations MCP et périodiquement ; une nouvelle soumission après expiration reçoit donc un
 nouvel `execution_id`. Les exécutions actives ne sont jamais supprimées par cette rétention.
+Pendant `ACCEPTED` et `RUNNING`, `heartbeat_at` est rafraîchi et persisté toutes les
+`AI_FACTORY_SANDBOX_HEARTBEAT_INTERVAL` (`PT15S` par défaut) ; l'orchestrateur refuse un heartbeat absent, invalide
+ou plus ancien que son timeout de polling. `sandbox.get_execution` retourne les logs déjà redacted par pages de
+4 096 caractères par défaut, jusqu'à 16 384 via `output_limit`, avec `next_output_cursor`, la taille totale retenue
+et `output_truncated` lorsque la borne globale a supprimé le début du flux. Le client reconstruit les pages avec une
+limite locale et refuse les curseurs incohérents.
 
 Le test d'intégration opt-in suivant demande un daemon Docker local et l'image `ai-factory-sandbox:local`. Il crée
 un conteneur et un volume aux noms aléatoires, vérifie les limites réellement acceptées par Docker, puis les supprime

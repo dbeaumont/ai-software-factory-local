@@ -16,11 +16,13 @@ import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -53,7 +55,8 @@ class SandboxJobServiceTest {
         Files.writeString(patch, "diff --git a/file.txt b/file.txt\n");
         patchDigest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(patch)));
         properties = new SandboxExecutionProperties(root, root.resolve(".sandbox-jobs"), "workspace", "image",
-                "network", 2, 100, Duration.ofHours(1), 65_536, 1_048_576,
+                "network", 2, 100, Duration.ofHours(1), Duration.ofSeconds(15),
+                65_536, 1_048_576,
                 "mirror", "artifact-token", "sonar", "sonar-token");
         store = new SandboxJobStore(new ObjectMapper().findAndRegisterModules(), properties);
         runtime = new FakeRuntime();
@@ -127,7 +130,67 @@ class SandboxJobServiceTest {
     }
 
     @Test
+    void paginatesOnlyRetainedRedactedOutputWithBoundedCursors() throws Exception {
+        runtime.result = new SandboxRuntime.RuntimeResult(0,
+                "API_TOKEN=top-secret\n" + "x".repeat(20_000), true);
+
+        ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
+                request("workflow", "paginated-output-key", patchDigest));
+        ExecutionView first = await(submitted.executionId());
+
+        assertTrue(first.outputTruncated());
+        assertEquals(0, first.outputCursor());
+        assertEquals(4_096, first.output().length());
+        assertEquals(4_096, first.nextOutputCursor());
+        assertFalse(first.output().contains("top-secret"));
+
+        StringBuilder complete = new StringBuilder(first.output());
+        Integer cursor = first.nextOutputCursor();
+        while (cursor != null) {
+            ExecutionView page = jobs.get("1", "task-1", commit, "workflow", TRACE_ID,
+                    submitted.executionId(), cursor, 5_000);
+            complete.append(page.output());
+            cursor = page.nextOutputCursor();
+        }
+        assertEquals(first.outputTotalChars(), complete.length());
+        assertTrue(complete.toString().startsWith("API_TOKEN=[REDACTED]"));
+        assertThrows(IllegalArgumentException.class, () -> jobs.get(
+                "1", "task-1", commit, "workflow", TRACE_ID, submitted.executionId(), -1, 10));
+        assertThrows(IllegalArgumentException.class, () -> jobs.get(
+                "1", "task-1", commit, "workflow", TRACE_ID, submitted.executionId(), 0, 16_385));
+    }
+
+    @Test
+    void persistsHeartbeatForActiveJobsWithoutExpiringThem() throws Exception {
+        jobs.shutdown();
+        MutableClock mutableClock = new MutableClock(Instant.parse("2026-08-31T08:00:00Z"));
+        clock = mutableClock;
+        runtime = new FakeRuntime();
+        runtime.block = true;
+        jobs = service(runtime);
+
+        ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
+                request("workflow", "heartbeat-running-key", patchDigest));
+        assertTrue(runtime.started.await(2, TimeUnit.SECONDS));
+        ExecutionView running = jobs.get(
+                "1", "task-1", commit, "workflow", TRACE_ID, submitted.executionId());
+        Instant initialHeartbeat = running.heartbeatAt();
+
+        mutableClock.advance(Duration.ofSeconds(16));
+        jobs.maintainJobs();
+        ExecutionView refreshed = jobs.get(
+                "1", "task-1", commit, "workflow", TRACE_ID, submitted.executionId());
+
+        assertEquals(initialHeartbeat.plusSeconds(16), refreshed.heartbeatAt());
+        assertEquals(refreshed.heartbeatAt(), store.load().stream()
+                .filter(snapshot -> snapshot.executionId().equals(submitted.executionId()))
+                .findFirst().orElseThrow().heartbeatAt());
+        jobs.cancel("1", "task-1", commit, "workflow", TRACE_ID, submitted.executionId());
+    }
+
+    @Test
     void restoresCompletedJobsAndIdempotencyAfterRestart() throws Exception {
+        runtime.result = new SandboxRuntime.RuntimeResult(0, "x".repeat(5_000), true);
         StartExecutionRequest request = request("workflow", "stable-key-across-restart", patchDigest);
         ExecutionView submitted = jobs.submit(Operation.VALIDATE_PATCH, request);
         ExecutionView completed = await(submitted.executionId());
@@ -140,6 +203,10 @@ class SandboxJobServiceTest {
         ExecutionView restored = jobs.get("1", "task-1", commit, "workflow", TRACE_ID, submitted.executionId());
         ExecutionView replayed = jobs.submit(Operation.VALIDATE_PATCH, request);
         assertEquals(ExecutionStatus.SUCCEEDED, restored.status());
+        assertTrue(restored.outputTruncated());
+        assertEquals(5_000, restored.outputTotalChars());
+        assertEquals(4_096, restored.nextOutputCursor());
+        assertEquals(restored.completedAt(), restored.heartbeatAt());
         assertEquals(submitted.executionId(), replayed.executionId());
         assertEquals(0, restartedRuntime.calls.get());
         assertEquals(1, restartedRuntime.reconciliations.get());
@@ -163,6 +230,7 @@ class SandboxJobServiceTest {
         assertEquals(Verdict.INDETERMINATE, restored.verdict());
         assertEquals("sandbox controller restarted during execution", restored.error());
         assertNotNull(restored.completedAt());
+        assertEquals(restored.completedAt(), restored.heartbeatAt());
         assertTrue(Files.exists(properties.stateRoot().resolve(executionId + ".json")));
         assertEquals(1, restartedRuntime.reconciliations.get());
     }
@@ -293,6 +361,33 @@ class SandboxJobServiceTest {
         @Override
         public void reconcileOrphans() {
             reconciliations.incrementAndGet();
+        }
+    }
+
+    private static final class MutableClock extends Clock {
+        private final AtomicReference<Instant> instant;
+
+        private MutableClock(Instant instant) {
+            this.instant = new AtomicReference<>(instant);
+        }
+
+        private void advance(Duration duration) {
+            instant.updateAndGet(current -> current.plus(duration));
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant.get();
         }
     }
 }

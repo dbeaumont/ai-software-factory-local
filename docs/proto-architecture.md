@@ -115,6 +115,10 @@ sequenceDiagram
   end
   O->>C: Application du patch puis build/tests
   C->>S: Profils patch-apply-v1 et test-auto-v1
+  loop Jusqu'à état terminal
+    O->>C: sandbox.get_execution(output_cursor, output_limit)
+    C-->>O: état + heartbeat_at + page de log redacted
+  end
   O->>L: Agent Tester (requirement + patch + logs de test)
   L-->>O: Synthèse de test (.ai-factory/test.txt)
   O->>S: Analyse SonarQube (Maven + SONAR_TOKEN)
@@ -158,6 +162,7 @@ sequenceDiagram
 
 - Le diff est appliqué (`git apply changes.patch`).
 - Contrôle de conformité (`git diff --check` et `git diff --stat`).
+- Les jobs actifs publient un `heartbeat_at` persistant ; les logs terminaux sont lus par curseur et restent bornés/redacted.
 - Exécution automatique du build et des tests selon le dépôt :
   - Maven wrapper : `./mvnw -B -s /opt/ai-factory/maven-settings.xml test`
   - Maven système : `mvn -B -s /opt/ai-factory/maven-settings.xml test`

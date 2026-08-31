@@ -31,6 +31,8 @@ public class SandboxJobService {
     private static final Pattern TRACE_ID = Pattern.compile("^[0-9a-f]{32}$");
     private static final Pattern DIGEST = Pattern.compile("^[0-9a-f]{64}$");
     private static final Pattern EXECUTION_ID = Pattern.compile("^[0-9a-f]{32}$");
+    private static final int DEFAULT_OUTPUT_PAGE_CHARS = 4_096;
+    private static final int MAX_OUTPUT_PAGE_CHARS = 16_384;
     private static final Pattern SECRET = Pattern.compile(
             "(?i)(password|secret|token|api[_-]?key)([\\s\"']*[:=][\\s\"']*)([^\\s\"']+)");
 
@@ -62,9 +64,10 @@ public class SandboxJobService {
         this.completed = Counter.builder("ai_factory_sandbox_jobs_completed").register(metrics);
         this.failed = Counter.builder("ai_factory_sandbox_jobs_failed").register(metrics);
         restorePersistedJobs();
-        long sweepMillis = Math.max(1_000L, Math.min(Duration.ofMinutes(1).toMillis(),
-                properties.jobRetention().toMillis() / 4));
-        maintenance.scheduleWithFixedDelay(this::sweepExpiredJobs, sweepMillis, sweepMillis, TimeUnit.MILLISECONDS);
+        long maintenanceMillis = Math.max(1_000L, Math.min(properties.heartbeatInterval().toMillis(),
+                Math.min(Duration.ofMinutes(1).toMillis(), properties.jobRetention().toMillis() / 4)));
+        maintenance.scheduleWithFixedDelay(this::maintainJobs, maintenanceMillis, maintenanceMillis,
+                TimeUnit.MILLISECONDS);
     }
 
     public ExecutionView submit(Operation operation, StartExecutionRequest request) throws Exception {
@@ -102,9 +105,14 @@ public class SandboxJobService {
 
     public ExecutionView get(String schemaVersion, String taskId, String sourceCommit, String actor,
                              String traceId, String executionId) {
+        return get(schemaVersion, taskId, sourceCommit, actor, traceId, executionId, null, null);
+    }
+
+    public ExecutionView get(String schemaVersion, String taskId, String sourceCommit, String actor,
+                             String traceId, String executionId, Integer outputCursor, Integer outputLimit) {
         validateLookup(schemaVersion, taskId, sourceCommit, actor, traceId, executionId);
         pruneExpiredJobs();
-        return view(requireOwnedJob(taskId, sourceCommit, executionId));
+        return view(requireOwnedJob(taskId, sourceCommit, executionId), outputCursor, outputLimit);
     }
 
     public ExecutionView cancel(String schemaVersion, String taskId, String sourceCommit, String actor,
@@ -121,6 +129,7 @@ public class SandboxJobService {
             job.verdict = Verdict.INDETERMINATE;
             job.error = "sandbox execution cancelled";
             job.completedAt = Instant.now(clock);
+            job.heartbeatAt = job.completedAt;
             if (job.future != null) {
                 job.future.cancel(true);
             }
@@ -143,6 +152,7 @@ public class SandboxJobService {
                 }
                 job.status = ExecutionStatus.RUNNING;
                 job.startedAt = Instant.now(clock);
+                job.heartbeatAt = job.startedAt;
                 store.save(snapshot(job));
             }
             SandboxRuntime.RuntimeResult result = runtime.execute(job.operation, job.executionId, workspace);
@@ -152,9 +162,11 @@ public class SandboxJobService {
                 }
                 job.exitCode = result.exitCode();
                 job.output = redact(result.output());
+                job.outputTruncated = result.outputTruncated();
                 job.status = ExecutionStatus.SUCCEEDED;
                 job.verdict = result.exitCode() == 0 ? Verdict.PASSED : Verdict.REJECTED;
                 job.completedAt = Instant.now(clock);
+                job.heartbeatAt = job.completedAt;
                 store.save(snapshot(job));
             }
             completed.increment();
@@ -186,6 +198,7 @@ public class SandboxJobService {
         job.verdict = Verdict.INDETERMINATE;
         job.error = error;
         job.completedAt = Instant.now(clock);
+        job.heartbeatAt = job.completedAt;
         store.save(snapshot(job));
         failed.increment();
     }
@@ -307,17 +320,33 @@ public class SandboxJobService {
         }
     }
 
-    private void sweepExpiredJobs() {
+    void maintainJobs() {
         try {
+            refreshHeartbeats();
             pruneExpiredJobs();
         } catch (RuntimeException exception) {
-            LOGGER.warn("Sandbox job retention sweep failed; it will be retried", exception);
+            LOGGER.warn("Sandbox job maintenance failed; it will be retried", exception);
+        }
+    }
+
+    private void refreshHeartbeats() {
+        Instant now = Instant.now(clock);
+        for (Job job : jobs.values()) {
+            synchronized (job) {
+                boolean active = job.status == ExecutionStatus.ACCEPTED || job.status == ExecutionStatus.RUNNING;
+                boolean due = job.heartbeatAt == null
+                        || !job.heartbeatAt.isAfter(now.minus(properties.heartbeatInterval()));
+                if (active && due) {
+                    job.heartbeatAt = now;
+                    store.save(snapshot(job));
+                }
+            }
         }
     }
 
     private boolean expired(ExecutionStatus status, Instant completedAt, Instant now) {
         return terminal(status) && completedAt != null
-                && !completedAt.plus(properties.jobRetention()).isAfter(now);
+                && !completedAt.isAfter(now.minus(properties.jobRetention()));
     }
 
     private static boolean terminal(ExecutionStatus status) {
@@ -360,15 +389,18 @@ public class SandboxJobService {
             job.verdict = persisted.verdict();
             job.exitCode = persisted.exitCode();
             job.output = persisted.output();
+            job.outputTruncated = persisted.outputTruncated();
             job.error = persisted.error();
             job.startedAt = persisted.startedAt();
             job.completedAt = persisted.completedAt();
+            job.heartbeatAt = persisted.heartbeatAt();
             if (!terminal(job.status)) {
                 job.status = ExecutionStatus.FAILED;
                 job.verdict = Verdict.INDETERMINATE;
                 job.exitCode = null;
                 job.error = "sandbox controller restarted during execution";
                 job.completedAt = Instant.now(clock);
+                job.heartbeatAt = job.completedAt;
                 store.save(snapshot(job));
             }
             Job previous = jobs.putIfAbsent(job.executionId, job);
@@ -386,14 +418,31 @@ public class SandboxJobService {
 
     private static JobSnapshot snapshot(Job job) {
         return JobSnapshot.versionOne(job.executionId, job.taskId, job.sourceCommit, job.patchDigest,
-                job.idempotencyKey, job.operation, job.status, job.verdict, job.exitCode, job.output, job.error,
-                job.createdAt, job.startedAt, job.completedAt);
+                job.idempotencyKey, job.operation, job.status, job.verdict, job.exitCode, job.output,
+                job.outputTruncated, job.error, job.createdAt, job.startedAt, job.completedAt, job.heartbeatAt);
     }
 
     private static ExecutionView view(Job job) {
+        return view(job, null, null);
+    }
+
+    private static ExecutionView view(Job job, Integer requestedCursor, Integer requestedLimit) {
         synchronized (job) {
+            int cursor = requestedCursor == null ? 0 : requestedCursor;
+            int limit = requestedLimit == null ? DEFAULT_OUTPUT_PAGE_CHARS : requestedLimit;
+            String retained = job.output == null ? "" : job.output;
+            if (cursor < 0 || cursor > retained.length()) {
+                throw new IllegalArgumentException("invalid output_cursor");
+            }
+            if (limit < 1 || limit > MAX_OUTPUT_PAGE_CHARS) {
+                throw new IllegalArgumentException("invalid output_limit");
+            }
+            int end = Math.min(retained.length(), cursor + limit);
+            String page = job.output == null ? null : retained.substring(cursor, end);
+            Integer nextCursor = end < retained.length() ? end : null;
             return new ExecutionView(job.executionId, job.taskId, job.operation, job.status, job.verdict,
-                    job.exitCode, job.output, job.error, job.createdAt, job.startedAt, job.completedAt);
+                    job.exitCode, page, cursor, nextCursor, retained.length(), job.outputTruncated, job.error,
+                    job.createdAt, job.startedAt, job.completedAt, job.heartbeatAt);
         }
     }
 
@@ -415,9 +464,11 @@ public class SandboxJobService {
         private Verdict verdict = Verdict.PENDING;
         private Integer exitCode;
         private String output;
+        private boolean outputTruncated;
         private String error;
         private Instant startedAt;
         private Instant completedAt;
+        private Instant heartbeatAt;
         private Future<?> future;
 
         private Job(String executionId, String taskId, String sourceCommit, String patchDigest, String idempotencyKey,
@@ -429,6 +480,7 @@ public class SandboxJobService {
             this.idempotencyKey = idempotencyKey;
             this.operation = operation;
             this.createdAt = createdAt;
+            this.heartbeatAt = createdAt;
         }
     }
 }

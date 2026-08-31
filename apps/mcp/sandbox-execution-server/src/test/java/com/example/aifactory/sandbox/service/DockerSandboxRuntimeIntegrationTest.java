@@ -31,7 +31,8 @@ class DockerSandboxRuntimeIntegrationTest {
         SandboxExecutionProperties properties = new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/tmp/sandbox-runtime-test-state"), volume, image,
                 "unused-network",
-                1, 10, Duration.ofDays(7), 65_536, 1_048_576, "", "", "", "");
+                1, 10, Duration.ofDays(7), Duration.ofSeconds(15),
+                65_536, 1_048_576, "", "", "", "");
         DockerSandboxRuntime runtime = new DockerSandboxRuntime(properties);
 
         try {

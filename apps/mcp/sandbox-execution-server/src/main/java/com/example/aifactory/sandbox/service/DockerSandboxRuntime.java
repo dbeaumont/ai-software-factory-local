@@ -39,14 +39,15 @@ public class DockerSandboxRuntime implements SandboxRuntime {
             process = new ProcessBuilder(command).redirectErrorStream(true).start();
             runningClients.put(executionId, process);
             Process started = process;
-            Future<String> output = outputReaders.submit(() -> boundedOutput(started));
+            Future<BoundedOutput> output = outputReaders.submit(() -> boundedOutput(started));
             boolean done = process.waitFor(profile.timeout().toMillis(), TimeUnit.MILLISECONDS);
             if (!done) {
                 process.destroyForcibly();
                 removeContainer(containerName);
                 throw new RuntimeTimeoutException("sandbox profile timed out: " + profile.id());
             }
-            return new RuntimeResult(process.exitValue(), output.get(10, TimeUnit.SECONDS));
+            BoundedOutput bounded = output.get(10, TimeUnit.SECONDS);
+            return new RuntimeResult(process.exitValue(), bounded.content(), bounded.truncated());
         } catch (InterruptedException exception) {
             if (process != null) {
                 process.destroyForcibly();
@@ -144,8 +145,9 @@ public class DockerSandboxRuntime implements SandboxRuntime {
         return file;
     }
 
-    private String boundedOutput(Process process) throws Exception {
+    private BoundedOutput boundedOutput(Process process) throws Exception {
         StringBuilder retained = new StringBuilder();
+        boolean truncated = false;
         try (InputStreamReader reader = new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)) {
             char[] buffer = new char[4096];
             int read;
@@ -154,10 +156,14 @@ public class DockerSandboxRuntime implements SandboxRuntime {
                 int overflow = retained.length() - properties.maxOutputChars();
                 if (overflow > 0) {
                     retained.delete(0, overflow);
+                    truncated = true;
                 }
             }
         }
-        return retained.toString();
+        return new BoundedOutput(retained.toString(), truncated);
+    }
+
+    private record BoundedOutput(String content, boolean truncated) {
     }
 
     private static void removeContainer(String containerName) {

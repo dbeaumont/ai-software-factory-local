@@ -85,8 +85,11 @@ public class SandboxExecutionTools {
             @ToolParam(description = "Immutable source commit SHA") String source_commit,
             @ToolParam(description = "Authorized caller; workflow only") String actor,
             @ToolParam(description = "32-character trace identifier") String trace_id,
-            @ToolParam(description = "Opaque execution handle") String execution_id) {
-        return jobs.get(schema_version, task_id, source_commit, actor, trace_id, execution_id);
+            @ToolParam(description = "Opaque execution handle") String execution_id,
+            @ToolParam(required = false, description = "Zero-based cursor in the retained redacted output") Integer output_cursor,
+            @ToolParam(required = false, description = "Page size from 1 to 16384 characters") Integer output_limit) {
+        return jobs.get(schema_version, task_id, source_commit, actor, trace_id, execution_id,
+                output_cursor, output_limit);
     }
 
     @Tool(name = "sandbox.cancel_execution", description = "Cancel a task-owned sandbox execution and clean up its container")

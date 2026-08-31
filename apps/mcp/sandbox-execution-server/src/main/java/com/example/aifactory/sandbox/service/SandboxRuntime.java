@@ -13,7 +13,10 @@ public interface SandboxRuntime {
         // Runtimes without an external job backend have nothing to reconcile.
     }
 
-    record RuntimeResult(int exitCode, String output) {
+    record RuntimeResult(int exitCode, String output, boolean outputTruncated) {
+        public RuntimeResult(int exitCode, String output) {
+            this(exitCode, output, false);
+        }
     }
 
     final class RuntimeTimeoutException extends Exception {

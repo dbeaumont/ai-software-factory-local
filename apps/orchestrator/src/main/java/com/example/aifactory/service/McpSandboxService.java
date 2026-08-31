@@ -12,6 +12,8 @@ import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,6 +21,8 @@ import java.util.UUID;
 
 @Service
 public class McpSandboxService implements SandboxExecutor {
+    private static final int OUTPUT_PAGE_CHARS = 16_384;
+    private static final int MAX_RETAINED_OUTPUT_CHARS = 1_048_576;
     private final McpToolInvoker invoker;
     private final McpFactoryProperties properties;
     private final Counter calls;
@@ -100,7 +104,7 @@ public class McpSandboxService implements SandboxExecutor {
             if (status.equals("SUCCEEDED")) {
                 calls.increment();
                 String verdict = requiredText(execution, "verdict");
-                String output = execution.path("output").asText("");
+                String output = collectOutput(execution, taskId, sourceCommit, traceId, executionId);
                 if (!verdict.equals("PASSED")) {
                     throw new IllegalStateException("Sandbox " + operation + " rejected (exit="
                             + execution.path("exit_code").asText("unknown") + "):\n" + output);
@@ -111,6 +115,10 @@ public class McpSandboxService implements SandboxExecutor {
                 throw new IllegalStateException("Sandbox " + operation + " ended with " + status + ": "
                         + execution.path("error").asText("no safe error detail"));
             }
+            if (!status.equals("ACCEPTED") && !status.equals("RUNNING")) {
+                throw new IllegalStateException("Malformed sandbox MCP response: unknown status " + status);
+            }
+            validateHeartbeat(execution, properties.sandboxPollTimeout());
             sleep(properties.sandboxPollInterval());
         }
         throw new IllegalStateException("Sandbox " + operation + " polling timed out");
@@ -127,9 +135,68 @@ public class McpSandboxService implements SandboxExecutor {
     }
 
     private static Map<String, Object> lookup(String taskId, String sourceCommit, String traceId, String executionId) {
+        return lookup(taskId, sourceCommit, traceId, executionId, 0);
+    }
+
+    private static Map<String, Object> lookup(String taskId, String sourceCommit, String traceId, String executionId,
+                                              int outputCursor) {
         Map<String, Object> arguments = common(taskId, sourceCommit, traceId);
         arguments.put("execution_id", executionId);
+        arguments.put("output_cursor", outputCursor);
+        arguments.put("output_limit", OUTPUT_PAGE_CHARS);
         return arguments;
+    }
+
+    private String collectOutput(JsonNode firstPage, String taskId, String sourceCommit, String traceId,
+                                 String executionId) throws Exception {
+        StringBuilder output = new StringBuilder();
+        JsonNode page = firstPage;
+        int expectedCursor = 0;
+        Integer declaredTotal = page.has("output_total_chars") ? page.path("output_total_chars").asInt(-1) : null;
+        while (true) {
+            int cursor = page.has("output_cursor") ? page.path("output_cursor").asInt(-1) : expectedCursor;
+            if (cursor != expectedCursor) {
+                throw new IllegalStateException("Malformed sandbox MCP response: invalid output_cursor");
+            }
+            output.append(page.path("output").asText(""));
+            if (output.length() > MAX_RETAINED_OUTPUT_CHARS) {
+                throw new IllegalStateException("Malformed sandbox MCP response: output exceeds client limit");
+            }
+            JsonNode nextNode = page.path("next_output_cursor");
+            if (!nextNode.isIntegralNumber()) {
+                if (declaredTotal != null && declaredTotal != output.length()) {
+                    throw new IllegalStateException("Malformed sandbox MCP response: incomplete paginated output");
+                }
+                return output.toString();
+            }
+            int next = nextNode.asInt(-1);
+            if (next <= expectedCursor || next != output.length()) {
+                throw new IllegalStateException("Malformed sandbox MCP response: invalid next_output_cursor");
+            }
+            expectedCursor = next;
+            page = invoker.call(properties.sandboxServerName(), "sandbox.get_execution",
+                    lookup(taskId, sourceCommit, traceId, executionId, next));
+            String status = requiredText(page, "status");
+            if (!status.equals("SUCCEEDED")) {
+                throw new IllegalStateException("Malformed sandbox MCP response: output changed state during pagination");
+            }
+        }
+    }
+
+    private static void validateHeartbeat(JsonNode execution, Duration maximumAge) {
+        String value = requiredText(execution, "heartbeat_at");
+        try {
+            Instant heartbeat = Instant.parse(value);
+            Instant now = Instant.now();
+            if (heartbeat.isAfter(now.plus(Duration.ofMinutes(1)))) {
+                throw new IllegalStateException("Malformed sandbox MCP response: heartbeat_at is in the future");
+            }
+            if (heartbeat.isBefore(now.minus(maximumAge))) {
+                throw new IllegalStateException("Sandbox execution heartbeat is stale");
+            }
+        } catch (DateTimeParseException exception) {
+            throw new IllegalStateException("Malformed sandbox MCP response: invalid heartbeat_at", exception);
+        }
     }
 
     private static String patchDigest(Path workspace) throws Exception {

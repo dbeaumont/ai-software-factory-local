@@ -130,6 +130,10 @@ public class SandboxJobStore {
                 || snapshot.startedAt() != null && snapshot.completedAt().isBefore(snapshot.startedAt()))) {
             throw invalid(source, "sandbox job completion timestamp is inconsistent");
         }
+        if (snapshot.heartbeatAt() != null && (snapshot.heartbeatAt().isBefore(snapshot.createdAt())
+                || snapshot.completedAt() != null && snapshot.heartbeatAt().isAfter(snapshot.completedAt()))) {
+            throw invalid(source, "sandbox job heartbeat timestamp is inconsistent");
+        }
     }
 
     private static void requireExecutionId(String executionId) {
@@ -154,18 +158,30 @@ public class SandboxJobStore {
             Verdict verdict,
             Integer exitCode,
             String output,
+            boolean outputTruncated,
             String error,
             Instant createdAt,
             Instant startedAt,
-            Instant completedAt) {
+            Instant completedAt,
+            Instant heartbeatAt) {
+
+        public static JobSnapshot versionOne(String executionId, String taskId, String sourceCommit,
+                                             String patchDigest, String idempotencyKey, Operation operation,
+                                             ExecutionStatus status, Verdict verdict, Integer exitCode,
+                                             String output, boolean outputTruncated, String error, Instant createdAt,
+                                             Instant startedAt, Instant completedAt, Instant heartbeatAt) {
+            return new JobSnapshot(FORMAT_VERSION, executionId, taskId, sourceCommit, patchDigest, idempotencyKey,
+                    operation, status, verdict, exitCode, output, outputTruncated, error, createdAt, startedAt,
+                    completedAt, heartbeatAt);
+        }
 
         public static JobSnapshot versionOne(String executionId, String taskId, String sourceCommit,
                                              String patchDigest, String idempotencyKey, Operation operation,
                                              ExecutionStatus status, Verdict verdict, Integer exitCode,
                                              String output, String error, Instant createdAt, Instant startedAt,
                                              Instant completedAt) {
-            return new JobSnapshot(FORMAT_VERSION, executionId, taskId, sourceCommit, patchDigest, idempotencyKey,
-                    operation, status, verdict, exitCode, output, error, createdAt, startedAt, completedAt);
+            return versionOne(executionId, taskId, sourceCommit, patchDigest, idempotencyKey, operation, status,
+                    verdict, exitCode, output, false, error, createdAt, startedAt, completedAt, null);
         }
     }
 }

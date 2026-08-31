@@ -98,7 +98,7 @@ Le serveur accepte des opérations énumérées, jamais une chaîne de commande.
 | `sandbox.run_tests` | tâche, commit, `test_profile_id` | job + résumé + preuves | profil allow-listé, pas de commande libre |
 | `sandbox.run_quality` | tâche, commit, `quality_profile_id` | job + état technique | secrets injectés au runner seulement |
 | `sandbox.run_security` | tâche, commit, `security_profile_id` | job + SBOM/rapport URI | versions Syft/Trivy épinglées |
-| `sandbox.get_execution` | `execution_id` | état, timestamps, exit code normalisé | handle aléatoire lié au principal et à la tâche |
+| `sandbox.get_execution` | `execution_id`, curseur/limite optionnels | état, heartbeat, timestamps, exit code et page de log | handle lié au principal/tâche, page et sortie totale bornées |
 | `sandbox.cancel_execution` | `execution_id`, motif | état final | workflow/administrateur seulement, audit obligatoire |
 | ressource `execution://{id}/log` | identifiant de job | log paginé et redacted | taille/retention bornées |
 
@@ -260,7 +260,7 @@ Objectif : retirer le principal privilège critique de l'orchestrateur.
 - [x] **MCP-075** — Implémenter `validate_patch` et `apply_patch` avec réseau coupé et contrôles Git actuels. _(Tests déterministes et smoke tests Docker réels réussis via MCP pour les deux opérations avec verdict `PASSED` et exit code 0 ; l'application produit un diff propre et son rejeu retourne le même job.)_
 - [ ] **MCP-076** — Implémenter `run_tests` par profil ; conserver l'usage explicite d'Artifactory et interdire l'egress non requis. _(`test-auto-v1` et injection Artifactory terminés ; profils par build et egress allow-list à ajouter.)_
 - [ ] **MCP-077** — Implémenter temporairement `run_quality` et `run_security` à parité avec `SandboxService`. _(Profils portés ; parité runtime à mesurer.)_
-- [ ] **MCP-078** — Implémenter `get_execution`, logs paginés/redacted, heartbeats, timeout, cancellation et nettoyage garanti. _(État, sortie bornée/redacted, timeout, annulation et cleanup terminés ; pagination et heartbeat à ajouter.)_
+- [x] **MCP-078** — Implémenter `get_execution`, logs paginés/redacted, heartbeats, timeout, cancellation et nettoyage garanti. _(Pagination par curseur bornée à 16 384 caractères, redaction avant découpage, signalement de troncature globale, heartbeat persistant des jobs actifs et contrôle fail-closed côté orchestrateur ; timeout, annulation et cleanup couverts.)_
 - [x] **MCP-079** — Normaliser séparément état technique, exit code et verdict métier ; considérer preuve absente/incomplète comme `INDETERMINATE` bloquant.
 - [x] **MCP-080** — Vérifier le digest du patch et du commit avant chaque job ; refuser un workspace modifié par une autre tentative.
 - [x] **MCP-081** — Injecter les secrets au job au dernier moment ; ne jamais les inclure dans MCP, le manifeste persistant ou les logs.
