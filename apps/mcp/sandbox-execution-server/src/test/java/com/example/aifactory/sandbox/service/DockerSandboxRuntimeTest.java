@@ -16,7 +16,7 @@ class DockerSandboxRuntimeTest {
         SandboxExecutionProperties properties = new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
                 "sandbox@sha256:fixed", "factory-network",
-                2, 100, Duration.ofDays(7), Duration.ofSeconds(15),
+                2, 32, 2, 100, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", "");
         DockerSandboxRuntime runtime = new DockerSandboxRuntime(properties);
 
@@ -67,7 +67,7 @@ class DockerSandboxRuntimeTest {
         SandboxExecutionProperties properties = new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
                 "sandbox@sha256:fixed", "factory-network",
-                2, 100, Duration.ofDays(7), Duration.ofSeconds(15),
+                2, 32, 2, 100, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", "");
         return new DockerSandboxRuntime(properties);
     }
@@ -81,26 +81,50 @@ class DockerSandboxRuntimeTest {
     }
 
     @Test
+    void retainsOnlyTheBoundedTailAndReportsTruncation() throws Exception {
+        DockerSandboxRuntime runtime = runtime();
+        Process process = new ProcessBuilder("bash", "-lc", "printf 'x%.0s' {1..70000}").start();
+
+        DockerSandboxRuntime.BoundedOutput output = runtime.boundedOutput(process);
+
+        assertEquals(0, process.waitFor());
+        assertTrue(output.truncated());
+        assertEquals(65_536, output.content().length());
+        assertEquals("x".repeat(65_536), output.content());
+        runtime.shutdown();
+    }
+
+    @Test
     void rejectsUnsafeJobRetentionBounds() {
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
                 "sandbox@sha256:fixed", "factory-network",
-                2, 100, Duration.ofSeconds(59), Duration.ofSeconds(15),
+                2, 32, 2, 100, Duration.ofSeconds(59), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
                 "sandbox@sha256:fixed", "factory-network",
-                2, 100, Duration.ofDays(366), Duration.ofSeconds(15),
+                2, 32, 2, 100, Duration.ofDays(366), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
                 "sandbox@sha256:fixed", "factory-network",
-                2, 100, Duration.ofDays(7), Duration.ofMillis(999),
+                2, 32, 2, 100, Duration.ofDays(7), Duration.ofMillis(999),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
                 "sandbox@sha256:fixed", "factory-network",
-                2, 100, Duration.ofDays(7), Duration.ofMinutes(6),
+                2, 32, 2, 100, Duration.ofDays(7), Duration.ofMinutes(6),
+                65_536, 1_048_576, "", "", "", ""));
+        assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
+                Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
+                "sandbox@sha256:fixed", "factory-network",
+                1, 1, 3, 10, Duration.ofDays(7), Duration.ofSeconds(15),
+                65_536, 1_048_576, "", "", "", ""));
+        assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
+                Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
+                "sandbox@sha256:fixed", "factory-network",
+                1, -1, 1, 10, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", ""));
     }
 }

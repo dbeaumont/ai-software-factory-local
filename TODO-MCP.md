@@ -264,8 +264,8 @@ Objectif : retirer le principal privilège critique de l'orchestrateur.
 - [x] **MCP-079** — Normaliser séparément état technique, exit code et verdict métier ; considérer preuve absente/incomplète comme `INDETERMINATE` bloquant.
 - [x] **MCP-080** — Vérifier le digest du patch et du commit avant chaque job ; refuser un workspace modifié par une autre tentative.
 - [x] **MCP-081** — Injecter les secrets au job au dernier moment ; ne jamais les inclure dans MCP, le manifeste persistant ou les logs.
-- [ ] **MCP-082** — Conserver les preuves même en cas d'échec/timeout, avec digest et statut `partial` explicite.
-- [ ] **MCP-083** — Ajouter quotas globaux/par tâche, limite de jobs concurrents et backpressure. _(Concurrence et capacité globales terminées ; quota par tâche et file bornée explicite à ajouter.)_
+- [x] **MCP-082** — Conserver les preuves même en cas d'échec/timeout, avec digest et statut `partial` explicite. _(La sortie bornée est redacted puis persistée avec `evidence_status=NONE|PARTIAL|COMPLETE` et un SHA-256 ; timeout et troncature produisent `PARTIAL/INDETERMINATE`, la restauration vérifie le digest du snapshot et l'orchestrateur recalcule le digest après pagination avant d'accepter uniquement `COMPLETE`.)_
+- [x] **MCP-083** — Ajouter quotas globaux/par tâche, limite de jobs concurrents et backpressure. _(Pool fixe et file `ArrayBlockingQueue`/`SynchronousQueue`, admission atomique bornée globalement et par tâche, rejeu idempotent prioritaire, rollback sans snapshot orphelin, métriques running/queued/queue duration/rejets et tests déterministes de saturation puis récupération.)_
 - [x] **MCP-084** — Ajouter tests des limites CPU/mémoire/PIDs/temps, réseau, volumes read-only, capabilities Linux et `no-new-privileges`. _(Le test Docker opt-in inspecte un conteneur réellement démarré et vérifie réseau `none`, 2 Gio, 2 CPU, 512 PIDs, `cap_drop=ALL`, `no-new-privileges`, workspace read-only et absence du cache Maven ; le timeout est normalisé en `TIMED_OUT/INDETERMINATE` par test déterministe.)_
 - [ ] **MCP-085** — Ajouter tests de commande injectée dans noms de fichiers, profils, variables et contenu du patch. _(Injection via `task_id` testée ; corpus fichiers/patch/variables à compléter.)_
 - [x] **MCP-086** — Ajouter tests de job orphelin, redémarrage serveur, double soumission, cancellation, retry et nettoyage. _(Tests déterministes de restauration, double soumission, cancellation et reprise fail-closed d'un job interrompu ; smoke test Docker réel validé avec snapshot restauré, rejeu idempotent sur le même `execution_id`, suppression ciblée de l'orphelin au redémarrage et aucun artefact éphémère résiduel.)_
@@ -406,7 +406,7 @@ Objectif : passer d'un réseau Compose de confiance à une plateforme Zero Trust
 - [ ] Charge sur lectures de contexte et exécutions concurrentes avec quotas vérifiés.
 - [ ] Mesure p50/p95/p99 des appels, temps de queue et durée des jobs.
 - [ ] Comparaison tokens/contexte avant-après retrieval MCP.
-- [ ] Test de backpressure lorsque la capacité sandbox est saturée.
+- [x] Test de backpressure lorsque la capacité sandbox est saturée.
 
 ## 8. Stratégie de déploiement et rollback
 

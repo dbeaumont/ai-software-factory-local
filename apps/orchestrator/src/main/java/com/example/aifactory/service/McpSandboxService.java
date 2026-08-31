@@ -105,6 +105,7 @@ public class McpSandboxService implements SandboxExecutor {
                 calls.increment();
                 String verdict = requiredText(execution, "verdict");
                 String output = collectOutput(execution, taskId, sourceCommit, traceId, executionId);
+                validateEvidence(execution, output);
                 if (!verdict.equals("PASSED")) {
                     throw new IllegalStateException("Sandbox " + operation + " rejected (exit="
                             + execution.path("exit_code").asText("unknown") + "):\n" + output);
@@ -196,6 +197,22 @@ public class McpSandboxService implements SandboxExecutor {
             }
         } catch (DateTimeParseException exception) {
             throw new IllegalStateException("Malformed sandbox MCP response: invalid heartbeat_at", exception);
+        }
+    }
+
+    private static void validateEvidence(JsonNode execution, String output) throws Exception {
+        String evidenceStatus = requiredText(execution, "evidence_status");
+        String expectedDigest = requiredText(execution, "output_digest");
+        if (!expectedDigest.matches("[0-9a-f]{64}")) {
+            throw new IllegalStateException("Malformed sandbox MCP response: invalid output_digest");
+        }
+        String actualDigest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(output.getBytes(StandardCharsets.UTF_8)));
+        if (!actualDigest.equals(expectedDigest)) {
+            throw new IllegalStateException("Malformed sandbox MCP response: output digest mismatch");
+        }
+        if (!evidenceStatus.equals("COMPLETE") || execution.path("output_truncated").asBoolean(true)) {
+            throw new IllegalStateException("Sandbox execution returned partial evidence");
         }
     }
 

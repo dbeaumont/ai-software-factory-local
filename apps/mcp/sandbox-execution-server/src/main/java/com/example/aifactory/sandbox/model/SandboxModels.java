@@ -33,6 +33,12 @@ public final class SandboxModels {
         INDETERMINATE
     }
 
+    public enum EvidenceStatus {
+        NONE,
+        PARTIAL,
+        COMPLETE
+    }
+
     public record StartExecutionRequest(
             String schemaVersion,
             String taskId,
@@ -55,6 +61,8 @@ public final class SandboxModels {
             @JsonProperty("next_output_cursor") Integer nextOutputCursor,
             @JsonProperty("output_total_chars") int outputTotalChars,
             @JsonProperty("output_truncated") boolean outputTruncated,
+            @JsonProperty("evidence_status") EvidenceStatus evidenceStatus,
+            @JsonProperty("output_digest") String outputDigest,
             String error,
             @JsonProperty("created_at") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant createdAt,
             @JsonProperty("started_at") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant startedAt,

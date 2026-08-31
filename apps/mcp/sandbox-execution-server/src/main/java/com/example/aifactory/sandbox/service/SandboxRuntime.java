@@ -20,8 +20,25 @@ public interface SandboxRuntime {
     }
 
     final class RuntimeTimeoutException extends Exception {
+        private final String partialOutput;
+        private final boolean outputTruncated;
+
         public RuntimeTimeoutException(String message) {
+            this(message, "", false);
+        }
+
+        public RuntimeTimeoutException(String message, String partialOutput, boolean outputTruncated) {
             super(message);
+            this.partialOutput = partialOutput;
+            this.outputTruncated = outputTruncated;
+        }
+
+        public String partialOutput() {
+            return partialOutput;
+        }
+
+        public boolean outputTruncated() {
+            return outputTruncated;
         }
     }
 }

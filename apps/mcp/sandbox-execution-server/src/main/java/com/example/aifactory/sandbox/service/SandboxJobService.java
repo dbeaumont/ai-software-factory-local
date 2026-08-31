@@ -4,7 +4,9 @@ import com.example.aifactory.sandbox.config.SandboxExecutionProperties;
 import com.example.aifactory.sandbox.model.SandboxModels.*;
 import com.example.aifactory.sandbox.service.SandboxJobStore.JobSnapshot;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,13 +42,18 @@ public class SandboxJobService {
     private final SandboxRuntime runtime;
     private final SandboxJobStore store;
     private final Clock clock;
-    private final ExecutorService executor;
+    private final ThreadPoolExecutor executor;
     private final ScheduledExecutorService maintenance;
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
     private final Map<String, String> idempotency = new ConcurrentHashMap<>();
+    private final Object admissionLock = new Object();
     private final Counter submitted;
     private final Counter completed;
     private final Counter failed;
+    private final Counter rejectedGlobal;
+    private final Counter rejectedTask;
+    private final Counter rejectedRetention;
+    private final Timer queueDuration;
 
     public SandboxJobService(SandboxExecutionProperties properties, SandboxRuntime runtime, MeterRegistry metrics,
                              SandboxJobStore store, Clock clock) {
@@ -54,7 +61,11 @@ public class SandboxJobService {
         this.runtime = runtime;
         this.store = store;
         this.clock = clock;
-        this.executor = Executors.newFixedThreadPool(Math.max(1, properties.maxConcurrentJobs()));
+        BlockingQueue<Runnable> queue = properties.maxQueuedJobs() == 0
+                ? new SynchronousQueue<>()
+                : new ArrayBlockingQueue<>(properties.maxQueuedJobs());
+        this.executor = new ThreadPoolExecutor(properties.maxConcurrentJobs(), properties.maxConcurrentJobs(),
+                0L, TimeUnit.MILLISECONDS, queue, new ThreadPoolExecutor.AbortPolicy());
         this.maintenance = Executors.newSingleThreadScheduledExecutor(task -> {
             Thread thread = new Thread(task, "sandbox-job-retention");
             thread.setDaemon(true);
@@ -63,6 +74,17 @@ public class SandboxJobService {
         this.submitted = Counter.builder("ai_factory_sandbox_jobs_submitted").register(metrics);
         this.completed = Counter.builder("ai_factory_sandbox_jobs_completed").register(metrics);
         this.failed = Counter.builder("ai_factory_sandbox_jobs_failed").register(metrics);
+        this.rejectedGlobal = Counter.builder("ai_factory_sandbox_jobs_rejected")
+                .tag("reason", "global_capacity").register(metrics);
+        this.rejectedTask = Counter.builder("ai_factory_sandbox_jobs_rejected")
+                .tag("reason", "task_quota").register(metrics);
+        this.rejectedRetention = Counter.builder("ai_factory_sandbox_jobs_rejected")
+                .tag("reason", "retention_capacity").register(metrics);
+        this.queueDuration = Timer.builder("ai_factory_sandbox_job_queue_duration").register(metrics);
+        Gauge.builder("ai_factory_sandbox_jobs_running", executor, ThreadPoolExecutor::getActiveCount)
+                .register(metrics);
+        Gauge.builder("ai_factory_sandbox_jobs_queued", executor, value -> value.getQueue().size())
+                .register(metrics);
         restorePersistedJobs();
         long maintenanceMillis = Math.max(1_000L, Math.min(properties.heartbeatInterval().toMillis(),
                 Math.min(Duration.ofMinutes(1).toMillis(), properties.jobRetention().toMillis() / 4)));
@@ -75,32 +97,58 @@ public class SandboxJobService {
         Path workspace = workspace(request.taskId(), request.sourceCommit());
         verifyPatchDigest(operation, workspace, request.patchDigest());
         pruneExpiredJobs();
-        String idempotencyScope = request.taskId() + '|' + operation + '|' + request.idempotencyKey();
-        String existingId = idempotency.get(idempotencyScope);
-        if (existingId != null) {
-            return view(requireOwnedJob(request.taskId(), request.sourceCommit(), existingId));
+        String idempotencyScope = idempotencyScope(request.taskId(), operation, request.idempotencyKey());
+        synchronized (admissionLock) {
+            String existingId = idempotency.get(idempotencyScope);
+            if (existingId != null) {
+                return view(requireOwnedJob(request.taskId(), request.sourceCommit(), existingId));
+            }
+            pruneCompletedJobs();
+            if (jobs.size() >= properties.maxJobs()) {
+                rejectedRetention.increment();
+                throw new IllegalStateException("sandbox job retention capacity is exhausted");
+            }
+            long activeJobs = activeJobCount(null);
+            if (activeJobs >= (long) properties.maxConcurrentJobs() + properties.maxQueuedJobs()) {
+                rejectedGlobal.increment();
+                throw new IllegalStateException("sandbox execution queue is saturated");
+            }
+            if (activeJobCount(request.taskId()) >= properties.maxActiveJobsPerTask()) {
+                rejectedTask.increment();
+                throw new IllegalStateException("sandbox task active job quota is exhausted");
+            }
+            Job job = new Job(randomId(), request.taskId(), request.sourceCommit(), request.patchDigest(),
+                    request.idempotencyKey(), operation, Instant.now(clock));
+            idempotency.put(idempotencyScope, job.executionId);
+            jobs.put(job.executionId, job);
+            try {
+                store.save(snapshot(job));
+                job.future = executor.submit(() -> run(job, workspace));
+            } catch (RejectedExecutionException exception) {
+                rollbackAdmission(job, idempotencyScope);
+                rejectedGlobal.increment();
+                throw new IllegalStateException("sandbox execution queue is saturated", exception);
+            } catch (RuntimeException exception) {
+                rollbackAdmission(job, idempotencyScope);
+                throw exception;
+            }
+            submitted.increment();
+            return view(job);
         }
-        pruneCompletedJobs();
-        if (jobs.size() >= properties.maxJobs()) {
-            throw new IllegalStateException("sandbox job capacity is exhausted");
-        }
-        Job job = new Job(randomId(), request.taskId(), request.sourceCommit(), request.patchDigest(),
-                request.idempotencyKey(), operation, Instant.now(clock));
-        String racedId = idempotency.putIfAbsent(idempotencyScope, job.executionId);
-        if (racedId != null) {
-            return view(requireOwnedJob(request.taskId(), request.sourceCommit(), racedId));
-        }
-        jobs.put(job.executionId, job);
-        try {
-            store.save(snapshot(job));
-        } catch (RuntimeException exception) {
-            jobs.remove(job.executionId, job);
-            idempotency.remove(idempotencyScope, job.executionId);
-            throw exception;
-        }
-        submitted.increment();
-        job.future = executor.submit(() -> run(job, workspace));
-        return view(job);
+    }
+
+    private void rollbackAdmission(Job job, String idempotencyScope) {
+        jobs.remove(job.executionId, job);
+        idempotency.remove(idempotencyScope, job.executionId);
+        store.delete(job.executionId);
+    }
+
+    private long activeJobCount(String taskId) {
+        return jobs.values().stream().filter(job -> {
+            synchronized (job) {
+                return !terminal(job.status) && (taskId == null || taskId.equals(job.taskId));
+            }
+        }).count();
     }
 
     public ExecutionView get(String schemaVersion, String taskId, String sourceCommit, String actor,
@@ -132,6 +180,7 @@ public class SandboxJobService {
             job.heartbeatAt = job.completedAt;
             if (job.future != null) {
                 job.future.cancel(true);
+                executor.purge();
             }
             cancelled = snapshot(job);
         }
@@ -153,6 +202,7 @@ public class SandboxJobService {
                 job.status = ExecutionStatus.RUNNING;
                 job.startedAt = Instant.now(clock);
                 job.heartbeatAt = job.startedAt;
+                queueDuration.record(Duration.between(job.createdAt, job.startedAt));
                 store.save(snapshot(job));
             }
             SandboxRuntime.RuntimeResult result = runtime.execute(job.operation, job.executionId, workspace);
@@ -163,15 +213,19 @@ public class SandboxJobService {
                 job.exitCode = result.exitCode();
                 job.output = redact(result.output());
                 job.outputTruncated = result.outputTruncated();
+                job.evidenceStatus = result.outputTruncated() ? EvidenceStatus.PARTIAL : EvidenceStatus.COMPLETE;
+                job.outputDigest = outputDigest(job.output);
                 job.status = ExecutionStatus.SUCCEEDED;
-                job.verdict = result.exitCode() == 0 ? Verdict.PASSED : Verdict.REJECTED;
+                job.verdict = result.outputTruncated()
+                        ? Verdict.INDETERMINATE
+                        : result.exitCode() == 0 ? Verdict.PASSED : Verdict.REJECTED;
                 job.completedAt = Instant.now(clock);
                 job.heartbeatAt = job.completedAt;
                 store.save(snapshot(job));
             }
             completed.increment();
         } catch (SandboxRuntime.RuntimeTimeoutException exception) {
-            fail(job, ExecutionStatus.TIMED_OUT, "sandbox profile timed out");
+            timeout(job, exception);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             synchronized (job) {
@@ -190,6 +244,19 @@ public class SandboxJobService {
                 return;
             }
             failLocked(job, status, error);
+        }
+    }
+
+    private void timeout(Job job, SandboxRuntime.RuntimeTimeoutException exception) {
+        synchronized (job) {
+            if (job.status == ExecutionStatus.CANCELLED) {
+                return;
+            }
+            job.output = redact(exception.partialOutput());
+            job.outputTruncated = exception.outputTruncated();
+            job.evidenceStatus = EvidenceStatus.PARTIAL;
+            job.outputDigest = outputDigest(job.output);
+            failLocked(job, ExecutionStatus.TIMED_OUT, "sandbox profile timed out");
         }
     }
 
@@ -367,6 +434,15 @@ public class SandboxJobService {
         return redacted;
     }
 
+    private static String outputDigest(String output) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest((output == null ? "" : output).getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
     private static String randomId() {
         return UUID.randomUUID().toString().replace("-", "");
     }
@@ -390,17 +466,35 @@ public class SandboxJobService {
             job.exitCode = persisted.exitCode();
             job.output = persisted.output();
             job.outputTruncated = persisted.outputTruncated();
+            job.evidenceStatus = persisted.evidenceStatus();
+            job.outputDigest = persisted.outputDigest();
             job.error = persisted.error();
             job.startedAt = persisted.startedAt();
             job.completedAt = persisted.completedAt();
             job.heartbeatAt = persisted.heartbeatAt();
-            if (!terminal(job.status)) {
+            boolean recoveredInterruptedJob = !terminal(job.status);
+            if (recoveredInterruptedJob) {
                 job.status = ExecutionStatus.FAILED;
                 job.verdict = Verdict.INDETERMINATE;
                 job.exitCode = null;
                 job.error = "sandbox controller restarted during execution";
                 job.completedAt = Instant.now(clock);
                 job.heartbeatAt = job.completedAt;
+            }
+            if (job.evidenceStatus == null) {
+                if (job.status == ExecutionStatus.SUCCEEDED) {
+                    job.evidenceStatus = job.outputTruncated ? EvidenceStatus.PARTIAL : EvidenceStatus.COMPLETE;
+                } else if (job.status == ExecutionStatus.TIMED_OUT || job.output != null) {
+                    job.evidenceStatus = EvidenceStatus.PARTIAL;
+                } else {
+                    job.evidenceStatus = EvidenceStatus.NONE;
+                }
+                if (job.evidenceStatus == EvidenceStatus.PARTIAL) {
+                    job.verdict = Verdict.INDETERMINATE;
+                }
+                job.outputDigest = job.evidenceStatus == EvidenceStatus.NONE ? null : outputDigest(job.output);
+            }
+            if (recoveredInterruptedJob || persisted.evidenceStatus() == null) {
                 store.save(snapshot(job));
             }
             Job previous = jobs.putIfAbsent(job.executionId, job);
@@ -419,7 +513,8 @@ public class SandboxJobService {
     private static JobSnapshot snapshot(Job job) {
         return JobSnapshot.versionOne(job.executionId, job.taskId, job.sourceCommit, job.patchDigest,
                 job.idempotencyKey, job.operation, job.status, job.verdict, job.exitCode, job.output,
-                job.outputTruncated, job.error, job.createdAt, job.startedAt, job.completedAt, job.heartbeatAt);
+                job.outputTruncated, job.evidenceStatus, job.outputDigest, job.error, job.createdAt, job.startedAt,
+                job.completedAt, job.heartbeatAt);
     }
 
     private static ExecutionView view(Job job) {
@@ -441,8 +536,9 @@ public class SandboxJobService {
             String page = job.output == null ? null : retained.substring(cursor, end);
             Integer nextCursor = end < retained.length() ? end : null;
             return new ExecutionView(job.executionId, job.taskId, job.operation, job.status, job.verdict,
-                    job.exitCode, page, cursor, nextCursor, retained.length(), job.outputTruncated, job.error,
-                    job.createdAt, job.startedAt, job.completedAt, job.heartbeatAt);
+                    job.exitCode, page, cursor, nextCursor, retained.length(), job.outputTruncated,
+                    job.evidenceStatus, job.outputDigest, job.error, job.createdAt, job.startedAt, job.completedAt,
+                    job.heartbeatAt);
         }
     }
 
@@ -465,6 +561,8 @@ public class SandboxJobService {
         private Integer exitCode;
         private String output;
         private boolean outputTruncated;
+        private EvidenceStatus evidenceStatus = EvidenceStatus.NONE;
+        private String outputDigest;
         private String error;
         private Instant startedAt;
         private Instant completedAt;

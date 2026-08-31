@@ -4,6 +4,7 @@ import com.example.aifactory.sandbox.config.SandboxExecutionProperties;
 import com.example.aifactory.sandbox.model.SandboxModels.*;
 import com.example.aifactory.sandbox.service.SandboxJobStore.JobSnapshot;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +56,7 @@ class SandboxJobServiceTest {
         Files.writeString(patch, "diff --git a/file.txt b/file.txt\n");
         patchDigest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(patch)));
         properties = new SandboxExecutionProperties(root, root.resolve(".sandbox-jobs"), "workspace", "image",
-                "network", 2, 100, Duration.ofHours(1), Duration.ofSeconds(15),
+                "network", 2, 32, 2, 100, Duration.ofHours(1), Duration.ofSeconds(15),
                 65_536, 1_048_576,
                 "mirror", "artifact-token", "sonar", "sonar-token");
         store = new SandboxJobStore(new ObjectMapper().findAndRegisterModules(), properties);
@@ -80,6 +81,8 @@ class SandboxJobServiceTest {
         assertEquals(first.executionId(), second.executionId());
         assertEquals(ExecutionStatus.SUCCEEDED, completed.status());
         assertEquals(Verdict.PASSED, completed.verdict());
+        assertEquals(EvidenceStatus.COMPLETE, completed.evidenceStatus());
+        assertEquals(digest("ok"), completed.outputDigest());
         assertEquals(1, runtime.calls.get());
     }
 
@@ -113,11 +116,14 @@ class SandboxJobServiceTest {
         assertFalse(completed.output().contains("top-secret"));
         assertFalse(completed.output().contains("artifact-token"));
         assertTrue(completed.output().contains("[REDACTED]"));
+        assertEquals(EvidenceStatus.COMPLETE, completed.evidenceStatus());
+        assertEquals(digest(completed.output()), completed.outputDigest());
     }
 
     @Test
     void mapsRuntimeTimeoutToABlockingIndeterminateResult() throws Exception {
-        runtime.failure = new SandboxRuntime.RuntimeTimeoutException("profile deadline exceeded");
+        runtime.failure = new SandboxRuntime.RuntimeTimeoutException("profile deadline exceeded",
+                "API_TOKEN=top-secret\npartial timeout output", true);
 
         ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
                 request("workflow", "stable-key-for-timeout", patchDigest));
@@ -127,6 +133,11 @@ class SandboxJobServiceTest {
         assertEquals(Verdict.INDETERMINATE, completed.verdict());
         assertNull(completed.exitCode());
         assertEquals("sandbox profile timed out", completed.error());
+        assertEquals(EvidenceStatus.PARTIAL, completed.evidenceStatus());
+        assertTrue(completed.outputTruncated());
+        assertFalse(completed.output().contains("top-secret"));
+        assertTrue(completed.output().contains("[REDACTED]"));
+        assertEquals(digest(completed.output()), completed.outputDigest());
     }
 
     @Test
@@ -139,6 +150,8 @@ class SandboxJobServiceTest {
         ExecutionView first = await(submitted.executionId());
 
         assertTrue(first.outputTruncated());
+        assertEquals(Verdict.INDETERMINATE, first.verdict());
+        assertEquals(EvidenceStatus.PARTIAL, first.evidenceStatus());
         assertEquals(0, first.outputCursor());
         assertEquals(4_096, first.output().length());
         assertEquals(4_096, first.nextOutputCursor());
@@ -154,6 +167,7 @@ class SandboxJobServiceTest {
         }
         assertEquals(first.outputTotalChars(), complete.length());
         assertTrue(complete.toString().startsWith("API_TOKEN=[REDACTED]"));
+        assertEquals(digest(complete.toString()), first.outputDigest());
         assertThrows(IllegalArgumentException.class, () -> jobs.get(
                 "1", "task-1", commit, "workflow", TRACE_ID, submitted.executionId(), -1, 10));
         assertThrows(IllegalArgumentException.class, () -> jobs.get(
@@ -204,9 +218,12 @@ class SandboxJobServiceTest {
         ExecutionView replayed = jobs.submit(Operation.VALIDATE_PATCH, request);
         assertEquals(ExecutionStatus.SUCCEEDED, restored.status());
         assertTrue(restored.outputTruncated());
+        assertEquals(Verdict.INDETERMINATE, restored.verdict());
+        assertEquals(EvidenceStatus.PARTIAL, restored.evidenceStatus());
         assertEquals(5_000, restored.outputTotalChars());
         assertEquals(4_096, restored.nextOutputCursor());
         assertEquals(restored.completedAt(), restored.heartbeatAt());
+        assertEquals(digest("x".repeat(5_000)), restored.outputDigest());
         assertEquals(submitted.executionId(), replayed.executionId());
         assertEquals(0, restartedRuntime.calls.get());
         assertEquals(1, restartedRuntime.reconciliations.get());
@@ -228,6 +245,8 @@ class SandboxJobServiceTest {
         ExecutionView restored = jobs.get("1", "task-1", commit, "workflow", TRACE_ID, executionId);
         assertEquals(ExecutionStatus.FAILED, restored.status());
         assertEquals(Verdict.INDETERMINATE, restored.verdict());
+        assertEquals(EvidenceStatus.NONE, restored.evidenceStatus());
+        assertNull(restored.outputDigest());
         assertEquals("sandbox controller restarted during execution", restored.error());
         assertNotNull(restored.completedAt());
         assertEquals(restored.completedAt(), restored.heartbeatAt());
@@ -294,11 +313,84 @@ class SandboxJobServiceTest {
 
         assertEquals(ExecutionStatus.CANCELLED, cancelled.status());
         assertEquals(Verdict.INDETERMINATE, cancelled.verdict());
+        assertEquals(EvidenceStatus.NONE, cancelled.evidenceStatus());
+        assertNull(cancelled.outputDigest());
         assertEquals(submitted.executionId(), runtime.cancelledExecutionId);
+    }
+
+    @Test
+    void rejectsNewJobsWhenTheBoundedGlobalQueueIsSaturated() throws Exception {
+        restartWithLimits(1, 1, 2);
+        runtime.block = true;
+
+        ExecutionView running = jobs.submit(Operation.RUN_TESTS,
+                request("workflow", "global-capacity-running", patchDigest));
+        assertTrue(runtime.started.await(2, TimeUnit.SECONDS));
+        ExecutionView queued = jobs.submit(Operation.RUN_QUALITY,
+                request("workflow", "global-capacity-queued", patchDigest));
+
+        IllegalStateException rejected = assertThrows(IllegalStateException.class,
+                () -> jobs.submit(Operation.RUN_SECURITY,
+                        request("workflow", "global-capacity-rejected", patchDigest)));
+
+        assertTrue(rejected.getMessage().contains("queue is saturated"));
+        assertEquals(2, store.load().size());
+        jobs.cancel("1", "task-1", commit, "workflow", TRACE_ID, running.executionId());
+        jobs.cancel("1", "task-1", commit, "workflow", TRACE_ID, queued.executionId());
+    }
+
+    @Test
+    void enforcesPerTaskQuotaButAllowsIdempotentReplayAndRecovery() throws Exception {
+        restartWithLimits(1, 2, 1);
+        runtime.block = true;
+        StartExecutionRequest firstRequest = request("workflow", "task-quota-running", patchDigest);
+
+        ExecutionView running = jobs.submit(Operation.RUN_TESTS, firstRequest);
+        assertTrue(runtime.started.await(2, TimeUnit.SECONDS));
+        ExecutionView replayed = jobs.submit(Operation.RUN_TESTS, firstRequest);
+        IllegalStateException rejected = assertThrows(IllegalStateException.class,
+                () -> jobs.submit(Operation.RUN_QUALITY,
+                        request("workflow", "task-quota-rejected", patchDigest)));
+
+        assertEquals(running.executionId(), replayed.executionId());
+        assertTrue(rejected.getMessage().contains("task active job quota"));
+
+        jobs.cancel("1", "task-1", commit, "workflow", TRACE_ID, running.executionId());
+        ExecutionView replacement = jobs.submit(Operation.RUN_QUALITY,
+                request("workflow", "task-quota-replacement", patchDigest));
+        assertNotEquals(running.executionId(), replacement.executionId());
+        jobs.cancel("1", "task-1", commit, "workflow", TRACE_ID, replacement.executionId());
+    }
+
+    @Test
+    void rejectsTamperedPersistedEvidenceOnRestart() throws Exception {
+        ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
+                request("workflow", "tampered-evidence-key", patchDigest));
+        ExecutionView completed = await(submitted.executionId());
+        assertEquals(EvidenceStatus.COMPLETE, completed.evidenceStatus());
+        jobs.shutdown();
+
+        Path snapshot = properties.stateRoot().resolve(submitted.executionId() + ".json");
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        ObjectNode tampered = (ObjectNode) mapper.readTree(snapshot.toFile());
+        tampered.put("output", "tampered");
+        Files.writeString(snapshot, mapper.writeValueAsString(tampered));
+
+        assertThrows(IllegalArgumentException.class, () -> service(new FakeRuntime()));
     }
 
     private SandboxJobService service(SandboxRuntime sandboxRuntime) {
         return new SandboxJobService(properties, sandboxRuntime, new SimpleMeterRegistry(), store, clock);
+    }
+
+    private void restartWithLimits(int concurrent, int queued, int perTask) {
+        jobs.shutdown();
+        properties = new SandboxExecutionProperties(root, root.resolve(".sandbox-jobs"), "workspace", "image",
+                "network", concurrent, queued, perTask, 100, Duration.ofHours(1), Duration.ofSeconds(15),
+                65_536, 1_048_576, "mirror", "artifact-token", "sonar", "sonar-token");
+        store = new SandboxJobStore(new ObjectMapper().findAndRegisterModules(), properties);
+        runtime = new FakeRuntime();
+        jobs = service(runtime);
     }
 
     private StartExecutionRequest request(String actor, String key, String digest) {
@@ -327,6 +419,11 @@ class SandboxJobServiceTest {
         String output = new String(process.getInputStream().readAllBytes()).strip();
         assertEquals(0, process.waitFor(), output);
         return output;
+    }
+
+    private static String digest(String output) throws Exception {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(output.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }
 
     private static final class FakeRuntime implements SandboxRuntime {

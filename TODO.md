@@ -15,4 +15,5 @@
 - [ ] Déclenchement de l'orchestration via GitHub Actions / GitLab CI au lieu du socket Docker
 - [ ] Diagrammes d'architecture enrichis centrés sur les boucles de rétroaction agentiques
 - [ ] Persistance des tâches et journaux d'audit dans une base de données de contrôle dédiée
+- [ ] Suppression de l'accès direct à la socket docker
 

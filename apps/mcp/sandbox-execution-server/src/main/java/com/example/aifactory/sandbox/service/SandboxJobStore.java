@@ -1,6 +1,7 @@
 package com.example.aifactory.sandbox.service;
 
 import com.example.aifactory.sandbox.config.SandboxExecutionProperties;
+import com.example.aifactory.sandbox.model.SandboxModels.EvidenceStatus;
 import com.example.aifactory.sandbox.model.SandboxModels.ExecutionStatus;
 import com.example.aifactory.sandbox.model.SandboxModels.Operation;
 import com.example.aifactory.sandbox.model.SandboxModels.Verdict;
@@ -8,15 +9,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -25,6 +29,7 @@ import java.util.regex.Pattern;
 public class SandboxJobStore {
     private static final int FORMAT_VERSION = 1;
     private static final Pattern EXECUTION_ID = Pattern.compile("^[0-9a-f]{32}$");
+    private static final Pattern SHA256 = Pattern.compile("^[0-9a-f]{64}$");
 
     private final ObjectMapper objectMapper;
     private final Path stateRoot;
@@ -134,6 +139,28 @@ public class SandboxJobStore {
                 || snapshot.completedAt() != null && snapshot.heartbeatAt().isAfter(snapshot.completedAt()))) {
             throw invalid(source, "sandbox job heartbeat timestamp is inconsistent");
         }
+        if (snapshot.evidenceStatus() != null) {
+            if (snapshot.evidenceStatus() == EvidenceStatus.NONE) {
+                if (snapshot.outputDigest() != null || snapshot.output() != null || snapshot.outputTruncated()
+                        || snapshot.status() == ExecutionStatus.SUCCEEDED
+                        || snapshot.status() == ExecutionStatus.TIMED_OUT) {
+                    throw invalid(source, "sandbox job without evidence has inconsistent output state");
+                }
+            } else {
+                if (!terminal || snapshot.outputDigest() == null || !SHA256.matcher(snapshot.outputDigest()).matches()
+                        || !snapshot.outputDigest().equals(digest(snapshot.output()))) {
+                    throw invalid(source, "sandbox job evidence digest is inconsistent");
+                }
+                if (snapshot.evidenceStatus() == EvidenceStatus.COMPLETE
+                        && (snapshot.status() != ExecutionStatus.SUCCEEDED || snapshot.outputTruncated())) {
+                    throw invalid(source, "complete sandbox evidence is inconsistent with execution status");
+                }
+                if (snapshot.evidenceStatus() == EvidenceStatus.PARTIAL
+                        && snapshot.verdict() != Verdict.INDETERMINATE) {
+                    throw invalid(source, "partial sandbox evidence must have an indeterminate verdict");
+                }
+            }
+        }
     }
 
     private static void requireExecutionId(String executionId) {
@@ -144,6 +171,15 @@ public class SandboxJobStore {
 
     private static IllegalArgumentException invalid(Path source, String message) {
         return new IllegalArgumentException(source == null ? message : message + ": " + source.getFileName());
+    }
+
+    private static String digest(String output) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest((output == null ? "" : output).getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
     }
 
     public record JobSnapshot(
@@ -159,6 +195,8 @@ public class SandboxJobStore {
             Integer exitCode,
             String output,
             boolean outputTruncated,
+            EvidenceStatus evidenceStatus,
+            String outputDigest,
             String error,
             Instant createdAt,
             Instant startedAt,
@@ -168,10 +206,21 @@ public class SandboxJobStore {
         public static JobSnapshot versionOne(String executionId, String taskId, String sourceCommit,
                                              String patchDigest, String idempotencyKey, Operation operation,
                                              ExecutionStatus status, Verdict verdict, Integer exitCode,
-                                             String output, boolean outputTruncated, String error, Instant createdAt,
+                                             String output, boolean outputTruncated, EvidenceStatus evidenceStatus,
+                                             String outputDigest, String error, Instant createdAt,
                                              Instant startedAt, Instant completedAt, Instant heartbeatAt) {
             return new JobSnapshot(FORMAT_VERSION, executionId, taskId, sourceCommit, patchDigest, idempotencyKey,
-                    operation, status, verdict, exitCode, output, outputTruncated, error, createdAt, startedAt,
+                    operation, status, verdict, exitCode, output, outputTruncated, evidenceStatus, outputDigest,
+                    error, createdAt, startedAt, completedAt, heartbeatAt);
+        }
+
+        public static JobSnapshot versionOne(String executionId, String taskId, String sourceCommit,
+                                             String patchDigest, String idempotencyKey, Operation operation,
+                                             ExecutionStatus status, Verdict verdict, Integer exitCode,
+                                             String output, boolean outputTruncated, String error, Instant createdAt,
+                                             Instant startedAt, Instant completedAt, Instant heartbeatAt) {
+            return versionOne(executionId, taskId, sourceCommit, patchDigest, idempotencyKey, operation, status,
+                    verdict, exitCode, output, outputTruncated, null, null, error, createdAt, startedAt,
                     completedAt, heartbeatAt);
         }
 
@@ -181,7 +230,7 @@ public class SandboxJobStore {
                                              String output, String error, Instant createdAt, Instant startedAt,
                                              Instant completedAt) {
             return versionOne(executionId, taskId, sourceCommit, patchDigest, idempotencyKey, operation, status,
-                    verdict, exitCode, output, false, error, createdAt, startedAt, completedAt, null);
+                    verdict, exitCode, output, false, null, null, error, createdAt, startedAt, completedAt, null);
         }
     }
 }

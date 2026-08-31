@@ -13,6 +13,8 @@ public record SandboxExecutionProperties(
         String image,
         String network,
         int maxConcurrentJobs,
+        int maxQueuedJobs,
+        int maxActiveJobsPerTask,
         int maxJobs,
         Duration jobRetention,
         Duration heartbeatInterval,
@@ -28,7 +30,9 @@ public record SandboxExecutionProperties(
                 || image == null || image.isBlank() || network == null || network.isBlank()) {
             throw new IllegalArgumentException("sandbox workspace, volume, image and network are required");
         }
-        if (maxConcurrentJobs < 1 || maxConcurrentJobs > 32 || maxJobs < maxConcurrentJobs
+        long activeCapacity = (long) maxConcurrentJobs + maxQueuedJobs;
+        if (maxConcurrentJobs < 1 || maxConcurrentJobs > 32 || maxQueuedJobs < 0 || maxQueuedJobs > 10_000
+                || maxActiveJobsPerTask < 1 || maxActiveJobsPerTask > activeCapacity || maxJobs < activeCapacity
                 || jobRetention == null || jobRetention.compareTo(Duration.ofMinutes(1)) < 0
                 || jobRetention.compareTo(Duration.ofDays(365)) > 0
                 || heartbeatInterval == null || heartbeatInterval.compareTo(Duration.ofSeconds(1)) < 0
@@ -38,4 +42,5 @@ public record SandboxExecutionProperties(
             throw new IllegalArgumentException("invalid sandbox limits");
         }
     }
+
 }

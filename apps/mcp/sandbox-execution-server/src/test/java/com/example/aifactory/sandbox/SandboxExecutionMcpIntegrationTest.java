@@ -121,7 +121,8 @@ class SandboxExecutionMcpIntegrationTest {
                 .jsonPath("$.result.isError").isEqualTo(false)
                 .jsonPath("$.result.content[0].text").value(containsString("\"execution_id\""))
                 .jsonPath("$.result.content[0].text").value(containsString("\"created_at\":\""))
-                .jsonPath("$.result.content[0].text").value(containsString("\"heartbeat_at\":\""));
+                .jsonPath("$.result.content[0].text").value(containsString("\"heartbeat_at\":\""))
+                .jsonPath("$.result.content[0].text").value(containsString("\"evidence_status\":"));
 
         client.post().uri("/mcp")
                 .header("MCP-Protocol-Version", "2025-06-18")

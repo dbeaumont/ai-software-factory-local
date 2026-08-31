@@ -7,6 +7,9 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -54,7 +57,9 @@ class SandboxGatewayTest {
             public JsonNode call(String serverName, String toolName, Map<String, Object> arguments) {
                 if (toolName.equals("sandbox.get_execution")) {
                     return mapper.valueToTree(Map.of(
-                            "status", "SUCCEEDED", "verdict", "PASSED", "exit_code", 0, "output", output));
+                            "status", "SUCCEEDED", "verdict", "PASSED", "exit_code", 0, "output", output,
+                            "output_total_chars", output.length(), "output_truncated", false,
+                            "evidence_status", "COMPLETE", "output_digest", digest(output)));
                 }
                 return mapper.valueToTree(Map.of("execution_id", "1".repeat(32), "status", "ACCEPTED"));
             }
@@ -65,5 +70,14 @@ class SandboxGatewayTest {
             }
         };
         return new McpSandboxService(invoker, properties, new SimpleMeterRegistry());
+    }
+
+    private static String digest(String value) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 }

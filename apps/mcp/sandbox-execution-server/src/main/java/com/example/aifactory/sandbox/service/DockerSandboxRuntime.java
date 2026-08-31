@@ -44,7 +44,14 @@ public class DockerSandboxRuntime implements SandboxRuntime {
             if (!done) {
                 process.destroyForcibly();
                 removeContainer(containerName);
-                throw new RuntimeTimeoutException("sandbox profile timed out: " + profile.id());
+                BoundedOutput bounded;
+                try {
+                    bounded = output.get(10, TimeUnit.SECONDS);
+                } catch (ExecutionException | TimeoutException exception) {
+                    bounded = new BoundedOutput("", true);
+                }
+                throw new RuntimeTimeoutException("sandbox profile timed out: " + profile.id(),
+                        bounded.content(), bounded.truncated());
             }
             BoundedOutput bounded = output.get(10, TimeUnit.SECONDS);
             return new RuntimeResult(process.exitValue(), bounded.content(), bounded.truncated());
@@ -145,7 +152,7 @@ public class DockerSandboxRuntime implements SandboxRuntime {
         return file;
     }
 
-    private BoundedOutput boundedOutput(Process process) throws Exception {
+    BoundedOutput boundedOutput(Process process) throws Exception {
         StringBuilder retained = new StringBuilder();
         boolean truncated = false;
         try (InputStreamReader reader = new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)) {
@@ -163,7 +170,7 @@ public class DockerSandboxRuntime implements SandboxRuntime {
         return new BoundedOutput(retained.toString(), truncated);
     }
 
-    private record BoundedOutput(String content, boolean truncated) {
+    record BoundedOutput(String content, boolean truncated) {
     }
 
     private static void removeContainer(String containerName) {

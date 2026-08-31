@@ -9,9 +9,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -76,6 +79,31 @@ class McpSandboxServiceTest {
         assertTrue(error.getMessage().contains("heartbeat is stale"));
     }
 
+    @Test
+    void failsClosedOnPartialEvidence() {
+        FakeInvoker invoker = new FakeInvoker("INDETERMINATE", 0, "truncated output");
+        invoker.evidenceStatus = "PARTIAL";
+        invoker.outputTruncated = true;
+        McpSandboxService service = service(invoker, true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.test(workspace, "task-1", "a".repeat(40)));
+
+        assertTrue(error.getMessage().contains("partial evidence"));
+    }
+
+    @Test
+    void failsClosedOnTamperedOutputDigest() {
+        FakeInvoker invoker = new FakeInvoker("PASSED", 0, "tests passed");
+        invoker.outputDigest = "0".repeat(64);
+        McpSandboxService service = service(invoker, true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.test(workspace, "task-1", "a".repeat(40)));
+
+        assertTrue(error.getMessage().contains("digest mismatch"));
+    }
+
     private static McpSandboxService service(McpToolInvoker invoker, boolean enabled,
                                              McpFactoryProperties.SandboxMode mode) {
         return new McpSandboxService(invoker, properties(enabled, mode), new SimpleMeterRegistry());
@@ -96,11 +124,15 @@ class McpSandboxServiceTest {
         private Map<String, Object> startArguments;
         private Map<String, Object> lastLookupArguments;
         private Instant heartbeatAt = Instant.now();
+        private String evidenceStatus = "COMPLETE";
+        private String outputDigest;
+        private boolean outputTruncated;
 
         private FakeInvoker(String verdict, int exitCode, String output) {
             this.verdict = verdict;
             this.exitCode = exitCode;
             this.output = output;
+            this.outputDigest = digest(output);
         }
 
         @Override
@@ -125,9 +157,20 @@ class McpSandboxServiceTest {
             response.put("output", output.substring(cursor, end));
             response.put("output_cursor", cursor);
             response.put("output_total_chars", output.length());
-            response.put("output_truncated", false);
+            response.put("output_truncated", outputTruncated);
+            response.put("evidence_status", evidenceStatus);
+            response.put("output_digest", outputDigest);
             response.put("next_output_cursor", end < output.length() ? end : null);
             return mapper.valueToTree(response);
+        }
+
+        private static String digest(String value) {
+            try {
+                return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                        .digest(value.getBytes(StandardCharsets.UTF_8)));
+            } catch (Exception exception) {
+                throw new IllegalStateException(exception);
+            }
         }
 
         @Override

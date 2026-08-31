@@ -209,12 +209,22 @@ Les états terminaux expirent depuis leur `completed_at` après `AI_FACTORY_SAND
 valeur autorisée de 1 minute à 365 jours). La purge du snapshot, du handle et de sa clé d'idempotence s'effectue au
 démarrage, avant les opérations MCP et périodiquement ; une nouvelle soumission après expiration reçoit donc un
 nouvel `execution_id`. Les exécutions actives ne sont jamais supprimées par cette rétention.
+L'admission est bornée par `AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS` exécutions simultanées,
+`AI_FACTORY_SANDBOX_MAX_QUEUED_JOBS` jobs en attente et `AI_FACTORY_SANDBOX_MAX_ACTIVE_JOBS_PER_TASK` jobs actifs
+pour une même tâche. Une soumission idempotente retrouve toujours son job existant ; une nouvelle soumission hors
+quota est refusée immédiatement, sans snapshot orphelin. Les jauges `ai_factory_sandbox_jobs_running` et
+`ai_factory_sandbox_jobs_queued`, le timer `ai_factory_sandbox_job_queue_duration` et le compteur de rejets par
+raison exposent la pression du contrôleur.
 Pendant `ACCEPTED` et `RUNNING`, `heartbeat_at` est rafraîchi et persisté toutes les
 `AI_FACTORY_SANDBOX_HEARTBEAT_INTERVAL` (`PT15S` par défaut) ; l'orchestrateur refuse un heartbeat absent, invalide
 ou plus ancien que son timeout de polling. `sandbox.get_execution` retourne les logs déjà redacted par pages de
 4 096 caractères par défaut, jusqu'à 16 384 via `output_limit`, avec `next_output_cursor`, la taille totale retenue
 et `output_truncated` lorsque la borne globale a supprimé le début du flux. Le client reconstruit les pages avec une
-limite locale et refuse les curseurs incohérents.
+limite locale et refuse les curseurs incohérents. Chaque résultat expose aussi `evidence_status` (`NONE`, `PARTIAL`
+ou `COMPLETE`) et le SHA-256 `output_digest` calculé après redaction sur l'intégralité de la sortie retenue. Une
+sortie tronquée ou interrompue par timeout est persistée comme preuve `PARTIAL` avec un verdict `INDETERMINATE` ;
+elle reste consultable mais ne peut pas valider le workflow. L'orchestrateur recalcule le digest après pagination et
+refuse toute preuve partielle, absente ou altérée.
 
 Le test d'intégration opt-in suivant demande un daemon Docker local et l'image `ai-factory-sandbox:local`. Il crée
 un conteneur et un volume aux noms aléatoires, vérifie les limites réellement acceptées par Docker, puis les supprime
@@ -291,7 +301,7 @@ make demo
 
 - stockage des tâches en mémoire uniquement ;
 - pas de persistance PostgreSQL pour l'orchestrateur ;
-- exécution locale uniquement, sans scheduler ni queue ;
+- exécution locale avec file bornée en mémoire, sans scheduler distribué ;
 - prompts versionnés mais sans gouvernance avancée ;
 - un seul pipeline d'exécution, avec rôles LLM logiques ;
 - support des builds limité à Maven, Gradle et npm ;

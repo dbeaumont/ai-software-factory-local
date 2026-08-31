@@ -117,8 +117,9 @@ sequenceDiagram
   C->>S: Profils patch-apply-v1 et test-auto-v1
   loop Jusqu'à état terminal
     O->>C: sandbox.get_execution(output_cursor, output_limit)
-    C-->>O: état + heartbeat_at + page de log redacted
+    C-->>O: état + heartbeat + preuve + digest + page redacted
   end
+  O->>O: Reconstruit les pages et vérifie SHA-256 + COMPLETE
   O->>L: Agent Tester (requirement + patch + logs de test)
   L-->>O: Synthèse de test (.ai-factory/test.txt)
   O->>S: Analyse SonarQube (Maven + SONAR_TOKEN)
@@ -162,6 +163,8 @@ sequenceDiagram
 
 - Le diff est appliqué (`git apply changes.patch`).
 - Contrôle de conformité (`git diff --check` et `git diff --stat`).
+- Le contrôleur applique une concurrence globale, une file d'attente bornée et un quota de jobs actifs par tâche ;
+  les soumissions excédentaires sont refusées avant création du job.
 - Les jobs actifs publient un `heartbeat_at` persistant ; les logs terminaux sont lus par curseur et restent bornés/redacted.
 - Exécution automatique du build et des tests selon le dépôt :
   - Maven wrapper : `./mvnw -B -s /opt/ai-factory/maven-settings.xml test`
