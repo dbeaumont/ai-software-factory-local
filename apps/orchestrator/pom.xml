@@ -44,6 +44,11 @@
       <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>2.0.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <optional>true</optional>
@@ -56,6 +61,15 @@
   </dependencies>
   <build>
     <finalName>ai-factory-orchestrator</finalName>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>../../resources/mcp/schemas</directory>
+        <targetPath>mcp/schemas</targetPath>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

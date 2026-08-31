@@ -22,7 +22,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | Inférence | `litellm`, Ollama, fournisseur cloud optionnel | `LITELLM_MASTER_KEY`, `VAULT_OPENAI_API_KEY`/`OPENAI_API_KEY` | `ollama-data` | `factory` vers Ollama ; egress TLS optionnel vers le fournisseur cloud | identité LiteLLM dédiée, secrets fournisseur dans Secret Manager |
 | Contexte dépôt | `RepositoryContextService` ou `repository-context-mcp` | aucun secret runtime | `factory-workspace:/workspace/tasks:ro` pour MCP | uniquement `mcp-internal`; aucun egress attendu | `sa-repository-context-mcp`, lecture limitée au workspace de la tentative |
 | Validation/application de patch | `sandbox-execution-mcp` et conteneur sandbox | aucun secret fonctionnel | workspace partagé ; `sandbox-job-state`; socket Docker local | MCP sur `mcp-internal`; job avec réseau `none` | `sa-sandbox-controller` puis identité éphémère de tentative GKE |
-| Tests | job sandbox `test-auto-v1` | `ARTIFACTORY_TOKEN` si miroir authentifié | workspace et cache dynamique `ai-factory-m2` | actuellement réseau `factory`; destination requise : miroir Maven/npm approuvé uniquement | contrôleur sandbox/identité de job, secret à durée courte |
+| Tests | jobs sandbox `test-maven-v1`, `test-gradle-v1`, `test-node-v1` | `ARTIFACTORY_TOKEN` si miroir authentifié | workspace ; cache `ai-factory-m2` réservé à Maven | actuellement réseau `factory`; destination requise : miroirs Maven/Gradle/npm approuvés uniquement | contrôleur sandbox/identité de job, secret à durée courte |
 | Qualité | job sandbox `quality-sonar-v1` | `SONAR_TOKEN`, éventuellement `ARTIFACTORY_TOKEN` | workspace, cache Maven, rapports `.ai-factory` | actuellement `factory`; destinations requises : SonarQube et miroir de dépendances | contrôleur sandbox pour produire le rapport ; `assurance-mcp` pour le verdict |
 | Sécurité | job sandbox `security-syft-trivy-v1` | aucun dans le profil actuel | workspace, SBOM et rapport `.ai-factory` | actuellement `factory`, alors qu'un scan avec bases préchargées peut être sans réseau | identité de job sandbox ; mises à jour de bases via pipeline séparé |
 | Livraison SCM | `GiteaService` dans l'orchestrateur | `GITEA_TOKEN` et nom `AI_FACTORY_GITEA_USER` | workspace Git local | `factory` vers `gitea:3000` et push HTTP authentifié | `sa-scm-delivery-mcp`, jeton Gitea dédié jusqu'à fédération d'identité |
@@ -137,4 +137,3 @@ La cible GCP applique un compte de service distinct pour l'orchestrateur et chaq
 - [x] Les réseaux et destinations nécessaires ou excessives sont identifiés.
 - [x] Les comptes techniques actuels et identités cibles sont distingués.
 - [x] Chaque dépendance métier a un propriétaire cible et un jalon de retrait.
-

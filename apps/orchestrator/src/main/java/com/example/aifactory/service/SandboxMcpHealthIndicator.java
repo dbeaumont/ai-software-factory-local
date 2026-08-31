@@ -8,11 +8,11 @@ import org.springframework.stereotype.Component;
 @Component("sandboxExecutionMcp")
 public class SandboxMcpHealthIndicator implements HealthIndicator {
     private final McpFactoryProperties properties;
-    private final McpSandboxService service;
+    private final McpServerRegistry registry;
 
-    public SandboxMcpHealthIndicator(McpFactoryProperties properties, McpSandboxService service) {
+    public SandboxMcpHealthIndicator(McpFactoryProperties properties, McpServerRegistry registry) {
         this.properties = properties;
-        this.service = service;
+        this.registry = registry;
     }
 
     @Override
@@ -20,16 +20,23 @@ public class SandboxMcpHealthIndicator implements HealthIndicator {
         if (!properties.sandboxEnabled()) {
             return Health.up().withDetail("enabled", false).withDetail("mode", properties.sandboxMode()).build();
         }
-        McpSandboxService.Availability availability = service.availability();
-        if (availability.available()) {
-            return Health.up().withDetail("enabled", true).withDetail("mode", properties.sandboxMode()).build();
+        McpServerRegistry.ServerStatus status = registry.status("sandbox-execution");
+        if (status.state() == McpServerRegistry.HealthState.READY) {
+            return Health.up()
+                    .withDetail("enabled", true)
+                    .withDetail("mode", properties.sandboxMode())
+                    .withDetail("state", status.state().name())
+                    .withDetail("protocolVersion", status.protocolVersion())
+                    .withDetail("serverVersion", status.serverVersion())
+                    .build();
         }
         Health.Builder health = properties.sandboxMode() == McpFactoryProperties.SandboxMode.MCP_ACTIVE
                 ? Health.down()
-                : Health.up().withDetail("state", "DEGRADED");
+                : Health.up();
         return health.withDetail("enabled", true)
                 .withDetail("mode", properties.sandboxMode())
-                .withDetail("error", "sandbox-execution-mcp unavailable")
+                .withDetail("state", status.state().name())
+                .withDetail("error", status.message())
                 .build();
     }
 }

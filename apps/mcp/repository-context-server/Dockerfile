@@ -16,7 +16,9 @@ FROM eclipse-temurin:21-jre
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10001 --create-home context-mcp
+    && useradd --system --uid 10001 --create-home context-mcp \
+    && mkdir -p /var/lib/ai-factory/context-registry \
+    && chown -R 10001:10001 /var/lib/ai-factory/context-registry
 WORKDIR /app
 COPY --from=build /src/target/repository-context-mcp-server.jar app.jar
 USER 10001

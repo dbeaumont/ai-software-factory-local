@@ -46,6 +46,7 @@ class SandboxJobServiceTest {
         Path repository = root.resolve("task-1");
         Files.createDirectories(repository);
         Files.writeString(repository.resolve("file.txt"), "before\n");
+        Files.writeString(repository.resolve("pom.xml"), "<project/>\n");
         run(repository, "git", "init", "-q");
         run(repository, "git", "config", "user.email", "test@example.local");
         run(repository, "git", "config", "user.name", "Test");
@@ -84,6 +85,14 @@ class SandboxJobServiceTest {
         assertEquals(EvidenceStatus.COMPLETE, completed.evidenceStatus());
         assertEquals(digest("ok"), completed.outputDigest());
         assertEquals(1, runtime.calls.get());
+        JobSnapshot persisted = store.load().stream()
+                .filter(snapshot -> snapshot.executionId().equals(first.executionId()))
+                .findFirst().orElseThrow();
+        assertEquals("patch-check-v1", persisted.manifest().profileId());
+        assertEquals("image", persisted.manifest().imageReference());
+        assertNull(persisted.manifest().imageDigest());
+        assertEquals(2L * 1024 * 1024 * 1024, persisted.manifest().memoryBytes());
+        assertEquals(512, persisted.manifest().pidsLimit());
     }
 
     @Test

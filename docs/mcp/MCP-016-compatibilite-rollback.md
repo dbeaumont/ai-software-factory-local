@@ -25,7 +25,7 @@ La version courante des contrats est N=`1`. Il n'existe donc pas encore de contr
 - Le client ignore les champs de réponse optionnels inconnus mais refuse une réponse dont les champs obligatoires ou invariants ne sont pas vérifiables.
 - Le serveur refuse explicitement une majeure de requête inconnue avec `INCOMPATIBLE_SCHEMA`; il ne devine pas la sémantique attendue.
 - Une suppression, un changement de type, une nouvelle valeur qui modifie une décision, ou un changement d'effet exige une nouvelle majeure.
-- Les profils sandbox sont immuables. `test-auto-v2` coexiste avec `test-auto-v1`; le sens de `test-auto-v1` n'est jamais modifié silencieusement.
+- Les profils sandbox sont immuables. `test-maven-v2` coexiste avec `test-maven-v1`; le sens de `test-maven-v1` n'est jamais modifié silencieusement.
 - Les snapshots et preuves déjà écrits ne sont ni réécrits ni rétrogradés pendant un rollback.
 
 ## 3. Déploiement N/N-1

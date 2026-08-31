@@ -7,8 +7,8 @@ import java.nio.file.Path;
 @ConfigurationProperties(prefix = "ai-factory.context")
 public record RepositoryContextProperties(
         Path workspaceRoot,
+        Path registryRoot,
         int maxFileBytes,
         int maxSearchFiles,
         int maxTreeEntries) {
 }
-

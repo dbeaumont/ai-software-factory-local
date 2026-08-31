@@ -54,16 +54,47 @@ class DockerSandboxRuntimeTest {
     }
 
     @Test
-    void mountsMavenCacheOnlyForBuildProfiles() {
+    void selectsMavenProfileAndMountsMavenCache(@TempDir Path workspace) throws Exception {
         DockerSandboxRuntime runtime = runtime();
+        Files.writeString(workspace.resolve("pom.xml"), "<project/>");
 
-        List<String> command = runtime.command(SandboxProfiles.forOperation(Operation.RUN_TESTS),
-                "ai-factory-sbx-ghi", Path.of("/workspace/tasks/task-1"), null);
+        SandboxProfiles.Profile profile = SandboxProfiles.forOperation(Operation.RUN_TESTS, workspace);
+        List<String> command = runtime.command(profile, "ai-factory-sbx-ghi", workspace, null);
 
+        assertEquals("test-maven-v1", profile.id());
         assertTrue(command.containsAll(List.of("--network", "factory-network")));
         assertTrue(command.contains("factory-workspace:/factory-tasks"));
         assertTrue(command.contains("ai-factory-m2:/root/.m2"));
         runtime.shutdown();
+    }
+
+    @Test
+    void selectsGradleProfileWithoutMavenCache(@TempDir Path workspace) throws Exception {
+        Files.writeString(workspace.resolve("gradlew"), "#!/bin/sh\n");
+
+        SandboxProfiles.Profile profile = SandboxProfiles.forOperation(Operation.RUN_TESTS, workspace);
+
+        assertEquals("test-gradle-v1", profile.id());
+        assertFalse(profile.mavenCache());
+        assertTrue(profile.script().contains("--no-daemon test"));
+    }
+
+    @Test
+    void selectsLockedNodeProfileWithoutMavenCache(@TempDir Path workspace) throws Exception {
+        Files.writeString(workspace.resolve("package.json"), "{}");
+
+        SandboxProfiles.Profile profile = SandboxProfiles.forOperation(Operation.RUN_TESTS, workspace);
+
+        assertEquals("test-node-v1", profile.id());
+        assertFalse(profile.mavenCache());
+        assertTrue(profile.script().contains("npm ci --ignore-scripts"));
+        assertTrue(profile.script().contains("package-lock.json"));
+    }
+
+    @Test
+    void rejectsWorkspaceWithoutSupportedTestManifest(@TempDir Path workspace) {
+        assertThrows(IllegalArgumentException.class,
+                () -> SandboxProfiles.forOperation(Operation.RUN_TESTS, workspace));
     }
 
     @Test

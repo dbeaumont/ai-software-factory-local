@@ -30,6 +30,7 @@ public class SandboxJobStore {
     private static final int FORMAT_VERSION = 1;
     private static final Pattern EXECUTION_ID = Pattern.compile("^[0-9a-f]{32}$");
     private static final Pattern SHA256 = Pattern.compile("^[0-9a-f]{64}$");
+    private static final Pattern PROFILE_ID = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*-v[1-9][0-9]*$");
 
     private final ObjectMapper objectMapper;
     private final Path stateRoot;
@@ -118,6 +119,7 @@ public class SandboxJobStore {
                 || snapshot.createdAt() == null) {
             throw invalid(source, "incomplete sandbox job state");
         }
+        validateManifest(snapshot.manifest(), source);
         if (source != null && !source.getFileName().toString().equals(snapshot.executionId() + ".json")) {
             throw invalid(source, "sandbox job state filename does not match its execution id");
         }
@@ -163,6 +165,25 @@ public class SandboxJobStore {
         }
     }
 
+    private static void validateManifest(JobManifest manifest, Path source) {
+        if (manifest == null) {
+            return; // Backward-compatible reader for snapshots written before the manifest was introduced.
+        }
+        if (manifest.profileId() == null || !PROFILE_ID.matcher(manifest.profileId()).matches()
+                || manifest.imageReference() == null || manifest.imageReference().isBlank()
+                || manifest.workspaceId() == null || manifest.workspaceId().isBlank()
+                || manifest.cpuCores() < 1 || manifest.memoryBytes() < 1 || manifest.pidsLimit() < 1
+                || manifest.timeoutSeconds() < 1 || manifest.networkPolicy() == null
+                || manifest.environmentNames() == null
+                || manifest.imageDigest() != null && !SHA256.matcher(manifest.imageDigest()).matches()) {
+            throw invalid(source, "invalid sandbox job manifest");
+        }
+        if (manifest.environmentNames().stream().anyMatch(name -> name == null
+                || !name.matches("^[A-Z][A-Z0-9_]{0,63}$"))) {
+            throw invalid(source, "invalid sandbox job manifest environment allow-list");
+        }
+    }
+
     private static void requireExecutionId(String executionId) {
         if (executionId == null || !EXECUTION_ID.matcher(executionId).matches()) {
             throw new IllegalArgumentException("invalid persisted sandbox execution id");
@@ -190,6 +211,7 @@ public class SandboxJobStore {
             String patchDigest,
             String idempotencyKey,
             Operation operation,
+            JobManifest manifest,
             ExecutionStatus status,
             Verdict verdict,
             Integer exitCode,
@@ -210,8 +232,20 @@ public class SandboxJobStore {
                                              String outputDigest, String error, Instant createdAt,
                                              Instant startedAt, Instant completedAt, Instant heartbeatAt) {
             return new JobSnapshot(FORMAT_VERSION, executionId, taskId, sourceCommit, patchDigest, idempotencyKey,
-                    operation, status, verdict, exitCode, output, outputTruncated, evidenceStatus, outputDigest,
+                    operation, null, status, verdict, exitCode, output, outputTruncated, evidenceStatus, outputDigest,
                     error, createdAt, startedAt, completedAt, heartbeatAt);
+        }
+
+        public static JobSnapshot versionOneWithManifest(String executionId, String taskId, String sourceCommit,
+                                             String patchDigest, String idempotencyKey, Operation operation,
+                                             JobManifest manifest, ExecutionStatus status, Verdict verdict,
+                                             Integer exitCode, String output, boolean outputTruncated,
+                                             EvidenceStatus evidenceStatus, String outputDigest, String error,
+                                             Instant createdAt, Instant startedAt, Instant completedAt,
+                                             Instant heartbeatAt) {
+            return new JobSnapshot(FORMAT_VERSION, executionId, taskId, sourceCommit, patchDigest, idempotencyKey,
+                    operation, manifest, status, verdict, exitCode, output, outputTruncated, evidenceStatus,
+                    outputDigest, error, createdAt, startedAt, completedAt, heartbeatAt);
         }
 
         public static JobSnapshot versionOne(String executionId, String taskId, String sourceCommit,
@@ -231,6 +265,24 @@ public class SandboxJobStore {
                                              Instant completedAt) {
             return versionOne(executionId, taskId, sourceCommit, patchDigest, idempotencyKey, operation, status,
                     verdict, exitCode, output, false, null, null, error, createdAt, startedAt, completedAt, null);
+        }
+    }
+
+    public record JobManifest(
+            String profileId,
+            String imageReference,
+            String imageDigest,
+            String workspaceId,
+            long memoryBytes,
+            int cpuCores,
+            int pidsLimit,
+            long timeoutSeconds,
+            String networkPolicy,
+            boolean workspaceReadOnly,
+            boolean mavenCache,
+            List<String> environmentNames) {
+        public JobManifest {
+            environmentNames = environmentNames == null ? null : List.copyOf(environmentNames);
         }
     }
 }

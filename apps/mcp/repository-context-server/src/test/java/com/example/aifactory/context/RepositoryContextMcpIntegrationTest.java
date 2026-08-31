@@ -33,6 +33,7 @@ class RepositoryContextMcpIntegrationTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("ai-factory.context.workspace-root", WORKSPACE_ROOT::toString);
+        registry.add("ai-factory.context.registry-root", () -> WORKSPACE_ROOT.resolve(".registry").toString());
     }
 
     @BeforeAll
@@ -89,21 +90,48 @@ class RepositoryContextMcpIntegrationTest {
                         "method", "tools/call",
                         "params", Map.of(
                                 "name", "context.read_file",
-                                "arguments", Map.of(
-                                        "schema_version", "1",
-                                        "task_id", "integration-task",
-                                        "source_commit", commit,
-                                        "actor", "workflow",
-                                        "trace_id", "0123456789abcdef0123456789abcdef",
-                                        "path", "src/Example.java",
-                                        "start_line", 1,
-                                        "max_bytes", 4096))))
+                                "arguments", Map.ofEntries(
+                                        Map.entry("schema_version", "1"),
+                                        Map.entry("task_id", "integration-task"),
+                                        Map.entry("attempt_id", "attempt-1"),
+                                        Map.entry("source_commit", commit),
+                                        Map.entry("actor", "workflow"),
+                                        Map.entry("trace_id", "0123456789abcdef0123456789abcdef"),
+                                        Map.entry("traceparent", "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"),
+                                        Map.entry("deadline", java.time.Instant.now().plusSeconds(60).toString()),
+                                        Map.entry("path", "src/Example.java"),
+                                        Map.entry("start_line", 1),
+                                        Map.entry("max_bytes", 4096)))))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.result.isError").isEqualTo(false)
                 .jsonPath("$.result.content[0].text").value(containsString("src/Example.java"))
                 .jsonPath("$.result.content[0].text").value(containsString("class Example {}"));
+
+        client.post().uri("/mcp")
+                .header("MCP-Protocol-Version", "2025-06-18")
+                .contentType(APPLICATION_JSON)
+                .accept(APPLICATION_JSON, TEXT_EVENT_STREAM)
+                .bodyValue(Map.of(
+                        "jsonrpc", "2.0", "id", 4, "method", "resources/templates/list", "params", Map.of()))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.result.resourceTemplates[?(@.uriTemplate == 'repo://{task_id}/{source_commit}/{path}')]")
+                .exists();
+
+        client.post().uri("/mcp")
+                .header("MCP-Protocol-Version", "2025-06-18")
+                .contentType(APPLICATION_JSON)
+                .accept(APPLICATION_JSON, TEXT_EVENT_STREAM)
+                .bodyValue(Map.of(
+                        "jsonrpc", "2.0", "id", 5, "method", "resources/read",
+                        "params", Map.of("uri", "repo://integration-task/" + commit + "/src%2FExample.java")))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.result.contents[0].text").value(containsString("class Example {}"));
     }
 
     private static Path temporaryDirectory() {

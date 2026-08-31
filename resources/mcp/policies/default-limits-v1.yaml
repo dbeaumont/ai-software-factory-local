@@ -107,7 +107,13 @@ sandbox:
     patch-apply-v1:
       timeout: PT3M
       network: none
-    test-auto-v1:
+    test-maven-v1:
+      timeout: PT15M
+      networkPolicy: dependencies-only
+    test-gradle-v1:
+      timeout: PT15M
+      networkPolicy: dependencies-only
+    test-node-v1:
       timeout: PT15M
       networkPolicy: dependencies-only
     quality-sonar-v1:
@@ -148,4 +154,3 @@ exceeded:
   retryable: false
   preservePartialEvidence: true
   allowDirectFallback: false
-

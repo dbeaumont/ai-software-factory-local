@@ -9,7 +9,7 @@
 | global | activation du client, timeout par défaut, taille maximale de réponse, concurrence par serveur et par tâche |
 | retry lecture | tentatives, backoff initial/maximal, multiplicateur et jitter |
 | retry effet | mêmes bornes, avec un maximum dur de deux tentatives |
-| serveur | activation, URI statique, audience attendue et timeout spécifique |
+| serveur | activation, URI statique, audience, timeout, identité/version attendues et allowlist d'outils |
 
 Les serveurs initiaux sont `repository-context` et `sandbox-execution`. Leur URI provient exclusivement de la configuration de déploiement ; aucune valeur issue d'un ticket, dépôt, prompt ou résultat de modèle ne peut la remplacer.
 
@@ -33,6 +33,7 @@ Le démarrage est refusé si :
 - aucun serveur n'est déclaré ;
 - une URI n'utilise pas HTTP(S), n'a pas d'autorité, contient des credentials, une query ou un fragment ;
 - une audience est vide ;
+- une identité/version attendue est invalide ou une allowlist d'outils est vide ;
 - un timeout ou backoff est nul/négatif ;
 - la concurrence par tâche dépasse celle du serveur ;
 - la réponse maximale dépasse 1 Mio ;

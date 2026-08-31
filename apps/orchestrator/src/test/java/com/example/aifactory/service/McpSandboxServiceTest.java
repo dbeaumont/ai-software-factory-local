@@ -37,7 +37,12 @@ class McpSandboxServiceTest {
         assertTrue(invoker.pollCalls.get() >= 2);
         assertEquals("task-1", invoker.startArguments.get("task_id"));
         assertEquals("a".repeat(40), invoker.startArguments.get("source_commit"));
+        assertTrue(invoker.startArguments.containsKey("attempt_id"));
+        assertTrue(invoker.startArguments.containsKey("traceparent"));
+        assertTrue(invoker.startArguments.containsKey("deadline"));
         assertTrue(invoker.startArguments.containsKey("idempotency_key"));
+        assertTrue(invoker.startArguments.get("idempotency_key").toString()
+                .matches("task-1:[0-9a-f]{32}:run-tests:[0-9a-f]{64}"));
         assertTrue(invoker.startArguments.containsKey("patch_digest"));
         assertEquals(16_384, invoker.lastLookupArguments.get("output_limit"));
     }

@@ -87,10 +87,13 @@ public class McpSandboxService implements SandboxExecutor {
     }
 
     private String executeTimed(String tool, String operation, Path workspace, String taskId, String sourceCommit) throws Exception {
-        String traceId = UUID.randomUUID().toString().replace("-", "");
+        McpRequestMetadata metadata = McpRequestMetadata.create(
+                taskId, sourceCommit, "workflow", properties.sandboxPollTimeout());
         String patchDigest = patchDigest(workspace);
-        Map<String, Object> start = common(taskId, sourceCommit, traceId);
-        start.put("idempotency_key", idempotencyKey(taskId, sourceCommit, operation, patchDigest));
+        Map<String, Object> start = metadata.arguments();
+        String inputDigest = patchDigest == null ? digest(sourceCommit) : patchDigest;
+        start.put("idempotency_key", idempotencyKey(
+                taskId, start.get("attempt_id").toString(), operation, inputDigest));
         if (patchDigest != null) {
             start.put("patch_digest", patchDigest);
         }
@@ -99,12 +102,12 @@ public class McpSandboxService implements SandboxExecutor {
         long deadline = System.nanoTime() + properties.sandboxPollTimeout().toNanos();
         while (System.nanoTime() < deadline) {
             JsonNode execution = invoker.call(properties.sandboxServerName(), "sandbox.get_execution",
-                    lookup(taskId, sourceCommit, traceId, executionId));
+                    lookup(metadata, executionId));
             String status = requiredText(execution, "status");
             if (status.equals("SUCCEEDED")) {
                 calls.increment();
                 String verdict = requiredText(execution, "verdict");
-                String output = collectOutput(execution, taskId, sourceCommit, traceId, executionId);
+                String output = collectOutput(execution, metadata, executionId);
                 validateEvidence(execution, output);
                 if (!verdict.equals("PASSED")) {
                     throw new IllegalStateException("Sandbox " + operation + " rejected (exit="
@@ -125,31 +128,19 @@ public class McpSandboxService implements SandboxExecutor {
         throw new IllegalStateException("Sandbox " + operation + " polling timed out");
     }
 
-    private static Map<String, Object> common(String taskId, String sourceCommit, String traceId) {
-        Map<String, Object> arguments = new LinkedHashMap<>();
-        arguments.put("schema_version", "1");
-        arguments.put("task_id", taskId);
-        arguments.put("source_commit", sourceCommit);
-        arguments.put("actor", "workflow");
-        arguments.put("trace_id", traceId);
-        return arguments;
+    private static Map<String, Object> lookup(McpRequestMetadata metadata, String executionId) {
+        return lookup(metadata, executionId, 0);
     }
 
-    private static Map<String, Object> lookup(String taskId, String sourceCommit, String traceId, String executionId) {
-        return lookup(taskId, sourceCommit, traceId, executionId, 0);
-    }
-
-    private static Map<String, Object> lookup(String taskId, String sourceCommit, String traceId, String executionId,
-                                              int outputCursor) {
-        Map<String, Object> arguments = common(taskId, sourceCommit, traceId);
+    private static Map<String, Object> lookup(McpRequestMetadata metadata, String executionId, int outputCursor) {
+        Map<String, Object> arguments = metadata.arguments();
         arguments.put("execution_id", executionId);
         arguments.put("output_cursor", outputCursor);
         arguments.put("output_limit", OUTPUT_PAGE_CHARS);
         return arguments;
     }
 
-    private String collectOutput(JsonNode firstPage, String taskId, String sourceCommit, String traceId,
-                                 String executionId) throws Exception {
+    private String collectOutput(JsonNode firstPage, McpRequestMetadata metadata, String executionId) throws Exception {
         StringBuilder output = new StringBuilder();
         JsonNode page = firstPage;
         int expectedCursor = 0;
@@ -176,7 +167,7 @@ public class McpSandboxService implements SandboxExecutor {
             }
             expectedCursor = next;
             page = invoker.call(properties.sandboxServerName(), "sandbox.get_execution",
-                    lookup(taskId, sourceCommit, traceId, executionId, next));
+                    lookup(metadata, executionId, next));
             String status = requiredText(page, "status");
             if (!status.equals("SUCCEEDED")) {
                 throw new IllegalStateException("Malformed sandbox MCP response: output changed state during pagination");
@@ -223,10 +214,13 @@ public class McpSandboxService implements SandboxExecutor {
                 : null;
     }
 
-    private static String idempotencyKey(String taskId, String sourceCommit, String operation, String patchDigest) throws Exception {
-        String material = taskId + ':' + sourceCommit + ':' + operation + ':' + (patchDigest == null ? "none" : patchDigest);
+    private static String idempotencyKey(String taskId, String attemptId, String operation, String inputDigest) {
+        return taskId + ':' + attemptId + ':' + operation + ':' + inputDigest;
+    }
+
+    private static String digest(String value) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                .digest(material.getBytes(StandardCharsets.UTF_8)));
+                .digest(value.getBytes(StandardCharsets.UTF_8)));
     }
 
     private static String requiredText(JsonNode node, String field) {

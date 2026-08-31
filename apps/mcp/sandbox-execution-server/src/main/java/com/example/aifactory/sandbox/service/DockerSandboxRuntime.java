@@ -30,7 +30,7 @@ public class DockerSandboxRuntime implements SandboxRuntime {
 
     @Override
     public RuntimeResult execute(Operation operation, String executionId, Path workspace) throws Exception {
-        SandboxProfiles.Profile profile = SandboxProfiles.forOperation(operation);
+        SandboxProfiles.Profile profile = SandboxProfiles.forOperation(operation, workspace);
         String containerName = "ai-factory-sbx-" + executionId;
         Path environmentFile = writeEnvironmentFile(executionId, profile.environmentNames());
         List<String> command = command(profile, containerName, workspace, environmentFile);

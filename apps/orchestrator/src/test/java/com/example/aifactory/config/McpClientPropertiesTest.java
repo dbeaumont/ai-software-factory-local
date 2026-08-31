@@ -26,6 +26,7 @@ class McpClientPropertiesTest {
             assertThat(properties.maxResponseBytes()).isEqualTo(65_536);
             assertThat(properties.maxInflightPerServer()).isEqualTo(16);
             assertThat(properties.maxInflightPerTask()).isEqualTo(4);
+            assertThat(properties.acceptedProtocolVersions()).containsExactly("2025-06-18");
             assertThat(properties.retry().readOnly().maxAttempts()).isEqualTo(3);
             assertThat(properties.retry().effectful().maxAttempts()).isEqualTo(2);
             assertThat(properties.servers()).containsOnlyKeys("repository-context", "sandbox-execution");
@@ -33,6 +34,9 @@ class McpClientPropertiesTest {
                     .isEqualTo(URI.create("http://repository-context-mcp:8091"));
             assertThat(properties.servers().get("repository-context").audience())
                     .isEqualTo("repository-context-mcp");
+            assertThat(properties.servers().get("repository-context").expectedVersion()).isEqualTo("0.1.0");
+            assertThat(properties.servers().get("repository-context").allowedTools())
+                    .containsExactlyInAnyOrder("context.get_repository_rules", "context.list_tree");
             assertThat(properties.servers().get("sandbox-execution").enabled()).isTrue();
         });
     }
@@ -59,6 +63,7 @@ class McpClientPropertiesTest {
                 "ai-factory.mcp.client.max-response-bytes=65536",
                 "ai-factory.mcp.client.max-inflight-per-server=16",
                 "ai-factory.mcp.client.max-inflight-per-task=4",
+                "ai-factory.mcp.client.accepted-protocol-versions=2025-06-18",
                 "ai-factory.mcp.client.retry.read-only.max-attempts=3",
                 "ai-factory.mcp.client.retry.read-only.initial-backoff=200ms",
                 "ai-factory.mcp.client.retry.read-only.max-backoff=2s",
@@ -73,10 +78,16 @@ class McpClientPropertiesTest {
                 "ai-factory.mcp.client.servers.repository-context.uri=http://repository-context-mcp:8091",
                 "ai-factory.mcp.client.servers.repository-context.audience=repository-context-mcp",
                 "ai-factory.mcp.client.servers.repository-context.request-timeout=20s",
+                "ai-factory.mcp.client.servers.repository-context.expected-name=repository-context-mcp",
+                "ai-factory.mcp.client.servers.repository-context.expected-version=0.1.0",
+                "ai-factory.mcp.client.servers.repository-context.allowed-tools=context.get_repository_rules,context.list_tree",
                 "ai-factory.mcp.client.servers.sandbox-execution.enabled=true",
                 "ai-factory.mcp.client.servers.sandbox-execution.uri=http://sandbox-execution-mcp:8092",
                 "ai-factory.mcp.client.servers.sandbox-execution.audience=sandbox-execution-mcp",
-                "ai-factory.mcp.client.servers.sandbox-execution.request-timeout=20s"
+                "ai-factory.mcp.client.servers.sandbox-execution.request-timeout=20s",
+                "ai-factory.mcp.client.servers.sandbox-execution.expected-name=sandbox-execution-mcp",
+                "ai-factory.mcp.client.servers.sandbox-execution.expected-version=0.1.0",
+                "ai-factory.mcp.client.servers.sandbox-execution.allowed-tools=sandbox.run_tests,sandbox.get_execution"
         };
     }
 

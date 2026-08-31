@@ -7,10 +7,14 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -18,13 +22,17 @@ import java.util.regex.Pattern;
 
 @Service
 public class RepositoryContextTools {
+    private static final int MAX_TREE_TOTAL_ENTRIES = 5_000;
+    private static final Duration CURSOR_TTL = Duration.ofMinutes(5);
+    private static final SecureRandom RANDOM = new SecureRandom();
     private static final Pattern TASK_ID = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final Pattern COMMIT = Pattern.compile("^[0-9a-f]{40}$");
     private static final Pattern TRACE_ID = Pattern.compile("^[0-9a-f]{32}$");
+    private static final Pattern TRACEPARENT = Pattern.compile("^00-[0-9a-f]{32}-[0-9a-f]{16}-0[01]$");
     private static final Pattern SENSITIVE_PATH = Pattern.compile(
             "(?i)(^|/)(\\.env(?:\\..*)?|\\.vault|.*(?:secret|credential|password|token|private.?key|id_rsa).*)($|/)");
-    private static final Pattern SENSITIVE_SETTING = Pattern.compile(
-            "(?im)^([ \\t]*[A-Za-z0-9_.-]*(?:password|secret|token|api[_-]?key|private[_-]?key)[A-Za-z0-9_.-]*[ \\t]*[=:][ \\t]*).*$");
+    private static final Pattern SETTING_LINE = Pattern.compile(
+            "(?m)^([ \\t]*)([A-Za-z0-9_.-]+)([ \\t]*[=:][ \\t]*)(.*)$");
     private static final Set<String> EXCLUDED_DIRECTORIES = Set.of(
             ".git", "target", "build", "dist", "node_modules", ".gradle", ".idea", ".vscode", "vendor");
     private static final Set<String> RULE_NAMES = Set.of(
@@ -38,53 +46,84 @@ public class RepositoryContextTools {
             ".properties", ".gradle", ".md", ".txt", ".toml", ".sh", ".sql", ".py", ".go");
 
     private final RepositoryContextProperties properties;
+    private final TaskWorkspaceRegistry workspaceRegistry;
+    private final Map<String, TreeCursor> treeCursors = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public RepositoryContextTools(RepositoryContextProperties properties) {
+    public RepositoryContextTools(RepositoryContextProperties properties, TaskWorkspaceRegistry workspaceRegistry) {
         this.properties = properties;
+        this.workspaceRegistry = workspaceRegistry;
+    }
+
+    String readRegisteredResource(String taskId, String sourceCommit, String path) throws Exception {
+        String traceId = randomCursor();
+        RequestContext context = new RequestContext(
+                "1", taskId, "resource-read", sourceCommit, "workflow", traceId,
+                "00-" + traceId + '-' + randomCursor().substring(0, 16) + "-01",
+                Instant.now().plusSeconds(20).toString());
+        Path workspace = workspace(context);
+        return read(workspace, path, 1, null, 65_536).content();
     }
 
     @Tool(name = "context.list_tree", description = "List a bounded repository tree for a registered task and immutable source commit")
     public ListTreeResult listTreeTool(
             @ToolParam(description = "Contract schema version, currently 1") String schema_version,
             @ToolParam(description = "Registered AI Factory task identifier") String task_id,
+            @ToolParam(description = "Stable workflow attempt identifier") String attempt_id,
             @ToolParam(description = "Immutable 40-character source commit SHA") String source_commit,
             @ToolParam(description = "Authorized caller role") String actor,
             @ToolParam(description = "32-character distributed trace identifier") String trace_id,
+            @ToolParam(description = "W3C trace context") String traceparent,
+            @ToolParam(description = "RFC 3339 call deadline") String deadline,
             @ToolParam(required = false, description = "Repository-relative start path") String path,
             @ToolParam(required = false, description = "Maximum traversal depth") Integer depth,
-            @ToolParam(required = false, description = "Maximum returned entries") Integer max_entries) throws Exception {
-        return listTree(new ListTreeRequest(schema_version, task_id, source_commit, actor, trace_id, path, depth, max_entries));
+            @ToolParam(required = false, description = "Maximum returned entries") Integer max_entries,
+            @ToolParam(required = false, description = "Included relative glob patterns") List<String> include,
+            @ToolParam(required = false, description = "Excluded relative glob patterns") List<String> exclude,
+            @ToolParam(required = false, description = "Opaque continuation cursor") String cursor) throws Exception {
+        return listTree(new ListTreeRequest(schema_version, task_id, attempt_id, source_commit, actor, trace_id,
+                traceparent, deadline, path, depth, max_entries, include, exclude, cursor));
     }
 
     public ListTreeResult listTree(ListTreeRequest request) throws Exception {
         authorize(request.actor(), CONTEXT_READERS, "context.list_tree");
         Path workspace = workspace(request.context());
+        pruneTreeCursors();
+        if (request.cursor() != null && !request.cursor().isBlank()) {
+            return continueTree(request);
+        }
         Path start = resolve(workspace, defaultString(request.path()));
         requireVisibleStart(workspace, start);
         int depth = bounded(request.depth(), 6, 1, 12, "depth");
         int requestedEntries = bounded(request.maxEntries(), 200, 1, properties.maxTreeEntries(), "maxEntries");
-        List<Path> paths = collectVisiblePaths(workspace, start, depth, requestedEntries + 1, path -> true);
+        Predicate<Path> filter = treeFilter(workspace, request.include(), request.exclude());
+        List<Path> paths = collectVisiblePaths(
+                workspace, start, depth, MAX_TREE_TOTAL_ENTRIES + 1, filter);
         List<TreeEntry> entries = new ArrayList<>();
-        for (Path path : paths.subList(0, Math.min(paths.size(), requestedEntries))) {
+        for (Path path : paths.subList(0, Math.min(paths.size(), MAX_TREE_TOTAL_ENTRIES))) {
             entries.add(new TreeEntry(normalizedRelative(workspace, path),
                     Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS) ? "directory" : "file",
                     Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) ? Files.size(path) : 0));
         }
-        return new ListTreeResult(request.sourceCommit(), List.copyOf(entries), paths.size() > requestedEntries);
+        return treePage(request.taskId(), request.sourceCommit(), List.copyOf(entries), 0, requestedEntries,
+                paths.size() > MAX_TREE_TOTAL_ENTRIES);
     }
 
     @Tool(name = "context.read_file", description = "Read a bounded line range from an allowed repository text file")
     public ReadFileResult readFileTool(
             @ToolParam(description = "Contract schema version, currently 1") String schema_version,
             @ToolParam(description = "Registered AI Factory task identifier") String task_id,
+            @ToolParam(description = "Stable workflow attempt identifier") String attempt_id,
             @ToolParam(description = "Immutable 40-character source commit SHA") String source_commit,
             @ToolParam(description = "Authorized caller role") String actor,
             @ToolParam(description = "32-character distributed trace identifier") String trace_id,
+            @ToolParam(description = "W3C trace context") String traceparent,
+            @ToolParam(description = "RFC 3339 call deadline") String deadline,
             @ToolParam(description = "Repository-relative text file path") String path,
             @ToolParam(required = false, description = "First line, one-based") Integer start_line,
             @ToolParam(required = false, description = "Last line, one-based and inclusive") Integer end_line,
             @ToolParam(required = false, description = "Maximum UTF-8 response bytes") Integer max_bytes) throws Exception {
-        return readFile(new ReadFileRequest(schema_version, task_id, source_commit, actor, trace_id, path, start_line, end_line, max_bytes));
+        return readFile(new ReadFileRequest(schema_version, task_id, attempt_id, source_commit, actor, trace_id,
+                traceparent, deadline, path, start_line, end_line, max_bytes));
     }
 
     public ReadFileResult readFile(ReadFileRequest request) throws Exception {
@@ -97,13 +136,17 @@ public class RepositoryContextTools {
     public SearchCodeResult searchCodeTool(
             @ToolParam(description = "Contract schema version, currently 1") String schema_version,
             @ToolParam(description = "Registered AI Factory task identifier") String task_id,
+            @ToolParam(description = "Stable workflow attempt identifier") String attempt_id,
             @ToolParam(description = "Immutable 40-character source commit SHA") String source_commit,
             @ToolParam(description = "Authorized caller role") String actor,
             @ToolParam(description = "32-character distributed trace identifier") String trace_id,
+            @ToolParam(description = "W3C trace context") String traceparent,
+            @ToolParam(description = "RFC 3339 call deadline") String deadline,
             @ToolParam(description = "Literal string to search") String query,
             @ToolParam(required = false, description = "Repository-relative start path") String path,
             @ToolParam(required = false, description = "Maximum returned matches") Integer max_results) throws Exception {
-        return searchCode(new SearchCodeRequest(schema_version, task_id, source_commit, actor, trace_id, query, path, max_results));
+        return searchCode(new SearchCodeRequest(schema_version, task_id, attempt_id, source_commit, actor, trace_id,
+                traceparent, deadline, query, path, max_results));
     }
 
     public SearchCodeResult searchCode(SearchCodeRequest request) throws Exception {
@@ -122,11 +165,13 @@ public class RepositoryContextTools {
                     path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) && isAllowedTextFile(workspace, path));
         boolean truncated = files.size() > properties.maxSearchFiles();
         for (Path file : files.subList(0, Math.min(files.size(), properties.maxSearchFiles()))) {
+            ensureBeforeDeadline(request.context());
             if (Files.size(file) > properties.maxFileBytes()) {
                 continue;
             }
             List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
             for (int index = 0; index < lines.size(); index++) {
+                ensureBeforeDeadline(request.context());
                 if (lines.get(index).contains(request.query())) {
                     matches.add(new SearchMatch(normalizedRelative(workspace, file), index + 1,
                             abbreviate(redact(lines.get(index).strip()), 400)));
@@ -143,21 +188,34 @@ public class RepositoryContextTools {
     public RepositoryRulesResult getRepositoryRulesTool(
             @ToolParam(description = "Contract schema version, currently 1") String schema_version,
             @ToolParam(description = "Registered AI Factory task identifier") String task_id,
+            @ToolParam(description = "Stable workflow attempt identifier") String attempt_id,
             @ToolParam(description = "Immutable 40-character source commit SHA") String source_commit,
             @ToolParam(description = "Authorized caller role") String actor,
-            @ToolParam(description = "32-character distributed trace identifier") String trace_id) throws Exception {
-        return getRepositoryRules(new RepositoryRulesRequest(schema_version, task_id, source_commit, actor, trace_id));
+            @ToolParam(description = "32-character distributed trace identifier") String trace_id,
+            @ToolParam(description = "W3C trace context") String traceparent,
+            @ToolParam(description = "RFC 3339 call deadline") String deadline) throws Exception {
+        return getRepositoryRules(new RepositoryRulesRequest(schema_version, task_id, attempt_id, source_commit,
+                actor, trace_id, traceparent, deadline));
     }
 
     public RepositoryRulesResult getRepositoryRules(RepositoryRulesRequest request) throws Exception {
         authorize(request.actor(), CONTEXT_READERS, "context.get_repository_rules");
         Path workspace = workspace(request.context());
-        List<ReadFileResult> rules = new ArrayList<>();
+        List<ReadFileResult> documents = new ArrayList<>();
         List<Path> paths = collectVisiblePaths(workspace, workspace, 8, 20,
                 path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
                         && RULE_NAMES.contains(path.getFileName().toString()));
         for (Path file : paths) {
-            rules.add(read(workspace, normalizedRelative(workspace, file), 1, null, 16_384));
+            documents.add(read(workspace, normalizedRelative(workspace, file), 1, null, 16_384));
+        }
+        documents.sort(Comparator.comparingInt((ReadFileResult rule) -> Path.of(rule.path()).getNameCount())
+                .thenComparing(ReadFileResult::path));
+        List<RepositoryRule> rules = new ArrayList<>();
+        for (int index = 0; index < documents.size(); index++) {
+            ReadFileResult document = documents.get(index);
+            rules.add(new RepositoryRule(document, index + 1,
+                    "repo://" + request.taskId() + '/' + request.sourceCommit() + '/'
+                            + document.path().replace("/", "%2F")));
         }
         return new RepositoryRulesResult(request.sourceCommit(), List.copyOf(rules));
     }
@@ -171,10 +229,20 @@ public class RepositoryContextTools {
         if (Files.size(file) > properties.maxFileBytes()) {
             throw new IllegalArgumentException("file exceeds the configured size limit");
         }
+        byte[] raw = Files.readAllBytes(file);
+        String decoded;
+        try {
+            decoded = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(raw)).toString();
+        } catch (java.nio.charset.CharacterCodingException exception) {
+            throw new IllegalArgumentException("file is not valid UTF-8 text", exception);
+        }
+        if (decoded.indexOf('\0') >= 0) {
+            throw new IllegalArgumentException("binary files are forbidden");
+        }
         int startLine = bounded(requestedStart, 1, 1, Integer.MAX_VALUE, "startLine");
         int endLine = requestedEnd == null ? Integer.MAX_VALUE : bounded(requestedEnd, startLine, startLine, Integer.MAX_VALUE, "endLine");
         int maxBytes = bounded(requestedMaxBytes, 16_384, 1, Math.min(65_536, properties.maxFileBytes()), "maxBytes");
-        List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
+        List<String> lines = decoded.lines().toList();
         StringBuilder content = new StringBuilder();
         int actualEnd = startLine - 1;
         boolean truncated = false;
@@ -191,7 +259,7 @@ public class RepositoryContextTools {
             truncated = true;
         }
         return new ReadFileResult(normalizedRelative(workspace, file), startLine, actualEnd,
-                content.toString(), sha256(Files.readAllBytes(file)), truncated);
+                content.toString(), mimeType(file), sha256(raw), truncated);
     }
 
     private Path workspace(RequestContext context) throws Exception {
@@ -210,6 +278,7 @@ public class RepositoryContextTools {
         if (!actualCommit.equals(context.sourceCommit())) {
             throw new IllegalArgumentException("source commit does not match task workspace");
         }
+        workspaceRegistry.verifyOrRegister(context.taskId(), real, actualCommit);
         return real;
     }
 
@@ -220,6 +289,9 @@ public class RepositoryContextTools {
         if (context.taskId() == null || !TASK_ID.matcher(context.taskId()).matches()) {
             throw new IllegalArgumentException("invalid taskId");
         }
+        if (context.attemptId() == null || !TASK_ID.matcher(context.attemptId()).matches()) {
+            throw new IllegalArgumentException("invalid attemptId");
+        }
         if (context.sourceCommit() == null || !COMMIT.matcher(context.sourceCommit()).matches()) {
             throw new IllegalArgumentException("invalid sourceCommit");
         }
@@ -228,6 +300,19 @@ public class RepositoryContextTools {
         }
         if (context.traceId() == null || !TRACE_ID.matcher(context.traceId()).matches()) {
             throw new IllegalArgumentException("invalid traceId");
+        }
+        if (context.traceparent() == null || !TRACEPARENT.matcher(context.traceparent()).matches()
+                || !context.traceparent().substring(3, 35).equals(context.traceId())) {
+            throw new IllegalArgumentException("invalid traceparent");
+        }
+        try {
+            Instant deadline = Instant.parse(context.deadline());
+            Instant now = Instant.now();
+            if (!deadline.isAfter(now) || deadline.isAfter(now.plus(Duration.ofHours(24)))) {
+                throw new IllegalArgumentException("deadline is expired or exceeds the maximum horizon");
+            }
+        } catch (DateTimeParseException | NullPointerException exception) {
+            throw new IllegalArgumentException("invalid deadline", exception);
         }
     }
 
@@ -293,6 +378,73 @@ public class RepositoryContextTools {
         }
     }
 
+    private ListTreeResult continueTree(ListTreeRequest request) {
+        TreeCursor state = treeCursors.remove(request.cursor());
+        if (state == null || state.expiresAt().isBefore(Instant.now())) {
+            throw new IllegalArgumentException("unknown or expired tree cursor");
+        }
+        if (!state.taskId().equals(request.taskId()) || !state.sourceCommit().equals(request.sourceCommit())) {
+            throw new SecurityException("tree cursor does not belong to this task and commit");
+        }
+        return treePage(state.taskId(), state.sourceCommit(), state.entries(), state.offset(), state.pageSize(),
+                state.hardTruncated());
+    }
+
+    private ListTreeResult treePage(String taskId, String sourceCommit, List<TreeEntry> entries, int offset,
+                                    int pageSize, boolean hardTruncated) {
+        int end = Math.min(entries.size(), offset + pageSize);
+        List<TreeEntry> page = List.copyOf(entries.subList(offset, end));
+        String nextCursor = null;
+        if (end < entries.size()) {
+            nextCursor = randomCursor();
+            treeCursors.put(nextCursor, new TreeCursor(taskId, sourceCommit, entries, end, pageSize,
+                    hardTruncated, Instant.now().plus(CURSOR_TTL)));
+        }
+        return new ListTreeResult(sourceCommit, page, hardTruncated || nextCursor != null, nextCursor);
+    }
+
+    private static Predicate<Path> treeFilter(Path workspace, List<String> includes, List<String> excludes) {
+        List<PathMatcher> includeMatchers = globMatchers(includes);
+        List<PathMatcher> excludeMatchers = globMatchers(excludes);
+        return path -> {
+            Path relative = Path.of(normalizedRelative(workspace, path));
+            boolean included = includeMatchers.isEmpty() || includeMatchers.stream().anyMatch(matcher -> matcher.matches(relative));
+            return included && excludeMatchers.stream().noneMatch(matcher -> matcher.matches(relative));
+        };
+    }
+
+    private static List<PathMatcher> globMatchers(List<String> patterns) {
+        if (patterns == null) {
+            return List.of();
+        }
+        if (patterns.size() > 32) {
+            throw new IllegalArgumentException("tree filters exceed 32 patterns");
+        }
+        List<PathMatcher> matchers = new ArrayList<>();
+        for (String pattern : patterns) {
+            if (pattern == null || pattern.isBlank() || pattern.length() > 256) {
+                throw new IllegalArgumentException("invalid tree filter");
+            }
+            try {
+                matchers.add(FileSystems.getDefault().getPathMatcher("glob:" + pattern));
+            } catch (RuntimeException exception) {
+                throw new IllegalArgumentException("invalid tree filter", exception);
+            }
+        }
+        return List.copyOf(matchers);
+    }
+
+    private void pruneTreeCursors() {
+        Instant now = Instant.now();
+        treeCursors.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
+    }
+
+    private static String randomCursor() {
+        byte[] bytes = new byte[16];
+        RANDOM.nextBytes(bytes);
+        return HexFormat.of().formatHex(bytes);
+    }
+
     private static List<Path> collectVisiblePaths(Path workspace, Path start, int maxDepth, int maximum,
                                                   Predicate<Path> include) throws IOException {
         List<Path> result = new ArrayList<>();
@@ -345,7 +497,34 @@ public class RepositoryContextTools {
     }
 
     private static String redact(String content) {
-        return SENSITIVE_SETTING.matcher(content).replaceAll("$1[REDACTED]");
+        return SETTING_LINE.matcher(content).replaceAll(match -> sensitiveKey(match.group(2))
+                ? match.group(1) + match.group(2) + match.group(3) + "[REDACTED]"
+                : match.group());
+    }
+
+    private static boolean sensitiveKey(String key) {
+        String lower = key.toLowerCase(Locale.ROOT);
+        String compact = lower.replace(".", "").replace("_", "").replace("-", "");
+        return lower.endsWith("password") || lower.endsWith("secret") || lower.endsWith("token")
+                || compact.endsWith("apikey") || compact.endsWith("privatekey");
+    }
+
+    private static String mimeType(Path path) {
+        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".json")) return "application/json";
+        if (name.endsWith(".xml")) return "application/xml";
+        if (name.endsWith(".html")) return "text/html";
+        if (name.endsWith(".css")) return "text/css";
+        if (name.endsWith(".js")) return "text/javascript";
+        if (name.endsWith(".md")) return "text/markdown";
+        if (name.endsWith(".yaml") || name.endsWith(".yml")) return "application/yaml";
+        return "text/plain";
+    }
+
+    private static void ensureBeforeDeadline(RequestContext context) {
+        if (!Instant.parse(context.deadline()).isAfter(Instant.now())) {
+            throw new IllegalStateException("repository context deadline exceeded");
+        }
     }
 
     private static int bounded(Integer value, int defaultValue, int minimum, int maximum, String name) {
@@ -370,5 +549,15 @@ public class RepositoryContextTools {
 
     private static String sha256(byte[] content) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+    }
+
+    private record TreeCursor(
+            String taskId,
+            String sourceCommit,
+            List<TreeEntry> entries,
+            int offset,
+            int pageSize,
+            boolean hardTruncated,
+            Instant expiresAt) {
     }
 }

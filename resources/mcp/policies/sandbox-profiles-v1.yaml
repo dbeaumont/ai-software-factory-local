@@ -14,8 +14,25 @@ profiles:
     memory: 2g
     cpus: 2
     pids: 512
-  test-auto-v1:
+  test-maven-v1:
     operation: RUN_TESTS
+    selector: "mvnw || pom.xml"
+    network: ai-factory-network
+    timeout: 15m
+    memory: 2g
+    cpus: 2
+    pids: 512
+  test-gradle-v1:
+    operation: RUN_TESTS
+    selector: "gradlew || build.gradle || build.gradle.kts"
+    network: ai-factory-network
+    timeout: 15m
+    memory: 2g
+    cpus: 2
+    pids: 512
+  test-node-v1:
+    operation: RUN_TESTS
+    selector: package.json
     network: ai-factory-network
     timeout: 15m
     memory: 2g
@@ -36,6 +53,7 @@ profiles:
     cpus: 2
     pids: 512
 arguments:
+  profiles: forbidden
   commands: forbidden
   images: forbidden
   networks: forbidden

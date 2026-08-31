@@ -8,12 +8,12 @@ import org.springframework.stereotype.Component;
 @Component("repositoryContextMcp")
 public class RepositoryContextMcpHealthIndicator implements HealthIndicator {
     private final McpFactoryProperties properties;
-    private final McpRepositoryContextService contextService;
+    private final McpServerRegistry registry;
 
     public RepositoryContextMcpHealthIndicator(McpFactoryProperties properties,
-                                               McpRepositoryContextService contextService) {
+                                               McpServerRegistry registry) {
         this.properties = properties;
-        this.contextService = contextService;
+        this.registry = registry;
     }
 
     @Override
@@ -24,20 +24,24 @@ public class RepositoryContextMcpHealthIndicator implements HealthIndicator {
                     .withDetail("mode", properties.repositoryContextMode())
                     .build();
         }
-        McpRepositoryContextService.Availability availability = contextService.availability();
-        if (availability.available()) {
+        McpServerRegistry.ServerStatus status = registry.status("repository-context");
+        if (status.state() == McpServerRegistry.HealthState.READY) {
             return Health.up()
                     .withDetail("enabled", true)
                     .withDetail("mode", properties.repositoryContextMode())
+                    .withDetail("state", status.state().name())
+                    .withDetail("protocolVersion", status.protocolVersion())
+                    .withDetail("serverVersion", status.serverVersion())
                     .build();
         }
         Health.Builder health = properties.repositoryContextMode() == McpFactoryProperties.ContextMode.MCP_ACTIVE
                 ? Health.down()
-                : Health.up().withDetail("state", "DEGRADED");
+                : Health.up();
         return health
                 .withDetail("enabled", true)
                 .withDetail("mode", properties.repositoryContextMode())
-                .withDetail("error", "repository-context-mcp unavailable")
+                .withDetail("state", status.state().name())
+                .withDetail("error", status.message())
                 .build();
     }
 }

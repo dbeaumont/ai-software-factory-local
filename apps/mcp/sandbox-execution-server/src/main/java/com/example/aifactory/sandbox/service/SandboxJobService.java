@@ -3,6 +3,7 @@ package com.example.aifactory.sandbox.service;
 import com.example.aifactory.sandbox.config.SandboxExecutionProperties;
 import com.example.aifactory.sandbox.model.SandboxModels.*;
 import com.example.aifactory.sandbox.service.SandboxJobStore.JobSnapshot;
+import com.example.aifactory.sandbox.service.SandboxJobStore.JobManifest;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -31,8 +32,10 @@ public class SandboxJobService {
     private static final Pattern TASK_ID = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final Pattern COMMIT = Pattern.compile("^[0-9a-f]{40}$");
     private static final Pattern TRACE_ID = Pattern.compile("^[0-9a-f]{32}$");
+    private static final Pattern TRACEPARENT = Pattern.compile("^00-[0-9a-f]{32}-[0-9a-f]{16}-0[01]$");
     private static final Pattern DIGEST = Pattern.compile("^[0-9a-f]{64}$");
     private static final Pattern EXECUTION_ID = Pattern.compile("^[0-9a-f]{32}$");
+    private static final Pattern IMAGE_DIGEST = Pattern.compile("@sha256:([0-9a-f]{64})$");
     private static final int DEFAULT_OUTPUT_PAGE_CHARS = 4_096;
     private static final int MAX_OUTPUT_PAGE_CHARS = 16_384;
     private static final Pattern SECRET = Pattern.compile(
@@ -96,12 +99,17 @@ public class SandboxJobService {
         validateRequest(request);
         Path workspace = workspace(request.taskId(), request.sourceCommit());
         verifyPatchDigest(operation, workspace, request.patchDigest());
+        JobManifest manifest = manifest(operation, request.taskId(), workspace);
         pruneExpiredJobs();
         String idempotencyScope = idempotencyScope(request.taskId(), operation, request.idempotencyKey());
         synchronized (admissionLock) {
             String existingId = idempotency.get(idempotencyScope);
             if (existingId != null) {
-                return view(requireOwnedJob(request.taskId(), request.sourceCommit(), existingId));
+                Job existing = requireOwnedJob(request.taskId(), request.sourceCommit(), existingId);
+                if (!java.util.Objects.equals(existing.patchDigest, request.patchDigest())) {
+                    throw new IllegalStateException("idempotency key conflicts with a different input digest");
+                }
+                return view(existing);
             }
             pruneCompletedJobs();
             if (jobs.size() >= properties.maxJobs()) {
@@ -118,7 +126,7 @@ public class SandboxJobService {
                 throw new IllegalStateException("sandbox task active job quota is exhausted");
             }
             Job job = new Job(randomId(), request.taskId(), request.sourceCommit(), request.patchDigest(),
-                    request.idempotencyKey(), operation, Instant.now(clock));
+                    request.idempotencyKey(), operation, manifest, Instant.now(clock));
             idempotency.put(idempotencyScope, job.executionId);
             jobs.put(job.executionId, job);
             try {
@@ -135,6 +143,14 @@ public class SandboxJobService {
             submitted.increment();
             return view(job);
         }
+    }
+
+    private JobManifest manifest(Operation operation, String taskId, Path workspace) {
+        SandboxProfiles.Profile profile = SandboxProfiles.forOperation(operation, workspace);
+        java.util.regex.Matcher digest = IMAGE_DIGEST.matcher(properties.image());
+        return new JobManifest(profile.id(), properties.image(), digest.find() ? digest.group(1) : null,
+                taskId, 2L * 1024 * 1024 * 1024, 2, 512, profile.timeout().toSeconds(),
+                profile.network(), profile.workspaceReadOnly(), profile.mavenCache(), profile.environmentNames());
     }
 
     private void rollbackAdmission(Job job, String idempotencyScope) {
@@ -158,14 +174,30 @@ public class SandboxJobService {
 
     public ExecutionView get(String schemaVersion, String taskId, String sourceCommit, String actor,
                              String traceId, String executionId, Integer outputCursor, Integer outputLimit) {
-        validateLookup(schemaVersion, taskId, sourceCommit, actor, traceId, executionId);
+        return get(schemaVersion, taskId, "attempt-test", sourceCommit, actor, traceId,
+                traceparent(traceId), deadline(), executionId, outputCursor, outputLimit);
+    }
+
+    public ExecutionView get(String schemaVersion, String taskId, String attemptId, String sourceCommit, String actor,
+                             String traceId, String traceparent, String deadline, String executionId,
+                             Integer outputCursor, Integer outputLimit) {
+        validateLookup(schemaVersion, taskId, attemptId, sourceCommit, actor, traceId, traceparent, deadline,
+                executionId);
         pruneExpiredJobs();
         return view(requireOwnedJob(taskId, sourceCommit, executionId), outputCursor, outputLimit);
     }
 
     public ExecutionView cancel(String schemaVersion, String taskId, String sourceCommit, String actor,
                                 String traceId, String executionId) {
-        validateLookup(schemaVersion, taskId, sourceCommit, actor, traceId, executionId);
+        return cancel(schemaVersion, taskId, "attempt-test", sourceCommit, actor, traceId,
+                traceparent(traceId), deadline(), executionId);
+    }
+
+    public ExecutionView cancel(String schemaVersion, String taskId, String attemptId, String sourceCommit,
+                                String actor, String traceId, String traceparent, String deadline,
+                                String executionId) {
+        validateLookup(schemaVersion, taskId, attemptId, sourceCommit, actor, traceId, traceparent, deadline,
+                executionId);
         pruneExpiredJobs();
         Job job = requireOwnedJob(taskId, sourceCommit, executionId);
         JobSnapshot cancelled;
@@ -325,6 +357,9 @@ public class SandboxJobService {
         if (request.taskId() == null || !TASK_ID.matcher(request.taskId()).matches()) {
             throw new IllegalArgumentException("invalid task_id");
         }
+        if (request.attemptId() == null || !TASK_ID.matcher(request.attemptId()).matches()) {
+            throw new IllegalArgumentException("invalid attempt_id");
+        }
         if (request.sourceCommit() == null || !COMMIT.matcher(request.sourceCommit()).matches()) {
             throw new IllegalArgumentException("invalid source_commit");
         }
@@ -334,20 +369,52 @@ public class SandboxJobService {
         if (request.traceId() == null || !TRACE_ID.matcher(request.traceId()).matches()) {
             throw new IllegalArgumentException("invalid trace_id");
         }
+        validateTraceAndDeadline(request.traceId(), request.traceparent(), request.deadline());
         if (request.idempotencyKey() == null || request.idempotencyKey().length() < 16
                 || request.idempotencyKey().length() > 256) {
             throw new IllegalArgumentException("invalid idempotency_key");
         }
     }
 
-    private static void validateLookup(String schemaVersion, String taskId, String sourceCommit, String actor,
-                                       String traceId, String executionId) {
+    private static void validateLookup(String schemaVersion, String taskId, String attemptId, String sourceCommit,
+                                       String actor, String traceId, String traceparent, String deadline,
+                                       String executionId) {
         if (!"1".equals(schemaVersion) || taskId == null || !TASK_ID.matcher(taskId).matches()
+                || attemptId == null || !TASK_ID.matcher(attemptId).matches()
                 || sourceCommit == null || !COMMIT.matcher(sourceCommit).matches() || !"workflow".equals(actor)
                 || traceId == null || !TRACE_ID.matcher(traceId).matches()
                 || executionId == null || !EXECUTION_ID.matcher(executionId).matches()) {
             throw new IllegalArgumentException("invalid execution lookup context");
         }
+        validateTraceAndDeadline(traceId, traceparent, deadline);
+    }
+
+    private static void validateTraceAndDeadline(String traceId, String traceparent, String deadline) {
+        if (traceparent == null || !TRACEPARENT.matcher(traceparent).matches()
+                || !traceparent.substring(3, 35).equals(traceId)) {
+            throw new IllegalArgumentException("invalid traceparent");
+        }
+        try {
+            Instant parsed = Instant.parse(deadline);
+            Instant now = Instant.now();
+            if (!parsed.isAfter(now) || parsed.isAfter(now.plus(Duration.ofHours(24)))) {
+                throw new IllegalArgumentException("deadline is expired or exceeds the maximum horizon");
+            }
+        } catch (RuntimeException exception) {
+            if (exception instanceof IllegalArgumentException illegal
+                    && illegal.getMessage() != null && illegal.getMessage().startsWith("deadline is")) {
+                throw illegal;
+            }
+            throw new IllegalArgumentException("invalid deadline", exception);
+        }
+    }
+
+    private static String traceparent(String traceId) {
+        return "00-" + traceId + "-0123456789abcdef-01";
+    }
+
+    private static String deadline() {
+        return Instant.now().plusSeconds(60).toString();
     }
 
     private Job requireOwnedJob(String taskId, String sourceCommit, String executionId) {
@@ -460,7 +527,8 @@ public class SandboxJobService {
                 continue;
             }
             Job job = new Job(persisted.executionId(), persisted.taskId(), persisted.sourceCommit(),
-                    persisted.patchDigest(), persisted.idempotencyKey(), persisted.operation(), persisted.createdAt());
+                    persisted.patchDigest(), persisted.idempotencyKey(), persisted.operation(), persisted.manifest(),
+                    persisted.createdAt());
             job.status = persisted.status();
             job.verdict = persisted.verdict();
             job.exitCode = persisted.exitCode();
@@ -511,8 +579,8 @@ public class SandboxJobService {
     }
 
     private static JobSnapshot snapshot(Job job) {
-        return JobSnapshot.versionOne(job.executionId, job.taskId, job.sourceCommit, job.patchDigest,
-                job.idempotencyKey, job.operation, job.status, job.verdict, job.exitCode, job.output,
+        return JobSnapshot.versionOneWithManifest(job.executionId, job.taskId, job.sourceCommit, job.patchDigest,
+                job.idempotencyKey, job.operation, job.manifest, job.status, job.verdict, job.exitCode, job.output,
                 job.outputTruncated, job.evidenceStatus, job.outputDigest, job.error, job.createdAt, job.startedAt,
                 job.completedAt, job.heartbeatAt);
     }
@@ -555,6 +623,7 @@ public class SandboxJobService {
         private final String patchDigest;
         private final String idempotencyKey;
         private final Operation operation;
+        private final JobManifest manifest;
         private final Instant createdAt;
         private ExecutionStatus status = ExecutionStatus.ACCEPTED;
         private Verdict verdict = Verdict.PENDING;
@@ -570,13 +639,14 @@ public class SandboxJobService {
         private Future<?> future;
 
         private Job(String executionId, String taskId, String sourceCommit, String patchDigest, String idempotencyKey,
-                    Operation operation, Instant createdAt) {
+                    Operation operation, JobManifest manifest, Instant createdAt) {
             this.executionId = executionId;
             this.taskId = taskId;
             this.sourceCommit = sourceCommit;
             this.patchDigest = patchDigest;
             this.idempotencyKey = idempotencyKey;
             this.operation = operation;
+            this.manifest = manifest;
             this.createdAt = createdAt;
             this.heartbeatAt = createdAt;
         }

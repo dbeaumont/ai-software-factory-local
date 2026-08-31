@@ -49,6 +49,7 @@ ai-factory:
       max-response-bytes: ${AI_FACTORY_MCP_MAX_RESPONSE_BYTES:65536}
       max-inflight-per-server: ${AI_FACTORY_MCP_MAX_INFLIGHT_PER_SERVER:16}
       max-inflight-per-task: ${AI_FACTORY_MCP_MAX_INFLIGHT_PER_TASK:4}
+      accepted-protocol-versions: ${AI_FACTORY_MCP_ACCEPTED_PROTOCOL_VERSIONS:2025-06-18}
       retry:
         read-only:
           max-attempts: ${AI_FACTORY_MCP_READ_RETRY_MAX_ATTEMPTS:3}
@@ -68,11 +69,17 @@ ai-factory:
           uri: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_URL:http://repository-context-mcp:8091}
           audience: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_AUDIENCE:repository-context-mcp}
           request-timeout: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_TIMEOUT:${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}}
+          expected-name: repository-context-mcp
+          expected-version: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_VERSION:0.1.0}
+          allowed-tools: context.get_repository_rules,context.list_tree,context.read_file,context.search_code
         sandbox-execution:
           enabled: ${AI_FACTORY_MCP_SANDBOX_ENABLED:false}
           uri: ${AI_FACTORY_MCP_SANDBOX_URL:http://sandbox-execution-mcp:8092}
           audience: ${AI_FACTORY_MCP_SANDBOX_AUDIENCE:sandbox-execution-mcp}
           request-timeout: ${AI_FACTORY_MCP_SANDBOX_REQUEST_TIMEOUT:${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}}
+          expected-name: sandbox-execution-mcp
+          expected-version: ${AI_FACTORY_MCP_SANDBOX_VERSION:0.1.0}
+          allowed-tools: sandbox.validate_patch,sandbox.apply_patch,sandbox.run_tests,sandbox.run_quality,sandbox.run_security,sandbox.get_execution,sandbox.cancel_execution
   llm-base-url: ${AI_FACTORY_LLM_BASE_URL}
   llm-api-key: ${AI_FACTORY_LLM_API_KEY}
   local-model: ${AI_FACTORY_LOCAL_MODEL}

@@ -273,44 +273,44 @@ Objectif : introduire MCP sans modifier les verdicts du pipeline.
 - [x] **MCP-021** — Ajouter `McpClientProperties` : serveurs, URI, audience, timeouts, limites, retry et activation par feature flag. _(Configuration typée et validée fail-fast dans `McpClientProperties`, reliée à `application.yml`, Compose et `.env.example` ; audiences, timeouts, limites et politiques de retry documentés dans `docs/mcp/MCP-021-configuration-client.md`.)_
 - [x] **MCP-022** — Créer `McpServerRegistry` avec allow-list statique locale ; interdire toute URL fournie par un ticket, dépôt ou modèle. _(Implémenté sous forme de connexion Spring statique et sélection par nom dans `SpringMcpToolInvoker`.)_
 - [x] **MCP-023** — Créer un adaptateur `FactoryToolClient` indépendant du SDK MCP afin de ne pas propager les types du protocole dans le domaine du workflow. _(Port `McpToolInvoker`.)_
-- [ ] **MCP-024** — Implémenter négociation de capacités/version au démarrage et health state `READY/DEGRADED/INCOMPATIBLE` par serveur.
-- [ ] **MCP-025** — Valider toutes les réponses MCP avec les schémas locaux avant usage ; refuser les champs/tailles non conformes selon la politique définie.
-- [ ] **MCP-026** — Propager `traceparent`, `task_id`, `attempt_id`, `actor` et deadline à chaque appel.
-- [ ] **MCP-027** — Implémenter timeouts, retry exponentiel avec jitter uniquement sur erreurs retryables, circuit breaker et limite de concurrence par serveur.
-- [ ] **MCP-028** — Ajouter une idempotency key stable pour chaque étape à effet : `<task>:<attempt>:<step>:<input_digest>`.
-- [ ] **MCP-029** — Journaliser métadonnées, durée, code d'erreur, taille et digest ; ne pas journaliser arguments/résultats bruts par défaut.
-- [ ] **MCP-030** — Exposer métriques `mcp_client_calls`, `mcp_client_duration`, `mcp_client_errors`, `mcp_client_retries`, `mcp_client_inflight` étiquetées sans cardinalité `task_id`.
+- [x] **MCP-024** — Implémenter négociation de capacités/version au démarrage et health state `READY/DEGRADED/INCOMPATIBLE` par serveur. _(Contrat local épinglé par serveur, inspection au démarrage via `McpServerRegistry`, allowlist exacte des outils et états Actuator documentés dans `docs/mcp/MCP-024-negociation-capacites.md`.)_
+- [x] **MCP-025** — Valider toutes les réponses MCP avec les schémas locaux avant usage ; refuser les champs/tailles non conformes selon la politique définie. _(Décorateur `ValidatedMcpToolInvoker`, JSON Schema Draft 2020-12 strict pour les 11 outils actifs, limite en octets et erreurs sans contenu sensible ; voir `docs/mcp/MCP-025-validation-reponses.md`.)_
+- [x] **MCP-026** — Propager `traceparent`, `task_id`, `attempt_id`, `actor` et deadline à chaque appel. _(Enveloppe stable par opération générée avec `SecureRandom`, propagée sur les appels paginés et validée par les deux serveurs ; voir `docs/mcp/MCP-026-contexte-distribue.md`.)_
+- [x] **MCP-027** — Implémenter timeouts, retry exponentiel avec jitter uniquement sur erreurs retryables, circuit breaker et limite de concurrence par serveur. _(Décorateur `ResilientMcpToolInvoker`, deadline non extensible, backoff borné, circuit 5 erreurs/30 s et permits conservés jusqu'à l'arrêt réel ; voir `docs/mcp/MCP-027-resilience-client.md`.)_
+- [x] **MCP-028** — Ajouter une idempotency key stable pour chaque étape à effet : `<task>:<attempt>:<step>:<input_digest>`. _(Format appliqué aux commandes sandbox, même clé réutilisée par les retries, résultat serveur dédupliqué et conflit sur digest divergent ; voir `docs/mcp/MCP-028-idempotence.md`.)_
+- [x] **MCP-029** — Journaliser métadonnées, durée, code d'erreur, taille et digest ; ne pas journaliser arguments/résultats bruts par défaut. _(Journal structuré et borné dans `ResilientMcpToolInvoker`, documenté avec MCP-030.)_
+- [x] **MCP-030** — Exposer métriques `mcp_client_calls`, `mcp_client_duration`, `mcp_client_errors`, `mcp_client_retries`, `mcp_client_inflight` étiquetées sans cardinalité `task_id`. _(Métriques Micrometer à labels bornés serveur/outil/résultat/code ; voir `docs/mcp/MCP-029-030-observabilite-client.md`.)_
 - [x] **MCP-031** — Ajouter health indicators Actuator par serveur MCP et les afficher dans `/api/capabilities` sans exposer de secret. _(Terminé pour `repository-context-mcp` et `sandbox-execution-mcp` ; le motif sera répliqué avec chaque nouveau serveur.)_
 - [x] **MCP-032** — Prévoir le double chemin `DIRECT`/`MCP_SHADOW`/`MCP_ACTIVE` par capacité, configuration non modifiable par le LLM.
-- [ ] **MCP-033** — Ajouter tests unitaires des enveloppes, schémas, timeout, retry, circuit breaker, idempotence et redaction.
+- [x] **MCP-033** — Ajouter tests unitaires des enveloppes, schémas, timeout, retry, circuit breaker, idempotence et redaction. _(Couverture répartie entre `McpRequestMetadataTest`, `McpResponseValidatorTest`, `ResilientMcpToolInvokerTest`, `McpSandboxServiceTest` et `SandboxJobServiceTest`.)_
 - [x] **MCP-034** — Ajouter un faux serveur MCP déterministe pour les tests de l'orchestrateur. _(Fake du port `McpToolInvoker`, sans dépendance réseau.)_
-- [ ] **MCP-035** — Ajouter tests d'incompatibilité de version, outil absent, résultat malformé, réponse trop grande et serveur lent.
-- [ ] **MCP-036** — Ajouter les services MCP au réseau Compose sans les exposer sur les ports hôte. _(`repository-context-mcp` terminé ; à répéter pour les quatre serveurs suivants.)_
+- [x] **MCP-035** — Ajouter tests d'incompatibilité de version, outil absent, résultat malformé, réponse trop grande et serveur lent. _(Versions/catalogues couverts par `McpServerRegistryTest`, contenu/taille par `McpResponseValidatorTest` et lenteur par `ResilientMcpToolInvokerTest`.)_
+- [x] **MCP-036** — Ajouter les services MCP au réseau Compose sans les exposer sur les ports hôte. _(`repository-context-mcp` et `sandbox-execution-mcp` sont limités à `mcp-internal`, sans section `ports`; le même contrôle reste requis dans le lot de chaque futur serveur.)_
 
 **Gate du lot 1**
 
-- [ ] Le client peut appeler un faux serveur, échouer fermé et produire traces/métriques sans changer le pipeline actif. _(Appel, échec fermé et métriques terminés ; propagation de traces à compléter.)_
+- [x] Le client peut appeler un faux serveur, échouer fermé et produire traces/métriques sans changer le pipeline actif. _(Gate technique satisfait : ports indépendants du SDK, validation fail-closed, propagation W3C, résilience et métriques couvertes ; les modes `DIRECT`/`MCP_SHADOW` préservent le pipeline historique.)_
 
 ### Lot 2 — `repository-context-mcp` (`MCP-040` à `MCP-069`)
 
 Objectif : fournir un contexte ciblé, cité et reproductible à la place du dump fixe de `RepositoryContextService`.
 
 - [x] **MCP-040** — Scaffolder `apps/mcp/repository-context-server/` avec health/readiness, endpoint MCP interne et image minimale non-root.
-- [ ] **MCP-041** — Monter le volume workspace en lecture seule et enregistrer côté serveur la relation `task_id -> root -> source_commit`. _(Volume en lecture seule et validation `task_id`/SHA terminés ; registre explicite à persister.)_
+- [x] **MCP-041** — Monter le volume workspace en lecture seule et enregistrer côté serveur la relation `task_id -> root -> source_commit`. _(Volume workspace `:ro` et registre atomique persistant dans `context-registry-state`, avec refus de toute réassociation racine/commit.)_
 - [x] **MCP-042** — Implémenter une primitive centrale de résolution de chemin : relatif seulement, normalisé, sous racine, symlinks contrôlés.
 - [x] **MCP-043** — Porter les exclusions sensibles de `RepositoryContextService` et ajouter `.git`, build outputs, dépendances vendoriées, binaires et fichiers générés.
-- [ ] **MCP-044** — Porter la redaction des réglages sensibles et ajouter des tests de faux positifs/faux négatifs. _(Redaction et test nominal terminés ; matrice faux positifs/faux négatifs à compléter.)_
-- [ ] **MCP-045** — Implémenter `context.list_tree` avec filtres, pagination, profondeur et limites. _(Profondeur, limite et troncature terminées ; filtres et curseur opaque à ajouter.)_
-- [ ] **MCP-046** — Implémenter `context.search_code` sans shell, avec timeout, nombre d'occurrences et extraits bornés. _(Recherche littérale, parcours/nombre/extraits bornés terminés ; deadline/timeout interruptible à ajouter.)_
-- [ ] **MCP-047** — Implémenter `context.read_file` avec plages de lignes, MIME/type, taille et SHA-256. _(Plages, limites et SHA-256 terminés ; MIME explicite à ajouter.)_
-- [ ] **MCP-048** — Implémenter `context.get_repository_rules` avec provenance et ordre d'applicabilité, sans promouvoir ces fichiers au rang d'instructions système. _(Lecture bornée et chemins terminés ; ordre d'applicabilité explicite à ajouter.)_
-- [ ] **MCP-049** — Implémenter les ressources immuables `repo://` et refuser une divergence entre SHA demandé et workspace constaté.
+- [x] **MCP-044** — Porter la redaction des réglages sensibles et ajouter des tests de faux positifs/faux négatifs. _(Clés sensibles segmentées/suffixées redacted ; `tokenizer` et `secretary` couverts comme faux positifs.)_
+- [x] **MCP-045** — Implémenter `context.list_tree` avec filtres, pagination, profondeur et limites. _(Globs bornés, pages 1 000 max, cumul 5 000, curseurs aléatoires à usage unique et TTL 5 min.)_
+- [x] **MCP-046** — Implémenter `context.search_code` sans shell, avec timeout, nombre d'occurrences et extraits bornés. _(Recherche littérale, contrôles coopératifs de deadline pendant le parcours, fichiers/résultats/extraits bornés.)_
+- [x] **MCP-047** — Implémenter `context.read_file` avec plages de lignes, MIME/type, taille et SHA-256. _(UTF-8 strict, rejet binaire/taille, MIME déterministe, plages, troncature et digest.)_
+- [x] **MCP-048** — Implémenter `context.get_repository_rules` avec provenance et ordre d'applicabilité, sans promouvoir ces fichiers au rang d'instructions système. _(Documents redacted, provenance immuable `repo://` et ordre déterministe explicite.)_
+- [x] **MCP-049** — Implémenter les ressources immuables `repo://` et refuser une divergence entre SHA demandé et workspace constaté. _(Template MCP `repo://{task_id}/{source_commit}/{path}`, revérification registre/Git/politique à chaque lecture.)_
 - [ ] **MCP-050** — Ajouter ultérieurement `get_symbols` via tree-sitter/LSP derrière un feature flag ; indexer par commit et version de parseur.
 - [ ] **MCP-051** — Ajouter ultérieurement `get_dependencies` sans téléchargement ni exécution de build pendant l'indexation.
-- [ ] **MCP-052** — Ajouter tests de traversal (`..`, encodages), symlink sortant, fichier énorme, binaire, secret, regex coûteuse, commit incorrect et pagination.
-- [ ] **MCP-053** — Ajouter tests de concurrence garantissant qu'une tâche ne lit jamais le workspace d'une autre.
+- [x] **MCP-052** — Ajouter tests de traversal (`..`, encodages), symlink sortant, fichier énorme, binaire, secret, regex coûteuse, commit incorrect et pagination. _(Matrice négative et curseur à usage unique dans `RepositoryContextToolsTest`.)_
+- [x] **MCP-053** — Ajouter tests de concurrence garantissant qu'une tâche ne lit jamais le workspace d'une autre. _(50 lectures entrelacées sur virtual threads vérifient contenu et commit propres à chaque tâche.)_
 - [ ] **MCP-054** — Passer le Planner en `MCP_SHADOW` : comparer le contexte actuel à un contexte reconstruit via outils, sans changer le prompt servi. _(Mode et métriques de comparaison disponibles ; activation sur la baseline encore requise.)_
-- [ ] **MCP-055** — Mesurer couverture des fichiers utiles, citations valides, octets/tokens, latence et impact sur la qualité du plan.
+- [ ] **MCP-055** — Mesurer couverture des fichiers utiles, citations valides, octets/tokens, latence et impact sur la qualité du plan. _(Métriques shadow ajoutées pour succès/échec, caractères, tokens estimés, couverture des fichiers et validité des citations ; campagne baseline et corrélation avec la qualité des plans restent à exécuter.)_
 - [ ] **MCP-056** — Basculer Planner puis Developer/PatchRepair sur `MCP_ACTIVE`, rôle par rôle.
 - [ ] **MCP-057** — Remplacer `RepositoryContextService.collect()` par l'adaptateur MCP après une période de stabilité.
 - [ ] **MCP-058** — Supprimer le montage workspace de l'orchestrateur en cible lorsque le clone/context builder a lui aussi été extrait.
@@ -324,12 +324,12 @@ Objectif : fournir un contexte ciblé, cité et reproductible à la place du dum
 Objectif : retirer le principal privilège critique de l'orchestrateur.
 
 - [x] **MCP-070** — Scaffolder `apps/mcp/sandbox-execution-server/` avec compte Unix non-root, API MCP interne et contrôleur de jobs séparé.
-- [ ] **MCP-071** — Définir des profils immuables `patch-check-v1`, `patch-apply-v1`, `test-maven-v1`, `test-gradle-v1`, `test-node-v1`, `quality-sonar-v1`, `security-syft-trivy-v1`. _(Cinq profils immuables terminés ; Maven/Gradle/Node restent regroupés dans `test-auto-v1`.)_
+- [x] **MCP-071** — Définir des profils immuables `patch-check-v1`, `patch-apply-v1`, `test-maven-v1`, `test-gradle-v1`, `test-node-v1`, `quality-sonar-v1`, `security-syft-trivy-v1`. _(Profils séparés ; sélection déterministe par manifests racine côté serveur, sans commande ni profil fourni via MCP.)_
 - [x] **MCP-072** — Interdire toute commande, image, volume, variable ou réseau arbitraire dans les arguments MCP.
-- [ ] **MCP-073** — Définir un manifeste de job validé : image digest, opération, workspace, CPU, mémoire, PIDs, timeout, volumes, variables autorisées et politique réseau. _(Profils et limites codés côté serveur ; pinning obligatoire de l'image par digest et manifeste persistant à ajouter.)_
+- [ ] **MCP-073** — Définir un manifeste de job validé : image digest, opération, workspace, CPU, mémoire, PIDs, timeout, volumes, variables autorisées et politique réseau. _(Manifeste validé et persistant ajouté avec profil, référence/digest éventuel, workspace, ressources, timeout, réseau, montages logiques et allow-list d'environnement ; publication puis pinning obligatoire de l'image par digest restent à effectuer.)_
 - [x] **MCP-074** — Implémenter le stockage des jobs avec handles aléatoires, liaison au principal/tâche, expiration et transitions atomiques. _(Handles liés à la tâche/SHA et au seul principal workflow, transitions synchronisées, snapshots atomiques redacted, restauration après redémarrage et TTL configurable depuis `completed_at` ; purge au démarrage, avant accès et périodiquement, avec libération de la clé d'idempotence.)_
 - [x] **MCP-075** — Implémenter `validate_patch` et `apply_patch` avec réseau coupé et contrôles Git actuels. _(Tests déterministes et smoke tests Docker réels réussis via MCP pour les deux opérations avec verdict `PASSED` et exit code 0 ; l'application produit un diff propre et son rejeu retourne le même job.)_
-- [ ] **MCP-076** — Implémenter `run_tests` par profil ; conserver l'usage explicite d'Artifactory et interdire l'egress non requis. _(`test-auto-v1` et injection Artifactory terminés ; profils par build et egress allow-list à ajouter.)_
+- [ ] **MCP-076** — Implémenter `run_tests` par profil ; conserver l'usage explicite d'Artifactory et interdire l'egress non requis. _(Profils Maven/Gradle/Node séparés et Maven redirigé vers Artifactory ; miroirs Gradle/npm et egress allow-list restent à rendre effectifs.)_
 - [ ] **MCP-077** — Implémenter temporairement `run_quality` et `run_security` à parité avec `SandboxService`. _(Profils portés ; parité runtime à mesurer.)_
 - [x] **MCP-078** — Implémenter `get_execution`, logs paginés/redacted, heartbeats, timeout, cancellation et nettoyage garanti. _(Pagination par curseur bornée à 16 384 caractères, redaction avant découpage, signalement de troncature globale, heartbeat persistant des jobs actifs et contrôle fail-closed côté orchestrateur ; timeout, annulation et cleanup couverts.)_
 - [x] **MCP-079** — Normaliser séparément état technique, exit code et verdict métier ; considérer preuve absente/incomplète comme `INDETERMINATE` bloquant.

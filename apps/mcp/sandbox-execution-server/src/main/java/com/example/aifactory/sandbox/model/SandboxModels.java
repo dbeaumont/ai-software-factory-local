@@ -42,11 +42,20 @@ public final class SandboxModels {
     public record StartExecutionRequest(
             String schemaVersion,
             String taskId,
+            String attemptId,
             String sourceCommit,
             String actor,
             String traceId,
+            String traceparent,
+            String deadline,
             String idempotencyKey,
             String patchDigest) {
+        public StartExecutionRequest(String schemaVersion, String taskId, String sourceCommit, String actor,
+                                     String traceId, String idempotencyKey, String patchDigest) {
+            this(schemaVersion, taskId, "attempt-test", sourceCommit, actor, traceId,
+                    "00-" + traceId + "-0123456789abcdef-01", Instant.now().plusSeconds(60).toString(),
+                    idempotencyKey, patchDigest);
+        }
     }
 
     public record ExecutionView(

@@ -6,6 +6,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @ConfigurationProperties(prefix = "ai-factory.mcp.client")
@@ -15,16 +16,24 @@ public record McpClientProperties(
         int maxResponseBytes,
         int maxInflightPerServer,
         int maxInflightPerTask,
+        Set<String> acceptedProtocolVersions,
         Retry retry,
         Map<String, Server> servers) {
 
     private static final Pattern SERVER_NAME = Pattern.compile("^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$");
+    private static final Pattern SERVER_VERSION = Pattern.compile("^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$");
+    private static final Pattern TOOL_NAME = Pattern.compile("^[a-z][a-z0-9]*(?:[._][a-z][a-z0-9_]*)+$");
 
     public McpClientProperties {
         requireDuration("requestTimeout", requestTimeout);
         requireRange("maxResponseBytes", maxResponseBytes, 1, 1_048_576);
         requireRange("maxInflightPerServer", maxInflightPerServer, 1, 64);
         requireRange("maxInflightPerTask", maxInflightPerTask, 1, maxInflightPerServer);
+        if (acceptedProtocolVersions == null || acceptedProtocolVersions.isEmpty()
+                || acceptedProtocolVersions.stream().anyMatch(version -> version == null || version.isBlank())) {
+            throw new IllegalArgumentException("at least one MCP protocol version must be accepted");
+        }
+        acceptedProtocolVersions = Set.copyOf(acceptedProtocolVersions);
         Objects.requireNonNull(retry, "retry is required");
         if (servers == null || servers.isEmpty()) {
             throw new IllegalArgumentException("at least one MCP server must be configured");
@@ -38,7 +47,14 @@ public record McpClientProperties(
         servers = Map.copyOf(servers);
     }
 
-    public record Server(boolean enabled, URI uri, String audience, Duration requestTimeout) {
+    public record Server(
+            boolean enabled,
+            URI uri,
+            String audience,
+            Duration requestTimeout,
+            String expectedName,
+            String expectedVersion,
+            Set<String> allowedTools) {
         public Server {
             Objects.requireNonNull(uri, "server uri is required");
             if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) {
@@ -51,6 +67,17 @@ public record McpClientProperties(
                 throw new IllegalArgumentException("server audience is required and must not exceed 255 characters");
             }
             requireDuration("server requestTimeout", requestTimeout);
+            if (expectedName == null || !SERVER_NAME.matcher(expectedName).matches()) {
+                throw new IllegalArgumentException("server expectedName must use kebab-case");
+            }
+            if (expectedVersion == null || !SERVER_VERSION.matcher(expectedVersion).matches()) {
+                throw new IllegalArgumentException("server expectedVersion must be a semantic version");
+            }
+            if (allowedTools == null || allowedTools.isEmpty()
+                    || allowedTools.stream().anyMatch(tool -> tool == null || !TOOL_NAME.matcher(tool).matches())) {
+                throw new IllegalArgumentException("server allowedTools must contain valid tool names");
+            }
+            allowedTools = Set.copyOf(allowedTools);
         }
     }
 

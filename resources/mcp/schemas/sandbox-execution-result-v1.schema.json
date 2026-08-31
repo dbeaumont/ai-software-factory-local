@@ -4,7 +4,7 @@
   "title": "Sandbox execution result v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["execution_id", "task_id", "operation", "status", "verdict", "created_at"],
+  "required": ["execution_id", "task_id", "operation", "status", "verdict", "output_cursor", "output_total_chars", "output_truncated", "evidence_status", "created_at", "heartbeat_at"],
   "properties": {
     "execution_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
     "task_id": { "type": "string" },
@@ -13,9 +13,16 @@
     "verdict": { "type": "string", "enum": ["PENDING", "PASSED", "REJECTED", "INDETERMINATE"] },
     "exit_code": { "type": ["integer", "null"] },
     "output": { "type": ["string", "null"], "maxLength": 65536 },
+    "output_cursor": { "type": "integer", "minimum": 0 },
+    "next_output_cursor": { "type": ["integer", "null"], "minimum": 1 },
+    "output_total_chars": { "type": "integer", "minimum": 0, "maximum": 1048576 },
+    "output_truncated": { "type": "boolean" },
+    "evidence_status": { "type": "string", "enum": ["NONE", "PARTIAL", "COMPLETE"] },
+    "output_digest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
     "error": { "type": ["string", "null"], "maxLength": 512 },
     "created_at": { "type": "string", "format": "date-time" },
     "started_at": { "type": ["string", "null"], "format": "date-time" },
-    "completed_at": { "type": ["string", "null"], "format": "date-time" }
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "heartbeat_at": { "type": "string", "format": "date-time" }
   }
 }
