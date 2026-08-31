@@ -55,16 +55,52 @@ class McpSandboxServiceTest {
     }
 
     @Test
-    void failsClosedOnRejectedOrMalformedExecutions() throws Exception {
+    void rejectsInvalidPatchEvidence() throws Exception {
         Files.writeString(workspace.resolve("changes.patch"), "patch");
-        McpSandboxService rejected = service(new FakeInvoker("REJECTED", 1, "tests failed"), true,
+        McpSandboxService rejected = service(new FakeInvoker("REJECTED", 1, "error: corrupt patch at line 4"), true,
+                McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> rejected.checkPatch(workspace, "task-1", "a".repeat(40)));
+
+        assertTrue(error.getMessage().contains("validate-patch rejected"));
+        assertTrue(error.getMessage().contains("corrupt patch"));
+    }
+
+    @Test
+    void rejectsFailedTestEvidence() {
+        McpSandboxService rejected = service(new FakeInvoker("REJECTED", 1, "Tests run: 3, Failures: 1"), true,
                 McpFactoryProperties.SandboxMode.MCP_ACTIVE);
 
         IllegalStateException error = assertThrows(IllegalStateException.class,
                 () -> rejected.test(workspace, "task-1", "a".repeat(40)));
 
-        assertTrue(error.getMessage().contains("rejected"));
-        assertTrue(error.getMessage().contains("tests failed"));
+        assertTrue(error.getMessage().contains("run-tests rejected"));
+        assertTrue(error.getMessage().contains("Failures: 1"));
+    }
+
+    @Test
+    void rejectsMissingSonarEvidence() {
+        McpSandboxService rejected = service(new FakeInvoker("REJECTED", 2,
+                "Required Sonar token is unavailable"), true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> rejected.quality(workspace, "task-1", "a".repeat(40)));
+
+        assertTrue(error.getMessage().contains("run-quality rejected"));
+        assertTrue(error.getMessage().contains("Sonar token is unavailable"));
+    }
+
+    @Test
+    void rejectsBlockingVulnerabilityEvidence() {
+        McpSandboxService rejected = service(new FakeInvoker("REJECTED", 1,
+                "Total: 1 (HIGH: 1, CRITICAL: 0)"), true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> rejected.security(workspace, "task-1", "a".repeat(40)));
+
+        assertTrue(error.getMessage().contains("run-security rejected"));
+        assertTrue(error.getMessage().contains("HIGH: 1"));
     }
 
     @Test

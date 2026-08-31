@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "baseline_id": "MCP-014",
+  "delivery_mutation_forbidden": true,
+  "cases": [
+    {
+      "id": "MCP014-N01",
+      "name": "invalid_patch",
+      "trigger": "sandbox.validate_patch returns SUCCEEDED with verdict REJECTED and exit_code 1",
+      "expected_workflow_status": "FAILED",
+      "oracle": "The workflow stops before APPLYING_PATCH and preserves the validation error as evidence.",
+      "forbidden_effects": ["patch_applied", "tests_started", "scm_mutation"],
+      "enforcement_status": "AUTOMATED",
+      "automated_by": ["McpSandboxServiceTest#rejectsInvalidPatchEvidence"]
+    },
+    {
+      "id": "MCP014-N02",
+      "name": "tests_failed",
+      "trigger": "sandbox.run_tests returns SUCCEEDED with verdict REJECTED and exit_code 1",
+      "expected_workflow_status": "FAILED",
+      "oracle": "The workflow stops before QUALITY_SCANNING and retains the failing test output.",
+      "forbidden_effects": ["quality_started", "security_started", "scm_mutation"],
+      "enforcement_status": "AUTOMATED",
+      "automated_by": ["McpSandboxServiceTest#rejectsFailedTestEvidence"]
+    },
+    {
+      "id": "MCP014-N03",
+      "name": "sonar_unavailable",
+      "trigger": "sandbox.run_quality returns SUCCEEDED with verdict REJECTED because required Sonar configuration or service is unavailable",
+      "expected_workflow_status": "FAILED",
+      "oracle": "Missing quality evidence is blocking and can never be converted to a successful gate.",
+      "forbidden_effects": ["security_started", "review_started", "scm_mutation"],
+      "enforcement_status": "AUTOMATED",
+      "automated_by": ["McpSandboxServiceTest#rejectsMissingSonarEvidence", "TaskServiceTest#requiresAQualityGateInsteadOfTreatingSkippedAnalysisAsSuccess"]
+    },
+    {
+      "id": "MCP014-N04",
+      "name": "blocking_vulnerability",
+      "trigger": "sandbox.run_security returns SUCCEEDED with verdict REJECTED after Trivy finds a HIGH or CRITICAL vulnerability",
+      "expected_workflow_status": "FAILED",
+      "oracle": "The workflow stops before REVIEWING and keeps the Trivy evidence.",
+      "forbidden_effects": ["review_started", "approval_requested", "scm_mutation"],
+      "enforcement_status": "AUTOMATED",
+      "automated_by": ["McpSandboxServiceTest#rejectsBlockingVulnerabilityEvidence"]
+    },
+    {
+      "id": "MCP014-N05",
+      "name": "approval_absent",
+      "trigger": "No valid human approval is recorded for the task",
+      "expected_workflow_status": "WAITING_APPROVAL",
+      "oracle": "The task remains immutable at the approval gate and no delivery operation starts.",
+      "forbidden_effects": ["commit", "push", "pull_request_created"],
+      "enforcement_status": "PARTIALLY_AUTOMATED",
+      "automated_by": ["TaskServiceTest#rejectsApprovalBeforeTheHumanApprovalGate"],
+      "gap": "Expiry, alteration and cryptographic binding of approval evidence are deferred to MCP-116 through MCP-120."
+    },
+    {
+      "id": "MCP014-N06",
+      "name": "pull_request_creation_retry",
+      "trigger": "The SCM call times out after a remote Pull Request may already have been created",
+      "expected_workflow_status": "PR_CREATED",
+      "oracle": "A retry discovers the existing branch and Pull Request using the idempotency key and returns the same URL; exactly one branch and one Pull Request exist.",
+      "forbidden_effects": ["duplicate_branch", "duplicate_commit", "duplicate_pull_request"],
+      "enforcement_status": "GAP_BLOCKING",
+      "automated_by": [],
+      "gap": "The prototype has no resumable or idempotent SCM delivery yet; implementation and proof are tracked by MCP-115 and MCP-120."
+    }
+  ]
+}

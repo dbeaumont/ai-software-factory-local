@@ -1,0 +1,73 @@
+version: "1"
+policyId: mcp-compatibility-rollback-v1
+status: initial
+
+compatibility:
+  strategy: N_AND_N_MINUS_1
+  currentContractMajor: 1
+  minimumOverlap: P28D
+  retirementRequires:
+    - client N deployed everywhere in scope
+    - no N-1 usage during P14D
+    - N and N-1 contract tests green
+    - canary SLO and security gates green
+    - rollback rehearsal green
+  additiveWithinMajor: true
+  rejectUnknownRequestMajor: true
+  ignoreUnknownOptionalResponseFields: true
+  preserveUnknownPersistedFields: true
+  breakingChangesRequireNewMajor: true
+
+artifacts:
+  pinByDigest:
+    - serverImage
+    - runnerImage
+    - schemaBundle
+    - policyBundle
+  mutableTagsForbiddenForPromotion: true
+  destructiveDownMigrationForbidden: true
+
+rollout:
+  order:
+    - publish N schemas and golden tests
+    - deploy server supporting N and N-1
+    - run contract and state compatibility tests
+    - enable shadow then canary clients on N
+    - migrate all clients to N
+    - observe the minimum overlap and zero-use window
+    - retire N-1 after approval
+
+rollback:
+  triggers:
+    - incompatible protocol or schema
+    - SLO fast burn
+    - false success or evidence integrity violation
+    - authorization or isolation regression
+    - effectful operation loses idempotency
+  automaticScope:
+    - stop canary traffic
+    - freeze new effectful operations
+  humanApprovalRequiredFor:
+    - resume effectful operations
+    - persisted state migration
+    - retirement of N-1
+  order:
+    - freeze new effectful operations and preserve evidence
+    - identify affected server, version, schema and handles
+    - route compatible traffic to the last promoted digest
+    - reconcile in-flight jobs by handle and idempotency key
+    - run readiness, contract and smoke tests
+    - resume read-only traffic
+    - resume effectful traffic after approval
+  directFallbackAllowed: false
+  approvalBypassAllowed: false
+  blindEffectfulRetryAllowed: false
+
+state:
+  sandboxSnapshots:
+    readerMustSupport: N_AND_N_MINUS_1
+    forwardOnlyMigrationRequiresDualReader: true
+    unknownVersionOutcome: INCOMPATIBLE_SCHEMA
+  evidence:
+    immutable: true
+    rewriteDuringRollback: false

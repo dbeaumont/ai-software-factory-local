@@ -4,17 +4,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
 public class SpringMcpToolInvoker implements McpToolInvoker {
-    private final ObjectProvider<McpSyncClient> clients;
+    private final List<McpSyncClient> clients;
     private final ObjectMapper objectMapper;
 
-    public SpringMcpToolInvoker(ObjectProvider<McpSyncClient> clients, ObjectMapper objectMapper) {
+    public SpringMcpToolInvoker(@Qualifier("mcpSyncClients") List<McpSyncClient> clients,
+                                ObjectMapper objectMapper) {
         this.clients = clients;
         this.objectMapper = objectMapper;
     }
@@ -52,11 +54,10 @@ public class SpringMcpToolInvoker implements McpToolInvoker {
     }
 
     private McpSyncClient client(String serverName) {
-        return clients.orderedStream()
+        return clients.stream()
                 .filter(client -> client.getServerInfo() != null)
                 .filter(client -> serverName.equals(client.getServerInfo().name()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("MCP client is unavailable: " + serverName));
     }
 }
-

@@ -1,0 +1,82 @@
+version: "1"
+policyId: mcp-slo-policy-v1
+status: initial
+evaluationWindow: P28D
+
+eligibility:
+  include:
+    - authenticated requests accepted by an MCP server
+    - idempotent replays returning the original result
+  exclude:
+    - invalid caller arguments
+    - unauthorized or forbidden requests
+    - policy and quota rejections
+    - business verdicts REJECTED or INDETERMINATE returned by an otherwise healthy tool
+
+objectives:
+  availability:
+    targetRatio: 0.995
+    scope: per-server
+    indicator: eligible requests without transport, protocol, timeout or internal server error
+    errorBudgetSecondsPerWindow: 12096
+
+  readLatency:
+    percentile: 0.95
+    scope: per-tool
+    targets:
+      context.list_tree: PT1S
+      context.read_file: PT1S
+      context.search_code: PT2S
+      context.get_symbols: PT3S
+      context.get_dependencies: PT3S
+
+  sandboxJobStartDelay:
+    percentile: 0.95
+    target: PT5S
+    secondaryPercentile: 0.99
+    secondaryTarget: PT15S
+    indicator: duration from ACCEPTED to RUNNING for admitted jobs
+
+  mcpSystemErrorRate:
+    targetMaxRatio: 0.005
+    scope: per-server
+    indicator: transport, protocol, timeout and internal errors divided by eligible requests
+
+invariants:
+  falseSuccessCount: 0
+  scmMutationWithoutApprovalCount: 0
+  acceptedJobWithoutTerminalOrRecoverableStateCount: 0
+
+alerting:
+  minimumEligibleRequests: 100
+  fastBurn:
+    shortWindow: PT1H
+    longWindow: PT6H
+    burnRate: 6
+  slowBurn:
+    shortWindow: PT6H
+    longWindow: P3D
+    burnRate: 2
+
+measurement:
+  requiredDimensions:
+    - server
+    - tool
+    - outcome
+    - error_code
+    - version
+  contentLabelsForbidden: true
+  requiredMetrics:
+    - ai_factory_mcp_requests_total
+    - ai_factory_mcp_request_duration_seconds_bucket
+    - ai_factory_sandbox_job_queue_duration_seconds_bucket
+    - ai_factory_sandbox_jobs_submitted_total
+    - ai_factory_sandbox_jobs_rejected_total
+  currentProxies:
+    - ai_factory_mcp_client_calls_total
+    - ai_factory_mcp_client_errors_total
+    - ai_factory_mcp_client_duration_seconds
+    - ai_factory_mcp_sandbox_calls_total
+    - ai_factory_mcp_sandbox_errors_total
+    - ai_factory_mcp_sandbox_duration_seconds
+    - ai_factory_sandbox_job_queue_duration_seconds
