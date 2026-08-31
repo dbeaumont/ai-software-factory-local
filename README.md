@@ -191,6 +191,9 @@ Dans la configuration Compose, les validations de patch, tests, analyses SonarQu
 par `sandbox-execution-mcp`. L'orchestrateur ne monte plus le socket Docker et ne reçoit plus les secrets SonarQube
 ou Artifactory nécessaires aux jobs. Les commandes et contraintes sont définies par cinq profils serveur immuables ;
 les appels MCP ne peuvent fournir ni shell, ni image, ni réseau, ni volume, ni variable d'environnement.
+Les valeurs d'environnement configurées côté serveur doivent être monolignes (CR/LF/NUL refusés) et sont transmises
+par un fichier `--env-file`, jamais concaténées au script. Les noms de fichiers et le contenu du patch sont uniquement
+lus par Git : les métacaractères shell qu'ils contiennent ne sont pas évalués.
 
 ```bash
 AI_FACTORY_MCP_CLIENT_ENABLED=true

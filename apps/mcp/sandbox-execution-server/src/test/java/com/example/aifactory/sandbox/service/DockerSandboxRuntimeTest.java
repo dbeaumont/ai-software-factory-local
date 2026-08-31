@@ -3,7 +3,10 @@ package com.example.aifactory.sandbox.service;
 import com.example.aifactory.sandbox.config.SandboxExecutionProperties;
 import com.example.aifactory.sandbox.model.SandboxModels.Operation;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -61,6 +64,45 @@ class DockerSandboxRuntimeTest {
         assertTrue(command.contains("factory-workspace:/factory-tasks"));
         assertTrue(command.contains("ai-factory-m2:/root/.m2"));
         runtime.shutdown();
+    }
+
+    @Test
+    void keepsServerSideEnvironmentValuesOutOfTheShellCommand() {
+        String payload = "$(touch injected-from-environment)";
+        SandboxExecutionProperties properties = new SandboxExecutionProperties(
+                Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
+                "sandbox@sha256:fixed", "factory-network", 2, 32, 2, 100,
+                Duration.ofDays(7), Duration.ofSeconds(15), 65_536, 1_048_576,
+                "https://mirror.invalid/" + payload, payload, "https://sonar.invalid", payload);
+        DockerSandboxRuntime runtime = new DockerSandboxRuntime(properties);
+
+        List<String> command = runtime.command(SandboxProfiles.forOperation(Operation.RUN_QUALITY),
+                "ai-factory-sbx-abc", Path.of("/workspace/tasks/task-1"), Path.of("/tmp/opaque-env-file"));
+
+        assertFalse(String.join(" ", command).contains(payload));
+        assertTrue(command.containsAll(List.of("--env-file", "/tmp/opaque-env-file")));
+        runtime.shutdown();
+    }
+
+    @Test
+    void treatsMaliciousFileNamesAndPatchLinesAsData(@TempDir Path repository) throws Exception {
+        String maliciousName = "$(touch injected-from-filename)";
+        Path maliciousFile = repository.resolve(maliciousName);
+        run(repository, "git", "init", "-q");
+        run(repository, "git", "config", "user.email", "test@example.local");
+        run(repository, "git", "config", "user.name", "Test");
+        Files.writeString(maliciousFile, "before\n", StandardCharsets.UTF_8);
+        run(repository, "git", "add", ".");
+        run(repository, "git", "commit", "-qm", "initial");
+        Files.writeString(maliciousFile, "after\n$(touch injected-from-content)\n", StandardCharsets.UTF_8);
+        Files.writeString(repository.resolve("changes.patch"), output(repository, "git", "diff", "--binary"),
+                StandardCharsets.UTF_8);
+        run(repository, "git", "checkout", "--", maliciousName);
+
+        run(repository, "bash", "-lc", SandboxProfiles.forOperation(Operation.VALIDATE_PATCH).script());
+
+        assertFalse(Files.exists(repository.resolve("injected-from-filename")));
+        assertFalse(Files.exists(repository.resolve("injected-from-content")));
     }
 
     private static DockerSandboxRuntime runtime() {
@@ -126,5 +168,23 @@ class DockerSandboxRuntimeTest {
                 "sandbox@sha256:fixed", "factory-network",
                 1, -1, 1, 10, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", ""));
+        assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
+                Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
+                "sandbox@sha256:fixed", "factory-network",
+                1, 1, 1, 10, Duration.ofDays(7), Duration.ofSeconds(15),
+                65_536, 1_048_576, "", "token\nINJECTED=value", "", ""));
+    }
+
+    private static void run(Path directory, String... command) throws Exception {
+        Process process = new ProcessBuilder(command).directory(directory.toFile()).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, process.waitFor(), output);
+    }
+
+    private static String output(Path directory, String... command) throws Exception {
+        Process process = new ProcessBuilder(command).directory(directory.toFile()).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, process.waitFor(), output);
+        return output;
     }
 }

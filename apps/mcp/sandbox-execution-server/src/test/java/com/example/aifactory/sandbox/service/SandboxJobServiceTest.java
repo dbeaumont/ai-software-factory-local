@@ -302,6 +302,19 @@ class SandboxJobServiceTest {
     }
 
     @Test
+    void rejectsCommandLikeTaskIdentifiersBeforeWorkspaceOrRuntimeResolution() {
+        for (String taskId : new String[]{"../task-1", "task-1;touch-pwned", "task-1$(touch pwned)",
+                "task-1\nINJECTED=value", "task-1|sh"}) {
+            StartExecutionRequest injected = new StartExecutionRequest("1", taskId, commit, "workflow", TRACE_ID,
+                    "injection-corpus-key", patchDigest);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> jobs.submit(Operation.RUN_TESTS, injected), taskId);
+        }
+        assertEquals(0, runtime.calls.get());
+    }
+
+    @Test
     void cancelsARunningJobAndInvokesRuntimeCleanup() throws Exception {
         runtime.block = true;
         ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,

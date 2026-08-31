@@ -25,6 +25,7 @@ import java.util.HexFormat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.http.MediaType.TEXT_EVENT_STREAM;
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @TestExecutionListeners(
@@ -146,6 +147,35 @@ class SandboxExecutionMcpIntegrationTest {
                 .jsonPath("$.result.isError").isEqualTo(false)
                 .jsonPath("$.result.content[0].text").value(containsString("\"operation\":\"APPLY_PATCH\""))
                 .jsonPath("$.result.content[0].text").value(containsString("\"execution_id\""));
+    }
+
+    @Test
+    void neverTreatsUnknownProfileOrCommandArgumentsAsExecutableInput() {
+        WebTestClient client = WebTestClient.bindToApplicationContext(applicationContext).build();
+        Path marker = WORKSPACE_ROOT.resolve("injected-by-mcp-argument");
+
+        client.post().uri("/mcp")
+                .header("MCP-Protocol-Version", "2025-06-18")
+                .contentType(APPLICATION_JSON)
+                .accept(APPLICATION_JSON, TEXT_EVENT_STREAM)
+                .bodyValue(Map.of(
+                        "jsonrpc", "2.0", "id", 5, "method", "tools/call",
+                        "params", Map.of(
+                                "name", "sandbox.validate_patch",
+                                "arguments", Map.of(
+                                        "schema_version", "1",
+                                        "task_id", "integration-task",
+                                        "source_commit", commit,
+                                        "actor", "workflow",
+                                        "trace_id", "abcdef0123456789abcdef0123456789",
+                                        "idempotency_key", "injected-profile-idempotency-key",
+                                        "patch_digest", patchDigest,
+                                        "profile", "../../attacker-profile",
+                                        "command", "touch " + marker))))
+                .exchange()
+                .expectStatus().isOk();
+
+        assertFalse(Files.exists(marker));
     }
 
     private static Path temporaryDirectory() {

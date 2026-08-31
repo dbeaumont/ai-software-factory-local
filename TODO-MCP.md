@@ -61,6 +61,77 @@ flowchart LR
   SCM -. trace_id .-> OTEL
 ```
 
+### Organisation des composants et responsabilités
+
+La séparation cible suit la chaîne suivante : **les agents raisonnent et proposent, l'orchestrateur décide et
+enchaîne, les serveurs MCP autorisent et bornent les capacités, les systèmes techniques exécutent ou stockent**.
+Un agent ne contacte donc jamais directement Gitea, SonarQube, Artifactory, Docker/GKE ou un stockage de preuves.
+
+#### Gouvernance du catalogue MCP
+
+| Responsabilité | Interlocuteur désigné | Décisions attendues |
+|---|---|---|
+| Produit | **Product Owner AI Software Factory** | Priorisation, valeur métier, ajout, évolution et retrait des capacités du catalogue |
+| Sécurité | **Représentant RSSI** | Validation des frontières de confiance, permissions, secrets, risques et conditions d'ouverture des outils |
+
+| Couche | Organisation | Responsabilités | Accès interdits |
+|---|---|---|---|
+| **Orchestrateur** | Service Spring Boot, hôte/client MCP et propriétaire de l'état du workflow | Enchaîner les étapes, appeler les agents, appliquer les gates, vérifier approbation et politiques, choisir déterministiquement les outils MCP, gérer timeout/retry/idempotence | Aucun secret fournisseur à terme, aucun `docker.sock`, aucune commande libre et aucun appel direct à Gitea/Sonar/Trivy |
+| **Agents** | Rôles logiques `Planner`, `Developer`, `PatchRepair`, `Tester`, `Reviewer`, définis par prompts et contrats de sortie ; ils s'exécutent via LiteLLM/modèle | Analyser des données non fiables et produire plan, patch, synthèse ou revue structurée | Aucun accès direct aux systèmes techniques ; aucun droit implicite lié au nom du rôle ; aucun outil à effet pendant les premiers lots |
+| **Serveurs MCP** | Services séparés par frontière de confiance, secret, réseau et niveau d'effet | Exposer des outils métier à schémas stricts, contrôler identité/scope/quota, valider les entrées, redacter les sorties, produire handles/digests/preuves et appeler uniquement leur backend autorisé | Aucun outil shell générique, aucune URL/image/commande arbitraire, aucun chaînage caché vers un autre serveur privilégié |
+| **Systèmes techniques** | Produits existants placés derrière le serveur MCP propriétaire de la capacité | Héberger le code, analyser la qualité, distribuer les dépendances, exécuter les jobs ou stocker les preuves | Ils ne sont ni des agents ni des outils exposés directement au modèle |
+
+#### Position des agents
+
+Les agents ne sont pas des microservices autonomes dans le prototype : ce sont des rôles exécutés par
+l'orchestrateur à partir de `resources/agents/` et `resources/prompts/`. L'orchestrateur construit le contexte,
+appelle LiteLLM, valide la réponse structurée puis décide de la transition suivante. Dans le lot agentique futur,
+un modèle pourra **demander** un outil de lecture, mais l'hôte vérifiera la matrice de permissions avant de réaliser
+l'appel MCP. Le résultat reviendra au modèle comme donnée non fiable ; le modèle ne recevra jamais l'identité ou le
+secret du backend.
+
+#### Répartition des serveurs MCP et des outils techniques
+
+| Serveur propriétaire | Backends/outils techniques | Usage autorisé |
+|---|---|---|
+| `repository-context-mcp` | Workspace Git/index par commit | Lecture ciblée, recherche et citations ; aucun clone depuis une URL fournie par le modèle |
+| `sandbox-execution-mcp` | Runner Docker local puis Jobs GKE ; Artifactory pour les dépendances ; SonarQube, Syft et Trivy dans les profils autorisés | Validation/application du patch, tests et production des rapports dans une sandbox bornée |
+| `scm-delivery-mcp` | Gitea puis SCM d'entreprise | Lecture des métadonnées et création idempotente d'une draft PR après gates et approbation |
+| `assurance-mcp` | API/résultats SonarQube, rapports Syft/Trivy et politiques qualité/sécurité | Transformer les rapports en verdicts structurés ; une preuve absente donne `INDETERMINATE` |
+| `evidence-mcp` | Volume local puis Cloud Storage/Object Storage | Enregistrer, vérifier et restituer les preuves immuables par URI et digest |
+
+LiteLLM reste la passerelle d'inférence des agents et non un serveur d'outils métier. Artifactory reste un dépôt de
+dépendances, SonarQube un moteur d'analyse, Syft/Trivy des moteurs exécutés dans le runner, et Gitea le SCM : MCP ne
+remplace pas ces produits, il place devant eux une API métier contrôlée.
+
+#### Sens des appels autorisés
+
+```mermaid
+flowchart LR
+  USER[Utilisateur / API] --> ORCH[Orchestrateur]
+  ORCH -->|prompt + données bornées| LLM[Agent logique via LiteLLM]
+  LLM -->|sortie structurée / demande d'outil| ORCH
+  ORCH -->|autorisation + appel déterministe| MCP[Serveur MCP propriétaire]
+  MCP -->|API/runner avec identité dédiée| TOOL[Gitea · SonarQube · Artifactory · Docker/GKE · stockage]
+  TOOL -->|résultat brut| MCP
+  MCP -->|résultat borné + digest + preuve| ORCH
+  ORCH -->|nouvelle étape ou blocage| USER
+```
+
+Il n'existe pas de chemin autorisé `Agent → système technique`, `Agent → secret`, ni `système technique → modèle`.
+Les sorties brutes passent par le serveur MCP et l'orchestrateur avant d'être éventuellement résumées pour un agent.
+
+#### Organisation correspondante dans le dépôt
+
+| Emplacement | Contenu |
+|---|---|
+| `apps/orchestrator/` | Workflow, état, gates, ports métier, clients MCP et appels aux agents |
+| `resources/agents/` et `resources/prompts/` | Définition des rôles, prompts versionnés et contrats attendus |
+| `apps/mcp/*-server/` | Implémentation isolée de chaque serveur MCP et de ses contrôles |
+| `resources/mcp/schemas/` | Contrats JSON versionnés des entrées et sorties |
+| `resources/mcp/policies/` | Permissions par rôle, profils d'exécution et limites |
+| `infrastructure/` | Compose, runner sandbox, proxy, LiteLLM, SonarQube, Artifactory et observabilité |
+
 ### Ordre d'introduction
 
 | Rang | Serveur | But immédiat | Pourquoi cet ordre |
@@ -171,11 +242,11 @@ Le serveur interprète les preuves ; leur production reste dans le runner isolé
 
 Objectif : rendre les décisions vérifiables avant d'ajouter des dépendances ou des services.
 
-- [ ] **MCP-000** — Nommer un responsable produit et un responsable sécurité du catalogue d'outils.
+- [x] **MCP-000** — Nommer un responsable produit et un responsable sécurité du catalogue d'outils. _(Produit : `Product Owner AI Software Factory` ; sécurité : `Représentant RSSI`.)_
 - [x] **MCP-001** — Écrire `docs/adr/ADR-MCP-001-boundaries-and-transport.md` avec les frontières ci-dessus, HTTP stateless, handles explicites et alternatives rejetées.
-- [ ] **MCP-002** — Faire l'inventaire des appels directs dans `TaskService`, `RepositoryContextService`, `SandboxService` et `GiteaService` ; associer chaque appel au futur outil.
-- [ ] **MCP-003** — Inventorier secrets, volumes, réseaux, comptes techniques et destinations utilisés par chaque capacité.
-- [ ] **MCP-004** — Définir les actifs et frontières de confiance : ticket, dépôt, source SHA, patch, workspace, preuves, approbation, jetons et PR.
+- [x] **MCP-002** — Faire l'inventaire des appels directs dans `TaskService`, `RepositoryContextService`, `SandboxService` et `GiteaService` ; associer chaque appel au futur outil. _(Inventaire et matrice de migration versionnés dans `docs/mcp/MCP-002-inventaire-appels-directs.md` ; les écarts de matérialisation de source, staging d'artefacts et isolation par tentative y sont explicités.)_
+- [x] **MCP-003** — Inventorier secrets, volumes, réseaux, comptes techniques et destinations utilisés par chaque capacité. _(Baseline Compose et propriété cible documentées dans `docs/mcp/MCP-003-inventaire-dependances-runtime.md`, sans lecture ni copie des valeurs de `.env`/`.vault`.)_
+- [x] **MCP-004** — Définir les actifs et frontières de confiance : ticket, dépôt, source SHA, patch, workspace, preuves, approbation, jetons et PR. _(Registre des actifs, zones, frontières, liaisons anti-rejeu et règles fail-closed dans `docs/mcp/MCP-004-actifs-frontieres-confiance.md`.)_
 - [ ] **MCP-005** — Réaliser un threat model couvrant prompt injection, tool poisoning, path traversal, SSRF, confused deputy, token passthrough, fuite de logs, handle hijacking, rejeu, déni de service et serveur compromis.
 - [x] **MCP-006** — Décider par ADR entre le SDK Java officiel et les starters Spring AI ; vérifier explicitement la compatibilité avec Spring Boot 3.5.16, WebFlux, Jackson et la version de protocole retenue.
 - [x] **MCP-007** — Épingler un BOM/version de SDK MCP et documenter le processus de montée de version avec tests de conformité.
@@ -267,7 +338,7 @@ Objectif : retirer le principal privilège critique de l'orchestrateur.
 - [x] **MCP-082** — Conserver les preuves même en cas d'échec/timeout, avec digest et statut `partial` explicite. _(La sortie bornée est redacted puis persistée avec `evidence_status=NONE|PARTIAL|COMPLETE` et un SHA-256 ; timeout et troncature produisent `PARTIAL/INDETERMINATE`, la restauration vérifie le digest du snapshot et l'orchestrateur recalcule le digest après pagination avant d'accepter uniquement `COMPLETE`.)_
 - [x] **MCP-083** — Ajouter quotas globaux/par tâche, limite de jobs concurrents et backpressure. _(Pool fixe et file `ArrayBlockingQueue`/`SynchronousQueue`, admission atomique bornée globalement et par tâche, rejeu idempotent prioritaire, rollback sans snapshot orphelin, métriques running/queued/queue duration/rejets et tests déterministes de saturation puis récupération.)_
 - [x] **MCP-084** — Ajouter tests des limites CPU/mémoire/PIDs/temps, réseau, volumes read-only, capabilities Linux et `no-new-privileges`. _(Le test Docker opt-in inspecte un conteneur réellement démarré et vérifie réseau `none`, 2 Gio, 2 CPU, 512 PIDs, `cap_drop=ALL`, `no-new-privileges`, workspace read-only et absence du cache Maven ; le timeout est normalisé en `TIMED_OUT/INDETERMINATE` par test déterministe.)_
-- [ ] **MCP-085** — Ajouter tests de commande injectée dans noms de fichiers, profils, variables et contenu du patch. _(Injection via `task_id` testée ; corpus fichiers/patch/variables à compléter.)_
+- [x] **MCP-085** — Ajouter tests de commande injectée dans noms de fichiers, profils, variables et contenu du patch. _(Corpus couvert : identifiants de tâche rejetés avant résolution, arguments MCP `profile`/`command` sans voie d'exécution, profil serveur immuable, secrets absents de la commande, CR/LF/NUL refusés dans l'env-file, et validation Git réelle d'un patch contenant `$()` dans le nom de fichier et le contenu sans création du marqueur.)_
 - [x] **MCP-086** — Ajouter tests de job orphelin, redémarrage serveur, double soumission, cancellation, retry et nettoyage. _(Tests déterministes de restauration, double soumission, cancellation et reprise fail-closed d'un job interrompu ; smoke test Docker réel validé avec snapshot restauré, rejeu idempotent sur le même `execution_id`, suppression ciblée de l'orphelin au redémarrage et aucun artefact éphémère résiduel.)_
 - [ ] **MCP-087** — Exécuter `SandboxService` et MCP en shadow ; comparer exit codes, diff stat, tests, qualité, SBOM et Trivy. _(Mode shadow disponible pour les opérations comparables ; campagne de parité non exécutée.)_
 - [ ] **MCP-088** — Basculer chaque opération sur MCP derrière un feature flag indépendant.

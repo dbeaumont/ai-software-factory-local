@@ -41,6 +41,14 @@ public record SandboxExecutionProperties(
                 || maxPatchBytes < 1 || maxPatchBytes > 10_485_760) {
             throw new IllegalArgumentException("invalid sandbox limits");
         }
+        if (invalidEnvironmentValue(mavenMirrorUrl) || invalidEnvironmentValue(artifactoryToken)
+                || invalidEnvironmentValue(sonarqubeUrl) || invalidEnvironmentValue(sonarToken)) {
+            throw new IllegalArgumentException("sandbox environment values must be single-line strings");
+        }
+    }
+
+    private static boolean invalidEnvironmentValue(String value) {
+        return value != null && (value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0 || value.indexOf('\0') >= 0);
     }
 
 }

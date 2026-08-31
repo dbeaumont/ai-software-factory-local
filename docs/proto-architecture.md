@@ -165,6 +165,8 @@ sequenceDiagram
 - Contrôle de conformité (`git diff --check` et `git diff --stat`).
 - Le contrôleur applique une concurrence globale, une file d'attente bornée et un quota de jobs actifs par tâche ;
   les soumissions excédentaires sont refusées avant création du job.
+- Les profils et scripts sont sélectionnés uniquement depuis l'enum serveur ; arguments MCP inconnus, noms de fichiers,
+  contenu du patch et valeurs d'environnement ne sont jamais concaténés à une commande.
 - Les jobs actifs publient un `heartbeat_at` persistant ; les logs terminaux sont lus par curseur et restent bornés/redacted.
 - Exécution automatique du build et des tests selon le dépôt :
   - Maven wrapper : `./mvnw -B -s /opt/ai-factory/maven-settings.xml test`
