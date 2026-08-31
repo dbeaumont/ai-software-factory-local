@@ -38,6 +38,7 @@ roles:
       - context.search_code
       - context.read_file
 limits:
+  defaultsPolicy: default-limits-v1
   maxResponseBytes: 65536
   maxToolCallsPerAgentTurn: 12
   maxConcurrentCallsPerTask: 4

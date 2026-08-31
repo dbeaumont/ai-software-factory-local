@@ -253,8 +253,8 @@ Objectif : rendre les décisions vérifiables avant d'ajouter des dépendances o
 - [x] **MCP-008** — Définir une convention de nommage/versionnement pour outils, ressources, schémas et serveurs. _(Convention normative, compatibilité N/N-1 et écarts à normaliser documentés dans `docs/mcp/MCP-008-conventions-nommage-versionnement.md`.)_
 - [x] **MCP-009** — Écrire les JSON Schema du tronc commun, des erreurs et des cinq premiers outils dans `resources/mcp/schemas/`. _(Tronc requête/réponse, erreurs et couples request/result de `context.list_tree`, `context.search_code`, `context.read_file`, `context.get_symbols` et `context.get_dependencies` créés en Draft 2020-12 ; catalogue `contract-catalog-v1.json` ajouté.)_
 - [x] **MCP-010** — Créer une matrice `agent-role -> outils -> scopes -> approbation -> quotas` lisible par machine.
-- [ ] **MCP-011** — Définir les limites par défaut : octets, résultats, durée, concurrence, retries, tours agentiques et budget.
-- [ ] **MCP-012** — Définir la politique de redaction des secrets/PII pour entrées, sorties, logs et traces.
+- [x] **MCP-011** — Définir les limites par défaut : octets, résultats, durée, concurrence, retries, tours agentiques et budget. _(Politique normative dans `resources/mcp/policies/default-limits-v1.yaml` et règles d'application documentées dans `docs/mcp/MCP-011-limites-par-defaut.md`.)_
+- [x] **MCP-012** — Définir la politique de redaction des secrets/PII pour entrées, sorties, logs et traces. _(Politique versionnée dans `resources/mcp/policies/redaction-policy-v1.yaml`, règles par canal et corpus de tests dans `docs/mcp/MCP-012-politique-redaction.md`.)_
 - [ ] **MCP-013** — Capturer une baseline du scénario `examples/customer-api` : statut de chaque étape, durées, digests et verdict final.
 - [ ] **MCP-014** — Ajouter des cas négatifs de référence : patch invalide, test échoué, Sonar absent, vulnérabilité bloquante, approbation absente et retry de création de PR.
 - [ ] **MCP-015** — Choisir les SLO initiaux : disponibilité, latence p95 des lectures, délai de démarrage des jobs et taux d'erreur MCP.

@@ -1,0 +1,176 @@
+version: "1"
+policyId: redaction-policy-v1
+defaultClassification: CONFIDENTIAL
+defaultAction: REDACT
+
+classifications:
+  PUBLIC:
+    logContent: true
+    modelContent: true
+  INTERNAL:
+    logContent: false
+    modelContent: true
+  CONFIDENTIAL:
+    logContent: false
+    modelContent: policy-gated
+  RESTRICTED:
+    logContent: false
+    modelContent: false
+  SECRET:
+    logContent: false
+    modelContent: false
+
+markers:
+  generic: "[REDACTED]"
+  secret: "[REDACTED:SECRET]"
+  pii: "[REDACTED:PII]"
+  credential: "[REDACTED:CREDENTIAL]"
+  privateKey: "[REDACTED:PRIVATE_KEY]"
+  truncated: "[TRUNCATED]"
+
+structuredFields:
+  forbiddenExact:
+    - password
+    - passwd
+    - secret
+    - token
+    - access_token
+    - refresh_token
+    - id_token
+    - api_key
+    - private_key
+    - client_secret
+    - authorization
+    - cookie
+    - set-cookie
+  forbiddenNamePattern: '(?i)(password|passwd|secret|token|api[_-]?key|private[_-]?key|client[_-]?secret|authorization|cookie)'
+  preserveMetadata:
+    - secret_type
+    - detector
+    - rule_id
+    - location
+    - severity
+    - redacted
+    - fingerprint
+
+detectors:
+  - id: configured-secret-values
+    classification: SECRET
+    action: REDACT
+    source: server-secret-registry
+  - id: private-key-block
+    classification: SECRET
+    action: REDACT
+    patternClass: PEM_PRIVATE_KEY
+  - id: authorization-header
+    classification: SECRET
+    action: REDACT
+    patternClass: AUTHORIZATION_CREDENTIAL
+  - id: jwt
+    classification: SECRET
+    action: REDACT
+    patternClass: JWT_COMPACT
+  - id: provider-token
+    classification: SECRET
+    action: REDACT
+    patternClass: KNOWN_PROVIDER_TOKEN
+  - id: sensitive-assignment
+    classification: SECRET
+    action: REDACT_VALUE
+    patternClass: KEY_VALUE_ASSIGNMENT
+  - id: email
+    classification: CONFIDENTIAL
+    action: CHANNEL_POLICY
+    patternClass: EMAIL
+  - id: phone
+    classification: CONFIDENTIAL
+    action: CHANNEL_POLICY
+    patternClass: PHONE
+  - id: ip-address
+    classification: INTERNAL
+    action: CHANNEL_POLICY
+    patternClass: IP_ADDRESS
+
+channels:
+  mcpRequest:
+    secretAction: REJECT
+    piiAction: POLICY_GATE
+    rawContentLogging: false
+  mcpResponse:
+    secretAction: REDACT
+    piiAction: POLICY_GATE
+    rawContentLogging: false
+  modelPrompt:
+    secretAction: REDACT
+    piiAction: POLICY_GATE
+    includeOnlyRequiredContext: true
+    rawContentLogging: false
+  modelResponse:
+    secretAction: REDACT_AND_BLOCK_EFFECT
+    piiAction: REDACT
+    rawContentLogging: false
+  applicationLog:
+    secretAction: REDACT
+    piiAction: REDACT
+    contentMode: METADATA_ONLY
+  auditLog:
+    secretAction: REDACT
+    piiAction: PSEUDONYMIZE
+    contentMode: METADATA_AND_DIGEST
+  trace:
+    secretAction: REDACT
+    piiAction: REDACT
+    contentMode: METADATA_ONLY
+  metric:
+    secretAction: DROP
+    piiAction: DROP
+    contentMode: LOW_CARDINALITY_ONLY
+  evidence:
+    secretAction: ENCRYPT_RESTRICT_AND_FINGERPRINT
+    piiAction: ENCRYPT_AND_RESTRICT
+    rawAccessAudited: true
+  ui:
+    secretAction: REDACT
+    piiAction: ROLE_FILTER
+    contentMode: SAFE_SUMMARY
+
+processingOrder:
+  - enforceInputByteLimit
+  - classifyStructuredFields
+  - matchConfiguredSecretValues
+  - detectHighConfidencePatterns
+  - applyChannelPolicy
+  - computeAuthorizedFingerprints
+  - truncateRedactedContent
+  - persistOrTransmit
+
+fingerprinting:
+  algorithm: HMAC-SHA-256
+  keySource: dedicated-secret-manager-key
+  outputCharacters: 16
+  rawSha256ForSecrets: forbidden
+  purpose: correlate-findings-without-revealing-values
+
+telemetry:
+  counters:
+    - redaction_matches_total
+    - redaction_rejections_total
+    - redaction_failures_total
+  allowedLabels:
+    - server
+    - channel
+    - detector
+    - action
+  forbiddenLabels:
+    - task_id
+    - attempt_id
+    - user_id
+    - repository_id
+    - matched_value
+
+failure:
+  detectorUnavailable: FAIL_CLOSED_FOR_SECRET_CHANNELS
+  policyUnknown: REJECT
+  preserveUnredactedFallback: false
+  safeErrorCode: POLICY_DENIED
+

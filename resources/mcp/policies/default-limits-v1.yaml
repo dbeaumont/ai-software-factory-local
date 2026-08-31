@@ -1,0 +1,151 @@
+version: "1"
+policyId: default-limits-v1
+mode: default-deny
+
+precedence:
+  order:
+    - serverHardCeiling
+    - environmentPolicy
+    - tenantPolicy
+    - repositoryPolicy
+    - rolePolicy
+    - request
+  rule: lower-value-wins
+  callerMayIncrease: false
+
+transport:
+  maxRequestBodyBytes: 1048576
+  maxResponseBodyBytes: 65536
+  requestTimeout: PT20S
+  maxInflightPerServer: 16
+  maxInflightPerTask: 4
+  maxWarnings: 32
+  maxEvidenceReferences: 64
+
+retry:
+  readOnly:
+    maxAttempts: 3
+    initialBackoff: PT0.2S
+    maxBackoff: PT2S
+    multiplier: 2.0
+    jitter: 0.2
+  effectful:
+    maxAttempts: 2
+    requiresIdempotencyKey: true
+    initialBackoff: PT0.5S
+    maxBackoff: PT2S
+    multiplier: 2.0
+    jitter: 0.2
+  retryableCodes:
+    - DEPENDENCY_UNAVAILABLE
+    - TIMEOUT
+  neverRetryCodes:
+    - INVALID_ARGUMENT
+    - UNAUTHORIZED
+    - FORBIDDEN
+    - NOT_FOUND
+    - CONFLICT
+    - POLICY_DENIED
+    - LIMIT_EXCEEDED
+    - INDETERMINATE
+    - INCOMPATIBLE_SCHEMA
+
+context:
+  maxEligibleFileBytes: 1048576
+  maxReturnedFileBytes: 65536
+  maxPathBytes: 1024
+  listTree:
+    defaultDepth: 6
+    maxDepth: 12
+    defaultPageEntries: 200
+    maxPageEntries: 1000
+    maxTotalEntries: 5000
+    maxFilters: 32
+  searchCode:
+    maxScannedFiles: 1000
+    defaultPageResults: 50
+    maxPageResults: 200
+    maxTotalResults: 500
+    maxQueryBytes: 256
+    maxExcerptBytes: 2048
+    timeout: PT3S
+  readFile:
+    defaultReturnedBytes: 16384
+    maxReturnedBytes: 65536
+  getSymbols:
+    defaultPageResults: 100
+    maxPageResults: 500
+    maxTotalResults: 2000
+    timeout: PT5S
+  getDependencies:
+    defaultPageResults: 500
+    maxPageResults: 2000
+    maxTotalResults: 5000
+    timeout: PT5S
+
+sandbox:
+  maxPatchBytes: 1048576
+  maxOutputBytes: 65536
+  maxOutputPageBytes: 16384
+  maxConcurrentJobs: 2
+  maxQueuedJobs: 32
+  maxActiveJobsPerTask: 2
+  maxJobsPerTask: 12
+  maxRetainedJobs: 500
+  jobRetention: P7D
+  heartbeatInterval: PT15S
+  pollInterval: PT0.25S
+  maxPollDuration: PT20M
+  resources:
+    memoryBytes: 2147483648
+    cpuCores: 2
+    pids: 512
+  profiles:
+    patch-check-v1:
+      timeout: PT3M
+      network: none
+    patch-apply-v1:
+      timeout: PT3M
+      network: none
+    test-auto-v1:
+      timeout: PT15M
+      networkPolicy: dependencies-only
+    quality-sonar-v1:
+      timeout: PT15M
+      networkPolicy: dependencies-and-sonar
+    security-syft-trivy-v1:
+      timeout: PT10M
+      networkPolicy: none-target
+
+agent:
+  maxTurnsPerInvocation: 8
+  maxToolCallsPerTurn: 12
+  maxToolCallsPerInvocation: 32
+  maxToolCallsPerTask: 96
+  maxConcurrentCallsPerTask: 4
+  maxRepeatedIdenticalCalls: 2
+  maxInputTokensPerTask: 120000
+  maxOutputTokensPerTask: 40000
+  maxCostEurPerTask: 5.00
+  maxWallDurationPerTask: PT45M
+  maxPatchRepairAttempts: 2
+
+scm:
+  maxRepositoriesPerTask: 1
+  maxPullRequestsPerAttempt: 1
+  maxCommitMessageBytes: 256
+  operationTimeout: PT2M
+  approvalMaxAge: PT24H
+
+evidence:
+  maxArtifactBytes: 10485760
+  maxArtifactsPerAttempt: 64
+  maxManifestBytes: 1048576
+  maxAgentSummaryBytes: 65536
+
+exceeded:
+  errorCode: LIMIT_EXCEEDED
+  retryable: false
+  preservePartialEvidence: true
+  allowDirectFallback: false
+
