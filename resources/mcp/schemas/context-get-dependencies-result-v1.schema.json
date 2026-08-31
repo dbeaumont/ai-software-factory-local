@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/context-get-dependencies-result-v1.schema.json",
+  "title": "context.get_dependencies result v1",
+  "unevaluatedProperties": false,
+  "allOf": [
+    { "$ref": "common-response-envelope-v1.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_commit", "module", "ecosystem", "dependencies", "truncated"],
+          "properties": {
+            "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "module": { "type": "string", "minLength": 1, "maxLength": 1024 },
+            "ecosystem": { "type": "string", "enum": ["MAVEN", "GRADLE", "NPM", "UNKNOWN"] },
+            "dependencies": {
+              "type": "array",
+              "maxItems": 2000,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "scope", "direct"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 1, "maxLength": 512 },
+                  "version": { "type": ["string", "null"], "maxLength": 256 },
+                  "scope": { "type": "string", "enum": ["BUILD", "COMPILE", "RUNTIME", "TEST", "DEVELOPMENT", "OPTIONAL", "UNKNOWN"] },
+                  "direct": { "type": "boolean" },
+                  "declaration_path": { "type": "string", "maxLength": 1024 },
+                  "declaration_line": { "type": "integer", "minimum": 1 }
+                }
+              }
+            },
+            "truncated": { "type": "boolean" },
+            "next_cursor": { "type": ["string", "null"], "maxLength": 2048 }
+          }
+        }
+      }
+    }
+  ]
+}

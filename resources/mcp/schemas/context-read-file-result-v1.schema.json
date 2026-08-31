@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/context-read-file-result-v1.schema.json",
+  "title": "context.read_file result v1",
+  "unevaluatedProperties": false,
+  "allOf": [
+    { "$ref": "common-response-envelope-v1.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "start_line", "end_line", "content", "mime_type", "sha256", "truncated"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+            "start_line": { "type": "integer", "minimum": 1 },
+            "end_line": { "type": "integer", "minimum": 1 },
+            "content": { "type": "string", "maxLength": 65536 },
+            "mime_type": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "truncated": { "type": "boolean" },
+            "resource_uri": { "type": "string", "pattern": "^repo://" }
+          }
+        }
+      }
+    }
+  ]
+}

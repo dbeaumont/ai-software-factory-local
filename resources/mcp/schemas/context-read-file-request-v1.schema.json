@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ai-factory.local/mcp/schemas/context-read-file-v1.schema.json",
+  "$id": "https://ai-factory.local/mcp/schemas/context-read-file-request-v1.schema.json",
   "title": "context.read_file request v1",
   "unevaluatedProperties": false,
   "allOf": [

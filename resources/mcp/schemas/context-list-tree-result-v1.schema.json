@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/context-list-tree-result-v1.schema.json",
+  "title": "context.list_tree result v1",
+  "unevaluatedProperties": false,
+  "allOf": [
+    { "$ref": "common-response-envelope-v1.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_commit", "entries", "tree_digest", "truncated"],
+          "properties": {
+            "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "entries": {
+              "type": "array",
+              "maxItems": 1000,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path", "type", "size"],
+                "properties": {
+                  "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+                  "type": { "type": "string", "enum": ["FILE", "DIRECTORY"] },
+                  "size": { "type": "integer", "minimum": 0 },
+                  "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+                }
+              }
+            },
+            "tree_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "truncated": { "type": "boolean" },
+            "next_cursor": { "type": ["string", "null"], "maxLength": 2048 }
+          }
+        }
+      }
+    }
+  ]
+}

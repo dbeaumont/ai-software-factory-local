@@ -1,0 +1,45 @@
+{
+  "catalog_version": "1",
+  "schema_draft": "https://json-schema.org/draft/2020-12/schema",
+  "common": {
+    "request": "common-envelope-v1.schema.json",
+    "response": "common-response-envelope-v1.schema.json",
+    "error": "error-v1.schema.json"
+  },
+  "tools": [
+    {
+      "name": "context.list_tree",
+      "request_schema": "context-list-tree-request-v1.schema.json",
+      "result_schema": "context-list-tree-result-v1.schema.json",
+      "implementation_status": "PARTIAL"
+    },
+    {
+      "name": "context.search_code",
+      "request_schema": "context-search-code-request-v1.schema.json",
+      "result_schema": "context-search-code-result-v1.schema.json",
+      "implementation_status": "PARTIAL"
+    },
+    {
+      "name": "context.read_file",
+      "request_schema": "context-read-file-request-v1.schema.json",
+      "result_schema": "context-read-file-result-v1.schema.json",
+      "implementation_status": "PARTIAL"
+    },
+    {
+      "name": "context.get_symbols",
+      "request_schema": "context-get-symbols-request-v1.schema.json",
+      "result_schema": "context-get-symbols-result-v1.schema.json",
+      "implementation_status": "PLANNED"
+    },
+    {
+      "name": "context.get_dependencies",
+      "request_schema": "context-get-dependencies-request-v1.schema.json",
+      "result_schema": "context-get-dependencies-result-v1.schema.json",
+      "implementation_status": "PLANNED"
+    }
+  ],
+  "notes": [
+    "Schema version 1 is the target contract. Current Java adapters do not yet propagate attempt_id and deadline; alignment is tracked by MCP-026.",
+    "Strict response envelopes are target contracts; runtime response validation is tracked by MCP-025."
+  ]
+}

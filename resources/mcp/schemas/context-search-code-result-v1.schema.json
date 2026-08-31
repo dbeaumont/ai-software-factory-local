@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/context-search-code-result-v1.schema.json",
+  "title": "context.search_code result v1",
+  "unevaluatedProperties": false,
+  "allOf": [
+    { "$ref": "common-response-envelope-v1.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_commit", "matches", "truncated"],
+          "properties": {
+            "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "matches": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path", "line", "excerpt"],
+                "properties": {
+                  "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+                  "line": { "type": "integer", "minimum": 1 },
+                  "excerpt": { "type": "string", "maxLength": 2048 },
+                  "file_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+                }
+              }
+            },
+            "truncated": { "type": "boolean" },
+            "next_cursor": { "type": ["string", "null"], "maxLength": 2048 }
+          }
+        }
+      }
+    }
+  ]
+}

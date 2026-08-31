@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/sandbox-get-execution-request-v1.schema.json",
+  "title": "sandbox.get_execution request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "attempt_id", "source_commit", "actor", "trace_id", "deadline", "execution_id"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "task_id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" },
+    "attempt_id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "actor": { "type": "string", "enum": ["workflow"] },
+    "trace_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "deadline": { "type": "string", "format": "date-time" },
+    "execution_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "output_cursor": { "type": "integer", "minimum": 0, "default": 0 },
+    "output_limit": { "type": "integer", "minimum": 1, "maximum": 16384, "default": 16384 }
+  }
+}

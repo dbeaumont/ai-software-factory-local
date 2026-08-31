@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ai-factory.local/mcp/schemas/sandbox-start-execution-v1.schema.json",
-  "title": "Sandbox execution command v1",
+  "$id": "https://ai-factory.local/mcp/schemas/sandbox-start-execution-request-v1.schema.json",
+  "title": "Sandbox execution command request v1",
   "unevaluatedProperties": false,
   "allOf": [
     { "$ref": "common-envelope-v1.schema.json" },

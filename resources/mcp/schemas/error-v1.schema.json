@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/error-v1.schema.json",
+  "title": "AI Factory MCP safe error v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "retryable", "safe_message"],
+  "properties": {
+    "code": {
+      "type": "string",
+      "enum": [
+        "INVALID_ARGUMENT",
+        "UNAUTHORIZED",
+        "FORBIDDEN",
+        "NOT_FOUND",
+        "CONFLICT",
+        "POLICY_DENIED",
+        "LIMIT_EXCEEDED",
+        "DEPENDENCY_UNAVAILABLE",
+        "TIMEOUT",
+        "INDETERMINATE",
+        "INCOMPATIBLE_SCHEMA",
+        "INTERNAL"
+      ]
+    },
+    "retryable": { "type": "boolean" },
+    "safe_message": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "correlation_id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{8,128}$" },
+    "retry_after_ms": { "type": "integer", "minimum": 0, "maximum": 3600000 }
+  }
+}

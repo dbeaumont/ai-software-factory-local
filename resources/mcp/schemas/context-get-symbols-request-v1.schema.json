@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/context-get-symbols-request-v1.schema.json",
+  "title": "context.get_symbols request v1",
+  "unevaluatedProperties": false,
+  "allOf": [
+    { "$ref": "common-envelope-v1.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "query": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "language": { "type": "string", "pattern": "^[a-z][a-z0-9+-]{0,31}$" },
+        "max_results": { "type": "integer", "minimum": 1, "maximum": 500, "default": 100 },
+        "cursor": { "type": "string", "minLength": 16, "maxLength": 2048 }
+      },
+      "oneOf": [
+        { "required": ["path"], "not": { "required": ["query"] } },
+        { "required": ["query"], "not": { "required": ["path"] } }
+      ]
+    }
+  ]
+}
