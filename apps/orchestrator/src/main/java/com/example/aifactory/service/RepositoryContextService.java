@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
-public class RepositoryContextService {
+public class RepositoryContextService implements RepositoryContextProvider {
     private static final Set<String> EXT = Set.of(".java", ".kt", ".xml", ".yml", ".yaml", ".json", ".ts", ".js", ".properties", ".gradle");
     private static final Pattern SENSITIVE_PATH = Pattern.compile("(?i)(^|/)(\\.env|\\.vault|.*(?:secret|credential|password|token|private.?key|id_rsa).*)($|/)");
     private static final Pattern SENSITIVE_SETTING = Pattern.compile("(?im)^([ \\t]*[A-Za-z0-9_.-]*(?:password|secret|token|api[_-]?key|private[_-]?key)[A-Za-z0-9_.-]*[ \\t]*[=:][ \\t]*).*$");
@@ -38,6 +38,11 @@ public class RepositoryContextService {
             sb.append("\n--- FILE: ").append(rel).append(" ---\n").append(content).append('\n');
         }
         return sb.substring(0, Math.min(sb.length(), max));
+    }
+
+    @Override
+    public String collect(Path repository, String taskId, String sourceCommit) throws IOException {
+        return collect(repository);
     }
 
     private boolean accepted(Path p) {

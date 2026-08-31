@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/sandbox-start-execution-v1.schema.json",
+  "title": "Sandbox execution command v1",
+  "unevaluatedProperties": false,
+  "allOf": [
+    { "$ref": "common-envelope-v1.schema.json" },
+    {
+      "type": "object",
+      "required": ["idempotency_key"],
+      "properties": {
+        "patch_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "idempotency_key": { "type": "string", "minLength": 16, "maxLength": 256 }
+      }
+    }
+  ]
+}

@@ -43,6 +43,8 @@ flowchart TB
 | `ollama` | Moteur d'exécution local du modèle LLM (`qwen2.5-coder:7b`) |
 | `litellm` | Passerelle OpenAI-compatible, alias de modèles et routage local/cloud |
 | `orchestrator` | Moteur principal du workflow (Spring Boot 3.5 / Java 21) |
+| `repository-context-mcp` | Lecture bornée des workspaces sur le réseau MCP interne |
+| `sandbox-execution-mcp` | Contrôleur de jobs Docker à profils immuables, seul détenteur local du socket |
 | `factory-web` | Interface utilisateur SPA HTML/JS/CSS, servie par Nginx |
 | `reverse-proxy` | Point d'entrée HTTP unique (port 8080) : `/` vers `factory-web`, `/api/` vers `orchestrator` |
 | `sonar-db` | Base PostgreSQL 16 de SonarQube |
@@ -75,7 +77,10 @@ flowchart TB
   PROM -.->|scrape des metriques| ORCH
 ```
 
-Le sandbox n'est pas un service permanent dans Compose : l'orchestrateur instancie un conteneur éphémère `ai-factory-sandbox:local` à la demande via le socket `/var/run/docker.sock`. Ce conteneur réutilise le volume nommé `factory-workspace` pour accéder aux fichiers du dépôt et le volume `ai-factory-m2` pour le cache de dépendances Maven.
+Le runner sandbox reste un conteneur éphémère `ai-factory-sandbox:local`, mais il est désormais créé par
+`sandbox-execution-mcp`. L'orchestrateur ne détient plus le socket Docker : il démarre un job MCP, reçoit un
+`execution_id`, puis interroge son état. Le contrôleur réutilise `factory-workspace` et `ai-factory-m2` et reste
+une solution POC-only tant que son backend est le socket Docker local.
 
 ## Flux réel d'une tâche
 
@@ -87,6 +92,7 @@ sequenceDiagram
   participant O as Orchestrateur
   participant G as Gitea
   participant L as LiteLLM
+  participant C as sandbox-execution-mcp
   participant S as Sandbox Docker
 
   U->>P: Ouvre l'interface web (GET /)
@@ -100,14 +106,15 @@ sequenceDiagram
   O->>L: Agent Developer (requirement + plan + contexte)
   L-->>O: Patch unifié
   O->>O: Normalisation du diff (UnifiedDiffNormalizer)
-  O->>S: Validation du patch (git apply --check)
+  O->>C: sandbox.validate_patch
+  C->>S: Profil patch-check-v1
   alt patch invalide
     O->>L: Agent PatchRepair (requirement + plan + fichiers authoritative + erreur git)
     L-->>O: Patch unifié réparé
-    O->>S: Re-validation (git apply --check)
+    O->>C: Re-validation du patch
   end
-  O->>S: Application du patch + git diff --check
-  O->>S: Build & tests automatisés (Maven / Gradle / npm via Artifactory)
+  O->>C: Application du patch puis build/tests
+  C->>S: Profils patch-apply-v1 et test-auto-v1
   O->>L: Agent Tester (requirement + patch + logs de test)
   L-->>O: Synthèse de test (.ai-factory/test.txt)
   O->>S: Analyse SonarQube (Maven + SONAR_TOKEN)
@@ -142,7 +149,7 @@ sequenceDiagram
 
 ### 4. Validation et réparation du patch
 
-- `SandboxService.checkPatch` valide le diff sans réseau via `git apply --check changes.patch`.
+- `SandboxGateway` appelle `sandbox.validate_patch`, qui exécute le profil immuable `patch-check-v1` sans réseau.
 - En cas d'erreur de validation, le patch initial est conservé dans `changes.invalid.patch`.
 - L'agent `PatchRepair` reçoit le besoin, le plan, les contenus réels des fichiers impactés et le message d'erreur `git apply`.
 - Le diff réparé est re-validé. Si cette seconde validation échoue, la tâche passe en `FAILED`.

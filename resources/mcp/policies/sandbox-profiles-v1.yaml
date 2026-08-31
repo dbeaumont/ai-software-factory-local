@@ -1,0 +1,43 @@
+version: "1"
+profiles:
+  patch-check-v1:
+    operation: VALIDATE_PATCH
+    network: none
+    timeout: 3m
+    memory: 2g
+    cpus: 2
+    pids: 512
+  patch-apply-v1:
+    operation: APPLY_PATCH
+    network: none
+    timeout: 3m
+    memory: 2g
+    cpus: 2
+    pids: 512
+  test-auto-v1:
+    operation: RUN_TESTS
+    network: ai-factory-network
+    timeout: 15m
+    memory: 2g
+    cpus: 2
+    pids: 512
+  quality-sonar-v1:
+    operation: RUN_QUALITY
+    network: ai-factory-network
+    timeout: 15m
+    memory: 2g
+    cpus: 2
+    pids: 512
+  security-syft-trivy-v1:
+    operation: RUN_SECURITY
+    network: ai-factory-network
+    timeout: 10m
+    memory: 2g
+    cpus: 2
+    pids: 512
+arguments:
+  commands: forbidden
+  images: forbidden
+  networks: forbidden
+  volumes: forbidden
+  environment: forbidden

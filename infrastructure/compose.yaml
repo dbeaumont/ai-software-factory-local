@@ -85,6 +85,78 @@ services:
       start_period: 5s
     networks: [factory]
 
+  # Read-only MCP server that exposes bounded repository context for registered task workspaces.
+  repository-context-mcp:
+    build:
+      context: ../apps/mcp/repository-context-server
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
+      secrets:
+        - artifactory_token
+    environment:
+      AI_FACTORY_CONTEXT_WORKSPACE_ROOT: /workspace/tasks
+      AI_FACTORY_CONTEXT_MAX_FILE_BYTES: ${AI_FACTORY_CONTEXT_MAX_FILE_BYTES:-1048576}
+      AI_FACTORY_CONTEXT_MAX_SEARCH_FILES: ${AI_FACTORY_CONTEXT_MAX_SEARCH_FILES:-1000}
+      AI_FACTORY_CONTEXT_MAX_TREE_ENTRIES: ${AI_FACTORY_CONTEXT_MAX_TREE_ENTRIES:-1000}
+    volumes:
+      - factory-workspace:/workspace/tasks:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8091/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [mcp-internal]
+
+  # Privileged controller for fixed-profile sandbox jobs. The Docker socket is deliberately isolated here.
+  sandbox-execution-mcp:
+    build:
+      context: ../apps/mcp/sandbox-execution-server
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
+      secrets:
+        - artifactory_token
+    environment:
+      AI_FACTORY_SANDBOX_WORKSPACE_ROOT: /workspace/tasks
+      AI_FACTORY_SANDBOX_STATE_ROOT: /var/lib/ai-factory/sandbox-jobs
+      AI_FACTORY_WORKSPACE_VOLUME: ${AI_FACTORY_WORKSPACE_VOLUME}
+      AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
+      AI_FACTORY_SANDBOX_NETWORK: ${AI_FACTORY_SANDBOX_NETWORK}
+      AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS: ${AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS:-2}
+      AI_FACTORY_SANDBOX_MAX_JOBS: ${AI_FACTORY_SANDBOX_MAX_JOBS:-500}
+      AI_FACTORY_SANDBOX_JOB_RETENTION: ${AI_FACTORY_SANDBOX_JOB_RETENTION:-P7D}
+      AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS: ${AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS:-65536}
+      AI_FACTORY_SANDBOX_MAX_PATCH_BYTES: ${AI_FACTORY_SANDBOX_MAX_PATCH_BYTES:-1048576}
+      MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
+      ARTIFACTORY_TOKEN: ${ARTIFACTORY_TOKEN}
+      AI_FACTORY_SONARQUBE_URL: ${AI_FACTORY_SONARQUBE_URL}
+      AI_FACTORY_SONAR_TOKEN: ${SONAR_TOKEN}
+    group_add:
+      - ${DOCKER_SOCKET_GID:-0}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - factory-workspace:/workspace/tasks:ro
+      - sandbox-job-state:/var/lib/ai-factory/sandbox-jobs
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8092/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [mcp-internal]
+
   # Spring Boot control plane. Its image pulls build dependencies through Artifactory using a BuildKit secret.
   orchestrator:
     build:
@@ -103,20 +175,25 @@ services:
       AI_FACTORY_WORKSPACE_VOLUME: ${AI_FACTORY_WORKSPACE_VOLUME}
       AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
       AI_FACTORY_SANDBOX_NETWORK: ${AI_FACTORY_SANDBOX_NETWORK}
-      MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
-      ARTIFACTORY_TOKEN: ${ARTIFACTORY_TOKEN}
       AI_FACTORY_GITEA_BASE_URL: ${AI_FACTORY_GITEA_BASE_URL}
       AI_FACTORY_GITEA_PUBLIC_BASE_URL: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL}
       AI_FACTORY_GITEA_TOKEN: ${GITEA_TOKEN}
       AI_FACTORY_GITEA_USER: ${AI_FACTORY_GITEA_USER}
-      AI_FACTORY_SONARQUBE_URL: ${AI_FACTORY_SONARQUBE_URL}
-      AI_FACTORY_SONAR_TOKEN: ${SONAR_TOKEN}
       AI_FACTORY_PROMPT_ROOT: ${AI_FACTORY_PROMPT_ROOT}
+      AI_FACTORY_MCP_CLIENT_ENABLED: ${AI_FACTORY_MCP_CLIENT_ENABLED:-true}
+      AI_FACTORY_MCP_ENABLED: ${AI_FACTORY_MCP_ENABLED:-false}
+      AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE:-DIRECT}
+      AI_FACTORY_MCP_REPOSITORY_CONTEXT_URL: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_URL:-http://repository-context-mcp:8091}
+      AI_FACTORY_MCP_REQUEST_TIMEOUT: ${AI_FACTORY_MCP_REQUEST_TIMEOUT:-20s}
+      AI_FACTORY_MCP_SANDBOX_ENABLED: ${AI_FACTORY_MCP_SANDBOX_ENABLED:-true}
+      AI_FACTORY_MCP_SANDBOX_MODE: ${AI_FACTORY_MCP_SANDBOX_MODE:-MCP_ACTIVE}
+      AI_FACTORY_MCP_SANDBOX_URL: ${AI_FACTORY_MCP_SANDBOX_URL:-http://sandbox-execution-mcp:8092}
+      AI_FACTORY_MCP_SANDBOX_POLL_INTERVAL: ${AI_FACTORY_MCP_SANDBOX_POLL_INTERVAL:-250ms}
+      AI_FACTORY_MCP_SANDBOX_POLL_TIMEOUT: ${AI_FACTORY_MCP_SANDBOX_POLL_TIMEOUT:-20m}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
     ports:
       - "${ORCHESTRATOR_PORT}:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - factory-workspace:/workspace/tasks
       - ../resources/prompts:/opt/ai-factory/resources/prompts:ro
     depends_on:
@@ -126,7 +203,11 @@ services:
         condition: service_healthy
       artifactory:
         condition: service_healthy
-    networks: [factory]
+      repository-context-mcp:
+        condition: service_healthy
+      sandbox-execution-mcp:
+        condition: service_healthy
+    networks: [factory, mcp-internal]
 
   # Static frontend served internally; reverse-proxy exposes the public web entry point.
   factory-web:
@@ -236,7 +317,7 @@ services:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "${PROMETHEUS_PORT}:9090"
-    networks: [factory]
+    networks: [factory, mcp-internal]
 
   grafana:
     image: grafana/grafana:12.1.1
@@ -253,6 +334,10 @@ networks:
   # Explicit name lets sandbox containers join the same network at runtime.
   factory:
     name: ai-factory-network
+  # MCP read services have no direct external egress; only the orchestrator and observability join this segment.
+  mcp-internal:
+    name: ai-factory-mcp-internal
+    internal: true
 
 volumes:
   # Persistent service state. `factory-workspace` is shared with ephemeral task sandboxes.
@@ -261,6 +346,7 @@ volumes:
   ollama-data:
   factory-workspace:
     name: ${AI_FACTORY_WORKSPACE_VOLUME}
+  sandbox-job-state:
   sonar-db-data:
   sonar-data:
   sonar-logs:

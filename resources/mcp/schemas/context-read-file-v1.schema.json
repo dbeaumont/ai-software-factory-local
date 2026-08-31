@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/context-read-file-v1.schema.json",
+  "title": "context.read_file request v1",
+  "unevaluatedProperties": false,
+  "allOf": [
+    { "$ref": "common-envelope-v1.schema.json" },
+    {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "start_line": { "type": "integer", "minimum": 1, "default": 1 },
+        "end_line": { "type": "integer", "minimum": 1 },
+        "max_bytes": { "type": "integer", "minimum": 1, "maximum": 65536, "default": 16384 }
+      }
+    }
+  ]
+}

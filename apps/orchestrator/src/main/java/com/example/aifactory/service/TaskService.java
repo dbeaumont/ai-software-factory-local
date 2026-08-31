@@ -29,18 +29,18 @@ public class TaskService {
     private final AtomicInteger ticketSequence = new AtomicInteger(1);
     private final AiFactoryProperties props;
     private final ProcessRunner runner;
-    private final RepositoryContextService contextService;
+    private final RepositoryContextProvider contextService;
     private final PromptService prompts;
     private final LlmGatewayClient llm;
     private final AgentResponseValidator agentResponses;
-    private final SandboxService sandbox;
+    private final SandboxExecutor sandbox;
     private final GiteaService gitea;
     private final Counter submittedTasks;
     private final Counter completedTasks;
     private final Counter failedTasks;
 
-    public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextService contextService,
-                       PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses, SandboxService sandbox, GiteaService gitea,
+    public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
+                       PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses, SandboxExecutor sandbox, GiteaService gitea,
                        MeterRegistry metrics) {
         this.props = props;
         this.runner = runner;
@@ -117,7 +117,7 @@ public class TaskService {
             s.sourceCommit = runner.run(List.of("git", "rev-parse", "HEAD"), ws, Duration.ofSeconds(10)).strip();
             s.model = llm.modelName(s.request.effectiveLlmMode());
             log.info("Task {} ({}) cloned source commit {} using model {}", s.id, s.ticketNumber, s.sourceCommit, s.model);
-            String context = contextService.collect(ws);
+            String context = contextService.collect(ws, s.id, s.sourceCommit);
             writeRunMetadata(ws, s);
 
             s.transition(TaskStatus.PLANNING, "Planner agent analyzing requirement and repository context");
@@ -133,10 +133,10 @@ public class TaskService {
             s.patch = validateAndRepairPatch(s, ws, rawPatch);
 
             s.transition(TaskStatus.APPLYING_PATCH, "Applying generated patch inside isolated Docker sandbox");
-            sandbox.applyPatch(ws);
+            sandbox.applyPatch(ws, s.id, s.sourceCommit);
 
             s.transition(TaskStatus.TESTING, "Running deterministic build and tests in sandbox");
-            String deterministicTests = tail(sandbox.test(ws), 12000);
+            String deterministicTests = tail(sandbox.test(ws, s.id, s.sourceCommit), 12000);
             String testerReview = chat(s, "tester", untrusted("REQUIREMENT", s.request.requirement()) +
                     untrusted("PATCH", s.patch) + untrusted("DETERMINISTIC_TEST_EVIDENCE", deterministicTests));
             agentResponses.requireTesterReport(testerReview);
@@ -146,11 +146,11 @@ public class TaskService {
             Files.writeString(ws.resolve(".ai-factory/test.txt"), s.testSummary);
 
             s.transition(TaskStatus.QUALITY_SCANNING, "Running SonarQube quality analysis");
-            s.qualitySummary = tail(sandbox.quality(ws), 12000);
+            s.qualitySummary = tail(sandbox.quality(ws, s.id, s.sourceCommit), 12000);
             requireQualityGate(s.qualitySummary);
 
             s.transition(TaskStatus.SECURITY_SCANNING, "Generating SBOM and running Trivy");
-            s.securitySummary = tail(sandbox.security(ws), 12000);
+            s.securitySummary = tail(sandbox.security(ws, s.id, s.sourceCommit), 12000);
 
             s.transition(TaskStatus.REVIEWING, "Reviewer agent assessing plan, patch and deterministic evidence");
             s.review = chat(s, "reviewer", untrusted("REQUIREMENT", s.request.requirement()) + untrusted("PLAN", s.plan) +
@@ -197,7 +197,7 @@ public class TaskService {
         for (int repairAttempt = 0; repairAttempt <= MAX_PATCH_REPAIR_ATTEMPTS; repairAttempt++) {
             Files.writeString(workspace.resolve("changes.patch"), patch);
             try {
-                sandbox.checkPatch(workspace);
+                sandbox.checkPatch(workspace, state.id, state.sourceCommit);
                 return patch;
             } catch (Exception validationFailure) {
                 if (repairAttempt == MAX_PATCH_REPAIR_ATTEMPTS) {

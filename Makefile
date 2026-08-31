@@ -17,7 +17,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all model bootstrap tokens demo test package config status restart logs urls down clean
+.PHONY: help init build up all model bootstrap tokens demo test test-sandbox-runtime package config status restart logs urls down clean
 
 help:
 	$(log-target)
@@ -30,7 +30,8 @@ help:
 	@echo -e "  $(CYAN)make bootstrap$(NC)  - initialize demo Gitea repository and service tokens"
 	@echo -e "  $(CYAN)make tokens$(NC)     - validate or regenerate local Gitea and SonarQube tokens"
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
-	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator tests"
+	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
+	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify effective Docker sandbox constraints"
 	@echo -e "  $(CYAN)make package$(NC)    - package orchestrator without tests"
 	@echo -e "  $(CYAN)make config$(NC)     - validate and render Docker Compose configuration"
 	@echo -e "  $(CYAN)make status$(NC)     - show containers"
@@ -57,7 +58,7 @@ build:
 		--build-arg SYFT_VERSION="$(SYFT_VERSION)" \
 		--build-arg TRIVY_PRELOAD_DB="$(TRIVY_PRELOAD_DB)" \
 		-t ai-factory-sandbox:local ./infrastructure/sandbox
-	$(COMPOSE) build orchestrator factory-web
+	$(COMPOSE) build repository-context-mcp sandbox-execution-mcp orchestrator factory-web
 	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build
@@ -105,8 +106,16 @@ demo:
 
 test:
 	$(log-target)
-	@echo -e "$(BLUE)Running orchestrator tests...$(NC)"
+	@echo -e "$(BLUE)Running orchestrator and MCP server tests...$(NC)"
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw -f apps/orchestrator/pom.xml test; else mvn -f apps/orchestrator/pom.xml test; fi
+	mvn -f apps/mcp/repository-context-server/pom.xml test
+	mvn -f apps/mcp/sandbox-execution-server/pom.xml test
+
+test-sandbox-runtime:
+	$(log-target)
+	@echo -e "$(BLUE)Verifying effective Docker sandbox constraints...$(NC)"
+	AI_FACTORY_RUN_DOCKER_INTEGRATION_TESTS=true mvn -f apps/mcp/sandbox-execution-server/pom.xml -Dtest=DockerSandboxRuntimeIntegrationTest test
+	@echo -e "$(GREEN)Docker sandbox constraints verified!$(NC)"
 
 package:
 	$(log-target)

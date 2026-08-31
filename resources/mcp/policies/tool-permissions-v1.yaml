@@ -1,0 +1,51 @@
+version: "1"
+default: deny
+roles:
+  workflow:
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+      - sandbox.validate_patch
+      - sandbox.apply_patch
+      - sandbox.run_tests
+      - sandbox.run_quality
+      - sandbox.run_security
+      - sandbox.get_execution
+      - sandbox.cancel_execution
+  planner:
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+  developer:
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+  patch-repair:
+    tools:
+      - context.read_file
+  tester:
+    tools:
+      - context.search_code
+      - context.read_file
+  reviewer:
+    tools:
+      - context.search_code
+      - context.read_file
+limits:
+  maxResponseBytes: 65536
+  maxToolCallsPerAgentTurn: 12
+  maxConcurrentCallsPerTask: 4
+  requestTimeout: 20s
+  sandbox:
+    maxConcurrentJobs: 2
+    maxRetainedJobs: 500
+    maxPatchBytes: 1048576
+    maxOutputBytes: 65536
+    effectfulActors:
+      - workflow

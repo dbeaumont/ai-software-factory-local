@@ -5,3 +5,11 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["orchestrator:8080"]
+  - job_name: repository-context-mcp
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["repository-context-mcp:8091"]
+  - job_name: sandbox-execution-mcp
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["sandbox-execution-mcp:8092"]

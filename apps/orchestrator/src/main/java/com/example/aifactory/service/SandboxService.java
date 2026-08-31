@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class SandboxService {
+public class SandboxService implements SandboxExecutor {
     private final AiFactoryProperties props;
     private final ProcessRunner runner;
 
@@ -40,17 +40,20 @@ public class SandboxService {
         return runner.run(cmd, null, timeout);
     }
 
-    public String applyPatch(Path workspace) throws Exception {
+    @Override
+    public String applyPatch(Path workspace, String taskId, String sourceCommit) throws Exception {
         return execute(workspace, "none",
                 "git apply --check changes.patch && git apply changes.patch && git diff --check && git diff --stat",
                 Duration.ofMinutes(3));
     }
 
-    public String checkPatch(Path workspace) throws Exception {
+    @Override
+    public String checkPatch(Path workspace, String taskId, String sourceCommit) throws Exception {
         return execute(workspace, "none", "git apply --check changes.patch", Duration.ofMinutes(3));
     }
 
-    public String test(Path workspace) throws Exception {
+    @Override
+    public String test(Path workspace, String taskId, String sourceCommit) throws Exception {
         return execute(workspace, props.sandboxNetwork(),
                 "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B -s /opt/ai-factory/maven-settings.xml test; " +
                         "elif [ -f pom.xml ]; then mvn -B -s /opt/ai-factory/maven-settings.xml test; " +
@@ -61,7 +64,8 @@ public class SandboxService {
                 Duration.ofMinutes(15));
     }
 
-    public String quality(Path workspace) throws Exception {
+    @Override
+    public String quality(Path workspace, String taskId, String sourceCommit) throws Exception {
         if (props.sonarToken() == null || props.sonarToken().isBlank()) {
             return "Skipped because AI_FACTORY_SONAR_TOKEN is not configured.";
         }
@@ -78,7 +82,8 @@ public class SandboxService {
                 Duration.ofMinutes(15));
     }
 
-    public String security(Path workspace) throws Exception {
+    @Override
+    public String security(Path workspace, String taskId, String sourceCommit) throws Exception {
         return execute(workspace, props.sandboxNetwork(),
                 "set -o pipefail && mkdir -p .ai-factory && " +
                         "syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json >/dev/null && " +

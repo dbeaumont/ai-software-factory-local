@@ -2,7 +2,7 @@
 
 ## Statut du document
 
-Cette note décrit la posture de sécurité réelle du prototype local au 26 août 2026. Le projet est un POC (Proof of Concept) d'usine logicielle agentique. Il n'a pas vocation à être exposé tel quel sur un réseau d'entreprise non sécurisé ni en environnement de production.
+Cette note décrit la posture de sécurité réelle du prototype local au 31 août 2026. Le projet est un POC (Proof of Concept) d'usine logicielle agentique. Il n'a pas vocation à être exposé tel quel sur un réseau d'entreprise non sécurisé ni en environnement de production.
 
 ## Hypothèses du POC
 
@@ -19,6 +19,11 @@ Cette note décrit la posture de sécurité réelle du prototype local au 26 ao�
 - Le prototype sépare formellement la phase de génération/validation locale et la phase de livraison vers le SCM.
 
 ### Exécution isolée en sandbox Docker
+
+L'orchestrateur ne possède plus le socket Docker. Il soumet des opérations MCP déterministes au service interne
+`sandbox-execution-mcp`, qui est le seul contrôleur Compose autorisé à monter `/var/run/docker.sock`. Le contrôleur
+accepte uniquement sept outils et cinq profils immuables ; aucun appel ne peut fournir une commande, une image,
+un réseau, un volume ou une variable d'environnement.
 
 Les étapes de vérification du patch, d'exécution des tests, d'analyse qualimétrique et de scans de sécurité s'exécutent dans un conteneur Docker éphémère `ai-factory-sandbox:local` configuré avec des restrictions strictes :
 
@@ -52,6 +57,7 @@ Profils réseau de la sandbox :
 - L'orchestrateur ne gère pas la clé OpenAI directement : elle est injectée de manière étanche dans le conteneur `litellm` via le fichier `.vault` ;
 - Les jetons d'accès `GITEA_TOKEN` et `SONAR_TOKEN` sont générés par le script de bootstrap et enregistrés localement dans `.env` ;
 - Avant la création de la Pull Request, tous les artefacts temporaires générés par l'IA (`.ai-plan.md`, `changes.patch`, `.ai-review.md`, `.ai-factory/`) sont systématiquement retirés de l'index Git (`git reset`).
+- Les jetons SonarQube et Artifactory nécessaires aux jobs ne sont plus injectés dans l'orchestrateur. Le contrôleur sandbox les place dans un fichier temporaire de permissions `0600`, puis le détruit après le job.
 
 ### Point d'entrée HTTP unique
 
@@ -61,12 +67,12 @@ Profils réseau de la sandbox :
 
 ## Risques et limites actuels
 
-### 1. `docker.sock` monté dans l'orchestrateur
+### 1. `docker.sock` monté dans le contrôleur sandbox local
 
-Le service `orchestrator` monte le socket Docker du hôte (`/var/run/docker.sock`) pour lancer les conteneurs sandbox à la demande. Une compromission de l'orchestrateur donnerait à un attaquant le contrôle du démon Docker hôte.
+Le service `sandbox-execution-mcp` monte encore le socket Docker du hôte. Sa surface est plus petite que celle de l'orchestrateur et son conteneur est non-root, read-only, sans capabilities et sans port hôte, mais une compromission capable d'utiliser le socket donnerait toujours un contrôle quasi total du démon Docker.
 
 - *Acceptable* dans un POC local isolé.
-- *Inacceptable* pour une cible de production (à remplacer par des Jobs Kubernetes ou une Sandbox API).
+- *Inacceptable* pour une cible de production (à remplacer par des Jobs Kubernetes ou une Sandbox API). Le démarrage de ce contrôleur doit être explicitement accepté dans les environnements qui contrôlent l'accès au socket.
 
 ### 2. Réseau interne partagé pour les builds
 

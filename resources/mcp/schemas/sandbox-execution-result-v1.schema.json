@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/sandbox-execution-result-v1.schema.json",
+  "title": "Sandbox execution result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["execution_id", "task_id", "operation", "status", "verdict", "created_at"],
+  "properties": {
+    "execution_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "task_id": { "type": "string" },
+    "operation": { "type": "string", "enum": ["VALIDATE_PATCH", "APPLY_PATCH", "RUN_TESTS", "RUN_QUALITY", "RUN_SECURITY"] },
+    "status": { "type": "string", "enum": ["ACCEPTED", "RUNNING", "SUCCEEDED", "FAILED", "TIMED_OUT", "CANCELLED"] },
+    "verdict": { "type": "string", "enum": ["PENDING", "PASSED", "REJECTED", "INDETERMINATE"] },
+    "exit_code": { "type": ["integer", "null"] },
+    "output": { "type": ["string", "null"], "maxLength": 65536 },
+    "error": { "type": ["string", "null"], "maxLength": 512 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "started_at": { "type": ["string", "null"], "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

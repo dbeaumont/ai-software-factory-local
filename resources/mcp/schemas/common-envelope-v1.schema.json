@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/common-envelope-v1.schema.json",
+  "title": "AI Factory MCP request envelope v1",
+  "type": "object",
+  "required": ["schema_version", "task_id", "source_commit", "actor", "trace_id"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "task_id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" },
+    "attempt_id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "actor": { "type": "string", "enum": ["workflow", "planner", "developer", "patch-repair", "tester", "reviewer", "delivery"] },
+    "trace_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "idempotency_key": { "type": "string", "minLength": 16, "maxLength": 256 }
+  }
+}

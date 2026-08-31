@@ -8,7 +8,7 @@ Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. Le 
 
 | Répertoire | Contenu |
 |---|---|
-| `apps/` | Applications exécutables : orchestrateur et interface web |
+| `apps/` | Applications exécutables : orchestrateur, serveurs MCP et interface web |
 | `resources/` | Ressources métier versionnées : prompts, profils d'agents et modèle de ticket |
 | `infrastructure/` | Compose, proxy, LiteLLM, sandbox et observabilité |
 | `examples/` | Dépôts d'exemple utilisés pour les démonstrations |
@@ -25,6 +25,8 @@ La stack actuelle contient :
 | Point d'entrée HTTP | `reverse-proxy` Nginx (port 8080) |
 | Interface de saisie & suivi | `factory-web` (SPA HTML/JS/CSS servie par Nginx) |
 | Orchestration | Spring Boot 3.5 / Java 21 (`orchestrator`) |
+| Contexte MCP | Serveur MCP stateless en lecture seule (`repository-context-mcp`) |
+| Exécution MCP | Contrôleur de jobs à profils immuables (`sandbox-execution-mcp`) |
 | Passerelle LLM | LiteLLM (port 4000 interne) |
 | Modèle local | Ollama (`qwen2.5-coder:7b` par défaut) |
 | Modèle cloud optionnel | OpenAI via LiteLLM (`gpt-5.6-luna` configurable) |
@@ -165,6 +167,57 @@ Le routage des modèles s'effectue via LiteLLM :
 - `LOCAL` -> modèle `factory-code-local` -> Ollama (`qwen2.5-coder:7b`)
 - `CLOUD` -> modèle `factory-code-cloud` -> OpenAI (`gpt-5.6-luna` par défaut)
 
+## Contexte dépôt via MCP
+
+Le premier incrément MCP fournit quatre outils en lecture seule : `context.list_tree`, `context.search_code`,
+`context.read_file` et `context.get_repository_rules`. Le serveur vérifie que chaque demande cible le workspace
+d'une tâche et son commit Git immuable, borne les résultats, exclut les chemins sensibles et refuse les sorties
+de workspace par traversal ou lien symbolique.
+
+La migration est désactivée par défaut :
+
+```bash
+AI_FACTORY_MCP_ENABLED=true
+AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE=MCP_SHADOW
+```
+
+Les modes disponibles sont `DIRECT`, `MCP_SHADOW` (le résultat direct reste autoritatif) et `MCP_ACTIVE`
+(une erreur MCP bloque la contextualisation). Le endpoint MCP reste privé au réseau Compose et n'est pas publié
+sur un port hôte. L'authentification du transport fait partie du chantier de durcissement avant toute exposition.
+
+## Exécution sandbox via MCP
+
+Dans la configuration Compose, les validations de patch, tests, analyses SonarQube, SBOM et scans Trivy passent
+par `sandbox-execution-mcp`. L'orchestrateur ne monte plus le socket Docker et ne reçoit plus les secrets SonarQube
+ou Artifactory nécessaires aux jobs. Les commandes et contraintes sont définies par cinq profils serveur immuables ;
+les appels MCP ne peuvent fournir ni shell, ni image, ni réseau, ni volume, ni variable d'environnement.
+
+```bash
+AI_FACTORY_MCP_CLIENT_ENABLED=true
+AI_FACTORY_MCP_SANDBOX_ENABLED=true
+AI_FACTORY_MCP_SANDBOX_MODE=MCP_ACTIVE
+```
+
+Le contrôleur reste une solution locale POC-only : lui seul monte encore `/var/run/docker.sock`. Son conteneur est
+non-root, read-only, sans capabilities, sans port hôte et attaché uniquement au réseau MCP interne. En production,
+ce backend devra être remplacé par des Jobs Kubernetes ou une Sandbox API sans modifier les outils MCP.
+
+Les états bornés et déjà redacted des jobs sont écrits atomiquement dans le volume dédié `sandbox-job-state`.
+Après un redémarrage, les résultats terminaux et les clés d'idempotence sont restaurés ; toute exécution qui était
+encore active devient `FAILED / INDETERMINATE`, et seuls les conteneurs `ai-factory-sbx-<execution_id>` sont nettoyés.
+Les états terminaux expirent depuis leur `completed_at` après `AI_FACTORY_SANDBOX_JOB_RETENTION` (`P7D` par défaut,
+valeur autorisée de 1 minute à 365 jours). La purge du snapshot, du handle et de sa clé d'idempotence s'effectue au
+démarrage, avant les opérations MCP et périodiquement ; une nouvelle soumission après expiration reçoit donc un
+nouvel `execution_id`. Les exécutions actives ne sont jamais supprimées par cette rétention.
+
+Le test d'intégration opt-in suivant demande un daemon Docker local et l'image `ai-factory-sandbox:local`. Il crée
+un conteneur et un volume aux noms aléatoires, vérifie les limites réellement acceptées par Docker, puis les supprime
+systématiquement :
+
+```bash
+make test-sandbox-runtime
+```
+
 Le mode cloud n'est accessible que si `AI_FACTORY_CLOUD_ENABLED=true` dans `.env`.
 
 Variables de configuration principales :
@@ -201,7 +254,7 @@ make demo
 
 - **SonarQube** (`http://localhost:9000`) : Analyse de la qualité du code Java/Maven. Les jetons sont générés par `make bootstrap` ou `make tokens`.
 - **Artifactory** (`http://localhost:8082`) : Dépôt d'artefacts local. Les builds Maven des sandboxes utilisent le miroir explicite `MAVEN_MIRROR_URL`.
-- **Prometheus** (`http://localhost:9090`) : Collecte les métriques Micrometer depuis `/actuator/prometheus` de l'orchestrator (`ai_factory_tasks_submitted`, `ai_factory_tasks_completed`, `ai_factory_tasks_failed`).
+- **Prometheus** (`http://localhost:9090`) : Collecte les métriques Micrometer de l'orchestrateur et des serveurs MCP, dont les appels clients et les compteurs de jobs sandbox.
 - **Grafana** (`http://localhost:3001`) : Tableau de bord de suivi pré-provisionné (`orchestrator.json`).
 
 ## Commandes Make disponibles
@@ -217,7 +270,7 @@ make demo
 | `make bootstrap` | Initialise Gitea, SonarQube et génère les jetons d'accès |
 | `make tokens` | Régénère ou valide les jetons Gitea et SonarQube |
 | `make demo` | Soumet une tâche de démo à l'orchestrateur |
-| `make test` | Exécute les tests unitaires de l'orchestrateur |
+| `make test` | Exécute les tests de l'orchestrateur et des serveurs MCP |
 | `make package` | Compile et empaquette l'orchestrateur Java (sans tests) |
 | `make config` | Valide et affiche la configuration Compose |
 | `make status` | Affiche l'état des conteneurs |
@@ -237,7 +290,7 @@ make demo
 - un seul pipeline d'exécution, avec rôles LLM logiques ;
 - support des builds limité à Maven, Gradle et npm ;
 - pas de SSO, RBAC ni policy engine ;
-- montage de `/var/run/docker.sock` dans l'orchestrateur ;
+- montage de `/var/run/docker.sock` encore présent dans le contrôleur local `sandbox-execution-mcp` ;
 - pas de sandbox Kubernetes ni d'egress allow-list ;
 - approbation humaine obligatoire avant push/PR ;
 
