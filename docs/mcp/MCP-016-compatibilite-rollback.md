@@ -1,6 +1,7 @@
 # MCP-016 — Compatibilité N/N-1 et rollback
 
-> Statut : plan défini, répétition opérationnelle à réaliser avant promotion  
+> Statut : plan défini, répétition opérationnelle à réaliser avant promotion
+>
 > Politique machine-readable : `resources/mcp/policies/compatibility-rollback-policy-v1.yaml`
 
 ## 1. Portée des versions

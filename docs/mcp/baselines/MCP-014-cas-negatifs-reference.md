@@ -1,7 +1,9 @@
 # MCP-014 — Cas négatifs de référence
 
-> Statut : catalogue créé et contrôles disponibles exécutés avec succès  
-> Version du catalogue : `resources/mcp/baselines/negative-cases-v1.json`  
+> Statut : catalogue créé et contrôles disponibles exécutés avec succès
+>
+> Version du catalogue : `resources/mcp/baselines/negative-cases-v1.json`
+>
 > Livraison SCM pendant la campagne : interdite
 
 ## 1. Objectif

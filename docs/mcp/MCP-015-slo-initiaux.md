@@ -1,7 +1,9 @@
 # MCP-015 — SLO initiaux des services MCP
 
-> Statut : proposition initiale à valider par produit et exploitation  
-> Politique machine-readable : `resources/mcp/policies/slo-policy-v1.yaml`  
+> Statut : proposition initiale à valider par produit et exploitation
+>
+> Politique machine-readable : `resources/mcp/policies/slo-policy-v1.yaml`
+>
 > Fenêtre d'évaluation : 28 jours glissants
 
 ## 1. Décisions

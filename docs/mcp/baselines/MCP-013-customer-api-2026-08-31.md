@@ -1,7 +1,9 @@
 # MCP-013 — Baseline `customer-api` du 31 août 2026
 
-> Statut : succès jusqu'au point de contrôle humain `WAITING_APPROVAL`  
-> Tâche de référence : `AF-0001` / `ca56a181`  
+> Statut : succès jusqu'au point de contrôle humain `WAITING_APPROVAL`
+>
+> Tâche de référence : `AF-0001` / `ca56a181`
+>
 > Livraison : aucune approbation, aucun commit, push ou Pull Request
 
 ## 1. Scénario de référence
