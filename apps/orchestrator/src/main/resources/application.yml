@@ -117,6 +117,8 @@ ai-factory:
           expected-name: assurance-mcp
           expected-version: ${AI_FACTORY_MCP_ASSURANCE_VERSION:0.1.0}
           allowed-tools: assurance.evaluate_quality_gate,assurance.normalize_findings,assurance.evaluate_policy
+    kill-switch:
+      control-file: ${AI_FACTORY_MCP_KILL_SWITCH_FILE:}
   llm-base-url: ${AI_FACTORY_LLM_BASE_URL}
   llm-api-key: ${AI_FACTORY_LLM_API_KEY}
   cloud-model: ${AI_FACTORY_CLOUD_MODEL}
