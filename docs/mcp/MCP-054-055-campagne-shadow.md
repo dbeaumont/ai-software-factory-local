@@ -107,3 +107,5 @@ Après bootstrap explicite des trois fixtures, vérification de leur clonabilit�
 Ces échecs aval n'invalident pas MCP-054 : le mode shadow continue de servir exclusivement le contexte direct au Planner et les 20 comparaisons Context ont été collectées. Ils interdisent en revanche de conclure à une non-régression globale. MCP-055 reste ouvert jusqu'à la revue des plans, la qualification des cinq réponses mal formées et la décision explicite Produit/RSSI. Les comparaisons sandbox relèvent de MCP-087 et ne sont pas artificiellement créditées à cette campagne.
 
 La revue qualitative et la recommandation de gate sont consignées dans [`MCP-055-revue-qualite-plans.md`](MCP-055-revue-qualite-plans.md).
+
+La campagne de qualification `20260901-152635`, exécutée après activation du schéma Planner strict, obtient 19 contrats valides sur 20. Le seul échec contractuel restant concerne `CTX-020`, toujours sans champ `status`. Cette amélioration de 75 % à 95 % d'adhérence ne lève pas le `NO-GO` : le détail et la remédiation attendue figurent dans le dossier MCP-055.

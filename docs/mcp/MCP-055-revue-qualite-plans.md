@@ -55,3 +55,15 @@ Avant promotion, il faut stabiliser le contrat de sortie Planner, obtenir une ba
 Le client Chat Completions impose désormais au seul Planner un `response_format` de type `json_schema` strict. Le schéma rend obligatoires les treize champs du contrat, borne `status` et `risk_level` par leurs énumérations, et refuse les propriétés supplémentaires à tous les niveaux objet. Les agents qui produisent un diff ou du texte ne reçoivent pas ce format.
 
 La suite orchestrateur valide la construction du corps de requête, l'application exclusive au Planner et la cohérence `required/properties`. Cette remédiation n'est pas considérée comme qualifiée en production tant qu'une nouvelle campagne cloud explicitement autorisée n'a pas confirmé zéro contrat Planner invalide.
+
+## Campagne de qualification du schéma strict
+
+La campagne autorisée `20260901-152635` a rejoué les 20 scénarios avec le schéma strict déployé :
+
+- 20/20 reconstructions Context shadow réussies, couverture 92 % et citations 100 % ;
+- 19/20 plans présents et conformes au contrat strict, contre 15/20 avant correction ;
+- 1/20 réponse (`CTX-020`, npm multi-fichier) encore rejetée pour absence du champ `status` ;
+- latence MCP Context moyenne de 57,4 ms ;
+- volumes inchangés : 61 588 caractères MCP contre 86 958 directs.
+
+Le taux de contrat Planner invalide passe de 25 % à 5 %, mais l'objectif fail-closed reste zéro. Le schéma transmis au proxy ne dispense donc pas de la validation applicative existante. La recommandation demeure **NO-GO** pour MCP-056 jusqu'à l'ajout d'une reprise bornée des seules réponses Planner invalides et sa qualification sur un nouvel échantillon autorisé.
