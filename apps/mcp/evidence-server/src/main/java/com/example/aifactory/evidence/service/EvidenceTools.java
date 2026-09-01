@@ -19,9 +19,10 @@ public class EvidenceTools {
                                 @ToolParam(description = "Base64 content") String content_base64,
                                 @ToolParam(description = "Expected SHA-256") String digest,
                                 @ToolParam(description = "Authorized workflow actor") String actor) throws Exception {
-        if (!"1".equals(schema_version) || !"workflow".equals(actor)) throw new SecurityException("unauthorized evidence request");
-        EvidenceStore.StoredEvidence stored = store.store(task_id, attempt_id, type, media_type, content_base64, digest);
-        return new StoredEvidence(stored.uri(), stored.digest(), stored.status(), stored.mediaType(), stored.sizeBytes(), stored.storedAt());
+        if (!"1".equals(schema_version)) throw new SecurityException("unauthorized evidence request");
+        EvidenceStore.StoredEvidence stored = store.store(task_id, attempt_id, type, media_type, content_base64, digest, actor);
+        return new StoredEvidence(stored.uri(), stored.digest(), stored.status(), stored.mediaType(), stored.sizeBytes(),
+                stored.classification(), stored.retainUntil(), stored.storedAt());
     }
 
     @Tool(name = "evidence.create_manifest", description = "Create one immutable manifest from already stored same-attempt evidence")
@@ -43,12 +44,15 @@ public class EvidenceTools {
                 policy_decision.inputDigests(), policy_decision.decidedAt());
         EvidenceStore.StoredManifest manifest = store.createManifest(task_id, attempt_id, repository_id, source_commit,
                 patch_digest, stored, decision);
-        return new StoredManifest(manifest.manifestId(), manifest.uri(), manifest.digest(), manifest.status(), manifest.createdAt());
+        return new StoredManifest(manifest.manifestId(), manifest.uri(), manifest.digest(), manifest.status(),
+                manifest.classification(), manifest.retainUntil(), manifest.createdAt());
     }
 
     public record StoredEvidence(String uri, String digest, String status,
                                  @JsonProperty("media_type") String mediaType,
                                  @JsonProperty("size_bytes") long sizeBytes,
+                                 String classification,
+                                 @JsonProperty("retain_until") java.time.Instant retainUntil,
                                  @JsonProperty("stored_at") java.time.Instant storedAt) {}
     public record EvidenceReference(String uri, String digest, String status) {}
     public record PolicyDecision(@JsonProperty("schema_version") String schemaVersion,
@@ -60,5 +64,7 @@ public class EvidenceTools {
                                  @JsonProperty("input_digests") java.util.Map<String, String> inputDigests,
                                  @JsonProperty("decided_at") java.time.Instant decidedAt) {}
     public record StoredManifest(@JsonProperty("manifest_id") String manifestId, String uri, String digest,
-                                 String status, @JsonProperty("created_at") java.time.Instant createdAt) {}
+                                 String status, String classification,
+                                 @JsonProperty("retain_until") java.time.Instant retainUntil,
+                                 @JsonProperty("created_at") java.time.Instant createdAt) {}
 }

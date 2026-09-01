@@ -24,3 +24,4 @@ ai-factory:
   evidence:
     state-root: ${AI_FACTORY_EVIDENCE_STATE_ROOT:/var/lib/ai-factory/evidence}
     max-artifact-bytes: ${AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES:1048576}
+    encryption-key: ${AI_FACTORY_EVIDENCE_ENCRYPTION_KEY}

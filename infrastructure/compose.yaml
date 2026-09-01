@@ -218,6 +218,8 @@ services:
     environment:
       AI_FACTORY_EVIDENCE_STATE_ROOT: /var/lib/ai-factory/evidence
       AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES: ${AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES:-1048576}
+      # POC: domain-separated derivation in evidence-mcp; replace with a dedicated Secret Manager key at MCP-217.
+      AI_FACTORY_EVIDENCE_ENCRYPTION_KEY: ${APPROVAL_ATTESTATION_KEY}
     volumes:
       - evidence-state:/var/lib/ai-factory/evidence
     read_only: true
