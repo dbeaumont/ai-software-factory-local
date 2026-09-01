@@ -140,6 +140,15 @@ class DockerSandboxRuntimeTest {
     }
 
     @Test
+    void routesSecurityDatabaseAccessThroughTheServerManagedProxy() {
+        SandboxProfiles.Profile profile = SandboxProfiles.forOperation(Operation.RUN_SECURITY);
+
+        assertEquals("factory", profile.network());
+        assertTrue(profile.environmentNames().containsAll(List.of(
+                "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "SYFT_CHECK_FOR_APP_UPDATE", "TRIVY_NO_PROGRESS")));
+    }
+
+    @Test
     void treatsMaliciousFileNamesAndPatchLinesAsData(@TempDir Path repository) throws Exception {
         String maliciousName = "$(touch injected-from-filename)";
         Path maliciousFile = repository.resolve(maliciousName);

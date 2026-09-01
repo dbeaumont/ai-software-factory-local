@@ -158,6 +158,8 @@ public class DockerSandboxRuntime implements SandboxRuntime {
         allowed.put("MAVEN_OPTS", dependencyProperties.gradleProxyOptions());
         allowed.put("MAVEN_PROXY_HOST", dependencyProperties.proxyHost());
         allowed.put("MAVEN_NO_PROXY_HOSTS", dependencyProperties.mavenNoProxyHosts());
+        allowed.put("SYFT_CHECK_FOR_APP_UPDATE", "false");
+        allowed.put("TRIVY_NO_PROGRESS", "true");
         StringBuilder content = new StringBuilder();
         for (String name : names) {
             String value = allowed.getOrDefault(name, "");

@@ -39,7 +39,8 @@ final class SandboxProfiles {
                             "syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json >/dev/null && " +
                             "trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1 --format table . " +
                             "| tee .ai-factory/trivy.txt && echo 'SBOM: .ai-factory/sbom.cdx.json'",
-                    List.of(), false, false);
+                    List.of("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "SYFT_CHECK_FOR_APP_UPDATE",
+                            "TRIVY_NO_PROGRESS"), false, false);
         };
     }
 
