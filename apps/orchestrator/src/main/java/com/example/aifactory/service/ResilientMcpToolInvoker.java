@@ -30,7 +30,7 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
     private static final Logger LOGGER = LoggerFactory.getLogger(ResilientMcpToolInvoker.class);
     private static final Set<String> EFFECTFUL_TOOLS = Set.of(
             "sandbox.validate_patch", "sandbox.apply_patch", "sandbox.run_tests", "sandbox.run_quality",
-            "sandbox.run_security", "sandbox.cancel_execution");
+            "sandbox.run_security", "sandbox.cancel_execution", "scm.create_draft_pull_request");
     private static final int CIRCUIT_FAILURE_THRESHOLD = 5;
     private static final Duration CIRCUIT_OPEN_DURATION = Duration.ofSeconds(30);
 

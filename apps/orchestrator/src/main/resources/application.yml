@@ -22,6 +22,9 @@ spring:
             sandbox-execution:
               url: ${AI_FACTORY_MCP_SANDBOX_URL:http://sandbox-execution-mcp:8092}
               endpoint: /mcp
+            scm-delivery:
+              url: ${AI_FACTORY_MCP_SCM_URL:http://scm-delivery-mcp:8093}
+              endpoint: /mcp
 
 management:
   endpoints:
@@ -45,6 +48,11 @@ ai-factory:
     sandbox-server-name: sandbox-execution-mcp
     sandbox-poll-interval: ${AI_FACTORY_MCP_SANDBOX_POLL_INTERVAL:250ms}
     sandbox-poll-timeout: ${AI_FACTORY_MCP_SANDBOX_POLL_TIMEOUT:20m}
+    scm-delivery:
+      enabled: ${AI_FACTORY_MCP_SCM_ENABLED:false}
+      server-name: scm-delivery-mcp
+      approver: ${AI_FACTORY_APPROVER_NAME:David Beaumont}
+      approval-key: ${APPROVAL_ATTESTATION_KEY:}
     client:
       enabled: ${AI_FACTORY_MCP_CLIENT_ENABLED:${AI_FACTORY_MCP_ENABLED:false}}
       request-timeout: ${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}
@@ -82,6 +90,14 @@ ai-factory:
           expected-name: sandbox-execution-mcp
           expected-version: ${AI_FACTORY_MCP_SANDBOX_VERSION:0.1.0}
           allowed-tools: sandbox.validate_patch,sandbox.apply_patch,sandbox.run_tests,sandbox.run_quality,sandbox.run_security,sandbox.get_execution,sandbox.cancel_execution
+        scm-delivery:
+          enabled: ${AI_FACTORY_MCP_SCM_ENABLED:false}
+          uri: ${AI_FACTORY_MCP_SCM_URL:http://scm-delivery-mcp:8093}
+          audience: ${AI_FACTORY_MCP_SCM_AUDIENCE:scm-delivery-mcp}
+          request-timeout: ${AI_FACTORY_MCP_SCM_REQUEST_TIMEOUT:60s}
+          expected-name: scm-delivery-mcp
+          expected-version: ${AI_FACTORY_MCP_SCM_VERSION:0.1.0}
+          allowed-tools: scm.get_repository,scm.resolve_revision,scm.create_draft_pull_request
   llm-base-url: ${AI_FACTORY_LLM_BASE_URL}
   llm-api-key: ${AI_FACTORY_LLM_API_KEY}
   cloud-model: ${AI_FACTORY_CLOUD_MODEL}

@@ -267,6 +267,13 @@ services:
       AI_FACTORY_MCP_SANDBOX_VERSION: ${AI_FACTORY_MCP_SANDBOX_VERSION:-0.1.0}
       AI_FACTORY_MCP_SANDBOX_POLL_INTERVAL: ${AI_FACTORY_MCP_SANDBOX_POLL_INTERVAL:-250ms}
       AI_FACTORY_MCP_SANDBOX_POLL_TIMEOUT: ${AI_FACTORY_MCP_SANDBOX_POLL_TIMEOUT:-20m}
+      AI_FACTORY_MCP_SCM_ENABLED: ${AI_FACTORY_MCP_SCM_ENABLED:-true}
+      AI_FACTORY_MCP_SCM_URL: ${AI_FACTORY_MCP_SCM_URL:-http://scm-delivery-mcp:8093}
+      AI_FACTORY_MCP_SCM_AUDIENCE: ${AI_FACTORY_MCP_SCM_AUDIENCE:-scm-delivery-mcp}
+      AI_FACTORY_MCP_SCM_REQUEST_TIMEOUT: ${AI_FACTORY_MCP_SCM_REQUEST_TIMEOUT:-60s}
+      AI_FACTORY_MCP_SCM_VERSION: ${AI_FACTORY_MCP_SCM_VERSION:-0.1.0}
+      AI_FACTORY_APPROVER_NAME: ${AI_FACTORY_APPROVER_NAME:-David Beaumont}
+      APPROVAL_ATTESTATION_KEY: ${APPROVAL_ATTESTATION_KEY}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
     ports:
       - "${ORCHESTRATOR_PORT}:8080"
@@ -283,6 +290,8 @@ services:
       repository-context-mcp:
         condition: service_healthy
       sandbox-execution-mcp:
+        condition: service_healthy
+      scm-delivery-mcp:
         condition: service_healthy
     networks: [factory, mcp-internal]
 

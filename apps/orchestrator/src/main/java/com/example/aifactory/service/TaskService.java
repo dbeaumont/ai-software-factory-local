@@ -36,14 +36,15 @@ public class TaskService {
     private final LlmGatewayClient llm;
     private final AgentResponseValidator agentResponses;
     private final SandboxExecutor sandbox;
-    private final GiteaService gitea;
+    private final ScmDeliveryGateway scmDelivery;
     private final Counter submittedTasks;
     private final Counter completedTasks;
     private final Counter failedTasks;
     private final Counter plannerContractRetries;
 
     public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
-                       PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses, SandboxExecutor sandbox, GiteaService gitea,
+                       PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses,
+                       SandboxExecutor sandbox, ScmDeliveryGateway scmDelivery,
                        MeterRegistry metrics) {
         this.props = props;
         this.runner = runner;
@@ -52,7 +53,7 @@ public class TaskService {
         this.llm = llm;
         this.agentResponses = agentResponses;
         this.sandbox = sandbox;
-        this.gitea = gitea;
+        this.scmDelivery = scmDelivery;
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted").description("Tasks submitted to the factory").register(metrics);
         this.completedTasks = Counter.builder("ai_factory_tasks_completed").description("Tasks that completed validation").register(metrics);
         this.failedTasks = Counter.builder("ai_factory_tasks_failed").description("Tasks that failed before approval").register(metrics);
@@ -98,7 +99,8 @@ public class TaskService {
         executor.submit(() -> {
             try {
                 Path workspace = Path.of(state.workspace);
-                String prUrl = gitea.commitPushAndCreatePr(workspace, state.request.repositoryUrl(), state.request.effectiveBranch(), state.id, state.request.requirement());
+                String prUrl = scmDelivery.createDraftPullRequest(workspace, state.request.repositoryUrl(),
+                        state.request.effectiveBranch(), state.id, state.sourceCommit, state.request.requirement());
                 state.pullRequestUrl = prUrl;
                 state.transition(TaskStatus.PR_CREATED, "Pull request created: " + prUrl);
                 log.info("Task {} ({}) created pull request", state.id, state.ticketNumber);

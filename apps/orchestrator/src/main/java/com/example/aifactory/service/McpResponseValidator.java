@@ -29,7 +29,8 @@ public class McpResponseValidator {
             Map.entry("sandbox.run_quality", "sandbox-execution-result-v1.schema.json"),
             Map.entry("sandbox.run_security", "sandbox-execution-result-v1.schema.json"),
             Map.entry("sandbox.get_execution", "sandbox-execution-result-v1.schema.json"),
-            Map.entry("sandbox.cancel_execution", "sandbox-execution-result-v1.schema.json"));
+            Map.entry("sandbox.cancel_execution", "sandbox-execution-result-v1.schema.json"),
+            Map.entry("scm.create_draft_pull_request", "scm-delivery-result-v1.schema.json"));
 
     private final ObjectMapper objectMapper;
     private final int maxResponseBytes;
