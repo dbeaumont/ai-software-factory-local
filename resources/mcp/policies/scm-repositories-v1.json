@@ -1,0 +1,26 @@
+{
+  "schema_version": "1",
+  "repositories": [
+    {
+      "repository_id": "customer-api",
+      "owner": "aiadmin",
+      "name": "customer-api",
+      "clone_path": "/aiadmin/customer-api.git",
+      "allowed_base_branches": ["main"]
+    },
+    {
+      "repository_id": "inventory-gradle",
+      "owner": "aiadmin",
+      "name": "inventory-gradle",
+      "clone_path": "/aiadmin/inventory-gradle.git",
+      "allowed_base_branches": ["main"]
+    },
+    {
+      "repository_id": "checkout-node",
+      "owner": "aiadmin",
+      "name": "checkout-node",
+      "clone_path": "/aiadmin/checkout-node.git",
+      "allowed_base_branches": ["main"]
+    }
+  ]
+}

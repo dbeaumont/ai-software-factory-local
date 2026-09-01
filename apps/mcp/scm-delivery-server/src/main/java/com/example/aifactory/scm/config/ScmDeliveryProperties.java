@@ -10,11 +10,12 @@ public record ScmDeliveryProperties(
         String giteaPublicBaseUrl,
         String giteaUser,
         Path giteaTokenFile,
-        Path stateRoot) {
+        Path stateRoot,
+        Path repositoryRegistry) {
     public ScmDeliveryProperties {
         if (giteaBaseUrl == null || giteaBaseUrl.isBlank() || giteaPublicBaseUrl == null
                 || giteaPublicBaseUrl.isBlank() || giteaUser == null || giteaUser.isBlank()
-                || giteaTokenFile == null || stateRoot == null) {
+                || giteaTokenFile == null || stateRoot == null || repositoryRegistry == null) {
             throw new IllegalArgumentException("SCM endpoint, identity, token file and state root are required");
         }
     }

@@ -39,3 +39,4 @@ ai-factory:
     gitea-user: ${AI_FACTORY_SCM_GITEA_USER:ai-factory-delivery}
     gitea-token-file: ${AI_FACTORY_SCM_GITEA_TOKEN_FILE:/run/secrets/gitea_token}
     state-root: ${AI_FACTORY_SCM_STATE_ROOT:/var/lib/ai-factory/scm}
+    repository-registry: ${AI_FACTORY_SCM_REPOSITORY_REGISTRY:/etc/ai-factory/scm-repositories-v1.json}

@@ -163,10 +163,12 @@ services:
       AI_FACTORY_SCM_GITEA_USER: ${AI_FACTORY_GITEA_USER:-aiadmin}
       AI_FACTORY_SCM_GITEA_TOKEN_FILE: /run/secrets/gitea_token
       AI_FACTORY_SCM_STATE_ROOT: /var/lib/ai-factory/scm
+      AI_FACTORY_SCM_REPOSITORY_REGISTRY: /etc/ai-factory/scm-repositories-v1.json
     secrets:
       - gitea_token
     volumes:
       - scm-delivery-state:/var/lib/ai-factory/scm
+      - ../resources/mcp/policies/scm-repositories-v1.json:/etc/ai-factory/scm-repositories-v1.json:ro
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777

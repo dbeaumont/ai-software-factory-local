@@ -357,7 +357,7 @@ Objectif : retirer le principal privilège critique de l'orchestrateur.
 Objectif : isoler les secrets SCM et garantir qu'une livraison n'arrive qu'après gate.
 
 - [x] **MCP-110** — Scaffolder `apps/mcp/scm-delivery-server/` avec identité Gitea dédiée et secrets hors variables de prompt/log. _(Serveur Spring Boot/MCP non-root sur le port interne 8093, état dédié et jeton Gitea monté comme secret fichier ; aucun credential dans les outils, prompts ou logs.)_
-- [ ] **MCP-111** — Créer un registre de dépôts autorisés ; accepter un `repository_id`, jamais des credentials ou une URL arbitraire.
+- [x] **MCP-111** — Créer un registre de dépôts autorisés ; accepter un `repository_id`, jamais des credentials ou une URL arbitraire. _(Registre JSON v1 des trois fixtures, validation stricte ID/owner/name/clone path/branches et résolution fail-closed ; test de refus d'une URL arbitraire.)_
 - [ ] **MCP-112** — Implémenter `get_repository` et `resolve_revision` avec contrôles d'organisation, dépôt et branche.
 - [ ] **MCP-113** — Définir une preuve d'approbation vérifiable contenant tâche, tentative, source SHA, patch digest, décision, approbateur et expiration.
 - [ ] **MCP-114** — Implémenter `create_draft_pull_request` comme commande métier atomique et idempotente.
