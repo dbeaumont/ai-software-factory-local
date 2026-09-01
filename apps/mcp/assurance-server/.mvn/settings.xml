@@ -1,0 +1,8 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+  <servers>
+    <server><id>artifactory</id><username>ai-factory-reader</username><password>${env.ARTIFACTORY_TOKEN}</password></server>
+  </servers>
+  <mirrors>
+    <mirror><id>artifactory</id><mirrorOf>*</mirrorOf><url>${env.MAVEN_MIRROR_URL}</url></mirror>
+  </mirrors>
+</settings>

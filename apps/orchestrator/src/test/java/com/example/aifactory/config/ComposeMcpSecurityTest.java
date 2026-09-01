@@ -24,6 +24,7 @@ class ComposeMcpSecurityTest {
         assertFalse(services.containsKey("ollama"));
         Map<String, Object> orchestrator = services.get("orchestrator");
         Map<String, Object> sandbox = services.get("sandbox-execution-mcp");
+        Map<String, Object> assurance = services.get("assurance-mcp");
         Map<String, Object> litellm = services.get("litellm");
 
         List<String> orchestratorVolumes = (List<String>) orchestrator.get("volumes");
@@ -46,6 +47,11 @@ class ComposeMcpSecurityTest {
         assertEquals(Boolean.TRUE, sandbox.get("read_only"));
         assertEquals(List.of("ALL"), sandbox.get("cap_drop"));
         assertTrue(((List<String>) sandbox.get("security_opt")).contains("no-new-privileges:true"));
+        assertFalse(assurance.containsKey("volumes"));
+        assertFalse(assurance.containsKey("secrets"));
+        assertEquals(List.of("mcp-internal"), assurance.get("networks"));
+        assertEquals(Boolean.TRUE, assurance.get("read_only"));
+        assertEquals(List.of("ALL"), assurance.get("cap_drop"));
     }
 
     private static Path composeFile() {

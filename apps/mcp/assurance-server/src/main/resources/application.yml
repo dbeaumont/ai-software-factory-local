@@ -1,0 +1,31 @@
+server:
+  port: 8094
+
+spring:
+  application:
+    name: assurance-mcp
+  ai:
+    mcp:
+      server:
+        name: assurance-mcp
+        version: 0.1.0
+        type: SYNC
+        protocol: STATELESS
+        instructions: "Evaluate bounded, structured assurance evidence. No source-code or SCM credential access."
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+        streamable-http:
+          mcp-endpoint: /mcp
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

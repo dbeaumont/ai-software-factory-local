@@ -189,6 +189,27 @@ services:
         condition: service_healthy
     networks: [factory, mcp-internal]
 
+  assurance-mcp:
+    build:
+      context: ../apps/mcp/assurance-server
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
+      secrets:
+        - artifactory_token
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8094/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [mcp-internal]
+
   # The only component shared by untrusted jobs and an egress-capable network.
   # Squid denies every destination not listed in its immutable configuration.
   sandbox-egress-proxy:

@@ -380,7 +380,7 @@ Objectif : isoler les secrets SCM et garantir qu'une livraison n'arrive qu'aprè
 Objectif : rendre les verdicts portables, explicables et auditables.
 
 - [x] **MCP-140** — Définir les schémas normalisés `TestResult`, `QualityGateResult`, `VulnerabilityResult`, `SbomReference`, `PolicyDecision` et `EvidenceManifest`. _(Six JSON Schema v1 fermés ajoutés au catalogue, avec identité tâche/tentative/SHA, digests, URI de preuve et états bloquants `INDETERMINATE`; exemples golden valides et rejet de version inconnue testés.)_
-- [ ] **MCP-141** — Scaffolder `assurance-mcp` sans accès au code source complet ni au jeton SCM.
+- [x] **MCP-141** — Scaffolder `assurance-mcp` sans accès au code source complet ni au jeton SCM. _(Serveur Spring Boot 4.1.1 / Spring AI 2.0.1 / JDK 25, stateless et non-root sur 8094 ; aucun volume, secret runtime ou réseau `factory`, filesystem read-only, capabilities supprimées et test de composition.)_
 - [ ] **MCP-142** — Déplacer l'interprétation du quality gate hors de `TaskService.requireQualityGate()` vers `evaluate_quality_gate`.
 - [ ] **MCP-143** — Normaliser les findings Trivy/Sonar avec sévérité, règle, composant/fichier, preuve et recommandation.
 - [ ] **MCP-144** — Rendre `INDETERMINATE` bloquant pour timeout, format inconnu, scanner absent ou preuve manquante.
