@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/evidence-manifest-v1.schema.json",
+  "title": "EvidenceManifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_id", "task_id", "attempt_id", "repository_id", "source_commit", "patch_digest", "artifacts", "policy_decision", "created_at"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "manifest_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "task_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+    "attempt_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+    "repository_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "patch_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "artifacts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["plan", "patch", "tests", "quality", "sbom", "security", "review", "approval"],
+      "properties": {
+        "plan": { "$ref": "#/$defs/evidence" },
+        "patch": { "$ref": "#/$defs/evidence" },
+        "tests": { "$ref": "#/$defs/evidence" },
+        "quality": { "$ref": "#/$defs/evidence" },
+        "sbom": { "$ref": "#/$defs/evidence" },
+        "security": { "$ref": "#/$defs/evidence" },
+        "review": { "$ref": "#/$defs/evidence" },
+        "approval": { "$ref": "#/$defs/evidence" }
+      }
+    },
+    "policy_decision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "task_id", "attempt_id", "policy_id", "policy_version", "decision", "reasons", "input_digests", "decided_at"],
+      "properties": {
+        "schema_version": { "const": "1" }, "task_id": { "type": "string" }, "attempt_id": { "type": "string" },
+        "policy_id": { "type": "string" }, "policy_version": { "type": "string" },
+        "decision": { "enum": ["ALLOW", "DENY", "INDETERMINATE"] },
+        "reasons": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "input_digests": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+        "decided_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object", "additionalProperties": false, "required": ["uri", "digest", "status"],
+      "properties": {
+        "uri": { "type": "string", "pattern": "^evidence://" },
+        "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "status": { "enum": ["COMPLETE", "PARTIAL"] }
+      }
+    }
+  }
+}

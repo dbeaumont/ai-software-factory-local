@@ -6,6 +6,14 @@
     "response": "common-response-envelope-v1.schema.json",
     "error": "error-v1.schema.json"
   },
+  "assurance": {
+    "test_result": "test-result-v1.schema.json",
+    "quality_gate_result": "quality-gate-result-v1.schema.json",
+    "vulnerability_result": "vulnerability-result-v1.schema.json",
+    "sbom_reference": "sbom-reference-v1.schema.json",
+    "policy_decision": "policy-decision-v1.schema.json",
+    "evidence_manifest": "evidence-manifest-v1.schema.json"
+  },
   "tools": [
     {
       "name": "context.list_tree",

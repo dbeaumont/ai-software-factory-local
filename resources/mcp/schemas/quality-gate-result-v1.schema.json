@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/quality-gate-result-v1.schema.json",
+  "title": "QualityGateResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "attempt_id", "source_commit", "provider", "gate", "verdict", "conditions", "evidence"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "task_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+    "attempt_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "provider": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "gate": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "verdict": { "enum": ["PASSED", "REJECTED", "INDETERMINATE"] },
+    "conditions": {
+      "type": "array", "maxItems": 256,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["metric", "operator", "threshold", "actual", "status"],
+        "properties": {
+          "metric": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "operator": { "enum": ["GT", "GTE", "LT", "LTE", "EQ", "NE"] },
+          "threshold": { "type": ["number", "string"] },
+          "actual": { "type": ["number", "string", "null"] },
+          "status": { "enum": ["PASSED", "FAILED", "UNKNOWN"] }
+        }
+      }
+    },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "reason": { "type": ["string", "null"], "maxLength": 512 }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object", "additionalProperties": false, "required": ["uri", "digest", "status"],
+      "properties": {
+        "uri": { "type": "string", "pattern": "^evidence://" },
+        "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "status": { "enum": ["COMPLETE", "PARTIAL"] }
+      }
+    }
+  }
+}

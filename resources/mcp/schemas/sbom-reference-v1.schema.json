@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/sbom-reference-v1.schema.json",
+  "title": "SbomReference v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "attempt_id", "source_commit", "format", "spec_version", "component_count", "uri", "digest", "status"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "task_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+    "attempt_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "format": { "enum": ["CYCLONEDX_JSON", "SPDX_JSON"] },
+    "spec_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "component_count": { "type": "integer", "minimum": 0 },
+    "uri": { "type": "string", "pattern": "^evidence://" },
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["COMPLETE", "PARTIAL"] }
+  }
+}

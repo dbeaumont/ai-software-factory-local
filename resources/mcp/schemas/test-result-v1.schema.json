@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/test-result-v1.schema.json",
+  "title": "TestResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "attempt_id", "source_commit", "verdict", "framework", "total", "passed", "failed", "skipped", "duration_ms", "evidence"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "task_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+    "attempt_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "verdict": { "enum": ["PASSED", "REJECTED", "INDETERMINATE"] },
+    "framework": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "total": { "type": "integer", "minimum": 0 },
+    "passed": { "type": "integer", "minimum": 0 },
+    "failed": { "type": "integer", "minimum": 0 },
+    "skipped": { "type": "integer", "minimum": 0 },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "reason": { "type": ["string", "null"], "maxLength": 512 }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object", "additionalProperties": false, "required": ["uri", "digest", "status"],
+      "properties": {
+        "uri": { "type": "string", "pattern": "^evidence://" },
+        "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "status": { "enum": ["COMPLETE", "PARTIAL"] }
+      }
+    }
+  }
+}
