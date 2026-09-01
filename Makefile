@@ -54,13 +54,15 @@ build:
 	@test -n "$(SYFT_VERSION)" || (echo "SYFT_VERSION must be defined in .env" >&2; exit 1)
 	@test -n "$(TRIVY_VERSION)" || (echo "TRIVY_VERSION must be defined in .env" >&2; exit 1)
 	@test -n "$(TRIVY_PRELOAD_DB)" || (echo "TRIVY_PRELOAD_DB must be defined in .env" >&2; exit 1)
+	@test -n "$(NODE_VERSION)" || (echo "NODE_VERSION must be defined in .env" >&2; exit 1)
 	docker build \
 		--build-arg TRIVY_VERSION="$(TRIVY_VERSION)" \
 		--build-arg SYFT_VERSION="$(SYFT_VERSION)" \
+		--build-arg NODE_VERSION="$(NODE_VERSION)" \
 		--build-arg TRIVY_PRELOAD_DB="$(TRIVY_PRELOAD_DB)" \
 		-t ai-factory-sandbox:local ./infrastructure/sandbox
 	./scripts/pin-sandbox-image.sh .env ai-factory-sandbox:local
-	$(COMPOSE) build repository-context-mcp sandbox-execution-mcp orchestrator factory-web
+	$(COMPOSE) build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp orchestrator factory-web
 	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build
@@ -83,7 +85,7 @@ bootstrap: init
 	@echo -e "$(BLUE)Bootstrapping Gitea and SonarQube...$(NC)"
 	./scripts/bootstrap-gitea.sh
 	./scripts/bootstrap-sonar.sh
-	$(COMPOSE) up -d --force-recreate orchestrator
+	$(COMPOSE) up -d --force-recreate sandbox-execution-mcp orchestrator
 	@echo -e "$(GREEN)Bootstrap complete!$(NC)"
 
 tokens: init

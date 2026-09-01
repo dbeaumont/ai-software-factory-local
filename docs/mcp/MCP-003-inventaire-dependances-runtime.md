@@ -22,9 +22,9 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | Inférence | `litellm`, fournisseur cloud | `LITELLM_MASTER_KEY`, `VAULT_OPENAI_API_KEY`/`OPENAI_API_KEY` | aucun volume de modèle | egress TLS vers le fournisseur cloud | identité LiteLLM dédiée, secrets fournisseur dans Secret Manager |
 | Contexte dépôt | `RepositoryContextService` ou `repository-context-mcp` | aucun secret runtime | `factory-workspace:/workspace/tasks:ro` pour MCP | uniquement `mcp-internal`; aucun egress attendu | `sa-repository-context-mcp`, lecture limitée au workspace de la tentative |
 | Validation/application de patch | `sandbox-execution-mcp` et conteneur sandbox | aucun secret fonctionnel | workspace partagé ; `sandbox-job-state`; socket Docker local | MCP sur `mcp-internal`; job avec réseau `none` | `sa-sandbox-controller` puis identité éphémère de tentative GKE |
-| Tests | jobs sandbox `test-maven-v1`, `test-gradle-v1`, `test-node-v1` | `ARTIFACTORY_TOKEN` si miroir authentifié | workspace ; cache `ai-factory-m2` réservé à Maven | actuellement réseau `factory`; destination requise : miroirs Maven/Gradle/npm approuvés uniquement | contrôleur sandbox/identité de job, secret à durée courte |
-| Qualité | job sandbox `quality-sonar-v1` | `SONAR_TOKEN`, éventuellement `ARTIFACTORY_TOKEN` | workspace, cache Maven, rapports `.ai-factory` | actuellement `factory`; destinations requises : SonarQube et miroir de dépendances | contrôleur sandbox pour produire le rapport ; `assurance-mcp` pour le verdict |
-| Sécurité | job sandbox `security-syft-trivy-v1` | aucun dans le profil actuel | workspace, SBOM et rapport `.ai-factory` | actuellement `factory`, alors qu'un scan avec bases préchargées peut être sans réseau | identité de job sandbox ; mises à jour de bases via pipeline séparé |
+| Tests | jobs sandbox `test-maven-v1`, `test-gradle-v1`, `test-node-v1` | `ARTIFACTORY_TOKEN` si miroir authentifié | workspace ; cache `ai-factory-m2` réservé à Maven | réseau interne `sandbox-egress`; Artifactory direct et domaines Gradle/npm via proxy allow-listé | contrôleur sandbox/identité de job, secret à durée courte |
+| Qualité | job sandbox `quality-sonar-v1` | `SONAR_TOKEN`, éventuellement `ARTIFACTORY_TOKEN` | workspace, cache Maven, rapports `.ai-factory` | réseau interne `sandbox-egress`; SonarQube et Artifactory seulement en accès direct | contrôleur sandbox pour produire le rapport ; `assurance-mcp` pour le verdict |
+| Sécurité | job sandbox `security-syft-trivy-v1` | aucun dans le profil actuel | workspace, SBOM et rapport `.ai-factory` | réseau interne `sandbox-egress`; la cible reste un scan sans réseau avec bases préchargées | identité de job sandbox ; mises à jour de bases via pipeline séparé |
 | Livraison SCM | `GiteaService` dans l'orchestrateur | `GITEA_TOKEN` et nom `AI_FACTORY_GITEA_USER` | workspace Git local | `factory` vers `gitea:3000` et push HTTP authentifié | `sa-scm-delivery-mcp`, jeton Gitea dédié jusqu'à fédération d'identité |
 | Assurance | pas encore séparée ; décision minimale dans l'orchestrateur | futur jeton Sonar en lecture si interrogation API | futurs rapports référencés par digest | SonarQube et `evidence-mcp` seulement | `sa-assurance-mcp`, lecture seule |
 | Preuves | fichiers locaux du workspace | aucun actuellement | `factory-workspace`; aucun stockage immuable | aucun backend dédié | `sa-evidence-mcp`, puis bucket Cloud Storage dédié et KMS si signature |
@@ -77,8 +77,9 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 
 | Réseau | Membres utiles au flux MCP | Propriété actuelle | Limite constatée |
 |---|---|---|---|
-| `factory` / `ai-factory-network` | orchestrateur, LiteLLM, Gitea, SonarQube, Artifactory, bases, web, observabilité et conteneurs sandbox pour certains profils | réseau applicatif partagé avec accès aux services internes | surface latérale trop large pour du code non fiable ; ce n'est pas une allow-list par destination |
+| `factory` / `ai-factory-network` | orchestrateur, LiteLLM, Gitea, SonarQube, Artifactory, bases, web et observabilité | réseau applicatif partagé ; aucun job sandbox n'y est désormais raccordé | conserver l'absence de jobs non fiables sur ce segment |
 | `mcp-internal` / `ai-factory-mcp-internal` | orchestrateur, `repository-context-mcp`, `sandbox-execution-mcp`, Prometheus | réseau Docker `internal: true` sans egress direct | absence d'authentification applicative ; Prometheus et l'orchestrateur peuvent joindre les deux serveurs |
+| `sandbox-egress` / `ai-factory-sandbox-egress` | jobs sandbox dynamiques, Artifactory, SonarQube et proxy d'egress | réseau `internal: true`; proxy seul raccordé aussi à `factory`, avec refus par défaut | porter l'isolation et les règles de destination vers GKE (MCP-216) |
 | `none` | jobs `validate_patch` et `apply_patch` | aucun réseau | conforme au besoin | conserver dans la cible sandbox |
 
 ### 5.2 Flux requis et flux à retirer
@@ -122,7 +123,7 @@ La cible GCP applique un compte de service distinct pour l'orchestrateur et chaq
 |---|---|---|
 | D1 | `GITEA_TOKEN` et l'accès Gitea direct restent dans l'orchestrateur. | MCP-110 à MCP-123 |
 | D2 | Les serveurs MCP ne valident pas encore une identité, une audience et des scopes propres à l'appelant. | MCP-210 à MCP-213 |
-| D3 | Les jobs tests/qualité/sécurité rejoignent le réseau `factory` complet au lieu d'une allow-list d'egress. | MCP-076, MCP-083, MCP-216 |
+| D3 | La séparation et l'allow-list sont effectives dans Docker local ; leur équivalent GKE, DNS et metadata reste à appliquer. | MCP-216 |
 | D4 | `docker.sock` reste monté dans le contrôleur sandbox local. | MCP-089 et MCP-092 |
 | D5 | Secrets runtime statiques dans `.env`/`.vault`, malgré une bonne séparation partielle des détenteurs. | MCP-217 |
 | D6 | Workspace partagé et cache Maven non segmenté par tentative. | schémas communs `attempt_id`, lot sandbox et MCP-145 à MCP-151 |

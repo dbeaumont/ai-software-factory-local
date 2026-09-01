@@ -121,7 +121,11 @@ services:
       AI_FACTORY_SANDBOX_HEARTBEAT_INTERVAL: ${AI_FACTORY_SANDBOX_HEARTBEAT_INTERVAL:-PT15S}
       AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS: ${AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS:-65536}
       AI_FACTORY_SANDBOX_MAX_PATCH_BYTES: ${AI_FACTORY_SANDBOX_MAX_PATCH_BYTES:-1048576}
-      MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
+      MAVEN_MIRROR_URL: ${AI_FACTORY_SANDBOX_MAVEN_MIRROR_URL}
+      NPM_REGISTRY_URL: ${NPM_REGISTRY_URL:-https://registry.npmjs.org/}
+      AI_FACTORY_SANDBOX_EGRESS_PROXY_URL: ${AI_FACTORY_SANDBOX_EGRESS_PROXY_URL:-http://sandbox-egress-proxy:3128}
+      AI_FACTORY_SANDBOX_NO_PROXY: ${AI_FACTORY_SANDBOX_NO_PROXY:-artifactory,sonarqube,localhost,127.0.0.1}
+      AI_FACTORY_SANDBOX_QUALITY_NETWORK: ${AI_FACTORY_SANDBOX_QUALITY_NETWORK:-ai-factory-sandbox-quality}
       ARTIFACTORY_TOKEN: ${ARTIFACTORY_TOKEN}
       AI_FACTORY_SONARQUBE_URL: ${AI_FACTORY_SONARQUBE_URL}
       AI_FACTORY_SONAR_TOKEN: ${SONAR_TOKEN}
@@ -144,6 +148,27 @@ services:
       retries: 20
       start_period: 10s
     networks: [mcp-internal]
+
+  # The only component shared by untrusted jobs and an egress-capable network.
+  # Squid denies every destination not listed in its immutable configuration.
+  sandbox-egress-proxy:
+    build:
+      context: ./sandbox-egress-proxy
+    read_only: true
+    tmpfs:
+      - /run:size=4m,mode=0755
+      - /var/log/squid:size=16m,mode=0755
+      - /var/spool/squid:size=16m,mode=0755
+      - /tmp:size=4m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q '^Name:[[:space:]]*squid$' /proc/1/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [factory, sandbox-egress, sandbox-quality]
 
   # Spring Boot control plane. Its image pulls build dependencies through Artifactory using a BuildKit secret.
   orchestrator:
@@ -274,7 +299,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 40
-    networks: [factory]
+    networks: [factory, sandbox-quality]
 
   # Artifactory OSS requires PostgreSQL; embedded Derby is no longer supported.
   artifactory-db:
@@ -291,6 +316,16 @@ services:
       timeout: 3s
       retries: 20
     networks: [factory]
+
+  # Artifactory OSS does not expose repository-administration REST APIs.
+  # Seed the supported first-start bootstrap file into its persistent volume.
+  artifactory-config:
+    image: busybox:1.37
+    command: ["sh", "-c", "mkdir -p /data/etc/artifactory && cp /bootstrap/artifactory.config.import.yml /data/etc/artifactory/artifactory.config.import.yml"]
+    volumes:
+      - artifactory-data:/data
+      - ./artifactory/artifactory.config.import.yml:/bootstrap/artifactory.config.import.yml:ro
+    network_mode: none
 
   # Local artifact repository used for local artifact storage.
   artifactory:
@@ -312,12 +347,14 @@ services:
     depends_on:
       artifactory-db:
         condition: service_healthy
+      artifactory-config:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8082/artifactory/api/system/ping >/dev/null"]
       interval: 15s
       timeout: 5s
       retries: 60
-    networks: [factory]
+    networks: [factory, sandbox-egress, sandbox-quality]
 
   # Metrics collection and visualization for the orchestrator.
   prometheus:
@@ -347,6 +384,16 @@ networks:
   # MCP read services have no direct external egress; only the orchestrator and observability join this segment.
   mcp-internal:
     name: ai-factory-mcp-internal
+    internal: true
+  # Test-job containers join only this internal segment. They can reach
+  # Artifactory and the allow-listed proxy, but no control-plane service or SonarQube.
+  sandbox-egress:
+    name: ai-factory-sandbox-egress
+    internal: true
+  # Quality jobs receive SonarQube in addition to Artifactory and the proxy;
+  # test jobs cannot join this network through any MCP argument.
+  sandbox-quality:
+    name: ai-factory-sandbox-quality
     internal: true
 
 volumes:

@@ -52,3 +52,8 @@ ai-factory:
     artifactory-token: ${ARTIFACTORY_TOKEN:}
     sonarqube-url: ${AI_FACTORY_SONARQUBE_URL:http://sonarqube:9000}
     sonar-token: ${AI_FACTORY_SONAR_TOKEN:}
+  sandbox-dependencies:
+    npm-registry-url: ${NPM_REGISTRY_URL:https://registry.npmjs.org/}
+    egress-proxy-url: ${AI_FACTORY_SANDBOX_EGRESS_PROXY_URL:http://sandbox-egress-proxy:3128}
+    no-proxy: ${AI_FACTORY_SANDBOX_NO_PROXY:artifactory,sonarqube,localhost,127.0.0.1}
+    quality-network: ${AI_FACTORY_SANDBOX_QUALITY_NETWORK:ai-factory-sandbox-quality}

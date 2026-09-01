@@ -3,8 +3,8 @@
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
   <mirrors>
     <mirror>
-      <id>artifactory</id>
-      <name>Configured Maven mirror</name>
+      <id>approved-mirror</id>
+      <name>Configured unauthenticated Maven mirror</name>
       <url>${env.MAVEN_MIRROR_URL}</url>
       <mirrorOf>*</mirrorOf>
     </mirror>
@@ -27,11 +27,4 @@
       <nonProxyHosts>${env.MAVEN_NO_PROXY_HOSTS}</nonProxyHosts>
     </proxy>
   </proxies>
-  <servers>
-    <server>
-      <id>artifactory</id>
-      <username>token</username>
-      <password>${env.ARTIFACTORY_TOKEN}</password>
-    </server>
-  </servers>
 </settings>

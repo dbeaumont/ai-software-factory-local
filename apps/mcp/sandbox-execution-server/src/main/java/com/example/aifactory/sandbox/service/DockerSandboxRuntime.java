@@ -1,8 +1,10 @@
 package com.example.aifactory.sandbox.service;
 
 import com.example.aifactory.sandbox.config.SandboxExecutionProperties;
+import com.example.aifactory.sandbox.config.SandboxDependencyProperties;
 import com.example.aifactory.sandbox.model.SandboxModels.Operation;
 import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStreamReader;
@@ -21,11 +23,21 @@ import java.util.regex.Pattern;
 public class DockerSandboxRuntime implements SandboxRuntime {
     private static final Pattern MANAGED_CONTAINER = Pattern.compile("^ai-factory-sbx-[0-9a-f]{32}$");
     private final SandboxExecutionProperties properties;
+    private final SandboxDependencyProperties dependencyProperties;
     private final ExecutorService outputReaders = Executors.newCachedThreadPool();
     private final ConcurrentMap<String, Process> runningClients = new ConcurrentHashMap<>();
 
-    public DockerSandboxRuntime(SandboxExecutionProperties properties) {
+    @Autowired
+    public DockerSandboxRuntime(SandboxExecutionProperties properties,
+                                SandboxDependencyProperties dependencyProperties) {
         this.properties = properties;
+        this.dependencyProperties = dependencyProperties;
+    }
+
+    DockerSandboxRuntime(SandboxExecutionProperties properties) {
+        this(properties, new SandboxDependencyProperties(
+                "https://registry.npmjs.org/", "http://sandbox-egress-proxy:3128",
+                "artifactory,sonarqube,localhost,127.0.0.1", "ai-factory-sandbox-quality"));
     }
 
     @Override
@@ -105,7 +117,11 @@ public class DockerSandboxRuntime implements SandboxRuntime {
     List<String> command(SandboxProfiles.Profile profile, String containerName, Path workspace,
                          Path environmentFile) {
         String taskDirectory = workspace.getFileName().toString();
-        String network = profile.network().equals("none") ? "none" : properties.network();
+        String network = switch (profile.network()) {
+            case "none" -> "none";
+            case "quality" -> dependencyProperties.qualityNetwork();
+            default -> properties.network();
+        };
         String workspaceMount = properties.workspaceVolume() + ":/factory-tasks"
                 + (profile.workspaceReadOnly() ? ":ro" : "");
         List<String> command = new ArrayList<>(List.of(
@@ -134,6 +150,14 @@ public class DockerSandboxRuntime implements SandboxRuntime {
         allowed.put("ARTIFACTORY_TOKEN", properties.artifactoryToken());
         allowed.put("SONAR_HOST_URL", properties.sonarqubeUrl());
         allowed.put("SONAR_TOKEN", properties.sonarToken());
+        allowed.put("NPM_CONFIG_REGISTRY", dependencyProperties.npmRegistryUrl());
+        allowed.put("HTTP_PROXY", dependencyProperties.egressProxyUrl());
+        allowed.put("HTTPS_PROXY", dependencyProperties.egressProxyUrl());
+        allowed.put("NO_PROXY", dependencyProperties.noProxy());
+        allowed.put("GRADLE_OPTS", dependencyProperties.gradleProxyOptions());
+        allowed.put("MAVEN_OPTS", dependencyProperties.gradleProxyOptions());
+        allowed.put("MAVEN_PROXY_HOST", dependencyProperties.proxyHost());
+        allowed.put("MAVEN_NO_PROXY_HOSTS", dependencyProperties.mavenNoProxyHosts());
         StringBuilder content = new StringBuilder();
         for (String name : names) {
             String value = allowed.getOrDefault(name, "");

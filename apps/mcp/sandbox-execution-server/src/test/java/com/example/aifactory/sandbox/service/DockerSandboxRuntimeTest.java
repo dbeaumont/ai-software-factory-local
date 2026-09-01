@@ -64,8 +64,12 @@ class DockerSandboxRuntimeTest {
         List<String> command = runtime.command(profile, "ai-factory-sbx-ghi", workspace, null);
 
         assertEquals("test-maven-v1", profile.id());
-        assertTrue(profile.script().contains("if [ -n \"$MAVEN_MIRROR_URL\" ]"));
-        assertTrue(profile.script().contains("MAVEN_SETTINGS=''"));
+        assertTrue(profile.script().contains("Required Maven mirror is unavailable"));
+        assertTrue(profile.script().contains("MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'"));
+        assertTrue(profile.script().contains("MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings-public.xml'"));
+        assertTrue(profile.environmentNames().containsAll(
+                List.of("MAVEN_MIRROR_URL", "MAVEN_OPTS", "MAVEN_PROXY_HOST",
+                        "MAVEN_NO_PROXY_HOSTS", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY")));
         assertTrue(command.containsAll(List.of("--network", "factory-network")));
         assertTrue(command.contains("factory-workspace:/factory-tasks"));
         assertTrue(command.contains("ai-factory-m2:/root/.m2"));
@@ -80,7 +84,9 @@ class DockerSandboxRuntimeTest {
 
         assertEquals("test-gradle-v1", profile.id());
         assertFalse(profile.mavenCache());
-        assertTrue(profile.script().contains("--no-daemon test"));
+        assertTrue(profile.script().contains("--init-script /opt/ai-factory/gradle-mirror.init.gradle test"));
+        assertTrue(profile.environmentNames().containsAll(
+                List.of("MAVEN_MIRROR_URL", "GRADLE_OPTS", "NO_PROXY")));
     }
 
     @Test
@@ -93,6 +99,8 @@ class DockerSandboxRuntimeTest {
         assertFalse(profile.mavenCache());
         assertTrue(profile.script().contains("npm ci --ignore-scripts"));
         assertTrue(profile.script().contains("package-lock.json"));
+        assertTrue(profile.environmentNames().containsAll(
+                List.of("NPM_CONFIG_REGISTRY", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY")));
     }
 
     @Test
@@ -116,6 +124,18 @@ class DockerSandboxRuntimeTest {
 
         assertFalse(String.join(" ", command).contains(payload));
         assertTrue(command.containsAll(List.of("--env-file", "/tmp/opaque-env-file")));
+        runtime.shutdown();
+    }
+
+    @Test
+    void isolatesQualityChecksOnTheDedicatedQualityNetwork() {
+        DockerSandboxRuntime runtime = runtime();
+
+        List<String> command = runtime.command(SandboxProfiles.forOperation(Operation.RUN_QUALITY),
+                "ai-factory-sbx-quality", Path.of("/workspace/tasks/task-1"), null);
+
+        assertTrue(command.containsAll(List.of("--network", "ai-factory-sandbox-quality")));
+        assertFalse(command.contains("factory-network"));
         runtime.shutdown();
     }
 

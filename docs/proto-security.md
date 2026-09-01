@@ -37,7 +37,7 @@ Les étapes de vérification du patch, d'exécution des tests, d'analyse qualim�
 Profils réseau de la sandbox :
 
 - **Validation du patch (`checkPatch` et `applyPatch`)** : exécutée avec `--network none` (isolation réseau totale).
-- **Builds, tests, SonarQube et Trivy** : exécutés sur le réseau interne Docker `ai-factory-network`.
+- **Builds, tests, SonarQube et Trivy** : exécutés sur `ai-factory-sandbox-egress`, réseau interne dédié sans accès au plan de contrôle ; les sorties passent par un proxy à liste blanche.
 
 ### Contrôles déterministes
 
@@ -76,7 +76,7 @@ Le service `sandbox-execution-mcp` monte encore le socket Docker du hôte. Sa su
 
 ### 2. Réseau interne partagé pour les builds
 
-Les builds et scans de la sandbox sont raccordés au réseau `ai-factory-network`. Bien que ce réseau soit interne à Compose, le sandbox a accès aux IP/ports des autres conteneurs de la stack (Gitea, SonarQube, Artifactory, etc.).
+Les builds et scans de la sandbox sont raccordés au seul réseau `ai-factory-sandbox-egress`, déclaré `internal: true`. Ce segment contient Artifactory, SonarQube et le proxy d'egress ; Gitea, LiteLLM, l'orchestrateur, les serveurs MCP, les bases et le frontal n'y sont pas raccordés. Le proxy applique un refus par défaut et une liste de domaines de dépendances versionnée dans le dépôt.
 
 ### 3. Secrets locaux en texte clair
 
@@ -104,7 +104,7 @@ Pour passer d'un POC local à une cible crédible, il faut au minimum :
 
 1. Remplacer `docker.sock` par une Sandbox API ou des Jobs Kubernetes.
 2. Introduire des identités workload et un gestionnaire de secrets.
-3. Ajouter des politiques réseau avec egress allow-list.
+3. Porter les restrictions réseau Docker vers les NetworkPolicies GKE, le DNS contrôlé et le blocage metadata suivis par MCP-216.
 4. Persister l'état et l'audit des tâches dans une base dédiée.
 5. Ajouter SSO, RBAC et policy-as-code.
 6. Isoler strictement les plans contrôle, contexte, exécution et livraison.

@@ -1,0 +1,25 @@
+def mirrorUrl = System.getenv('MAVEN_MIRROR_URL')
+def mirrorToken = System.getenv('ARTIFACTORY_TOKEN')
+
+def configureMirror = { repositoryHandler ->
+    repositoryHandler.clear()
+    repositoryHandler.maven {
+        name = 'aiFactoryArtifactory'
+        url = uri(mirrorUrl)
+        if (mirrorToken) {
+            credentials {
+                username = 'token'
+                password = mirrorToken
+            }
+        }
+    }
+}
+
+settingsEvaluated { settings ->
+    configureMirror(settings.pluginManagement.repositories)
+}
+
+allprojects {
+    configureMirror(buildscript.repositories)
+    configureMirror(repositories)
+}
