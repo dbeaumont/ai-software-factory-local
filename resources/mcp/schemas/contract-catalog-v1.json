@@ -29,7 +29,7 @@
       "name": "context.get_symbols",
       "request_schema": "context-get-symbols-request-v1.schema.json",
       "result_schema": "context-get-symbols-result-v1.schema.json",
-      "implementation_status": "PLANNED"
+      "implementation_status": "IMPLEMENTED_FEATURE_FLAGGED"
     },
     {
       "name": "context.get_dependencies",

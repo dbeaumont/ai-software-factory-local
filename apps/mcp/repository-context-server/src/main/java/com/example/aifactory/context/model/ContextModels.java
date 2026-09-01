@@ -123,6 +123,53 @@ public final class ContextModels {
             boolean truncated) {
     }
 
+    public record GetSymbolsRequest(
+            String schemaVersion,
+            String taskId,
+            String attemptId,
+            String sourceCommit,
+            String actor,
+            String traceId,
+            String traceparent,
+            String deadline,
+            String path,
+            String query,
+            String language,
+            Integer maxResults,
+            String cursor) {
+        public RequestContext context() {
+            return new RequestContext(schemaVersion, taskId, attemptId, sourceCommit, actor, traceId, traceparent, deadline);
+        }
+
+        public GetSymbolsRequest(String schemaVersion, String taskId, String sourceCommit, String actor,
+                                 String traceId, String path, String query, String language, Integer maxResults) {
+            this(schemaVersion, taskId, "attempt-test", sourceCommit, actor, traceId,
+                    ContextModels.traceparent(traceId), ContextModels.deadline(), path, query, language,
+                    maxResults, null);
+        }
+    }
+
+    public record ParserDescriptor(String name, String version) {
+    }
+
+    public record Symbol(
+            String name,
+            String kind,
+            String path,
+            @JsonProperty("start_line") int startLine,
+            @JsonProperty("end_line") int endLine,
+            String language,
+            String signature) {
+    }
+
+    public record GetSymbolsResult(
+            @JsonProperty("source_commit") String sourceCommit,
+            ParserDescriptor parser,
+            List<Symbol> symbols,
+            boolean truncated,
+            @JsonProperty("next_cursor") String nextCursor) {
+    }
+
     public record RepositoryRulesRequest(
             String schemaVersion,
             String taskId,

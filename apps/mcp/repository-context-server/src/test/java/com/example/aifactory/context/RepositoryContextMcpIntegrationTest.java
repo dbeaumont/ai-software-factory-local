@@ -34,6 +34,7 @@ class RepositoryContextMcpIntegrationTest {
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("ai-factory.context.workspace-root", WORKSPACE_ROOT::toString);
         registry.add("ai-factory.context.registry-root", () -> WORKSPACE_ROOT.resolve(".registry").toString());
+        registry.add("ai-factory.context.symbols.enabled", () -> "true");
     }
 
     @BeforeAll
@@ -82,9 +83,10 @@ class RepositoryContextMcpIntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.result.tools.length()").isEqualTo(5)
+                .jsonPath("$.result.tools.length()").isEqualTo(6)
                 .jsonPath("$.result.tools[?(@.name == 'context.read_file')]").exists()
-                .jsonPath("$.result.tools[?(@.name == 'context.get_dependencies')]").exists();
+                .jsonPath("$.result.tools[?(@.name == 'context.get_dependencies')]").exists()
+                .jsonPath("$.result.tools[?(@.name == 'context.get_symbols')]").exists();
 
         client.post().uri("/mcp")
                 .header("MCP-Protocol-Version", "2025-06-18")
@@ -174,6 +176,36 @@ class RepositoryContextMcpIntegrationTest {
                 .jsonPath("$.result.isError").isEqualTo(false)
                 .jsonPath("$.result.content[0].text").value(containsString("org.example:integration-lib"))
                 .jsonPath("$.result.content[0].text").value(containsString("\"declaration_path\":\"pom.xml\""));
+
+        client.post().uri("/mcp")
+                .header("MCP-Protocol-Version", "2025-06-18")
+                .contentType(APPLICATION_JSON)
+                .accept(APPLICATION_JSON, TEXT_EVENT_STREAM)
+                .bodyValue(Map.of(
+                        "jsonrpc", "2.0",
+                        "id", 8,
+                        "method", "tools/call",
+                        "params", Map.of(
+                                "name", "context.get_symbols",
+                                "arguments", Map.ofEntries(
+                                        Map.entry("schema_version", "1"),
+                                        Map.entry("task_id", "integration-task"),
+                                        Map.entry("attempt_id", "attempt-1"),
+                                        Map.entry("source_commit", commit),
+                                        Map.entry("actor", "planner"),
+                                        Map.entry("trace_id", "3123456789abcdef0123456789abcdef"),
+                                        Map.entry("traceparent", "00-3123456789abcdef0123456789abcdef-0123456789abcdef-01"),
+                                        Map.entry("deadline", java.time.Instant.now().plusSeconds(60).toString()),
+                                        Map.entry("path", "src/Example.java"),
+                                        Map.entry("language", "java"),
+                                        Map.entry("max_results", 100)))))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.result.isError").isEqualTo(false)
+                .jsonPath("$.result.content[0].text").value(containsString("\"name\":\"Example\""))
+                .jsonPath("$.result.content[0].text")
+                .value(containsString("\"version\":\"0.26.6+grammars.20260301\""));
 
         client.post().uri("/mcp")
                 .header("MCP-Protocol-Version", "2025-06-18")

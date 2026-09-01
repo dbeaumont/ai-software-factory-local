@@ -75,6 +75,25 @@ class McpResponseValidatorTest {
                 """)));
     }
 
+    @Test
+    void validatesPinnedSymbolIndexResults() throws Exception {
+        McpResponseValidator validator = new McpResponseValidator(mapper, properties(65_536));
+
+        assertThatNoException().isThrownBy(() -> validator.validate("context.get_symbols", mapper.readTree("""
+                {
+                  "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "parser": {"name": "tree-sitter-ng", "version": "0.26.6+grammars.20260301"},
+                  "symbols": [{
+                    "name": "Customer", "kind": "RECORD", "path": "src/Customer.java",
+                    "start_line": 3, "end_line": 8, "language": "java",
+                    "signature": "public record Customer(String name)"
+                  }],
+                  "truncated": false,
+                  "next_cursor": null
+                }
+                """)));
+    }
+
     private static McpClientProperties properties(int maxResponseBytes) {
         McpClientProperties.RetryPolicy readOnly = new McpClientProperties.RetryPolicy(
                 3, Duration.ofMillis(200), Duration.ofSeconds(2), 2.0, 0.2);

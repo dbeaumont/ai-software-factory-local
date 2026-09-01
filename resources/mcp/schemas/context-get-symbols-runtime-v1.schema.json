@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/context-get-symbols-runtime-v1.schema.json",
+  "title": "context.get_symbols runtime result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_commit", "parser", "symbols", "truncated"],
+  "properties": {
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "parser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "tree-sitter-ng" },
+        "version": { "const": "0.26.6+grammars.20260301" }
+      }
+    },
+    "symbols": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "path", "start_line", "end_line", "language"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "kind": { "type": "string", "enum": ["MODULE", "NAMESPACE", "CLASS", "INTERFACE", "ENUM", "RECORD", "FUNCTION", "METHOD", "CONSTRUCTOR", "FIELD", "PROPERTY", "CONSTANT", "TYPE"] },
+          "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+          "start_line": { "type": "integer", "minimum": 1 },
+          "end_line": { "type": "integer", "minimum": 1 },
+          "language": { "type": "string", "enum": ["java", "kotlin", "javascript", "typescript", "tsx", "python", "go"] },
+          "signature": { "type": ["string", "null"], "maxLength": 2048 }
+        }
+      }
+    },
+    "truncated": { "type": "boolean" },
+    "next_cursor": { "type": ["string", "null"], "pattern": "^[0-9a-f]{32}$" }
+  }
+}

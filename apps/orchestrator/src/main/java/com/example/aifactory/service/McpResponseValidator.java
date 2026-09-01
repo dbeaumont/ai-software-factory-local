@@ -22,6 +22,7 @@ public class McpResponseValidator {
             Map.entry("context.search_code", "context-search-code-runtime-v1.schema.json"),
             Map.entry("context.get_repository_rules", "context-repository-rules-runtime-v1.schema.json"),
             Map.entry("context.get_dependencies", "context-get-dependencies-runtime-v1.schema.json"),
+            Map.entry("context.get_symbols", "context-get-symbols-runtime-v1.schema.json"),
             Map.entry("sandbox.validate_patch", "sandbox-execution-result-v1.schema.json"),
             Map.entry("sandbox.apply_patch", "sandbox-execution-result-v1.schema.json"),
             Map.entry("sandbox.run_tests", "sandbox-execution-result-v1.schema.json"),

@@ -22,4 +22,4 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=build /src/target/repository-context-mcp-server.jar app.jar
 USER 10001
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "/app/app.jar"]

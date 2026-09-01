@@ -50,6 +50,8 @@ public class RepositoryContextTools {
             "workflow", "planner", "developer", "patch-repair", "tester", "reviewer");
     private static final Set<String> DEPENDENCY_READERS = Set.of(
             "workflow", "planner", "developer", "tester", "reviewer");
+    private static final Set<String> SYMBOL_READERS = Set.of(
+            "workflow", "planner", "developer", "patch-repair", "tester", "reviewer");
     private static final Set<String> TEXT_EXTENSIONS = Set.of(
             ".java", ".kt", ".xml", ".yml", ".yaml", ".json", ".ts", ".js", ".css", ".html",
             ".properties", ".gradle", ".md", ".txt", ".toml", ".sh", ".sql", ".py", ".go");
@@ -285,6 +287,31 @@ public class RepositoryContextTools {
         if (module.isEmpty()) module = ".";
         return dependencyPage(request.taskId(), request.sourceCommit(), module, manifest.ecosystem(),
                 dependencies, 0, pageSize, hardTruncated);
+    }
+
+    Path symbolWorkspace(RequestContext context) throws Exception {
+        authorize(context.actor(), SYMBOL_READERS, "context.get_symbols");
+        return workspace(context);
+    }
+
+    Path symbolSelection(Path workspace, String requestedPath) throws IOException {
+        Path selected = resolve(workspace, requestedPath);
+        requireVisibleStart(workspace, selected);
+        return selected;
+    }
+
+    List<Path> symbolSourceFiles(Path workspace, int maximum) throws IOException {
+        return collectVisiblePaths(workspace, workspace, 64, maximum,
+                path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
+                        && isVisible(workspace, path));
+    }
+
+    static String symbolRelativePath(Path workspace, Path path) {
+        return normalizedRelative(workspace, path);
+    }
+
+    static void ensureSymbolDeadline(RequestContext context) {
+        ensureBeforeDeadline(context);
     }
 
     private Manifest selectManifest(Path requested, String requestedEcosystem) {

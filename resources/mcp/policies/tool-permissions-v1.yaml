@@ -8,6 +8,7 @@ roles:
       - context.read_file
       - context.get_repository_rules
       - context.get_dependencies
+      - context.get_symbols
       - sandbox.validate_patch
       - sandbox.apply_patch
       - sandbox.run_tests
@@ -22,6 +23,7 @@ roles:
       - context.read_file
       - context.get_repository_rules
       - context.get_dependencies
+      - context.get_symbols
   developer:
     tools:
       - context.list_tree
@@ -29,19 +31,23 @@ roles:
       - context.read_file
       - context.get_repository_rules
       - context.get_dependencies
+      - context.get_symbols
   patch-repair:
     tools:
       - context.read_file
+      - context.get_symbols
   tester:
     tools:
       - context.search_code
       - context.read_file
       - context.get_dependencies
+      - context.get_symbols
   reviewer:
     tools:
       - context.search_code
       - context.read_file
       - context.get_dependencies
+      - context.get_symbols
 limits:
   defaultsPolicy: default-limits-v1
   maxResponseBytes: 65536
