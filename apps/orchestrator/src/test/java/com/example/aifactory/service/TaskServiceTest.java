@@ -146,7 +146,7 @@ class TaskServiceTest {
     private static final class TestableTaskService extends TaskService {
         private TestableTaskService() {
             super(null, null, null, null, null, new AgentResponseValidator(new ObjectMapper()), null, null, null,
-                    new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+                    new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), new ObjectMapper());
         }
     }
 }

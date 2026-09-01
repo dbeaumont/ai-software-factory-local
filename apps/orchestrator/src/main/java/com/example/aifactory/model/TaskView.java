@@ -20,6 +20,7 @@ public record TaskView(
         String testSummary,
         String qualitySummary,
         String securitySummary,
+        java.util.Map<String, Object> assuranceResults,
         String review,
         String pullRequestUrl,
         String error,

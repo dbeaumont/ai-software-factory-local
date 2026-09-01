@@ -7,6 +7,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.*;
 import java.time.Duration;
@@ -42,11 +44,12 @@ public class TaskService {
     private final Counter completedTasks;
     private final Counter failedTasks;
     private final Counter plannerContractRetries;
+    private final ObjectMapper objectMapper;
 
     public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
                        PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses,
                        SandboxExecutor sandbox, AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
-                       MeterRegistry metrics) {
+                       MeterRegistry metrics, ObjectMapper objectMapper) {
         this.props = props;
         this.runner = runner;
         this.contextService = contextService;
@@ -56,6 +59,7 @@ public class TaskService {
         this.sandbox = sandbox;
         this.assurance = assurance;
         this.scmDelivery = scmDelivery;
+        this.objectMapper = objectMapper;
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted").description("Tasks submitted to the factory").register(metrics);
         this.completedTasks = Counter.builder("ai_factory_tasks_completed").description("Tasks that completed validation").register(metrics);
         this.failedTasks = Counter.builder("ai_factory_tasks_failed").description("Tasks that failed before approval").register(metrics);
@@ -153,18 +157,25 @@ public class TaskService {
             s.testSummary = deterministicTests + "\n\n--- AI TESTER REVIEW ---\n" + testerReview;
             Files.createDirectories(ws.resolve(".ai-factory"));
             Files.writeString(ws.resolve(".ai-factory/test.txt"), s.testSummary);
+            s.assuranceResults.put("tests", evidenceResult(s, "tests", "PASSED", deterministicTests));
 
             s.transition(TaskStatus.QUALITY_SCANNING, "Running SonarQube quality analysis");
             s.qualitySummary = tail(sandbox.quality(ws, s.id, s.sourceCommit), 12000);
-            assurance.requireQualityGate(s.id, s.sourceCommit, s.qualitySummary);
+            JsonNode qualityResult = assurance.requireQualityGate(s.id, s.sourceCommit, s.qualitySummary);
+            s.assuranceResults.put("quality", objectMapper.convertValue(qualityResult, Map.class));
 
             s.transition(TaskStatus.SECURITY_SCANNING, "Generating SBOM and running Trivy");
             s.securitySummary = tail(sandbox.security(ws, s.id, s.sourceCommit), 12000);
+            s.assuranceResults.put("security", evidenceResult(s, "security", "PASSED", s.securitySummary));
+            Path sbom = ws.resolve(".ai-factory/sbom.cdx.json");
+            s.assuranceResults.put("sbom", Map.of("schema_version", "1", "task_id", s.id,
+                    "attempt_id", "pipeline-1", "source_commit", s.sourceCommit, "format", "CYCLONEDX_JSON",
+                    "uri", "evidence://" + s.id + "/pipeline-1/sbom", "digest", sha256(Files.readAllBytes(sbom)),
+                    "status", "COMPLETE"));
 
             s.transition(TaskStatus.REVIEWING, "Reviewer agent assessing plan, patch and deterministic evidence");
             s.review = chat(s, "reviewer", untrusted("REQUIREMENT", s.request.requirement()) + untrusted("PLAN", s.plan) +
-                    untrusted("PATCH", s.patch) + untrusted("TEST_EVIDENCE", s.testSummary) +
-                    untrusted("QUALITY_EVIDENCE", s.qualitySummary) + untrusted("SECURITY_EVIDENCE", s.securitySummary));
+                    untrusted("PATCH", s.patch) + untrusted("ASSURANCE_RESULTS", objectMapper.writeValueAsString(s.assuranceResults)));
             AgentResponseValidator.ReviewSummary reviewSummary = agentResponses.summarizeReview(s.review);
             logReviewerDecision(s, reviewSummary);
             agentResponses.requireReviewAllowsApproval(reviewSummary);
@@ -261,6 +272,19 @@ public class TaskService {
 
     private static String tail(String s, int max) {
         return s.length() <= max ? s : "...[truncated]...\n" + s.substring(s.length() - max);
+    }
+
+    private static Map<String, Object> evidenceResult(TaskState state, String type, String verdict, String content) {
+        return Map.of("schema_version", "1", "task_id", state.id, "attempt_id", "pipeline-1",
+                "source_commit", state.sourceCommit, "type", type, "verdict", verdict,
+                "evidence", Map.of("uri", "evidence://" + state.id + "/pipeline-1/" + type,
+                        "digest", sha256(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)), "status", "COMPLETE"));
+    }
+
+    private static String sha256(byte[] value) {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value));
+        } catch (Exception exception) { throw new IllegalStateException("cannot digest assurance result", exception); }
     }
 
     private String chat(TaskState state, String promptName, String untrustedInput) {

@@ -24,6 +24,7 @@ public class TaskState {
     public String testSummary;
     public String qualitySummary;
     public String securitySummary;
+    public final Map<String, Object> assuranceResults = new LinkedHashMap<>();
     public String review;
     public String pullRequestUrl;
     public String error;
@@ -54,7 +55,8 @@ public class TaskState {
 
     public synchronized TaskView view() {
         return new TaskView(id, ticketNumber, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
-                request.effectiveLlmMode(), workspace, sourceCommit, model, Map.copyOf(promptFingerprints), plan, patch, testSummary, qualitySummary, securitySummary, review,
+                request.effectiveLlmMode(), workspace, sourceCommit, model, Map.copyOf(promptFingerprints), plan, patch,
+                testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), review,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
     }
 

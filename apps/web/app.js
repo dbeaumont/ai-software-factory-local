@@ -414,9 +414,9 @@ proposalButton.addEventListener('click', () => {
   if (!activeTask) return;
   proposalPatch.textContent = activeTask.patch || 'Aucun diff généré.';
   proposalPlan.textContent = activeTask.plan || 'Aucun plan généré.';
-  proposalTests.textContent = activeTask.testSummary || 'Aucun résultat de test disponible.';
-  proposalQuality.textContent = activeTask.qualitySummary || 'Aucun résultat SonarQube disponible.';
-  proposalSecurity.textContent = activeTask.securitySummary || 'Aucun résultat de sécurité disponible.';
+  proposalTests.textContent = assuranceText(activeTask.assuranceResults?.tests, activeTask.testSummary, 'Aucun résultat de test disponible.');
+  proposalQuality.textContent = assuranceText(activeTask.assuranceResults?.quality, activeTask.qualitySummary, 'Aucun résultat SonarQube disponible.');
+  proposalSecurity.textContent = assuranceText(activeTask.assuranceResults?.security, activeTask.securitySummary, 'Aucun résultat de sécurité disponible.');
   proposalReview.textContent = activeTask.review || 'Aucune revue IA disponible.';
   if (typeof proposalDialog.showModal === 'function') proposalDialog.showModal();
   else proposalDialog.open = true;
@@ -426,6 +426,15 @@ proposalCloseButton.addEventListener('click', () => proposalDialog.close());
 
 function reviewValue(value, fallback) {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function assuranceText(result, raw, fallback) {
+  if (!result) return raw || fallback;
+  const evidence = result.evidence || {};
+  const verdict = result.verdict || result.status || 'INDETERMINATE';
+  const digest = evidence.digest || result.digest || 'digest indisponible';
+  const uri = evidence.uri || result.uri || 'URI indisponible';
+  return `Verdict : ${verdict}\nPreuve : ${uri}\nSHA-256 : ${digest}\n\n${raw || ''}`.trim();
 }
 
 function reviewList(values, emptyMessage) {
