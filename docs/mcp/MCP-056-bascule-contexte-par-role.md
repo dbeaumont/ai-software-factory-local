@@ -39,3 +39,16 @@ Les opérations sandbox, qualité, sécurité et SCM ne sont pas créditées à 
 La campagne `20260901-211328` obtient 20/20 plans présents et zéro contrat invalide avec `planner` seul en MCP_ACTIVE. Les journaux prouvent 20 collectes MCP pour Planner et 14 collectes directes pour les 14 plans implémentables ayant atteint Developer. Aucun fallback Planner n'a été observé et la revue sémantique est conforme.
 
 Décision : **GO** pour l'étape suivante avec `planner,developer,patch-repair`.
+
+## Résultat de la promotion complète
+
+La campagne `20260901-212521` conserve 20/20 plans présents et zéro contrat invalide avec les trois rôles autorisés. Les journaux donnent exactement :
+
+- 20 collectes MCP_ACTIVE pour Planner ;
+- 14 collectes MCP_ACTIVE pour Developer, correspondant aux 14 plans `IMPLEMENTABLE` ;
+- 6 collectes MCP_ACTIVE pour PatchRepair sur cinq tâches ;
+- aucun message de fallback direct pour un rôle actif.
+
+Quatre des cinq tâches ayant utilisé PatchRepair ont dépassé l'étape de validation du patch ; une reste bloquée après la limite de réparation. Cette qualité de génération relève des évaluations agentiques, pas du routage de contexte.
+
+Décision MCP-056 : **GO et tâche terminée**. Le rollback reste disponible par réduction de l'allow-list ou retour à `MCP_SHADOW`.
