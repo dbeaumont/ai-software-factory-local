@@ -150,6 +150,40 @@ services:
       start_period: 10s
     networks: [mcp-internal]
 
+  scm-delivery-mcp:
+    build:
+      context: ../apps/mcp/scm-delivery-server
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
+      secrets:
+        - artifactory_token
+    environment:
+      AI_FACTORY_SCM_GITEA_BASE_URL: ${AI_FACTORY_GITEA_BASE_URL:-http://gitea:3000}
+      AI_FACTORY_SCM_GITEA_PUBLIC_BASE_URL: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL:-http://localhost:3000}
+      AI_FACTORY_SCM_GITEA_USER: ${AI_FACTORY_GITEA_USER:-aiadmin}
+      AI_FACTORY_SCM_GITEA_TOKEN_FILE: /run/secrets/gitea_token
+      AI_FACTORY_SCM_STATE_ROOT: /var/lib/ai-factory/scm
+    secrets:
+      - gitea_token
+    volumes:
+      - scm-delivery-state:/var/lib/ai-factory/scm
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8093/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    depends_on:
+      gitea:
+        condition: service_healthy
+    networks: [factory, mcp-internal]
+
   # The only component shared by untrusted jobs and an egress-capable network.
   # Squid denies every destination not listed in its immutable configuration.
   sandbox-egress-proxy:
@@ -407,6 +441,7 @@ volumes:
     name: ${AI_FACTORY_WORKSPACE_VOLUME}
   sandbox-job-state:
   context-registry-state:
+  scm-delivery-state:
   sonar-db-data:
   sonar-data:
   sonar-logs:
@@ -420,3 +455,5 @@ secrets:
   # pour authentifier Maven auprès du miroir — jamais gravé dans l'image.
   artifactory_token:
     environment: ARTIFACTORY_TOKEN
+  gitea_token:
+    environment: GITEA_TOKEN

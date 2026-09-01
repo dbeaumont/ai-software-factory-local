@@ -1,0 +1,41 @@
+server:
+  port: 8093
+
+spring:
+  application:
+    name: scm-delivery-mcp
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  ai:
+    mcp:
+      server:
+        name: scm-delivery-mcp
+        version: 0.1.0
+        type: SYNC
+        protocol: STATELESS
+        instructions: "Repository-scoped Gitea delivery. Credentials and remote URLs are server-owned."
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+        streamable-http:
+          mcp-endpoint: /mcp
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+ai-factory:
+  scm:
+    gitea-base-url: ${AI_FACTORY_SCM_GITEA_BASE_URL:http://gitea:3000}
+    gitea-public-base-url: ${AI_FACTORY_SCM_GITEA_PUBLIC_BASE_URL:http://localhost:3000}
+    gitea-user: ${AI_FACTORY_SCM_GITEA_USER:ai-factory-delivery}
+    gitea-token-file: ${AI_FACTORY_SCM_GITEA_TOKEN_FILE:/run/secrets/gitea_token}
+    state-root: ${AI_FACTORY_SCM_STATE_ROOT:/var/lib/ai-factory/scm}
