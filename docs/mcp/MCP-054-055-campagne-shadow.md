@@ -100,7 +100,10 @@ Après bootstrap explicite des trois fixtures, vérification de leur clonabilit�
 - couverture moyenne des fichiers de 92 %, au-dessus du seuil de 90 % ;
 - validité des citations de 100 % ;
 - 61 588 caractères et environ 15 400 tokens MCP estimés, contre 86 958 caractères et 21 748 tokens directs, soit une réduction d'environ 29,2 % ;
+- 0,956 seconde cumulée pour 20 collectes MCP Context, soit une latence moyenne d'environ 47,8 ms ; la latence du collecteur direct n'était pas instrumentée séparément ;
 - 15 réponses Planner exploitables et 5 réponses rejetées car le champ obligatoire `status` était absent ;
 - 20 tâches terminées en échec à une étape du pipeline : refus `NEEDS_CLARIFICATION`, réponse Planner mal formée, patch invalide, test en échec ou indisponibilité des dépendances de scan sécurité.
 
 Ces échecs aval n'invalident pas MCP-054 : le mode shadow continue de servir exclusivement le contexte direct au Planner et les 20 comparaisons Context ont été collectées. Ils interdisent en revanche de conclure à une non-régression globale. MCP-055 reste ouvert jusqu'à la revue des plans, la qualification des cinq réponses mal formées et la décision explicite Produit/RSSI. Les comparaisons sandbox relèvent de MCP-087 et ne sont pas artificiellement créditées à cette campagne.
+
+La revue qualitative et la recommandation de gate sont consignées dans [`MCP-055-revue-qualite-plans.md`](MCP-055-revue-qualite-plans.md).
