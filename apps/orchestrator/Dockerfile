@@ -19,13 +19,14 @@ COPY mvnw .
 # Maven fourni par l'image est utilisé directement : contrairement au Wrapper, il applique l'authentification
 # de settings.xml avant tout téléchargement.
 #
-RUN --mount=type=secret,id=artifactory_token  \
-  apt-get update \
-  && apt-get install -y --no-install-recommends openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/* \
-  && if [ -n "${MAVEN_MIRROR_URL}" ]; then \
+RUN --mount=type=secret,id=artifactory_token \
+    --mount=type=cache,target=/root/.m2 \
+  if [ -n "${MAVEN_MIRROR_URL}" ]; then \
        case "${MAVEN_MIRROR_URL}" in \
          https://*) \
+           apt-get update; \
+           apt-get install -y --no-install-recommends openssl ca-certificates; \
+           rm -rf /var/lib/apt/lists/*; \
            MIRROR_HOST=$(echo "${MAVEN_MIRROR_URL}" | sed 's|^https://||' | cut -d'/' -f1); \
            openssl s_client -connect "${MIRROR_HOST}" -showcerts </dev/null 2>/dev/null \
              | awk '/-----BEGIN CERTIFICATE-----/{n++; f="/tmp/ca-"n".crt"} f{print > f} /-----END CERTIFICATE-----/{f=""}'; \
@@ -50,6 +51,7 @@ COPY --from=mcp-schemas . /src/external-schemas
 
 # Build du projet avec le profil prod (tests ignorés — ils sont exécutés en CI séparément) avec le profil prod.
 RUN --mount=type=secret,id=artifactory_token \
+    --mount=type=cache,target=/root/.m2 \
   if [ -n "${MAVEN_MIRROR_URL}" ]; then \
     export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token); \
     mvn package -DskipTests -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas; \
