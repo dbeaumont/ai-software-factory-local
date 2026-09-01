@@ -10,10 +10,29 @@ import java.time.Instant;
 public class ScmDeliveryTools {
     private final RepositoryRegistry repositories;
     private final ScmRepositoryClient client;
+    private final ScmDeliveryService delivery;
 
-    public ScmDeliveryTools(RepositoryRegistry repositories, ScmRepositoryClient client) {
+    public ScmDeliveryTools(RepositoryRegistry repositories, ScmRepositoryClient client, ScmDeliveryService delivery) {
         this.repositories = repositories;
         this.client = client;
+        this.delivery = delivery;
+    }
+
+    @Tool(name = "scm.create_draft_pull_request", description = "Atomically commit, push and create one draft PR after approval verification")
+    public ScmDeliveryBackend.DeliveryResult createDraftPullRequest(
+            @ToolParam(description = "Contract version, currently 1") String schema_version,
+            @ToolParam(description = "Registered task identifier") String task_id,
+            @ToolParam(description = "Stable workflow attempt identifier") String attempt_id,
+            @ToolParam(description = "Server-registered repository identifier") String repository_id,
+            @ToolParam(description = "Immutable source commit SHA") String source_commit,
+            @ToolParam(description = "SHA-256 of changes.patch") String patch_digest,
+            @ToolParam(description = "Allow-listed base branch") String base_branch,
+            @ToolParam(description = "Human-readable PR title") String title,
+            @ToolParam(description = "Authorized caller; delivery only") String actor,
+            @ToolParam(description = "Stable command idempotency key") String idempotency_key,
+            @ToolParam(description = "Signed approval proof bound to this delivery") ApprovalProof approval_proof) throws Exception {
+        return delivery.create(new ScmDeliveryService.CreateRequest(schema_version, task_id, attempt_id, repository_id,
+                source_commit, patch_digest, base_branch, title, actor, idempotency_key, approval_proof));
     }
 
     @Tool(name = "scm.get_repository", description = "Return secret-free metadata for an allow-listed repository_id")

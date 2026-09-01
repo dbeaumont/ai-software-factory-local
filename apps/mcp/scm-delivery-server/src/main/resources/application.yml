@@ -40,3 +40,5 @@ ai-factory:
     gitea-token-file: ${AI_FACTORY_SCM_GITEA_TOKEN_FILE:/run/secrets/gitea_token}
     state-root: ${AI_FACTORY_SCM_STATE_ROOT:/var/lib/ai-factory/scm}
     repository-registry: ${AI_FACTORY_SCM_REPOSITORY_REGISTRY:/etc/ai-factory/scm-repositories-v1.json}
+    workspace-root: ${AI_FACTORY_SCM_WORKSPACE_ROOT:/workspace/tasks}
+    approval-key-file: ${AI_FACTORY_SCM_APPROVAL_KEY_FILE:/run/secrets/approval_attestation_key}

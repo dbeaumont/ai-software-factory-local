@@ -164,10 +164,14 @@ services:
       AI_FACTORY_SCM_GITEA_TOKEN_FILE: /run/secrets/gitea_token
       AI_FACTORY_SCM_STATE_ROOT: /var/lib/ai-factory/scm
       AI_FACTORY_SCM_REPOSITORY_REGISTRY: /etc/ai-factory/scm-repositories-v1.json
+      AI_FACTORY_SCM_WORKSPACE_ROOT: /workspace/tasks
+      AI_FACTORY_SCM_APPROVAL_KEY_FILE: /run/secrets/approval_attestation_key
     secrets:
       - gitea_token
+      - approval_attestation_key
     volumes:
       - scm-delivery-state:/var/lib/ai-factory/scm
+      - factory-workspace:/workspace/tasks
       - ../resources/mcp/policies/scm-repositories-v1.json:/etc/ai-factory/scm-repositories-v1.json:ro
     read_only: true
     tmpfs:
@@ -459,3 +463,5 @@ secrets:
     environment: ARTIFACTORY_TOKEN
   gitea_token:
     environment: GITEA_TOKEN
+  approval_attestation_key:
+    environment: APPROVAL_ATTESTATION_KEY

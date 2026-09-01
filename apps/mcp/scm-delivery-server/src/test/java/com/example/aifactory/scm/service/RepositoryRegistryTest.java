@@ -30,6 +30,7 @@ class RepositoryRegistryTest {
 
     private static ScmDeliveryProperties properties(Path root, Path registry) {
         return new ScmDeliveryProperties("http://gitea:3000", "http://localhost:3000", "delivery",
-                root.resolve("token"), root.resolve("state"), registry);
+                root.resolve("token"), root.resolve("state"), registry, root.resolve("workspace"),
+                root.resolve("approval-key"));
     }
 }

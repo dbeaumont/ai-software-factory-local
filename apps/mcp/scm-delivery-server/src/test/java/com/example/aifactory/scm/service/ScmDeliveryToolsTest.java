@@ -28,7 +28,7 @@ class ScmDeliveryToolsTest {
                 return new Revision(repository.repositoryId(), branch, "a".repeat(40));
             }
         };
-        ScmDeliveryTools tools = new ScmDeliveryTools(registry, client);
+        ScmDeliveryTools tools = new ScmDeliveryTools(registry, client, null);
         String deadline = Instant.now().plusSeconds(60).toString();
 
         assertEquals("customer-api", tools.getRepository("1", "customer-api", "workflow", deadline).repositoryId());
@@ -47,6 +47,7 @@ class ScmDeliveryToolsTest {
                 "name":"customer-api","clone_path":"/aiadmin/customer-api.git","allowed_base_branches":["main"]}]}
                 """);
         return new RepositoryRegistry(new ScmDeliveryProperties("http://gitea:3000", "http://localhost:3000",
-                "delivery", root.resolve("token"), root.resolve("state"), file), new ObjectMapper());
+                "delivery", root.resolve("token"), root.resolve("state"), file, root.resolve("workspace"),
+                root.resolve("approval-key")), new ObjectMapper());
     }
 }
