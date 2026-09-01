@@ -15,17 +15,27 @@ public class ScmDeliveryService {
     private final ScmCredentials credentials;
     private final RepositoryRegistry repositories;
     private final ScmDeliveryBackend backend;
+    private final ScmIdempotencyStore idempotency;
 
     public ScmDeliveryService(ScmDeliveryProperties properties, ScmCredentials credentials,
-                              RepositoryRegistry repositories, ScmDeliveryBackend backend) {
+                              RepositoryRegistry repositories, ScmDeliveryBackend backend,
+                              ScmIdempotencyStore idempotency) {
         this.properties = properties;
         this.credentials = credentials;
         this.repositories = repositories;
         this.backend = backend;
+        this.idempotency = idempotency;
     }
 
     public ScmDeliveryBackend.DeliveryResult create(CreateRequest request) throws Exception {
         validate(request);
+        String fingerprint = fingerprint(request);
+        if (idempotency != null) {
+            ScmDeliveryBackend.DeliveryResult replay = idempotency.find(request.idempotencyKey(), fingerprint);
+            if (replay != null) {
+                return replay;
+            }
+        }
         RepositoryRegistry.RepositoryDefinition repository = repositories.require(request.repositoryId());
         repository.requireBaseBranch(request.baseBranch());
         request.approvalProof().verify(credentials.approvalKey(), Instant.now());
@@ -41,8 +51,16 @@ public class ScmDeliveryService {
         }
         String branch = "ai-factory/" + request.taskId() + "-" + request.attemptId();
         String title = "AI Factory: " + abbreviate(request.title(), 90);
-        return backend.createDraftPullRequest(new ScmDeliveryBackend.DeliveryCommand(repository, workspace,
-                request.taskId(), request.sourceCommit(), request.baseBranch(), branch, title));
+        ScmDeliveryBackend.DeliveryCommand command = new ScmDeliveryBackend.DeliveryCommand(repository, workspace,
+                request.taskId(), request.sourceCommit(), request.baseBranch(), branch, title);
+        ScmDeliveryBackend.DeliveryResult result = backend.findExisting(command);
+        if (result == null) {
+            result = backend.createDraftPullRequest(command);
+        }
+        if (idempotency != null) {
+            idempotency.save(request.idempotencyKey(), fingerprint, result);
+        }
+        return result;
     }
 
     private static void validate(CreateRequest request) {
@@ -68,6 +86,13 @@ public class ScmDeliveryService {
     private static String abbreviate(String value, int limit) {
         String safe = value == null || value.isBlank() ? "change" : value.replaceAll("[\\r\\n]+", " ").strip();
         return safe.length() <= limit ? safe : safe.substring(0, limit - 3) + "...";
+    }
+
+    private static String fingerprint(CreateRequest request) throws Exception {
+        String canonical = String.join("\n", request.taskId(), request.attemptId(), request.repositoryId(),
+                request.sourceCommit(), request.patchDigest(), request.baseBranch(), request.approvalProof().signature());
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }
 
     public record CreateRequest(String schemaVersion, String taskId, String attemptId, String repositoryId,

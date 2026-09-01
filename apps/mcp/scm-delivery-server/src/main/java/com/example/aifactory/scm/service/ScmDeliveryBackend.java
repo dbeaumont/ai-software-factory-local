@@ -3,6 +3,8 @@ package com.example.aifactory.scm.service;
 import java.nio.file.Path;
 
 public interface ScmDeliveryBackend {
+    DeliveryResult findExisting(DeliveryCommand command);
+
     DeliveryResult createDraftPullRequest(DeliveryCommand command) throws Exception;
 
     record DeliveryCommand(RepositoryRegistry.RepositoryDefinition repository, Path workspace, String taskId,

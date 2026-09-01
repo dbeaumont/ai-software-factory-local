@@ -27,6 +27,29 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
     }
 
     @Override
+    public DeliveryResult findExisting(DeliveryCommand command) {
+        JsonNode response = client.get()
+                .uri(builder -> builder.path("/api/v1/repos/{owner}/{name}/pulls")
+                        .queryParam("state", "open")
+                        .queryParam("head", command.repository().owner() + ":" + command.branch())
+                        .queryParam("base", command.baseBranch())
+                        .build(command.repository().owner(), command.repository().name()))
+                .header("Authorization", "token " + credentials.giteaToken())
+                .retrieve().bodyToMono(JsonNode.class).block(Duration.ofSeconds(20));
+        if (response == null || !response.isArray() || response.isEmpty()) {
+            return null;
+        }
+        JsonNode pullRequest = response.get(0);
+        String commit = pullRequest.path("head").path("sha").asText();
+        if (!commit.matches("[0-9a-f]{40}")) {
+            throw new IllegalStateException("existing SCM pull request has no immutable head SHA");
+        }
+        return new DeliveryResult(command.repository().repositoryId(), command.branch(), commit,
+                pullRequest.path("id").asLong(), publicUrl(pullRequest.path("html_url").asText()),
+                pullRequest.path("draft").asBoolean(true));
+    }
+
+    @Override
     public DeliveryResult createDraftPullRequest(DeliveryCommand command) throws Exception {
         Path askpass = createAskPass(command.taskId());
         try {

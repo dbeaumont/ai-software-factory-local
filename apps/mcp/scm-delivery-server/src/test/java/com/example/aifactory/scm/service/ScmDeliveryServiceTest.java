@@ -12,6 +12,7 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -38,22 +39,37 @@ class ScmDeliveryServiceTest {
         ScmCredentials credentials = new ScmCredentials(properties);
         RepositoryRegistry registry = new RepositoryRegistry(properties, new ObjectMapper());
         AtomicReference<ScmDeliveryBackend.DeliveryCommand> captured = new AtomicReference<>();
-        ScmDeliveryBackend backend = command -> {
-            captured.set(command);
-            return new ScmDeliveryBackend.DeliveryResult("customer-api", command.branch(), "c".repeat(40), 42,
-                    "http://localhost:3000/aiadmin/customer-api/pulls/42", true);
+        AtomicInteger creates = new AtomicInteger();
+        ScmDeliveryBackend backend = new ScmDeliveryBackend() {
+            @Override
+            public DeliveryResult findExisting(DeliveryCommand command) {
+                return null;
+            }
+
+            @Override
+            public DeliveryResult createDraftPullRequest(DeliveryCommand command) {
+                creates.incrementAndGet();
+                captured.set(command);
+                return new DeliveryResult("customer-api", command.branch(), "c".repeat(40), 42,
+                        "http://localhost:3000/aiadmin/customer-api/pulls/42", true);
+            }
         };
-        ScmDeliveryService service = new ScmDeliveryService(properties, credentials, registry, backend);
+        ScmIdempotencyStore store = new ScmIdempotencyStore(properties, new ObjectMapper());
+        ScmDeliveryService service = new ScmDeliveryService(properties, credentials, registry, backend, store);
         Instant approvedAt = Instant.now().minusSeconds(5);
         ApprovalProof proof = ApprovalProof.sign("task-1", "attempt-1", "customer-api", "a".repeat(40),
                 patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
 
-        ScmDeliveryBackend.DeliveryResult result = service.create(new ScmDeliveryService.CreateRequest("1", "task-1",
+        ScmDeliveryService.CreateRequest request = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-1", "customer-api", "a".repeat(40), patchDigest, "main", "Add endpoint", "delivery",
-                "delivery-task-1-attempt-1", proof));
+                "delivery-task-1-attempt-1", proof);
+        ScmDeliveryBackend.DeliveryResult result = service.create(request);
+        ScmDeliveryBackend.DeliveryResult replay = service.create(request);
 
         assertEquals(42, result.pullRequestId());
         assertEquals("ai-factory/task-1-attempt-1", captured.get().branch());
         assertEquals(workspace, captured.get().workspace());
+        assertEquals(result, replay);
+        assertEquals(1, creates.get());
     }
 }
