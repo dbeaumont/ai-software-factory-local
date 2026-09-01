@@ -33,3 +33,9 @@ Le lanceur `make mcp-active-campaign CAMPAIGN_ARGS=--execute` refuse de démarre
 - rollback immédiat par retrait du rôle ou retour à `MCP_SHADOW`.
 
 Les opérations sandbox, qualité, sécurité et SCM ne sont pas créditées à ce gate.
+
+## Résultat du canary Planner
+
+La campagne `20260901-211328` obtient 20/20 plans présents et zéro contrat invalide avec `planner` seul en MCP_ACTIVE. Les journaux prouvent 20 collectes MCP pour Planner et 14 collectes directes pour les 14 plans implémentables ayant atteint Developer. Aucun fallback Planner n'a été observé et la revue sémantique est conforme.
+
+Décision : **GO** pour l'étape suivante avec `planner,developer,patch-repair`.
