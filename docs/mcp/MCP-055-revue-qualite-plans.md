@@ -102,3 +102,11 @@ Le client traite maintenant explicitement les métadonnées Chat Completions con
 - la première tentative Planner reste bornée à 1 200 tokens ; l'unique seconde tentative utilise 2 400 tokens pour traiter une éventuelle troncature sans augmenter le coût nominal.
 
 La reprise reste déclenchée pour une violation du contrat applicatif même si le fournisseur annonce `stop`. Les 80 tests orchestrateur passent, dont les cas `length`, refus, filtre de contenu, contrat invalide et décision métier valide. Une campagne cloud reste nécessaire avant de reconsidérer le gate.
+
+## Décision finale MCP-055
+
+La campagne `20260901-205843` valide la remédiation : 20/20 contrats Planner sont conformes. Deux sorties initiales ont atteint la limite de 1 200 tokens avec `finish_reason=length`; les deux secondes tentatives à 2 400 tokens ont terminé par `stop` et produit un contrat complet. Aucun refus ni filtrage n'a été observé.
+
+La revue des 20 plans confirme que leurs fichiers impactés, tests et décisions sont cohérents avec les exigences du corpus. Les huit `NEEDS_CLARIFICATION` correspondent à des choix d'API ou de produit absents des tickets et ne constituent pas une régression technique.
+
+Décision technique MCP-055 : **GO pour préparer le canary Planner MCP_ACTIVE de MCP-056**. Cette décision ne préjuge pas du gate sandbox ni des défauts aval observés dans les pipelines.
