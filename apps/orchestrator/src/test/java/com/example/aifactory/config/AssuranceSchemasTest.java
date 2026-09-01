@@ -53,8 +53,9 @@ class AssuranceSchemasTest {
         examples.put("evidence-manifest-v1.schema.json", mapper.valueToTree(Map.ofEntries(
                 Map.entry("schema_version", "1"), Map.entry("manifest_id", DIGEST), Map.entry("task_id", "task-1"),
                 Map.entry("attempt_id", "attempt-1"), Map.entry("repository_id", "customer-api"), Map.entry("source_commit", SHA),
-                Map.entry("patch_digest", DIGEST), Map.entry("artifacts", Map.of("plan", evidence, "patch", evidence, "tests", evidence,
-                        "quality", evidence, "sbom", evidence, "security", evidence, "review", evidence, "approval", evidence)),
+                Map.entry("patch_digest", DIGEST), Map.entry("artifacts", Map.ofEntries(Map.entry("plan", evidence), Map.entry("patch", evidence),
+                        Map.entry("metadata", evidence), Map.entry("tests", evidence), Map.entry("sonar", evidence), Map.entry("sbom", evidence),
+                        Map.entry("trivy", evidence), Map.entry("review", evidence), Map.entry("approval", evidence))),
                 Map.entry("policy_decision", decision), Map.entry("created_at", "2026-09-02T00:00:00Z"))));
 
         for (Map.Entry<String, JsonNode> example : examples.entrySet()) {
