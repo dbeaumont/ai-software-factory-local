@@ -25,6 +25,9 @@ spring:
             scm-delivery:
               url: ${AI_FACTORY_MCP_SCM_URL:http://scm-delivery-mcp:8093}
               endpoint: /mcp
+            assurance:
+              url: ${AI_FACTORY_MCP_ASSURANCE_URL:http://assurance-mcp:8094}
+              endpoint: /mcp
 
 management:
   endpoints:
@@ -53,6 +56,9 @@ ai-factory:
       server-name: scm-delivery-mcp
       approver: ${AI_FACTORY_APPROVER_NAME:David Beaumont}
       approval-key: ${APPROVAL_ATTESTATION_KEY:}
+    assurance:
+      enabled: ${AI_FACTORY_MCP_ASSURANCE_ENABLED:false}
+      server-name: assurance-mcp
     client:
       enabled: ${AI_FACTORY_MCP_CLIENT_ENABLED:${AI_FACTORY_MCP_ENABLED:false}}
       request-timeout: ${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}
@@ -98,6 +104,14 @@ ai-factory:
           expected-name: scm-delivery-mcp
           expected-version: ${AI_FACTORY_MCP_SCM_VERSION:0.1.0}
           allowed-tools: scm.get_repository,scm.resolve_revision,scm.create_draft_pull_request
+        assurance:
+          enabled: ${AI_FACTORY_MCP_ASSURANCE_ENABLED:false}
+          uri: ${AI_FACTORY_MCP_ASSURANCE_URL:http://assurance-mcp:8094}
+          audience: ${AI_FACTORY_MCP_ASSURANCE_AUDIENCE:assurance-mcp}
+          request-timeout: ${AI_FACTORY_MCP_ASSURANCE_REQUEST_TIMEOUT:20s}
+          expected-name: assurance-mcp
+          expected-version: ${AI_FACTORY_MCP_ASSURANCE_VERSION:0.1.0}
+          allowed-tools: assurance.evaluate_quality_gate
   llm-base-url: ${AI_FACTORY_LLM_BASE_URL}
   llm-api-key: ${AI_FACTORY_LLM_API_KEY}
   cloud-model: ${AI_FACTORY_CLOUD_MODEL}

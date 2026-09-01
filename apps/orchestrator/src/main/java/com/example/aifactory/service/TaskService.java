@@ -36,6 +36,7 @@ public class TaskService {
     private final LlmGatewayClient llm;
     private final AgentResponseValidator agentResponses;
     private final SandboxExecutor sandbox;
+    private final AssuranceGateway assurance;
     private final ScmDeliveryGateway scmDelivery;
     private final Counter submittedTasks;
     private final Counter completedTasks;
@@ -44,7 +45,7 @@ public class TaskService {
 
     public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
                        PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses,
-                       SandboxExecutor sandbox, ScmDeliveryGateway scmDelivery,
+                       SandboxExecutor sandbox, AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
                        MeterRegistry metrics) {
         this.props = props;
         this.runner = runner;
@@ -53,6 +54,7 @@ public class TaskService {
         this.llm = llm;
         this.agentResponses = agentResponses;
         this.sandbox = sandbox;
+        this.assurance = assurance;
         this.scmDelivery = scmDelivery;
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted").description("Tasks submitted to the factory").register(metrics);
         this.completedTasks = Counter.builder("ai_factory_tasks_completed").description("Tasks that completed validation").register(metrics);
@@ -154,7 +156,7 @@ public class TaskService {
 
             s.transition(TaskStatus.QUALITY_SCANNING, "Running SonarQube quality analysis");
             s.qualitySummary = tail(sandbox.quality(ws, s.id, s.sourceCommit), 12000);
-            requireQualityGate(s.qualitySummary);
+            assurance.requireQualityGate(s.id, s.sourceCommit, s.qualitySummary);
 
             s.transition(TaskStatus.SECURITY_SCANNING, "Generating SBOM and running Trivy");
             s.securitySummary = tail(sandbox.security(ws, s.id, s.sourceCommit), 12000);
@@ -259,12 +261,6 @@ public class TaskService {
 
     private static String tail(String s, int max) {
         return s.length() <= max ? s : "...[truncated]...\n" + s.substring(s.length() - max);
-    }
-
-    static void requireQualityGate(String qualityEvidence) {
-        if (qualityEvidence == null || qualityEvidence.startsWith("Skipped")) {
-            throw new IllegalStateException("Required deterministic quality gate did not run");
-        }
     }
 
     private String chat(TaskState state, String promptName, String untrustedInput) {

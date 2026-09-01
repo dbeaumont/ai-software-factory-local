@@ -54,12 +54,6 @@ class TaskServiceTest {
     }
 
     @Test
-    void requiresAQualityGateInsteadOfTreatingSkippedAnalysisAsSuccess() {
-        assertThrows(IllegalStateException.class,
-                () -> TaskService.requireQualityGate("Skipped because AI_FACTORY_SONAR_TOKEN is not configured."));
-    }
-
-    @Test
     void boundsLlmOutputByAgentRole() {
         assertEquals(1_200, TaskService.maxTokensFor("planner"));
         assertEquals(1_200, TaskService.maxTokensFor("developer"));
@@ -151,7 +145,7 @@ class TaskServiceTest {
 
     private static final class TestableTaskService extends TaskService {
         private TestableTaskService() {
-            super(null, null, null, null, null, new AgentResponseValidator(new ObjectMapper()), null, null,
+            super(null, null, null, null, null, new AgentResponseValidator(new ObjectMapper()), null, null, null,
                     new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
         }
     }

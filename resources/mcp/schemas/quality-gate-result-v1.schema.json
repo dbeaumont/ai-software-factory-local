@@ -28,7 +28,8 @@
       }
     },
     "evidence": { "$ref": "#/$defs/evidence" },
-    "reason": { "type": ["string", "null"], "maxLength": 512 }
+    "reason": { "type": ["string", "null"], "maxLength": 512 },
+    "evaluated_at": { "type": "string", "format": "date-time" }
   },
   "$defs": {
     "evidence": {
