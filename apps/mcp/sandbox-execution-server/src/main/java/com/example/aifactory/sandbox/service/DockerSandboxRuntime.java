@@ -5,6 +5,7 @@ import com.example.aifactory.sandbox.config.SandboxDependencyProperties;
 import com.example.aifactory.sandbox.model.SandboxModels.Operation;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStreamReader;
@@ -20,6 +21,7 @@ import java.util.concurrent.*;
 import java.util.regex.Pattern;
 
 @Service
+@ConditionalOnProperty(prefix = "ai-factory.sandbox", name = "runtime", havingValue = "docker", matchIfMissing = true)
 public class DockerSandboxRuntime implements SandboxRuntime {
     private static final Pattern MANAGED_CONTAINER = Pattern.compile("^ai-factory-sbx-[0-9a-f]{32}$");
     private final SandboxExecutionProperties properties;

@@ -34,6 +34,7 @@ management:
 
 ai-factory:
   sandbox:
+    runtime: ${AI_FACTORY_SANDBOX_RUNTIME:docker}
     workspace-root: ${AI_FACTORY_SANDBOX_WORKSPACE_ROOT:/workspace/tasks}
     state-root: ${AI_FACTORY_SANDBOX_STATE_ROOT:/var/lib/ai-factory/sandbox-jobs}
     workspace-volume: ${AI_FACTORY_WORKSPACE_VOLUME:ai-software-factory_factory-workspace}

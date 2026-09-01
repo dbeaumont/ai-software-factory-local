@@ -345,7 +345,7 @@ Objectif : retirer le principal privilège critique de l'orchestrateur.
 - [x] **MCP-089** — Retirer l'appel `docker run` de `SandboxService`, puis supprimer la classe lorsqu'aucun chemin direct ne subsiste. _(`SandboxService` supprimé ; `SandboxGateway` délègue exclusivement à MCP et refuse modes obsolètes, serveur désactivé et opération non activée sans fallback.)_
 - [x] **MCP-090** — Retirer `/var/run/docker.sock:/var/run/docker.sock` du service `orchestrator` dans `infrastructure/compose.yaml`.
 - [x] **MCP-091** — Limiter le socket Docker au contrôleur local temporaire ; documenter qu'il reste POC-only.
-- [ ] **MCP-092** — Préparer l'adaptateur cible GKE Jobs/Agent Sandbox sans changer les outils MCP ni les profils.
+- [x] **MCP-092** — Préparer l'adaptateur cible GKE Jobs/Agent Sandbox sans changer les outils MCP ni les profils. _(`SandboxRuntime` sélectionnable `docker`/`gke`, port `GkeJobController`, traduction bornée des profils vers Jobs/NetworkPolicies et tests ; contrat détaillé dans `docs/mcp/MCP-092-adaptateur-gke-sandbox.md`.)_
 - [x] **MCP-093** — Vérifier par test automatisé/OPA de configuration que l'orchestrateur n'a plus socket, privilèges ni droit de créer des jobs. _(Test automatisé `ComposeMcpSecurityTest`.)_
 
 **Gate du lot 3**
