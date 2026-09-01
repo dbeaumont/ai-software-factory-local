@@ -239,7 +239,15 @@ Variables de configuration principales :
 OPENAI_MODEL=gpt-5.6-luna
 AI_FACTORY_CLOUD_ENABLED=true
 LITELLM_MASTER_KEY=local-dev-litellm-key
+MAVEN_MIRROR_URL=
+NPM_REGISTRY_URL=
+NPM_REGISTRY_HOST=
 ```
+
+Sur un poste disposant d'un accès Internet direct, laissez les trois variables de registre ci-dessus vides :
+Maven utilise alors Maven Central et npm son registre public par défaut. En environnement d'entreprise,
+renseignez-les avec les endpoints autorisés ; le `settings.xml` et le jeton Artifactory ne sont chargés que
+lorsqu'un miroir Maven est explicitement configuré.
 
 Pour utiliser le mode cloud, placez votre clé OpenAI dans le fichier `.vault` :
 ```bash

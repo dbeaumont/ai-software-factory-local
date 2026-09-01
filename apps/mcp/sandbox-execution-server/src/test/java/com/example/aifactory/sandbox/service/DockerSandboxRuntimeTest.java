@@ -62,6 +62,8 @@ class DockerSandboxRuntimeTest {
         List<String> command = runtime.command(profile, "ai-factory-sbx-ghi", workspace, null);
 
         assertEquals("test-maven-v1", profile.id());
+        assertTrue(profile.script().contains("if [ -n \"$MAVEN_MIRROR_URL\" ]"));
+        assertTrue(profile.script().contains("MAVEN_SETTINGS=''"));
         assertTrue(command.containsAll(List.of("--network", "factory-network")));
         assertTrue(command.contains("factory-workspace:/factory-tasks"));
         assertTrue(command.contains("ai-factory-m2:/root/.m2"));

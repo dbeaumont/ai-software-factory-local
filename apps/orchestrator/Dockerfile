@@ -23,21 +23,25 @@ RUN --mount=type=secret,id=artifactory_token  \
   apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
-    && MIRROR_HOST=$(echo "${MAVEN_MIRROR_URL}" | sed 's|^https://||' | cut -d'/' -f1) \
-    && openssl s_client -connect "${MIRROR_HOST}" -showcerts </dev/null 2>/dev/null \
-       | awk '/-----BEGIN CERTIFICATE-----/{n++; f="/tmp/ca-"n".crt"} f{print > f} /-----END CERTIFICATE-----/{f=""}' \
-    && for cert in /tmp/ca-*.crt; do \
-         [ -f "${cert}" ] || break; \
-         keytool -import -noprompt \
-           -alias "jfrog-$(basename ${cert} .crt)" \
-           -file "${cert}" \
-           -keystore "${JAVA_HOME}/lib/security/cacerts" \
-           -storepass changeit 2>/dev/null || true; \
-         cp "${cert}" /usr/local/share/ca-certificates/; \
-       done \
-    && update-ca-certificates \
-    && export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token) \
-    && mvn dependency:go-offline -B -s .mvn/settings.xml
+  && if [ -n "${MAVEN_MIRROR_URL}" ]; then \
+       case "${MAVEN_MIRROR_URL}" in \
+         https://*) \
+           MIRROR_HOST=$(echo "${MAVEN_MIRROR_URL}" | sed 's|^https://||' | cut -d'/' -f1); \
+           openssl s_client -connect "${MIRROR_HOST}" -showcerts </dev/null 2>/dev/null \
+             | awk '/-----BEGIN CERTIFICATE-----/{n++; f="/tmp/ca-"n".crt"} f{print > f} /-----END CERTIFICATE-----/{f=""}'; \
+           for cert in /tmp/ca-*.crt; do \
+             [ -f "${cert}" ] || break; \
+             keytool -import -noprompt -alias "jfrog-$(basename ${cert} .crt)" -file "${cert}" \
+               -keystore "${JAVA_HOME}/lib/security/cacerts" -storepass changeit 2>/dev/null || true; \
+             cp "${cert}" /usr/local/share/ca-certificates/; \
+           done; \
+           update-ca-certificates ;; \
+       esac; \
+       export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token); \
+       mvn dependency:go-offline -B -s .mvn/settings.xml; \
+     else \
+       mvn dependency:go-offline -B; \
+     fi
 
 # Copier les sources après le go-offline pour que cette couche soit invalidée
 # uniquement lors d'un changement de code source (pas de dépendance)
@@ -46,9 +50,12 @@ COPY --from=mcp-schemas . /src/external-schemas
 
 # Build du projet avec le profil prod (tests ignorés — ils sont exécutés en CI séparément) avec le profil prod.
 RUN --mount=type=secret,id=artifactory_token \
-  export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token) \
-  && mvn package -DskipTests -B -s .mvn/settings.xml \
-       -Dmcp.schemas.directory=/src/external-schemas
+  if [ -n "${MAVEN_MIRROR_URL}" ]; then \
+    export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token); \
+    mvn package -DskipTests -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas; \
+  else \
+    mvn package -DskipTests -B -Dmcp.schemas.directory=/src/external-schemas; \
+  fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Runtime stage

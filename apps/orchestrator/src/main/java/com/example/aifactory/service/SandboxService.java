@@ -55,8 +55,10 @@ public class SandboxService implements SandboxExecutor {
     @Override
     public String test(Path workspace, String taskId, String sourceCommit) throws Exception {
         return execute(workspace, props.sandboxNetwork(),
-                "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B -s /opt/ai-factory/maven-settings.xml test; " +
-                        "elif [ -f pom.xml ]; then mvn -B -s /opt/ai-factory/maven-settings.xml test; " +
+                "if [ -n \"$MAVEN_MIRROR_URL\" ]; then MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; " +
+                        "else MAVEN_SETTINGS=''; fi; " +
+                        "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B $MAVEN_SETTINGS test; " +
+                        "elif [ -f pom.xml ]; then mvn -B $MAVEN_SETTINGS test; " +
                         "elif [ -f gradlew ]; then chmod +x gradlew; ./gradlew test; " +
                         "elif [ -f package.json ]; then npm test -- --runInBand; " +
                         "else echo 'No supported build file found'; exit 2; fi",
@@ -71,7 +73,8 @@ public class SandboxService implements SandboxExecutor {
         }
         return execute(workspace, props.sandboxNetwork(),
                 "if [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
-                        "mvn -B -s /opt/ai-factory/maven-settings.xml " +
+                        "if [ -n \"$MAVEN_MIRROR_URL\" ]; then MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; " +
+                        "else MAVEN_SETTINGS=''; fi; mvn -B $MAVEN_SETTINGS " +
                         "org.sonarsource.scanner.maven:sonar-maven-plugin:sonar " +
                         "-Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_TOKEN\" -Dsonar.qualitygate.wait=true " +
                         "| tee .ai-factory/sonar.txt; " +

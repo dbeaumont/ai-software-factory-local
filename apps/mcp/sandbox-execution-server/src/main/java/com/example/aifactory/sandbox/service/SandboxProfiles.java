@@ -23,7 +23,8 @@ final class SandboxProfiles {
             case RUN_QUALITY -> new Profile("quality-sonar-v1", "factory", Duration.ofMinutes(15),
                     "if [ -z \"$SONAR_TOKEN\" ]; then echo 'Required Sonar token is unavailable'; exit 2; " +
                             "elif [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
-                            "mvn -B -s /opt/ai-factory/maven-settings.xml " +
+                            "if [ -n \"$MAVEN_MIRROR_URL\" ]; then MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; " +
+                            "else MAVEN_SETTINGS=''; fi; mvn -B $MAVEN_SETTINGS " +
                             "org.sonarsource.scanner.maven:sonar-maven-plugin:sonar " +
                             "-Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_TOKEN\" " +
                             "-Dsonar.qualitygate.wait=true | tee .ai-factory/sonar.txt; " +
@@ -45,8 +46,10 @@ final class SandboxProfiles {
         }
         if (regular(workspace, "mvnw") || regular(workspace, "pom.xml")) {
             return new Profile("test-maven-v1", "factory", Duration.ofMinutes(15),
-                    "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B -s /opt/ai-factory/maven-settings.xml test; " +
-                            "else mvn -B -s /opt/ai-factory/maven-settings.xml test; fi",
+                    "if [ -n \"$MAVEN_MIRROR_URL\" ]; then MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; " +
+                            "else MAVEN_SETTINGS=''; fi; " +
+                            "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B $MAVEN_SETTINGS test; " +
+                            "else mvn -B $MAVEN_SETTINGS test; fi",
                     List.of("MAVEN_MIRROR_URL", "ARTIFACTORY_TOKEN"), false, true);
         }
         if (regular(workspace, "gradlew") || regular(workspace, "build.gradle")
