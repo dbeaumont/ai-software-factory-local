@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -82,19 +83,17 @@ public class LlmGatewayClient {
     }
 
     public String chat(String system, String user, int maxTokens) {
+        return chat(system, user, maxTokens, null);
+    }
+
+    String chat(String system, String user, int maxTokens, Map<String, Object> responseFormat) {
         if (!props.cloudEnabled()) {
             throw new IllegalStateException("Cloud LLM is disabled by configuration");
         }
         if (maxTokens < 1 || maxTokens > 8_192) {
             throw new IllegalArgumentException("maxTokens must be between 1 and 8192");
         }
-        Map<String, Object> body = Map.of(
-                "model", props.cloudModel(),
-                "messages", List.of(
-                        Map.of("role", "system", "content", system),
-                        Map.of("role", "user", "content", user)
-                ),
-                "max_tokens", maxTokens);
+        Map<String, Object> body = requestBody(props.cloudModel(), system, user, maxTokens, responseFormat);
         JsonNode response = client.post()
                 .uri("/chat/completions")
                 .headers(headers -> addAuthorization(headers))
@@ -107,6 +106,20 @@ public class LlmGatewayClient {
             throw new IllegalStateException("Invalid response from LLM gateway");
         }
         return content.asText();
+    }
+
+    static Map<String, Object> requestBody(String model, String system, String user, int maxTokens,
+                                           Map<String, Object> responseFormat) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", model);
+        body.put("messages", List.of(
+                Map.of("role", "system", "content", system),
+                Map.of("role", "user", "content", user)));
+        body.put("max_tokens", maxTokens);
+        if (responseFormat != null) {
+            body.put("response_format", responseFormat);
+        }
+        return Map.copyOf(body);
     }
 
     public String modelName() {

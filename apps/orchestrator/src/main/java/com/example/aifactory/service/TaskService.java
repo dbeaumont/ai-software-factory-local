@@ -261,7 +261,7 @@ public class TaskService {
         log.info("Task {} ({}) invoking {} agent with prompt sha256={}",
                 state.id, state.ticketNumber, promptName, fingerprint.substring(0, 12));
         String response = llm.chat(prompts.load(promptName), untrustedInput,
-                maxTokensFor(promptName));
+                maxTokensFor(promptName), PlannerResponseFormat.forPrompt(promptName));
         log.info("Task {} ({}) {} agent completed; response_chars={}",
                 state.id, state.ticketNumber, promptName, response.length());
         return response;

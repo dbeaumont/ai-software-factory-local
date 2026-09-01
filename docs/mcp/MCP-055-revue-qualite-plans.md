@@ -49,3 +49,9 @@ Le contexte MCP satisfait les critères de couverture, provenance, réduction et
 2. aucun plan n'a encore été généré à partir du contexte MCP, donc la non-régression sémantique en `MCP_ACTIVE` n'est pas directement démontrée.
 
 Avant promotion, il faut stabiliser le contrat de sortie Planner, obtenir une baseline valide, puis faire approuver explicitement le canary `MCP_ACTIVE` du seul Planner par le Product Owner AI Software Factory et le Représentant RSSI. Developer et PatchRepair restent hors périmètre tant que ce canary n'est pas accepté.
+
+## Remédiation préparée
+
+Le client Chat Completions impose désormais au seul Planner un `response_format` de type `json_schema` strict. Le schéma rend obligatoires les treize champs du contrat, borne `status` et `risk_level` par leurs énumérations, et refuse les propriétés supplémentaires à tous les niveaux objet. Les agents qui produisent un diff ou du texte ne reçoivent pas ce format.
+
+La suite orchestrateur valide la construction du corps de requête, l'application exclusive au Planner et la cohérence `required/properties`. Cette remédiation n'est pas considérée comme qualifiée en production tant qu'une nouvelle campagne cloud explicitement autorisée n'a pas confirmé zéro contrat Planner invalide.
