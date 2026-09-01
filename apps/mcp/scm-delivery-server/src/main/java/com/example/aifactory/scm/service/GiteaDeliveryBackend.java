@@ -54,7 +54,7 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
         String commit = prepareCommit(command);
         Path askpass = createAskPass(command.taskId());
         try {
-            git(command, askpass, "push", remote(command.repository()), "HEAD:refs/heads/" + command.branch());
+            git(command, askpass, "push", remote(command.repository()), pushRefspec(command));
             JsonNode response = client.post()
                     .uri("/api/v1/repos/{owner}/{name}/pulls", command.repository().owner(), command.repository().name())
                     .header("Authorization", "token " + credentials.giteaToken())
@@ -113,8 +113,15 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
         return script;
     }
 
-    private String remote(RepositoryRegistry.RepositoryDefinition repository) {
+    String remote(RepositoryRegistry.RepositoryDefinition repository) {
         return properties.giteaBaseUrl() + repository.clonePath();
+    }
+
+    static String pushRefspec(DeliveryCommand command) {
+        if (!command.branch().startsWith("ai-factory/") || command.branch().equals(command.baseBranch())) {
+            throw new SecurityException("SCM delivery branch is not authorized");
+        }
+        return "HEAD:refs/heads/" + command.branch();
     }
 
     private String publicUrl(String internalUrl) {

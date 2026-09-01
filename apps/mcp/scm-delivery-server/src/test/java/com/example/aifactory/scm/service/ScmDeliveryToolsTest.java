@@ -11,6 +11,9 @@ import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.Arrays;
+import java.util.Set;
+import org.springframework.ai.tool.annotation.Tool;
 
 class ScmDeliveryToolsTest {
     @Test
@@ -38,6 +41,17 @@ class ScmDeliveryToolsTest {
                 () -> tools.resolveRevision("1", "customer-api", "feature/unregistered", "workflow", deadline));
         assertThrows(SecurityException.class,
                 () -> tools.getRepository("1", "customer-api", "planner", deadline));
+    }
+
+    @Test
+    void publishesNoMergeForcePushDeleteOrGenericGitTool() {
+        Set<String> names = Arrays.stream(ScmDeliveryTools.class.getDeclaredMethods())
+                .map(method -> method.getAnnotation(Tool.class))
+                .filter(java.util.Objects::nonNull)
+                .map(Tool::name)
+                .collect(java.util.stream.Collectors.toSet());
+
+        assertEquals(Set.of("scm.get_repository", "scm.resolve_revision", "scm.create_draft_pull_request"), names);
     }
 
     private static RepositoryRegistry registry(Path root) throws Exception {

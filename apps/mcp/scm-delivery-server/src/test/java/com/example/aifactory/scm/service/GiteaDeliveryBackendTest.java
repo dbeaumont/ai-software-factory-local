@@ -11,6 +11,8 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class GiteaDeliveryBackendTest {
     @Test
@@ -49,6 +51,29 @@ class GiteaDeliveryBackendTest {
         assertFalse(names.contains("changes.patch"));
         assertFalse(names.contains(".ai-review.md"));
         assertFalse(names.contains(".ai-factory"));
+    }
+
+    @Test
+    void pushIsNonForceToDerivedFeatureBranchAndRegisteredRemote(@TempDir Path root) throws Exception {
+        Path token = root.resolve("token");
+        Path approval = root.resolve("approval");
+        Files.writeString(token, "gitea-token-for-tests");
+        Files.writeString(approval, "approval-key-for-tests-at-least-32-bytes");
+        ScmDeliveryProperties properties = new ScmDeliveryProperties("http://gitea:3000", "http://localhost:3000",
+                "delivery", token, root.resolve("state"), root.resolve("registry"), root, approval);
+        GiteaDeliveryBackend backend = new GiteaDeliveryBackend(properties, new ScmCredentials(properties),
+                WebClient.builder());
+        RepositoryRegistry.RepositoryDefinition repository = new RepositoryRegistry.RepositoryDefinition(
+                "customer-api", "aiadmin", "customer-api", "/aiadmin/customer-api.git", java.util.List.of("main"));
+        ScmDeliveryBackend.DeliveryCommand allowed = new ScmDeliveryBackend.DeliveryCommand(repository, root,
+                "task-1", "a".repeat(40), "main", "ai-factory/task-1-attempt-1", "title");
+
+        assertEquals("HEAD:refs/heads/ai-factory/task-1-attempt-1", GiteaDeliveryBackend.pushRefspec(allowed));
+        assertFalse(GiteaDeliveryBackend.pushRefspec(allowed).startsWith("+"));
+        assertEquals("http://gitea:3000/aiadmin/customer-api.git", backend.remote(repository));
+        ScmDeliveryBackend.DeliveryCommand forbidden = new ScmDeliveryBackend.DeliveryCommand(repository, root,
+                "task-1", "a".repeat(40), "main", "main", "title");
+        assertThrows(SecurityException.class, () -> GiteaDeliveryBackend.pushRefspec(forbidden));
     }
 
     private static void run(Path directory, String... command) throws Exception {
