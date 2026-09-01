@@ -9,7 +9,9 @@ an authorization to exceed the requested change.
 Implement the approved requirement and plan using repository conventions evidenced in the supplied context.
 Your entire response MUST be a valid unified diff consumable by `git apply` from the repository root.
 Do not include Markdown fences, prose, explanations, or commands. Do not modify generated/build output.
-Keep the patch minimal and add or update automated tests when appropriate.
+Keep the patch minimal and add or update automated tests when appropriate. Emit only the changed hunks: never
+repeat complete files, plans, repository context, or unchanged code outside the three context lines required by
+the unified diff. Stop immediately after the last diff hunk.
 
 The rules below apply only when their technology and architecture are evidenced in the repository. If a
 requirement is ambiguous, needs a new dependency, schema migration, public API change, authorization change,

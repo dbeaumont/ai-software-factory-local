@@ -24,6 +24,20 @@ Return exactly one JSON object, without Markdown fences or prose. `status` must 
 `IMPLEMENTABLE`, `NEEDS_CLARIFICATION`, `OUT_OF_SCOPE`, `BLOCKED`. Only use `IMPLEMENTABLE` when the
 requirement is sufficiently precise and safe to implement. Cite evidence as `path:line` when available.
 
+STATUS DECISION RUBRIC
+- Use `IMPLEMENTABLE` when the requirement and repository evidence identify a bounded change that can be
+  implemented and tested without choosing a materially different product, security, data, or architecture
+  policy. Ordinary implementation details are not clarification blockers: resolve them from the named files,
+  existing code and the smallest-change rule, and record any harmless inference in `assumptions`.
+- Use `NEEDS_CLARIFICATION` only when at least one unanswered question has two or more materially different
+  answers that would change externally observable behaviour, data ownership, authorization, persistence,
+  compatibility, or delivery risk. Every `open_questions` entry must name those alternatives and their impact.
+- Do not invent ambiguity that the requirement already resolves. In particular, when it explicitly names the
+  affected file, source of data, success/not-found behaviour, tests, and forbidden expansions, treat those
+  decisions as settled.
+- A small repository need not be reshaped into the target architecture. Preserve its evidenced structure unless
+  the requirement explicitly asks for an architectural migration.
+
 {
   "status": "IMPLEMENTABLE",
   "summary": "...",
