@@ -390,7 +390,7 @@ Objectif : rendre les verdicts portables, explicables et auditables.
 - [x] **MCP-148** — Ne fournir aux agents que résumés et URI autorisées ; l'accès au brut exige une lecture explicite auditée. _(`evidence.get_summary` retourne uniquement URI/type/digest/statut/classification/taille aux rôles autorisés. `evidence.read` exige reviewer/workflow et un motif borné, interdit notamment l'approbation au reviewer, lie l'URI à la tâche et force un événement ALLOWED/DENIED sur disque.)_
 - [x] **MCP-149** — Ajouter tests d'altération de digest, manifeste incomplet, preuve inter-tâches, résultat partiel et format scanner inconnu. _(Corpus automatisé complet, incluant altération du ciphertext AES-GCM et décisions `INDETERMINATE`; synthèse : `docs/mcp/MCP-149-cas-negatifs-assurance.md`.)_
 - [x] **MCP-150** — Remplacer les concaténations de texte de `TaskService` par les résultats structurés, tout en gardant une vue lisible dans l'UI. _(Tests, quality gate, sécurité et SBOM alimentent désormais `assuranceResults` avec tâche/tentative/SHA/verdict/URI/digest ; le reviewer reçoit un JSON unique au lieu de trois concaténations brutes. L'UI affiche verdict, URI et digest puis conserve le détail humain lisible.)_
-- [ ] **MCP-151** — Préparer le backend GCP Cloud Storage avec Object Lock/rétention et attestations, sans modifier les URI logiques.
+- [x] **MCP-151** — Préparer le backend GCP Cloud Storage avec Object Lock/rétention et attestations, sans modifier les URI logiques. _(Port et descripteur GCS testés : URI `evidence://` stable, chemin objet déterministe, bucket verrouillé, CMEK, rétention minimale, métadonnées d'attestation et précondition `generation-match-0`. Détail : `docs/mcp/MCP-151-backend-gcs-evidence.md`.)_
 
 **Gate du lot 5**
 
