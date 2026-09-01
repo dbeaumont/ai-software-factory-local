@@ -13,7 +13,7 @@
     "policy_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "decision": { "enum": ["ALLOW", "DENY", "INDETERMINATE"] },
     "reasons": { "type": "array", "minItems": 1, "maxItems": 64, "items": { "type": "string", "minLength": 1, "maxLength": 512 } },
-    "input_digests": { "type": "object", "minProperties": 1, "maxProperties": 64, "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+    "input_digests": { "type": "object", "maxProperties": 64, "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
     "decided_at": { "type": "string", "format": "date-time" }
   }
 }

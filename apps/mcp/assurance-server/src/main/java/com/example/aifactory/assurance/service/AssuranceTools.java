@@ -80,6 +80,38 @@ public class AssuranceTools {
                 "INDETERMINATE".equals(verdict) ? "unknown severity or incomplete evidence" : null);
     }
 
+    @Tool(name = "assurance.evaluate_policy", description = "Combine mandatory assurance verdicts into a fail-closed delivery policy decision")
+    public PolicyDecision evaluatePolicy(
+            @ToolParam(description = "Contract version, currently 1") String schema_version,
+            @ToolParam(description = "Task identifier") String task_id,
+            @ToolParam(description = "Attempt identifier") String attempt_id,
+            @ToolParam(description = "Verdicts keyed by tests, quality, security and sbom") Map<String, String> verdicts,
+            @ToolParam(description = "Digests keyed by the same mandatory inputs") Map<String, String> input_digests) {
+        if (!"1".equals(schema_version) || task_id == null || !task_id.matches("[A-Za-z0-9_-]{1,64}")
+                || attempt_id == null || !attempt_id.matches("[A-Za-z0-9_-]{1,128}")
+                || verdicts == null || input_digests == null) {
+            throw new IllegalArgumentException("invalid policy evaluation request");
+        }
+        List<String> required = List.of("tests", "quality", "security", "sbom");
+        boolean complete = verdicts.keySet().containsAll(required) && input_digests.keySet().containsAll(required)
+                && required.stream().allMatch(key -> input_digests.get(key) != null
+                && input_digests.get(key).matches("[0-9a-f]{64}"));
+        boolean rejected = required.stream().anyMatch(key -> "REJECTED".equals(verdicts.get(key)));
+        boolean allPassed = required.stream().allMatch(key -> "PASSED".equals(verdicts.get(key)));
+        String decision = !complete || (!rejected && !allPassed) ? "INDETERMINATE" : rejected ? "DENY" : "ALLOW";
+        String reason = switch (decision) {
+            case "ALLOW" -> "all mandatory assurance verdicts passed";
+            case "DENY" -> "at least one mandatory assurance verdict rejected";
+            default -> "mandatory assurance result is absent, partial or unknown";
+        };
+        Map<String, String> safeDigests = new LinkedHashMap<>();
+        input_digests.forEach((key, value) -> {
+            if (key != null && value != null && value.matches("[0-9a-f]{64}")) safeDigests.put(key, value);
+        });
+        return new PolicyDecision("1", task_id, attempt_id, "delivery.gate", "1.0.0", decision,
+                List.of(reason), Map.copyOf(safeDigests), Instant.now());
+    }
+
     private NormalizedFinding normalize(RawFinding finding) {
         if (finding == null || blank(finding.id()) || blank(finding.component()) || blank(finding.rule())
                 || blank(finding.proof()) || blank(finding.recommendation())) {
@@ -140,4 +172,12 @@ public class AssuranceTools {
                                       @JsonProperty("source_commit") String sourceCommit,
                                       String scanner, String verdict, List<NormalizedFinding> findings,
                                       Map<String, Integer> summary, Evidence evidence, String reason) {}
+    public record PolicyDecision(@JsonProperty("schema_version") String schemaVersion,
+                                 @JsonProperty("task_id") String taskId,
+                                 @JsonProperty("attempt_id") String attemptId,
+                                 @JsonProperty("policy_id") String policyId,
+                                 @JsonProperty("policy_version") String policyVersion,
+                                 String decision, List<String> reasons,
+                                 @JsonProperty("input_digests") Map<String, String> inputDigests,
+                                 @JsonProperty("decided_at") Instant decidedAt) {}
 }

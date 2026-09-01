@@ -35,7 +35,7 @@
         "policy_id": { "type": "string" }, "policy_version": { "type": "string" },
         "decision": { "enum": ["ALLOW", "DENY", "INDETERMINATE"] },
         "reasons": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-        "input_digests": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
+        "input_digests": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
         "decided_at": { "type": "string", "format": "date-time" }
       }
     },

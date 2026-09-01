@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.List;
+import java.util.Map;
 
 class AssuranceToolsTest {
     private final AssuranceTools tools = new AssuranceTools();
@@ -29,6 +30,20 @@ class AssuranceToolsTest {
         assertEquals(List.of("CRITICAL", "HIGH"), result.findings().stream().map(AssuranceTools.NormalizedFinding::severity).toList());
         assertEquals("REJECTED", result.verdict());
         assertEquals(1, result.summary().get("critical"));
+    }
+
+    @Test
+    void policyBlocksMissingPartialUnknownAndRejectedEvidence() {
+        Map<String, String> digests = Map.of("tests", "b".repeat(64), "quality", "b".repeat(64),
+                "security", "b".repeat(64), "sbom", "b".repeat(64));
+        assertEquals("ALLOW", policy(Map.of("tests", "PASSED", "quality", "PASSED", "security", "PASSED", "sbom", "PASSED"), digests));
+        assertEquals("DENY", policy(Map.of("tests", "PASSED", "quality", "REJECTED", "security", "PASSED", "sbom", "PASSED"), digests));
+        assertEquals("INDETERMINATE", policy(Map.of("tests", "PASSED", "quality", "INDETERMINATE", "security", "PASSED", "sbom", "PASSED"), digests));
+        assertEquals("INDETERMINATE", policy(Map.of("tests", "PASSED", "quality", "PASSED", "security", "PASSED"), digests));
+    }
+
+    private String policy(Map<String, String> verdicts, Map<String, String> digests) {
+        return tools.evaluatePolicy("1", "task-1", "attempt-1", verdicts, digests).decision();
     }
 
     private AssuranceTools.QualityGateResult evaluate(String status, Integer exitCode, String evidence, String output) {
