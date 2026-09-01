@@ -16,10 +16,12 @@ Modifier une commande, une limite ou une politique réseau exige un nouvel ident
 
 ## Manifeste persistant
 
-Chaque admission de job fige et valide dans son snapshot : profil, référence d'image, digest lorsqu'il est présent, identifiant du workspace, mémoire, CPU, PIDs, timeout, politique réseau, lecture seule du workspace, présence du cache Maven et noms des variables autorisées. Les valeurs des secrets ne sont jamais persistées.
+Chaque admission de job fige et valide dans son snapshot : profil, référence d'image immuable, digest obligatoire, identifiant du workspace, mémoire, CPU, PIDs, timeout, politique réseau, lecture seule du workspace, présence du cache Maven et noms des variables autorisées. Les valeurs des secrets ne sont jamais persistées.
+
+Le contrôleur refuse désormais toute étiquette mutable. Une image publiée doit être fournie sous la forme `registre/image@sha256:<digest>`. Pour le prototype local, `make build` résout l'image construite et remplace automatiquement `AI_FACTORY_SANDBOX_IMAGE` dans le `.env` ignoré par Git par son identifiant Docker `sha256:<digest>`. L'image effectivement lancée et le manifeste utilisent donc la même identité immuable. La publication dans le registre cible sera prise en charge avec l'adaptateur GKE (MCP-092).
 
 Le lecteur accepte encore les snapshots antérieurs dépourvus de manifeste afin de préserver la compatibilité de reprise. Toute nouvelle admission écrit le manifeste.
 
 ## Éléments restant bloquants
 
-MCP-073 et MCP-076 restent ouvertes tant que l'image d'exécution n'est pas publiée puis configurée sous la forme `image@sha256:<digest>`, que les miroirs Gradle/npm ne sont pas imposés et que l'egress `factory` n'est pas remplacé par une allow-list effectivement contrôlée.
+MCP-076 reste ouverte tant que les miroirs Gradle/npm ne sont pas imposés et que l'egress `factory` n'est pas remplacé par une allow-list effectivement contrôlée.

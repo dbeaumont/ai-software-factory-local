@@ -35,7 +35,6 @@ public class SandboxJobService {
     private static final Pattern TRACEPARENT = Pattern.compile("^00-[0-9a-f]{32}-[0-9a-f]{16}-0[01]$");
     private static final Pattern DIGEST = Pattern.compile("^[0-9a-f]{64}$");
     private static final Pattern EXECUTION_ID = Pattern.compile("^[0-9a-f]{32}$");
-    private static final Pattern IMAGE_DIGEST = Pattern.compile("@sha256:([0-9a-f]{64})$");
     private static final int DEFAULT_OUTPUT_PAGE_CHARS = 4_096;
     private static final int MAX_OUTPUT_PAGE_CHARS = 16_384;
     private static final Pattern SECRET = Pattern.compile(
@@ -147,8 +146,7 @@ public class SandboxJobService {
 
     private JobManifest manifest(Operation operation, String taskId, Path workspace) {
         SandboxProfiles.Profile profile = SandboxProfiles.forOperation(operation, workspace);
-        java.util.regex.Matcher digest = IMAGE_DIGEST.matcher(properties.image());
-        return new JobManifest(profile.id(), properties.image(), digest.find() ? digest.group(1) : null,
+        return new JobManifest(profile.id(), properties.image(), properties.imageDigest(),
                 taskId, 2L * 1024 * 1024 * 1024, 2, 512, profile.timeout().toSeconds(),
                 profile.network(), profile.workspaceReadOnly(), profile.mavenCache(), profile.environmentNames());
     }

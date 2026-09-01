@@ -27,7 +27,10 @@ class DockerSandboxRuntimeIntegrationTest {
         String volume = "ai-factory-sandbox-runtime-test-" + suffix;
         String container = "ai-factory-sbx-runtime-test-" + suffix;
         String managedOrphan = "ai-factory-sbx-" + UUID.randomUUID().toString().replace("-", "");
-        String image = System.getenv().getOrDefault("AI_FACTORY_SANDBOX_IMAGE", "ai-factory-sandbox:local");
+        String configuredImage = System.getenv().getOrDefault("AI_FACTORY_SANDBOX_IMAGE", "ai-factory-sandbox:local");
+        String image = configuredImage.matches("^(?:[a-zA-Z0-9][a-zA-Z0-9._:/-]*@)?sha256:[0-9a-f]{64}$")
+                ? configuredImage
+                : execute(List.of("docker", "image", "inspect", configuredImage, "--format", "{{.Id}}"));
         SandboxExecutionProperties properties = new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/tmp/sandbox-runtime-test-state"), volume, image,
                 "unused-network",

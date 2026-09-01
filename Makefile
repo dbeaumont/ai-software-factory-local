@@ -59,6 +59,7 @@ build:
 		--build-arg SYFT_VERSION="$(SYFT_VERSION)" \
 		--build-arg TRIVY_PRELOAD_DB="$(TRIVY_PRELOAD_DB)" \
 		-t ai-factory-sandbox:local ./infrastructure/sandbox
+	./scripts/pin-sandbox-image.sh .env ai-factory-sandbox:local
 	$(COMPOSE) build repository-context-mcp sandbox-execution-mcp orchestrator factory-web
 	@echo -e "$(GREEN)Build complete!$(NC)"
 

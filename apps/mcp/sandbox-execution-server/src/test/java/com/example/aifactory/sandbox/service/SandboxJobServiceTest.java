@@ -29,6 +29,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SandboxJobServiceTest {
+    private static final String SANDBOX_DIGEST = "a".repeat(64);
+    private static final String SANDBOX_IMAGE = "sha256:" + SANDBOX_DIGEST;
     private static final String TRACE_ID = "0123456789abcdef0123456789abcdef";
 
     @TempDir
@@ -57,7 +59,7 @@ class SandboxJobServiceTest {
         Path patch = repository.resolve("changes.patch");
         Files.writeString(patch, "diff --git a/file.txt b/file.txt\n");
         patchDigest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(patch)));
-        properties = new SandboxExecutionProperties(root, root.resolve(".sandbox-jobs"), "workspace", "image",
+        properties = new SandboxExecutionProperties(root, root.resolve(".sandbox-jobs"), "workspace", SANDBOX_IMAGE,
                 "network", 2, 32, 2, 100, Duration.ofHours(1), Duration.ofSeconds(15),
                 65_536, 1_048_576,
                 "mirror", "artifact-token", "sonar", "sonar-token");
@@ -90,8 +92,8 @@ class SandboxJobServiceTest {
                 .filter(snapshot -> snapshot.executionId().equals(first.executionId()))
                 .findFirst().orElseThrow();
         assertEquals("patch-check-v1", persisted.manifest().profileId());
-        assertEquals("image", persisted.manifest().imageReference());
-        assertNull(persisted.manifest().imageDigest());
+        assertEquals(SANDBOX_IMAGE, persisted.manifest().imageReference());
+        assertEquals(SANDBOX_DIGEST, persisted.manifest().imageDigest());
         assertEquals(2L * 1024 * 1024 * 1024, persisted.manifest().memoryBytes());
         assertEquals(512, persisted.manifest().pidsLimit());
     }
@@ -408,7 +410,7 @@ class SandboxJobServiceTest {
 
     private void restartWithLimits(int concurrent, int queued, int perTask) {
         jobs.shutdown();
-        properties = new SandboxExecutionProperties(root, root.resolve(".sandbox-jobs"), "workspace", "image",
+        properties = new SandboxExecutionProperties(root, root.resolve(".sandbox-jobs"), "workspace", SANDBOX_IMAGE,
                 "network", concurrent, queued, perTask, 100, Duration.ofHours(1), Duration.ofSeconds(15),
                 65_536, 1_048_576, "mirror", "artifact-token", "sonar", "sonar-token");
         store = new SandboxJobStore(JsonMapper.builder().findAndAddModules().build(), properties);

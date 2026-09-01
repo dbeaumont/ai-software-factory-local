@@ -37,7 +37,8 @@ ai-factory:
     workspace-root: ${AI_FACTORY_SANDBOX_WORKSPACE_ROOT:/workspace/tasks}
     state-root: ${AI_FACTORY_SANDBOX_STATE_ROOT:/var/lib/ai-factory/sandbox-jobs}
     workspace-volume: ${AI_FACTORY_WORKSPACE_VOLUME:ai-software-factory_factory-workspace}
-    image: ${AI_FACTORY_SANDBOX_IMAGE:ai-factory-sandbox:local}
+    # make build replaces this fail-closed placeholder in the local .env with the built image ID.
+    image: ${AI_FACTORY_SANDBOX_IMAGE:sha256:0000000000000000000000000000000000000000000000000000000000000000}
     network: ${AI_FACTORY_SANDBOX_NETWORK:ai-factory-network}
     max-concurrent-jobs: ${AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS:2}
     max-queued-jobs: ${AI_FACTORY_SANDBOX_MAX_QUEUED_JOBS:32}

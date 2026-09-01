@@ -14,11 +14,13 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DockerSandboxRuntimeTest {
+    private static final String SANDBOX_IMAGE = "sandbox@sha256:" + "a".repeat(64);
+
     @Test
     void buildsReadOnlyNetworklessValidationProfileWithoutBuildCache() {
         SandboxExecutionProperties properties = new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 2, 32, 2, 100, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", "");
         DockerSandboxRuntime runtime = new DockerSandboxRuntime(properties);
@@ -30,7 +32,7 @@ class DockerSandboxRuntimeTest {
                 "--pids-limit", "512", "--cap-drop", "ALL", "no-new-privileges")));
         assertTrue(command.contains("factory-workspace:/factory-tasks:ro"));
         assertFalse(command.contains("ai-factory-m2:/root/.m2"));
-        assertTrue(command.contains("sandbox@sha256:fixed"));
+        assertTrue(command.contains(SANDBOX_IMAGE));
         assertEquals("git apply --check changes.patch", command.getLast());
         assertFalse(command.contains("--privileged"));
         runtime.shutdown();
@@ -104,7 +106,7 @@ class DockerSandboxRuntimeTest {
         String payload = "$(touch injected-from-environment)";
         SandboxExecutionProperties properties = new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network", 2, 32, 2, 100,
+                SANDBOX_IMAGE, "factory-network", 2, 32, 2, 100,
                 Duration.ofDays(7), Duration.ofSeconds(15), 65_536, 1_048_576,
                 "https://mirror.invalid/" + payload, payload, "https://sonar.invalid", payload);
         DockerSandboxRuntime runtime = new DockerSandboxRuntime(properties);
@@ -141,7 +143,7 @@ class DockerSandboxRuntimeTest {
     private static DockerSandboxRuntime runtime() {
         SandboxExecutionProperties properties = new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 2, 32, 2, 100, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", "");
         return new DockerSandboxRuntime(properties);
@@ -173,39 +175,56 @@ class DockerSandboxRuntimeTest {
     void rejectsUnsafeJobRetentionBounds() {
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 2, 32, 2, 100, Duration.ofSeconds(59), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 2, 32, 2, 100, Duration.ofDays(366), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 2, 32, 2, 100, Duration.ofDays(7), Duration.ofMillis(999),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 2, 32, 2, 100, Duration.ofDays(7), Duration.ofMinutes(6),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 1, 1, 3, 10, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 1, -1, 1, 10, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "", "", ""));
         assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
                 Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
-                "sandbox@sha256:fixed", "factory-network",
+                SANDBOX_IMAGE, "factory-network",
                 1, 1, 1, 10, Duration.ofDays(7), Duration.ofSeconds(15),
                 65_536, 1_048_576, "", "token\nINJECTED=value", "", ""));
+    }
+
+    @Test
+    void rejectsMutableImageTagsAndExtractsImmutableDigest() {
+        assertThrows(IllegalArgumentException.class, () -> new SandboxExecutionProperties(
+                Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
+                "ai-factory-sandbox:local", "factory-network",
+                2, 32, 2, 100, Duration.ofDays(7), Duration.ofSeconds(15),
+                65_536, 1_048_576, "", "", "", ""));
+
+        SandboxExecutionProperties pinned = new SandboxExecutionProperties(
+                Path.of("/workspace/tasks"), Path.of("/state"), "factory-workspace",
+                "registry.example:5000/factory/sandbox@sha256:" + "b".repeat(64), "factory-network",
+                2, 32, 2, 100, Duration.ofDays(7), Duration.ofSeconds(15),
+                65_536, 1_048_576, "", "", "", "");
+
+        assertEquals("b".repeat(64), pinned.imageDigest());
     }
 
     private static void run(Path directory, String... command) throws Exception {
