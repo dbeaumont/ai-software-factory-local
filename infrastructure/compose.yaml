@@ -161,17 +161,16 @@ services:
       AI_FACTORY_SCM_GITEA_BASE_URL: ${AI_FACTORY_GITEA_BASE_URL:-http://gitea:3000}
       AI_FACTORY_SCM_GITEA_PUBLIC_BASE_URL: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL:-http://localhost:3000}
       AI_FACTORY_SCM_GITEA_USER: ${AI_FACTORY_GITEA_USER:-aiadmin}
-      AI_FACTORY_SCM_GITEA_TOKEN_FILE: /run/secrets/gitea_token
+      AI_FACTORY_SCM_GITEA_TOKEN_FILE: /run/secrets/local_vault
       AI_FACTORY_SCM_STATE_ROOT: /var/lib/ai-factory/scm
       AI_FACTORY_SCM_REPOSITORY_REGISTRY: /etc/ai-factory/scm-repositories-v1.json
       AI_FACTORY_SCM_WORKSPACE_ROOT: /workspace/tasks
-      AI_FACTORY_SCM_APPROVAL_KEY_FILE: /run/secrets/approval_attestation_key
+      AI_FACTORY_SCM_APPROVAL_KEY_FILE: /run/secrets/local_vault
     secrets:
-      - gitea_token
-      - approval_attestation_key
+      - local_vault
     volumes:
       - scm-delivery-state:/var/lib/ai-factory/scm
-      - factory-workspace:/workspace/tasks
+      - factory-workspace:/workspace/tasks:ro
       - ../resources/mcp/policies/scm-repositories-v1.json:/etc/ai-factory/scm-repositories-v1.json:ro
     read_only: true
     tmpfs:
@@ -461,7 +460,5 @@ secrets:
   # pour authentifier Maven auprès du miroir — jamais gravé dans l'image.
   artifactory_token:
     environment: ARTIFACTORY_TOKEN
-  gitea_token:
-    environment: GITEA_TOKEN
-  approval_attestation_key:
-    environment: APPROVAL_ATTESTATION_KEY
+  local_vault:
+    file: ../.vault

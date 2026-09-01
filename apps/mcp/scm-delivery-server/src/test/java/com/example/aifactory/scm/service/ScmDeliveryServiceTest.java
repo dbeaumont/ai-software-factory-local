@@ -68,7 +68,8 @@ class ScmDeliveryServiceTest {
         };
         ScmIdempotencyStore store = new ScmIdempotencyStore(properties, new ObjectMapper());
         ScmAuditLog audit = new ScmAuditLog(properties, new ObjectMapper());
-        ScmDeliveryService service = new ScmDeliveryService(properties, credentials, registry, backend, store, audit);
+        ScmWorktreeStager stager = new ScmWorktreeStager(properties);
+        ScmDeliveryService service = new ScmDeliveryService(properties, credentials, registry, backend, stager, store, audit);
         Instant approvedAt = Instant.now().minusSeconds(5);
         ApprovalProof proof = ApprovalProof.sign("task-1", "attempt-1", "customer-api", sourceCommit,
                 patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
@@ -81,7 +82,7 @@ class ScmDeliveryServiceTest {
 
         assertEquals(42, result.pullRequestId());
         assertEquals("ai-factory/task-1-attempt-1", captured.get().branch());
-        assertEquals(workspace, captured.get().workspace());
+        assertEquals(root.resolve("state/worktrees/task-1-attempt-1"), captured.get().workspace());
         assertEquals(result, replay);
         assertEquals(1, creates.get());
         String auditEvents = Files.readString(root.resolve("state/audit/scm-delivery.jsonl"));
@@ -131,7 +132,7 @@ class ScmDeliveryServiceTest {
             }
         };
         ScmDeliveryService existingService = new ScmDeliveryService(properties, credentials, registry, existingBackend,
-                store, audit);
+                stager, store, audit);
         assertEquals(43, existingService.create(existingRequest).pullRequestId());
         assertEquals(0, existingCreates.get());
 
@@ -157,7 +158,7 @@ class ScmDeliveryServiceTest {
             }
         };
         ScmDeliveryService timeoutService = new ScmDeliveryService(properties, credentials, registry, timeoutBackend,
-                store, audit);
+                stager, store, audit);
         assertThrows(IllegalStateException.class, () -> timeoutService.create(timeoutRequest));
         assertEquals(44, timeoutService.create(timeoutRequest).pullRequestId());
         assertEquals(1, timeoutCreates.get());

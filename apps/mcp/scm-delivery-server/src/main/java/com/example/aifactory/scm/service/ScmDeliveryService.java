@@ -24,16 +24,18 @@ public class ScmDeliveryService {
     private final ScmCredentials credentials;
     private final RepositoryRegistry repositories;
     private final ScmDeliveryBackend backend;
+    private final ScmWorktreeStager stager;
     private final ScmIdempotencyStore idempotency;
     private final ScmAuditLog audit;
 
     public ScmDeliveryService(ScmDeliveryProperties properties, ScmCredentials credentials,
-                              RepositoryRegistry repositories, ScmDeliveryBackend backend,
+                              RepositoryRegistry repositories, ScmDeliveryBackend backend, ScmWorktreeStager stager,
                               ScmIdempotencyStore idempotency, ScmAuditLog audit) {
         this.properties = properties;
         this.credentials = credentials;
         this.repositories = repositories;
         this.backend = backend;
+        this.stager = stager;
         this.idempotency = idempotency;
         this.audit = audit;
     }
@@ -67,12 +69,18 @@ public class ScmDeliveryService {
         verifyEvidenceDigests(workspace, request.evidenceDigests());
         String branch = "ai-factory/" + request.taskId() + "-" + request.attemptId();
         String title = "AI Factory: " + abbreviate(request.title(), 90);
-        ScmDeliveryBackend.DeliveryCommand command = new ScmDeliveryBackend.DeliveryCommand(repository, workspace,
-                request.taskId(), request.sourceCommit(), request.baseBranch(), branch, title);
         audit.before(request, branch);
-        ScmDeliveryBackend.DeliveryResult result = backend.findExisting(command);
-        if (result == null) {
-            result = backend.createDraftPullRequest(command);
+        Path stagedWorkspace = stager.stage(workspace, request.taskId(), request.attemptId());
+        ScmDeliveryBackend.DeliveryResult result;
+        try {
+            ScmDeliveryBackend.DeliveryCommand command = new ScmDeliveryBackend.DeliveryCommand(repository, stagedWorkspace,
+                    request.taskId(), request.sourceCommit(), request.baseBranch(), branch, title);
+            result = backend.findExisting(command);
+            if (result == null) {
+                result = backend.createDraftPullRequest(command);
+            }
+        } finally {
+            stager.delete(stagedWorkspace);
         }
         if (idempotency != null) {
             idempotency.save(request.idempotencyKey(), fingerprint, result);
@@ -134,7 +142,8 @@ public class ScmDeliveryService {
     }
 
     private static String gitHead(Path workspace) throws Exception {
-        Process process = new ProcessBuilder("git", "rev-parse", "HEAD").directory(workspace.toFile())
+        Process process = new ProcessBuilder("git", "-c", "safe.directory=" + workspace,
+                "rev-parse", "HEAD").directory(workspace.toFile())
                 .redirectErrorStream(true).start();
         String output = new String(process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).strip();
         if (!process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS) || process.exitValue() != 0

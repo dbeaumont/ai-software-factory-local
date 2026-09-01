@@ -14,16 +14,22 @@ public class ScmCredentials {
     }
 
     public String giteaToken() {
-        return read(properties.giteaTokenFile(), "SCM credential");
+        return read(properties.giteaTokenFile(), "GITEA_TOKEN", "SCM credential");
     }
 
     public byte[] approvalKey() {
-        return read(properties.approvalKeyFile(), "approval attestation key").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return read(properties.approvalKeyFile(), "APPROVAL_ATTESTATION_KEY", "approval attestation key")
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
-    private static String read(java.nio.file.Path path, String label) {
+    private static String read(java.nio.file.Path path, String key, String label) {
         try {
-            String value = Files.readString(path).strip();
+            String content = Files.readString(path);
+            String value = content.lines()
+                    .filter(line -> line.startsWith(key + "="))
+                    .map(line -> line.substring(key.length() + 1).strip())
+                    .findFirst()
+                    .orElseGet(content::strip);
             if (value.length() < 16 || value.contains("\n") || value.contains("\r")) {
                 throw new IllegalStateException(label + " file is invalid");
             }
