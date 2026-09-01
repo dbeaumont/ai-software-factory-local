@@ -24,5 +24,23 @@ public class EvidencePolicy {
         return rule;
     }
 
+    public Rule requireSummary(String type, String actor) {
+        Rule rule = require(type);
+        if (!("workflow".equals(actor) || "planner".equals(actor) || "reviewer".equals(actor))) {
+            throw new SecurityException("actor cannot inspect evidence summary");
+        }
+        return rule;
+    }
+
+    public Rule requireRead(String type, String actor, String purpose) {
+        Rule rule = require(type);
+        if (!("workflow".equals(actor) || "reviewer".equals(actor))
+                || !("human-review".equals(purpose) || "incident-investigation".equals(purpose))
+                || ("approval".equals(type) && !"workflow".equals(actor))) {
+            throw new SecurityException("raw evidence read is not authorized");
+        }
+        return rule;
+    }
+
     public record Rule(String classification, int retentionDays) {}
 }

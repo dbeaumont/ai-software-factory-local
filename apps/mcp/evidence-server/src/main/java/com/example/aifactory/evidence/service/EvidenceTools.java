@@ -8,7 +8,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class EvidenceTools {
     private final EvidenceStore store;
-    public EvidenceTools(EvidenceStore store) { this.store = store; }
+    private final EvidenceReadAudit audit;
+    public EvidenceTools(EvidenceStore store, EvidenceReadAudit audit) { this.store = store; this.audit = audit; }
 
     @Tool(name = "evidence.store", description = "Verify and immutably store one task-scoped evidence artifact")
     public StoredEvidence store(@ToolParam(description = "Contract version") String schema_version,
@@ -48,6 +49,35 @@ public class EvidenceTools {
                 manifest.classification(), manifest.retainUntil(), manifest.createdAt());
     }
 
+    @Tool(name = "evidence.get_summary", description = "Return authorized evidence metadata without raw content")
+    public EvidenceSummary getSummary(@ToolParam(description = "Contract version") String schema_version,
+                                      @ToolParam(description = "Task identifier") String task_id,
+                                      @ToolParam(description = "Evidence URI") String uri,
+                                      @ToolParam(description = "workflow, planner or reviewer") String actor) throws Exception {
+        if (!"1".equals(schema_version)) throw new IllegalArgumentException("unsupported schema version");
+        EvidenceStore.ReadEvidence value = store.read(task_id, uri, actor, "summary", false);
+        return new EvidenceSummary(value.uri(), value.type(), value.digest(), value.status(), value.classification(), value.sizeBytes());
+    }
+
+    @Tool(name = "evidence.read", description = "Explicitly read authorized raw evidence and emit an immutable audit event")
+    public RawEvidence read(@ToolParam(description = "Contract version") String schema_version,
+                            @ToolParam(description = "Task identifier") String task_id,
+                            @ToolParam(description = "Evidence URI") String uri,
+                            @ToolParam(description = "workflow or reviewer") String actor,
+                            @ToolParam(description = "human-review or incident-investigation") String purpose) throws Exception {
+        if (!"1".equals(schema_version)) throw new IllegalArgumentException("unsupported schema version");
+        try {
+            EvidenceStore.ReadEvidence value = store.read(task_id, uri, actor, purpose, true);
+            audit.record(task_id, actor, purpose, uri, "ALLOWED");
+            return new RawEvidence(value.uri(), value.type(), value.digest(), value.status(), value.classification(),
+                    value.sizeBytes(), value.contentBase64());
+        } catch (RuntimeException exception) {
+            audit.record(task_id, actor == null ? "unknown" : actor, purpose == null ? "unknown" : purpose,
+                    uri == null ? "invalid" : uri, "DENIED");
+            throw exception;
+        }
+    }
+
     public record StoredEvidence(String uri, String digest, String status,
                                  @JsonProperty("media_type") String mediaType,
                                  @JsonProperty("size_bytes") long sizeBytes,
@@ -67,4 +97,9 @@ public class EvidenceTools {
                                  String status, String classification,
                                  @JsonProperty("retain_until") java.time.Instant retainUntil,
                                  @JsonProperty("created_at") java.time.Instant createdAt) {}
+    public record EvidenceSummary(String uri, String type, String digest, String status, String classification,
+                                  @JsonProperty("size_bytes") long sizeBytes) {}
+    public record RawEvidence(String uri, String type, String digest, String status, String classification,
+                              @JsonProperty("size_bytes") long sizeBytes,
+                              @JsonProperty("content_base64") String contentBase64) {}
 }

@@ -61,4 +61,26 @@ class EvidenceStoreTest {
         assertThrows(SecurityException.class, () -> store.createManifest("task-1", "attempt-1", "customer-api",
                 "a".repeat(40), patchDigest, crossTask, decision));
     }
+
+    @Test
+    void summariesHideContentAndRawReadsAreExplicitlyAudited(@TempDir Path root) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        EvidenceProperties properties = new EvidenceProperties(root, 1024);
+        EvidenceStore store = new EvidenceStore(properties, mapper, new EvidencePolicy());
+        EvidenceTools tools = new EvidenceTools(store, new EvidenceReadAudit(properties, mapper));
+        byte[] content = "review proof".getBytes(StandardCharsets.UTF_8);
+        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        EvidenceTools.StoredEvidence stored = tools.store("1", "task-1", "attempt-1", "review", "text/plain",
+                Base64.getEncoder().encodeToString(content), digest, "workflow");
+
+        EvidenceTools.EvidenceSummary summary = tools.getSummary("1", "task-1", stored.uri(), "planner");
+        assertEquals(content.length, summary.sizeBytes());
+        assertThrows(SecurityException.class, () -> tools.read("1", "task-1", stored.uri(), "planner", "human-review"));
+        EvidenceTools.RawEvidence raw = tools.read("1", "task-1", stored.uri(), "reviewer", "human-review");
+        assertArrayEquals(content, Base64.getDecoder().decode(raw.contentBase64()));
+        String audit = java.nio.file.Files.readString(root.resolve("audit/raw-reads.jsonl"));
+        assertTrue(audit.contains("DENIED"));
+        assertTrue(audit.contains("ALLOWED"));
+        assertFalse(audit.contains("review proof"));
+    }
 }

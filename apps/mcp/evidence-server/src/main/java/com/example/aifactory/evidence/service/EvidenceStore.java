@@ -123,10 +123,31 @@ public class EvidenceStore {
         catch (Exception exception) { throw new SecurityException("stored evidence cannot be verified: " + type); }
     }
 
+    public ReadEvidence read(String taskId, String uri, String actor, String purpose, boolean raw) throws Exception {
+        java.net.URI parsed = java.net.URI.create(uri);
+        String[] parts = parsed.getPath() == null ? new String[0] : parsed.getPath().split("/");
+        if (!"evidence".equals(parsed.getScheme()) || !taskId.equals(parsed.getHost()) || parts.length != 4
+                || parsed.getQuery() != null || parsed.getFragment() != null) {
+            throw new SecurityException("evidence URI is outside task scope");
+        }
+        String attemptId = parts[1], type = parts[2], identifier = parts[3];
+        if (!attemptId.matches("[A-Za-z0-9_-]{1,128}") || !identifier.matches("[0-9a-f]{64}")) {
+            throw new SecurityException("invalid evidence URI");
+        }
+        EvidencePolicy.Rule rule = raw ? policy.requireRead(type, actor, purpose) : policy.requireSummary(type, actor);
+        Path file = attemptPath(taskId, attemptId).resolve(
+                "manifest".equals(type) ? "manifest-" + identifier + ".json" : type + '-' + identifier + ".bin");
+        if (!Files.isRegularFile(file)) throw new SecurityException("evidence is unavailable");
+        byte[] clear = decrypt(Files.readAllBytes(file), aad(taskId, attemptId, type, identifier));
+        return new ReadEvidence(uri, type, identifier, "COMPLETE", rule.classification(), clear.length,
+                raw ? Base64.getEncoder().encodeToString(clear) : null);
+    }
+
     void purgeExpired() throws Exception {
         if (!Files.isDirectory(root)) return;
         try (var files = Files.walk(root)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
+                if (file.startsWith(root.resolve("audit"))) continue;
                 String name = file.getFileName().toString();
                 int separator = name.indexOf('-');
                 if (separator < 1) continue;
@@ -182,4 +203,6 @@ public class EvidenceStore {
                                  Map<String, String> inputDigests, Instant decidedAt) {}
     public record StoredManifest(String manifestId, String uri, String digest, String status, String classification,
                                  Instant retainUntil, Instant createdAt) {}
+    public record ReadEvidence(String uri, String type, String digest, String status, String classification,
+                               long sizeBytes, String contentBase64) {}
 }
