@@ -8,9 +8,18 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Service
 public class ScmDeliveryService {
+    private static final Map<String, String> EVIDENCE_PATHS = Map.of(
+            "plan", ".ai-plan.md",
+            "tests", ".ai-factory/test.txt",
+            "quality", ".ai-factory/sonar.txt",
+            "sbom", ".ai-factory/sbom.cdx.json",
+            "security", ".ai-factory/trivy.txt",
+            "review", ".ai-review.md");
     private final ScmDeliveryProperties properties;
     private final ScmCredentials credentials;
     private final RepositoryRegistry repositories;
@@ -44,11 +53,16 @@ public class ScmDeliveryService {
         if (!workspace.startsWith(properties.workspaceRoot()) || !Files.isDirectory(workspace)) {
             throw new SecurityException("task workspace is unavailable");
         }
+        String workspaceCommit = gitHead(workspace);
+        if (!request.sourceCommit().equals(workspaceCommit)) {
+            throw new SecurityException("workspace source SHA does not match delivery request");
+        }
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(Files.readAllBytes(workspace.resolve("changes.patch"))));
         if (!MessageDigest.isEqual(HexFormat.of().parseHex(digest), HexFormat.of().parseHex(request.patchDigest()))) {
             throw new SecurityException("patch digest does not match workspace evidence");
         }
+        verifyEvidenceDigests(workspace, request.evidenceDigests());
         String branch = "ai-factory/" + request.taskId() + "-" + request.attemptId();
         String title = "AI Factory: " + abbreviate(request.title(), 90);
         ScmDeliveryBackend.DeliveryCommand command = new ScmDeliveryBackend.DeliveryCommand(repository, workspace,
@@ -69,6 +83,8 @@ public class ScmDeliveryService {
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
                 || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
                 || request.patchDigest() == null || !request.patchDigest().matches("[0-9a-f]{64}")
+                || request.evidenceDigests() == null || !request.evidenceDigests().keySet().equals(EVIDENCE_PATHS.keySet())
+                || request.evidenceDigests().values().stream().anyMatch(value -> value == null || !value.matches("[0-9a-f]{64}"))
                 || request.idempotencyKey() == null || !request.idempotencyKey().matches("[A-Za-z0-9._:-]{8,128}")) {
             throw new IllegalArgumentException("invalid SCM delivery request");
         }
@@ -89,14 +105,46 @@ public class ScmDeliveryService {
     }
 
     private static String fingerprint(CreateRequest request) throws Exception {
+        String evidence = new TreeMap<>(request.evidenceDigests()).entrySet().stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(java.util.stream.Collectors.joining("\n"));
         String canonical = String.join("\n", request.taskId(), request.attemptId(), request.repositoryId(),
-                request.sourceCommit(), request.patchDigest(), request.baseBranch(), request.approvalProof().signature());
+                request.sourceCommit(), request.patchDigest(), evidence, request.baseBranch(), request.approvalProof().signature());
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }
 
+    private static void verifyEvidenceDigests(Path workspace, Map<String, String> supplied) throws Exception {
+        for (Map.Entry<String, String> entry : EVIDENCE_PATHS.entrySet()) {
+            Path evidence = workspace.resolve(entry.getValue()).normalize();
+            if (!evidence.startsWith(workspace) || !Files.isRegularFile(evidence)) {
+                throw new SecurityException("required delivery evidence is missing: " + entry.getKey());
+            }
+            byte[] actual = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(evidence));
+            byte[] expected = HexFormat.of().parseHex(supplied.get(entry.getKey()));
+            if (!MessageDigest.isEqual(actual, expected)) {
+                throw new SecurityException("delivery evidence digest mismatch: " + entry.getKey());
+            }
+        }
+    }
+
+    private static String gitHead(Path workspace) throws Exception {
+        Process process = new ProcessBuilder("git", "rev-parse", "HEAD").directory(workspace.toFile())
+                .redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).strip();
+        if (!process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS) || process.exitValue() != 0
+                || !output.matches("[0-9a-f]{40}")) {
+            throw new SecurityException("workspace has no verifiable source SHA");
+        }
+        return output;
+    }
+
     public record CreateRequest(String schemaVersion, String taskId, String attemptId, String repositoryId,
-                                String sourceCommit, String patchDigest, String baseBranch, String title, String actor,
+                                String sourceCommit, String patchDigest, Map<String, String> evidenceDigests,
+                                String baseBranch, String title, String actor,
                                 String idempotencyKey, ApprovalProof approvalProof) {
+        public CreateRequest {
+            evidenceDigests = evidenceDigests == null ? Map.of() : Map.copyOf(evidenceDigests);
+        }
     }
 }

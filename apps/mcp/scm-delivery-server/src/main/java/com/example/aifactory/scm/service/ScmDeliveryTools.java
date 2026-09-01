@@ -5,6 +5,7 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Map;
 
 @Service
 public class ScmDeliveryTools {
@@ -26,13 +27,14 @@ public class ScmDeliveryTools {
             @ToolParam(description = "Server-registered repository identifier") String repository_id,
             @ToolParam(description = "Immutable source commit SHA") String source_commit,
             @ToolParam(description = "SHA-256 of changes.patch") String patch_digest,
+            @ToolParam(description = "SHA-256 digests keyed by plan, tests, quality, sbom, security and review") Map<String, String> evidence_digests,
             @ToolParam(description = "Allow-listed base branch") String base_branch,
             @ToolParam(description = "Human-readable PR title") String title,
             @ToolParam(description = "Authorized caller; delivery only") String actor,
             @ToolParam(description = "Stable command idempotency key") String idempotency_key,
             @ToolParam(description = "Signed approval proof bound to this delivery") ApprovalProof approval_proof) throws Exception {
         return delivery.create(new ScmDeliveryService.CreateRequest(schema_version, task_id, attempt_id, repository_id,
-                source_commit, patch_digest, base_branch, title, actor, idempotency_key, approval_proof));
+                source_commit, patch_digest, evidence_digests, base_branch, title, actor, idempotency_key, approval_proof));
     }
 
     @Tool(name = "scm.get_repository", description = "Return secret-free metadata for an allow-listed repository_id")

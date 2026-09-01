@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -22,6 +24,13 @@ class ScmDeliveryServiceTest {
         Path workspaceRoot = root.resolve("workspace");
         Path workspace = workspaceRoot.resolve("task-1");
         Files.createDirectories(workspace);
+        run(workspace, "git", "init", "-q");
+        run(workspace, "git", "config", "user.email", "test@example.local");
+        run(workspace, "git", "config", "user.name", "Test");
+        Files.writeString(workspace.resolve("README.md"), "fixture\n");
+        run(workspace, "git", "add", "README.md");
+        run(workspace, "git", "commit", "-qm", "fixture");
+        String sourceCommit = output(workspace, "git", "rev-parse", "HEAD").strip();
         byte[] patch = "diff --git a/a b/a\n".getBytes(StandardCharsets.UTF_8);
         Files.write(workspace.resolve("changes.patch"), patch);
         String patchDigest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(patch));
@@ -34,6 +43,7 @@ class ScmDeliveryServiceTest {
         Path approvalFile = root.resolve("approval");
         Files.writeString(tokenFile, "gitea-token-for-tests");
         Files.writeString(approvalFile, "approval-key-for-tests-at-least-32-bytes");
+        Map<String, String> evidenceDigests = evidence(workspace);
         ScmDeliveryProperties properties = new ScmDeliveryProperties("http://gitea:3000", "http://localhost:3000",
                 "delivery", tokenFile, root.resolve("state"), registryFile, workspaceRoot, approvalFile);
         ScmCredentials credentials = new ScmCredentials(properties);
@@ -57,12 +67,12 @@ class ScmDeliveryServiceTest {
         ScmIdempotencyStore store = new ScmIdempotencyStore(properties, new ObjectMapper());
         ScmDeliveryService service = new ScmDeliveryService(properties, credentials, registry, backend, store);
         Instant approvedAt = Instant.now().minusSeconds(5);
-        ApprovalProof proof = ApprovalProof.sign("task-1", "attempt-1", "customer-api", "a".repeat(40),
+        ApprovalProof proof = ApprovalProof.sign("task-1", "attempt-1", "customer-api", sourceCommit,
                 patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
 
         ScmDeliveryService.CreateRequest request = new ScmDeliveryService.CreateRequest("1", "task-1",
-                "attempt-1", "customer-api", "a".repeat(40), patchDigest, "main", "Add endpoint", "delivery",
-                "delivery-task-1-attempt-1", proof);
+                "attempt-1", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "Add endpoint",
+                "delivery", "delivery-task-1-attempt-1", proof);
         ScmDeliveryBackend.DeliveryResult result = service.create(request);
         ScmDeliveryBackend.DeliveryResult replay = service.create(request);
 
@@ -71,5 +81,39 @@ class ScmDeliveryServiceTest {
         assertEquals(workspace, captured.get().workspace());
         assertEquals(result, replay);
         assertEquals(1, creates.get());
+    }
+
+    private static Map<String, String> evidence(Path workspace) throws Exception {
+        Map<String, String> paths = Map.of(
+                "plan", ".ai-plan.md", "tests", ".ai-factory/test.txt", "quality", ".ai-factory/sonar.txt",
+                "sbom", ".ai-factory/sbom.cdx.json", "security", ".ai-factory/trivy.txt",
+                "review", ".ai-review.md");
+        Map<String, String> digests = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : paths.entrySet()) {
+            Path file = workspace.resolve(entry.getValue());
+            Files.createDirectories(file.getParent());
+            byte[] content = (entry.getKey() + " evidence\n").getBytes(StandardCharsets.UTF_8);
+            Files.write(file, content);
+            digests.put(entry.getKey(), HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(content)));
+        }
+        return digests;
+    }
+
+    private static void run(Path directory, String... command) throws Exception {
+        Process process = new ProcessBuilder(command).directory(directory.toFile()).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (process.waitFor() != 0) {
+            throw new IllegalStateException(output);
+        }
+    }
+
+    private static String output(Path directory, String... command) throws Exception {
+        Process process = new ProcessBuilder(command).directory(directory.toFile()).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (process.waitFor() != 0) {
+            throw new IllegalStateException(output);
+        }
+        return output;
     }
 }
