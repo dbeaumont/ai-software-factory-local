@@ -90,3 +90,15 @@ La campagne autorisée `20260901-154935` a exécuté les 20 scénarios avec la r
 Le mécanisme est donc correctement borné et sélectif, mais n'atteint pas le seuil de qualité requis. L'échec était `CTX-020` dans la campagne précédente et concerne désormais `CTX-011` : il n'est pas reproductiblement lié à un scénario. Avant toute nouvelle consommation cloud, la prochaine remédiation doit capturer et classifier de façon non sensible le `finish_reason` du fournisseur et distinguer explicitement troncature, refus et violation de schéma. Le plafond Planner de 1 200 tokens devra être réévalué sur la base de cette télémétrie, sans l'augmenter à l'aveugle.
 
 Décision technique maintenue : **NO-GO pour MCP-056**.
+
+## Remédiation de classification
+
+Le client traite maintenant explicitement les métadonnées Chat Completions conformément à la [documentation OpenAI sur les sorties structurées](https://developers.openai.com/api/docs/guides/structured-outputs) :
+
+- `finish_reason=stop` est le seul état accepté avec un contenu textuel ;
+- `finish_reason=length` est classé comme troncature retryable ;
+- `content_filter`, `refusal`, contenu absent et raison inconnue bloquent sans retry ;
+- le journal conserve uniquement la raison de fin et `completion_tokens`, jamais le prompt ni la réponse ;
+- la première tentative Planner reste bornée à 1 200 tokens ; l'unique seconde tentative utilise 2 400 tokens pour traiter une éventuelle troncature sans augmenter le coût nominal.
+
+La reprise reste déclenchée pour une violation du contrat applicatif même si le fournisseur annonce `stop`. Les 80 tests orchestrateur passent, dont les cas `length`, refus, filtre de contenu, contrat invalide et décision métier valide. Une campagne cloud reste nécessaire avant de reconsidérer le gate.

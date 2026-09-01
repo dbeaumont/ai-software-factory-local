@@ -75,7 +75,8 @@ class TaskServiceTest {
 
         String response = TaskService.withSingleContractRetry(
                 () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
-                value -> value.contains("IMPLEMENTABLE"), retries::incrementAndGet);
+                () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
+                value -> value.contains("IMPLEMENTABLE"), reason -> retries.incrementAndGet());
 
         assertEquals("{\"status\":\"IMPLEMENTABLE\"}", response);
         assertEquals(2, calls.get());
@@ -90,13 +91,45 @@ class TaskServiceTest {
                 () -> {
                     calls.incrementAndGet();
                     return "{\"status\":\"NEEDS_CLARIFICATION\"}";
+                }, () -> {
+                    calls.incrementAndGet();
+                    return "unexpected";
                 }, value -> value.contains("NEEDS_CLARIFICATION"),
-                () -> {
+                reason -> {
                     throw new AssertionError("A valid contract must not be retried");
                 });
 
         assertEquals("{\"status\":\"NEEDS_CLARIFICATION\"}", response);
         assertEquals(1, calls.get());
+    }
+
+    @Test
+    void retriesATruncatedPlannerCompletionWithTheLargerBudget() {
+        AtomicInteger retries = new AtomicInteger();
+
+        String response = TaskService.withSingleContractRetry(
+                () -> {
+                    throw new LlmCompletionException("length", true, "truncated");
+                }, () -> "valid", value -> true,
+                reason -> {
+                    assertEquals("length", reason);
+                    retries.incrementAndGet();
+                });
+
+        assertEquals("valid", response);
+        assertEquals(1, retries.get());
+        assertEquals(2_400, TaskService.retryMaxTokensFor("planner"));
+    }
+
+    @Test
+    void doesNotRetryARefusal() {
+        assertThrows(LlmCompletionException.class, () -> TaskService.withSingleContractRetry(
+                () -> {
+                    throw new LlmCompletionException("refusal", false, "refused");
+                }, () -> "unexpected", value -> true,
+                reason -> {
+                    throw new AssertionError("A refusal must not be retried");
+                }));
     }
 
     @Test

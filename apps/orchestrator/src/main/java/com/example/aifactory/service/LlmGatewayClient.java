@@ -101,11 +101,39 @@ public class LlmGatewayClient {
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .block(Duration.ofMinutes(10));
-        JsonNode content = response == null ? null : response.path("choices").path(0).path("message").path("content");
-        if (content == null || !content.isTextual()) {
-            throw new IllegalStateException("Invalid response from LLM gateway");
+        ChatCompletion completion = parseCompletion(response);
+        log.info("LLM completion finished reason={} completion_tokens={}",
+                completion.finishReason(), completion.completionTokens());
+        return completion.content();
+    }
+
+    static ChatCompletion parseCompletion(JsonNode response) {
+        JsonNode choice = response == null ? null : response.path("choices").path(0);
+        JsonNode message = choice == null ? null : choice.path("message");
+        String finishReason = choice == null ? "missing" : choice.path("finish_reason").asText("missing");
+        int completionTokens = response == null ? -1 : response.path("usage").path("completion_tokens").asInt(-1);
+        String refusal = message == null ? "" : message.path("refusal").asText("");
+        if (!refusal.isBlank()) {
+            throw new LlmCompletionException("refusal", false, "LLM refused the request");
         }
-        return content.asText();
+        if ("length".equals(finishReason)) {
+            throw new LlmCompletionException("length", true, "LLM response was truncated at the output token limit");
+        }
+        if ("content_filter".equals(finishReason)) {
+            throw new LlmCompletionException("content_filter", false, "LLM response was interrupted by the content filter");
+        }
+        if (!"stop".equals(finishReason)) {
+            throw new LlmCompletionException(finishReason, false,
+                    "LLM response ended with unsupported finish reason " + finishReason);
+        }
+        JsonNode content = message == null ? null : message.path("content");
+        if (content == null || !content.isTextual()) {
+            throw new LlmCompletionException("missing_content", false, "Invalid response from LLM gateway");
+        }
+        return new ChatCompletion(content.asText(), finishReason, completionTokens);
+    }
+
+    record ChatCompletion(String content, String finishReason, int completionTokens) {
     }
 
     static Map<String, Object> requestBody(String model, String system, String user, int maxTokens,

@@ -270,11 +270,13 @@ public class TaskService {
         Map<String, Object> responseFormat = PlannerResponseFormat.forPrompt(promptName);
         Supplier<String> invocation = () -> llm.chat(systemPrompt, untrustedInput,
                 maxTokensFor(promptName), responseFormat);
+        Supplier<String> retryInvocation = () -> llm.chat(systemPrompt, untrustedInput,
+                retryMaxTokensFor(promptName), responseFormat);
         String response = "planner".equals(promptName)
-                ? withSingleContractRetry(invocation, agentResponses::hasValidPlannerContract, () -> {
+                ? withSingleContractRetry(invocation, retryInvocation, agentResponses::hasValidPlannerContract, reason -> {
                     plannerContractRetries.increment();
-                    log.warn("Task {} ({}) planner returned an invalid contract; retrying once",
-                            state.id, state.ticketNumber);
+                    log.warn("Task {} ({}) planner retrying once; reason={}",
+                            state.id, state.ticketNumber, reason);
                 })
                 : invocation.get();
         log.info("Task {} ({}) {} agent completed; response_chars={}",
@@ -282,14 +284,28 @@ public class TaskService {
         return response;
     }
 
-    static String withSingleContractRetry(Supplier<String> invocation, Predicate<String> contract,
-                                          Runnable retryObserver) {
-        String response = invocation.get();
+    static String withSingleContractRetry(Supplier<String> invocation, Supplier<String> retryInvocation,
+                                          Predicate<String> contract,
+                                          java.util.function.Consumer<String> retryObserver) {
+        String response;
+        try {
+            response = invocation.get();
+        } catch (LlmCompletionException exception) {
+            if (!exception.retryable()) {
+                throw exception;
+            }
+            retryObserver.accept(exception.reason());
+            return retryInvocation.get();
+        }
         if (contract.test(response)) {
             return response;
         }
-        retryObserver.run();
-        return invocation.get();
+        retryObserver.accept("invalid_contract");
+        return retryInvocation.get();
+    }
+
+    static int retryMaxTokensFor(String promptName) {
+        return "planner".equals(promptName) ? 2_400 : maxTokensFor(promptName);
     }
 
     static int maxTokensFor(String promptName) {
