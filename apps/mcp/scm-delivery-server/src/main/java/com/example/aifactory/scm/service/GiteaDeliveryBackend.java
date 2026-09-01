@@ -51,15 +51,9 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
 
     @Override
     public DeliveryResult createDraftPullRequest(DeliveryCommand command) throws Exception {
+        String commit = prepareCommit(command);
         Path askpass = createAskPass(command.taskId());
         try {
-            git(command, askpass, "checkout", "-b", command.branch());
-            git(command, askpass, "config", "user.email", "ai-factory@example.local");
-            git(command, askpass, "config", "user.name", "AI Factory Delivery");
-            git(command, askpass, "add", "-A");
-            git(command, askpass, "reset", "--", ".ai-plan.md", "changes.patch", ".ai-review.md", ".ai-factory");
-            git(command, askpass, "commit", "-m", command.title());
-            String commit = git(command, askpass, "rev-parse", "HEAD").strip();
             git(command, askpass, "push", remote(command.repository()), "HEAD:refs/heads/" + command.branch());
             JsonNode response = client.post()
                     .uri("/api/v1/repos/{owner}/{name}/pulls", command.repository().owner(), command.repository().name())
@@ -72,6 +66,21 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
             }
             return new DeliveryResult(command.repository().repositoryId(), command.branch(), commit,
                     response.path("id").asLong(), publicUrl(response.path("html_url").asText()), true);
+        } finally {
+            Files.deleteIfExists(askpass);
+        }
+    }
+
+    String prepareCommit(DeliveryCommand command) throws Exception {
+        Path askpass = createAskPass(command.taskId());
+        try {
+            git(command, askpass, "checkout", "-b", command.branch());
+            git(command, askpass, "config", "user.email", "ai-factory@example.local");
+            git(command, askpass, "config", "user.name", "AI Factory Delivery");
+            git(command, askpass, "add", "-A");
+            git(command, askpass, "reset", "--", ".ai-plan.md", "changes.patch", ".ai-review.md", ".ai-factory");
+            git(command, askpass, "commit", "-m", command.title());
+            return git(command, askpass, "rev-parse", "HEAD").strip();
         } finally {
             Files.deleteIfExists(askpass);
         }
