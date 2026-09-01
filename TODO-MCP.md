@@ -373,7 +373,7 @@ Objectif : isoler les secrets SCM et garantir qu'une livraison n'arrive qu'aprè
 
 **Gate du lot 4**
 
-- [ ] Les tests prouvent qu'aucune mutation SCM n'est possible sans approbation valide et qu'un retry ne crée pas de doublon.
+- [x] Les tests prouvent qu'aucune mutation SCM n'est possible sans approbation valide et qu'un retry ne crée pas de doublon.
 
 ### Lot 5 — Assurance et preuves (`MCP-140` à `MCP-169`)
 
