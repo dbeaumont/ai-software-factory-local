@@ -89,3 +89,18 @@ La pile locale utilise désormais `AI_FACTORY_MCP_ENABLED=true` et `AI_FACTORY_M
 Le premier redémarrage sous Spring Boot 4.1.1 a exposé l'absence de `WebClient.Builder` : Boot 4 sépare l'auto-configuration client dans `spring-boot-starter-webclient`. Le starter est maintenant déclaré explicitement dans l'orchestrateur et couvert par `WebClientBoot4ConfigurationTest`.
 
 Le dry-run du manifeste valide les 20 cas et leur répartition Maven, Gradle, npm et catégories fonctionnelles. Aucune tâche cloud n'a été soumise : `AI_FACTORY_RUN_CLOUD_CAMPAIGN=false` reste la barrière explicite avant consommation de capacité externe.
+
+## Campagne cloud complète — 2026-09-01
+
+Une première exécution horodatée `20260901-143253` a révélé un défaut de préparation : les dépôts Gitea `inventory-gradle` et `checkout-node` n'avaient pas de branche `main` publiquement clonable. Cette tentative est conservée comme preuve de diagnostic, mais n'est pas utilisée pour la décision de gate.
+
+Après bootstrap explicite des trois fixtures, vérification de leur clonabilité depuis l'orchestrateur et remise à zéro des métriques en mémoire, la campagne autoritative `20260901-144626` a exécuté les 20 scénarios :
+
+- 20 reconstructions Context shadow réussies et aucun échec du serveur Context MCP ;
+- couverture moyenne des fichiers de 92 %, au-dessus du seuil de 90 % ;
+- validité des citations de 100 % ;
+- 61 588 caractères et environ 15 400 tokens MCP estimés, contre 86 958 caractères et 21 748 tokens directs, soit une réduction d'environ 29,2 % ;
+- 15 réponses Planner exploitables et 5 réponses rejetées car le champ obligatoire `status` était absent ;
+- 20 tâches terminées en échec à une étape du pipeline : refus `NEEDS_CLARIFICATION`, réponse Planner mal formée, patch invalide, test en échec ou indisponibilité des dépendances de scan sécurité.
+
+Ces échecs aval n'invalident pas MCP-054 : le mode shadow continue de servir exclusivement le contexte direct au Planner et les 20 comparaisons Context ont été collectées. Ils interdisent en revanche de conclure à une non-régression globale. MCP-055 reste ouvert jusqu'à la revue des plans, la qualification des cinq réponses mal formées et la décision explicite Produit/RSSI. Les comparaisons sandbox relèvent de MCP-087 et ne sont pas artificiellement créditées à cette campagne.
