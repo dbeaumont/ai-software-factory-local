@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.HashMap;
 import java.util.function.LongSupplier;
 
 /** Host-controlled agent loop. The model can request tools, but cannot extend its own budgets. */
@@ -12,24 +13,32 @@ public final class AgentToolLoop {
     private final Model model;
     private final ToolExecutor tools;
     private final ToolAuthorization authorization;
+    private final SafetyLimits safety;
     private final LongSupplier nanoTime;
 
     public AgentToolLoop(Model model, ToolExecutor tools) {
-        this(model, tools, (actor, tool) -> true, System::nanoTime);
+        this(model, tools, (actor, tool) -> true, SafetyLimits.defaults(), System::nanoTime);
     }
 
     AgentToolLoop(Model model, ToolExecutor tools, LongSupplier nanoTime) {
-        this(model, tools, (actor, tool) -> true, nanoTime);
+        this(model, tools, (actor, tool) -> true, SafetyLimits.defaults(), nanoTime);
     }
 
     public AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization) {
-        this(model, tools, authorization, System::nanoTime);
+        this(model, tools, authorization, SafetyLimits.defaults(), System::nanoTime);
     }
 
-    AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization, LongSupplier nanoTime) {
+    public AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization, SafetyLimits safety) {
+        this(model, tools, authorization, safety, System::nanoTime);
+    }
+
+    AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization,
+                  SafetyLimits safety, LongSupplier nanoTime) {
         this.model = Objects.requireNonNull(model);
         this.tools = Objects.requireNonNull(tools);
         this.authorization = Objects.requireNonNull(authorization);
+        this.safety = Objects.requireNonNull(safety);
+        this.safety.validate();
         this.nanoTime = Objects.requireNonNull(nanoTime);
     }
 
@@ -47,9 +56,11 @@ public final class AgentToolLoop {
         messages.add(new Message("user", userPrompt, null));
         int tokens = 0;
         long costMicros = 0;
+        Map<String, Integer> repeatedCalls = new HashMap<>();
 
         for (int turnNumber = 1; turnNumber <= budget.maxTurns(); turnNumber++) {
             requireWithinDeadline(deadline);
+            requireContextWithinLimit(messages);
             Turn turn = Objects.requireNonNull(model.next(List.copyOf(messages)), "Model returned no turn");
             tokens = Math.addExact(tokens, Math.addExact(turn.promptTokens(), turn.completionTokens()));
             costMicros = Math.addExact(costMicros, turn.costMicros());
@@ -65,19 +76,34 @@ public final class AgentToolLoop {
             if (turn.stop() != Stop.TOOL_CALLS || turn.toolCalls().isEmpty() || turn.finalResult() != null) {
                 throw new AgentLoopException("invalid_stop", "The model must explicitly stop with FINAL or TOOL_CALLS");
             }
+            if (turn.toolCalls().size() > safety.maxCallsPerTurn()) {
+                throw new AgentLoopException("fan_out", "Agent requested too many tools in one turn");
+            }
 
             messages.add(new Message("assistant", "", turn.toolCalls()));
             for (ToolCall call : turn.toolCalls()) {
                 requireWithinDeadline(deadline);
+                String fingerprint = call.name() + "\n" + call.arguments();
+                if (repeatedCalls.merge(fingerprint, 1, Integer::sum) > safety.maxIdenticalCalls()) {
+                    throw new AgentLoopException("repeated_call", "Agent repeated an identical tool call too often");
+                }
                 if (!authorization.isAllowed(actor, call.name())) {
                     throw new AgentLoopException("tool_denied",
                             "Host policy denied tool " + call.name() + " for role " + actor.role());
                 }
                 String output = tools.execute(call);
                 messages.add(new Message("tool", output, List.of(call)));
+                requireContextWithinLimit(messages);
             }
         }
         throw new AgentLoopException("max_turns", "Agent exceeded its maximum number of turns");
+    }
+
+    private void requireContextWithinLimit(List<Message> messages) {
+        long chars = messages.stream().mapToLong(message -> message.content() == null ? 0 : message.content().length()).sum();
+        if (chars > safety.maxContextChars()) {
+            throw new AgentLoopException("context_limit", "Agent context exceeded its host limit");
+        }
     }
 
     private void requireWithinDeadline(long deadline) {
@@ -122,6 +148,18 @@ public final class AgentToolLoop {
             if (maxTurns < 1 || deadline == null || deadline.isZero() || deadline.isNegative()
                     || maxTokens < 1 || maxCostMicros < 0) {
                 throw new IllegalArgumentException("Agent budgets must be positive (cost may be zero)");
+            }
+        }
+    }
+
+    public record SafetyLimits(int maxCallsPerTurn, int maxIdenticalCalls, int maxContextChars) {
+        public static SafetyLimits defaults() {
+            return new SafetyLimits(12, 2, 1_000_000);
+        }
+
+        void validate() {
+            if (maxCallsPerTurn < 1 || maxIdenticalCalls < 1 || maxContextChars < 1) {
+                throw new IllegalArgumentException("Agent safety limits must be positive");
             }
         }
     }

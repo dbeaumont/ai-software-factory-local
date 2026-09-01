@@ -53,7 +53,7 @@ class AgentToolLoopTest {
         AgentToolLoop deadlineLoop = new AgentToolLoop(messages -> {
             clock.set(Duration.ofSeconds(2).toNanos());
             return finalTurn(1, 1, 0);
-        }, call -> "ok", clock::get);
+        }, call -> "ok", (actor, tool) -> true, AgentToolLoop.SafetyLimits.defaults(), clock::get);
         assertEquals("deadline", exceptionFor(deadlineLoop,
                 new AgentToolLoop.Budget(1, Duration.ofSeconds(1), 100, 10)).reason());
 
@@ -79,6 +79,32 @@ class AgentToolLoopTest {
 
         assertEquals("tool_denied", error.reason());
         assertEquals(0, executions.get());
+    }
+
+    @Test
+    void detectsFanOutRepeatedCallsAndContextExplosion() {
+        AgentToolLoop fanOut = loopReturning(List.of(tool("1", "a"), tool("2", "b")), "ok",
+                new AgentToolLoop.SafetyLimits(1, 2, 100));
+        assertEquals("fan_out", exceptionFor(fanOut, BUDGET).reason());
+
+        AgentToolLoop repeated = loopReturning(List.of(tool("ignored-id", "same")), "ok",
+                new AgentToolLoop.SafetyLimits(2, 1, 100));
+        assertEquals("repeated_call", exceptionFor(repeated, BUDGET).reason());
+
+        AgentToolLoop oversized = loopReturning(List.of(tool("1", "context")), "x".repeat(101),
+                new AgentToolLoop.SafetyLimits(2, 2, 100));
+        assertEquals("context_limit", exceptionFor(oversized, BUDGET).reason());
+    }
+
+    private static AgentToolLoop loopReturning(List<AgentToolLoop.ToolCall> calls, String result,
+                                               AgentToolLoop.SafetyLimits limits) {
+        return new AgentToolLoop(messages -> new AgentToolLoop.Turn(
+                AgentToolLoop.Stop.TOOL_CALLS, null, calls, 1, 1, 0), call -> result,
+                (actor, tool) -> true, limits);
+    }
+
+    private static AgentToolLoop.ToolCall tool(String id, String value) {
+        return new AgentToolLoop.ToolCall(id, "context.read_file", Map.of("path", value));
     }
 
     private static AgentToolLoop.AgentLoopException exceptionFor(AgentToolLoop loop, AgentToolLoop.Budget budget) {
