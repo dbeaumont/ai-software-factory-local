@@ -19,6 +19,7 @@ class McpFactoryPropertiesTest {
                     "ai-factory.mcp.repository-context-server-name=repository-context-mcp",
                     "ai-factory.mcp.sandbox-enabled=true",
                     "ai-factory.mcp.sandbox-mode=MCP_ACTIVE",
+                    "ai-factory.mcp.sandbox-active-operations=validate_patch,run_tests",
                     "ai-factory.mcp.sandbox-server-name=sandbox-execution-mcp",
                     "ai-factory.mcp.sandbox-poll-interval=250ms",
                     "ai-factory.mcp.sandbox-poll-timeout=20m");
@@ -30,6 +31,7 @@ class McpFactoryPropertiesTest {
             McpFactoryProperties properties = context.getBean(McpFactoryProperties.class);
             assertThat(properties.sandboxEnabled()).isTrue();
             assertThat(properties.sandboxMode()).isEqualTo(McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+            assertThat(properties.sandboxActiveOperations()).containsExactlyInAnyOrder("validate_patch", "run_tests");
             assertThat(properties.sandboxPollInterval()).isEqualTo(Duration.ofMillis(250));
             assertThat(properties.sandboxPollTimeout()).isEqualTo(Duration.ofMinutes(20));
         });

@@ -198,6 +198,7 @@ lus par Git : les métacaractères shell qu'ils contiennent ne sont pas évalué
 AI_FACTORY_MCP_CLIENT_ENABLED=true
 AI_FACTORY_MCP_SANDBOX_ENABLED=true
 AI_FACTORY_MCP_SANDBOX_MODE=MCP_ACTIVE
+AI_FACTORY_MCP_SANDBOX_ACTIVE_OPERATIONS=validate_patch,apply_patch,run_tests,run_quality,run_security
 ```
 
 Le contrôleur reste une solution locale POC-only : lui seul monte encore `/var/run/docker.sock`. Son conteneur est

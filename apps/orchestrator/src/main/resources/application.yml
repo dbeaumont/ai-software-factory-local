@@ -41,6 +41,7 @@ ai-factory:
     repository-context-server-name: repository-context-mcp
     sandbox-enabled: ${AI_FACTORY_MCP_SANDBOX_ENABLED:false}
     sandbox-mode: ${AI_FACTORY_MCP_SANDBOX_MODE:DIRECT}
+    sandbox-active-operations: ${AI_FACTORY_MCP_SANDBOX_ACTIVE_OPERATIONS:validate_patch,apply_patch,run_tests,run_quality,run_security}
     sandbox-server-name: sandbox-execution-mcp
     sandbox-poll-interval: ${AI_FACTORY_MCP_SANDBOX_POLL_INTERVAL:250ms}
     sandbox-poll-timeout: ${AI_FACTORY_MCP_SANDBOX_POLL_TIMEOUT:20m}

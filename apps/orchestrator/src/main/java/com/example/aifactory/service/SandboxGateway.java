@@ -30,7 +30,7 @@ public class SandboxGateway implements SandboxExecutor {
 
     @Override
     public String applyPatch(Path workspace, String taskId, String sourceCommit) throws Exception {
-        if (active()) {
+        if (active("apply_patch")) {
             return mcp.applyPatch(workspace, taskId, sourceCommit);
         }
         String result = direct.applyPatch(workspace, taskId, sourceCommit);
@@ -65,7 +65,7 @@ public class SandboxGateway implements SandboxExecutor {
 
     private String executeComparable(String operation, Path workspace, String taskId, String sourceCommit,
                                      SandboxCall directCall, SandboxCall mcpCall) throws Exception {
-        if (active()) {
+        if (active(operation)) {
             return mcpCall.call(workspace, taskId, sourceCommit);
         }
         String directResult;
@@ -105,8 +105,11 @@ public class SandboxGateway implements SandboxExecutor {
                 .record(chars);
     }
 
-    private boolean active() {
+    private boolean active(String operation) {
         if (properties.sandboxMode() != McpFactoryProperties.SandboxMode.MCP_ACTIVE) {
+            return false;
+        }
+        if (!properties.sandboxOperationActive(operation)) {
             return false;
         }
         if (!properties.sandboxEnabled()) {
