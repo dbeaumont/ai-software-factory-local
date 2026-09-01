@@ -210,6 +210,28 @@ services:
       start_period: 10s
     networks: [mcp-internal]
 
+  evidence-mcp:
+    build:
+      context: ../apps/mcp/evidence-server
+      args: { MAVEN_MIRROR_URL: "${MAVEN_MIRROR_URL}" }
+      secrets: [artifactory_token]
+    environment:
+      AI_FACTORY_EVIDENCE_STATE_ROOT: /var/lib/ai-factory/evidence
+      AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES: ${AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES:-1048576}
+    volumes:
+      - evidence-state:/var/lib/ai-factory/evidence
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8095/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [mcp-internal]
+
   # The only component shared by untrusted jobs and an egress-capable network.
   # Squid denies every destination not listed in its immutable configuration.
   sandbox-egress-proxy:
@@ -480,6 +502,7 @@ volumes:
   sandbox-job-state:
   context-registry-state:
   scm-delivery-state:
+  evidence-state:
   sonar-db-data:
   sonar-data:
   sonar-logs:

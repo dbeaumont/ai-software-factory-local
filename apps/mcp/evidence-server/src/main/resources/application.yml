@@ -1,0 +1,26 @@
+server:
+  port: 8095
+spring:
+  application:
+    name: evidence-mcp
+  ai:
+    mcp:
+      server:
+        name: evidence-mcp
+        version: 0.1.0
+        type: SYNC
+        protocol: STATELESS
+        instructions: "Immutable task-scoped evidence storage. Digests are verified before persistence."
+        capabilities: { tool: true, resource: false, prompt: false, completion: false }
+        streamable-http: { mcp-endpoint: /mcp }
+management:
+  endpoints:
+    web:
+      exposure: { include: "health,info,prometheus" }
+  endpoint:
+    health:
+      probes: { enabled: true }
+ai-factory:
+  evidence:
+    state-root: ${AI_FACTORY_EVIDENCE_STATE_ROOT:/var/lib/ai-factory/evidence}
+    max-artifact-bytes: ${AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES:1048576}
