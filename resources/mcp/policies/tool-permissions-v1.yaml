@@ -7,6 +7,7 @@ roles:
       - context.search_code
       - context.read_file
       - context.get_repository_rules
+      - context.get_dependencies
       - sandbox.validate_patch
       - sandbox.apply_patch
       - sandbox.run_tests
@@ -20,12 +21,14 @@ roles:
       - context.search_code
       - context.read_file
       - context.get_repository_rules
+      - context.get_dependencies
   developer:
     tools:
       - context.list_tree
       - context.search_code
       - context.read_file
       - context.get_repository_rules
+      - context.get_dependencies
   patch-repair:
     tools:
       - context.read_file
@@ -33,10 +36,12 @@ roles:
     tools:
       - context.search_code
       - context.read_file
+      - context.get_dependencies
   reviewer:
     tools:
       - context.search_code
       - context.read_file
+      - context.get_dependencies
 limits:
   defaultsPolicy: default-limits-v1
   maxResponseBytes: 65536

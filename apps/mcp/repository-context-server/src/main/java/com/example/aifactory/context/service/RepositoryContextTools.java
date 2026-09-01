@@ -2,9 +2,16 @@ package com.example.aifactory.context.service;
 
 import com.example.aifactory.context.config.RepositoryContextProperties;
 import com.example.aifactory.context.model.ContextModels.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,6 +48,8 @@ public class RepositoryContextTools {
     private static final Set<String> CODE_SEARCHERS = Set.of("workflow", "planner", "developer", "tester", "reviewer");
     private static final Set<String> FILE_READERS = Set.of(
             "workflow", "planner", "developer", "patch-repair", "tester", "reviewer");
+    private static final Set<String> DEPENDENCY_READERS = Set.of(
+            "workflow", "planner", "developer", "tester", "reviewer");
     private static final Set<String> TEXT_EXTENSIONS = Set.of(
             ".java", ".kt", ".xml", ".yml", ".yaml", ".json", ".ts", ".js", ".css", ".html",
             ".properties", ".gradle", ".md", ".txt", ".toml", ".sh", ".sql", ".py", ".go");
@@ -48,6 +57,8 @@ public class RepositoryContextTools {
     private final RepositoryContextProperties properties;
     private final TaskWorkspaceRegistry workspaceRegistry;
     private final Map<String, TreeCursor> treeCursors = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, DependencyCursor> dependencyCursors = new java.util.concurrent.ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public RepositoryContextTools(RepositoryContextProperties properties, TaskWorkspaceRegistry workspaceRegistry) {
         this.properties = properties;
@@ -218,6 +229,255 @@ public class RepositoryContextTools {
                             + document.path().replace("/", "%2F")));
         }
         return new RepositoryRulesResult(request.sourceCommit(), List.copyOf(rules));
+    }
+
+    @Tool(name = "context.get_dependencies", description = "Read direct dependencies from repository manifests without downloading dependencies or executing builds")
+    public GetDependenciesResult getDependenciesTool(
+            @ToolParam(description = "Contract schema version, currently 1") String schema_version,
+            @ToolParam(description = "Registered AI Factory task identifier") String task_id,
+            @ToolParam(description = "Stable workflow attempt identifier") String attempt_id,
+            @ToolParam(description = "Immutable 40-character source commit SHA") String source_commit,
+            @ToolParam(description = "Authorized caller role") String actor,
+            @ToolParam(description = "32-character distributed trace identifier") String trace_id,
+            @ToolParam(description = "W3C trace context") String traceparent,
+            @ToolParam(description = "RFC 3339 call deadline") String deadline,
+            @ToolParam(description = "Repository-relative module directory or manifest path") String module,
+            @ToolParam(required = false, description = "MAVEN, GRADLE, NPM or UNKNOWN for automatic detection") String ecosystem,
+            @ToolParam(required = false, description = "Maximum dependencies returned on this page") Integer max_dependencies,
+            @ToolParam(required = false, description = "Opaque continuation cursor") String cursor) throws Exception {
+        return getDependencies(new GetDependenciesRequest(schema_version, task_id, attempt_id, source_commit,
+                actor, trace_id, traceparent, deadline, module, ecosystem, max_dependencies, cursor));
+    }
+
+    public GetDependenciesResult getDependencies(GetDependenciesRequest request) throws Exception {
+        authorize(request.actor(), DEPENDENCY_READERS, "context.get_dependencies");
+        Path workspace = workspace(request.context());
+        pruneDependencyCursors();
+        if (request.cursor() != null && !request.cursor().isBlank()) {
+            return continueDependencies(request);
+        }
+        if (request.module() == null || request.module().isBlank() || request.module().length() > 1024) {
+            throw new IllegalArgumentException("module must contain between 1 and 1024 characters");
+        }
+        Path requested = resolve(workspace, request.module());
+        requireVisibleStart(workspace, requested);
+        Manifest manifest = selectManifest(requested, request.ecosystem());
+        if (!isVisible(workspace, manifest.path()) || Files.size(manifest.path()) > properties.maxFileBytes()) {
+            throw new IllegalArgumentException("dependency manifest is excluded or exceeds the configured size limit");
+        }
+        ensureBeforeDeadline(request.context());
+        List<Dependency> dependencies = switch (manifest.ecosystem()) {
+            case "MAVEN" -> parseMaven(workspace, manifest.path());
+            case "GRADLE" -> parseGradle(workspace, manifest.path());
+            case "NPM" -> parseNpm(workspace, manifest.path());
+            default -> throw new IllegalArgumentException("unsupported dependency ecosystem");
+        };
+        boolean hardTruncated = dependencies.size() > 2_000;
+        dependencies = dependencies.stream()
+                .sorted(Comparator.comparing(Dependency::declarationPath)
+                        .thenComparingInt(Dependency::declarationLine)
+                        .thenComparing(Dependency::name))
+                .limit(2_000)
+                .toList();
+        int pageSize = bounded(request.maxDependencies(), 500, 1, 2_000, "maxDependencies");
+        String module = normalizedRelative(workspace,
+                Files.isDirectory(requested, LinkOption.NOFOLLOW_LINKS) ? requested : requested.getParent());
+        if (module.isEmpty()) module = ".";
+        return dependencyPage(request.taskId(), request.sourceCommit(), module, manifest.ecosystem(),
+                dependencies, 0, pageSize, hardTruncated);
+    }
+
+    private Manifest selectManifest(Path requested, String requestedEcosystem) {
+        String ecosystem = requestedEcosystem == null ? "UNKNOWN" : requestedEcosystem.toUpperCase(Locale.ROOT);
+        if (!Set.of("MAVEN", "GRADLE", "NPM", "UNKNOWN").contains(ecosystem)) {
+            throw new IllegalArgumentException("ecosystem must be MAVEN, GRADLE, NPM or UNKNOWN");
+        }
+        if (Files.isRegularFile(requested, LinkOption.NOFOLLOW_LINKS)) {
+            String detected = ecosystemForManifest(requested.getFileName().toString());
+            if (detected == null || !ecosystem.equals("UNKNOWN") && !ecosystem.equals(detected)) {
+                throw new IllegalArgumentException("module is not a manifest for the requested ecosystem");
+            }
+            return new Manifest(requested, detected);
+        }
+        List<Manifest> candidates = List.of(
+                new Manifest(requested.resolve("pom.xml"), "MAVEN"),
+                new Manifest(requested.resolve("build.gradle"), "GRADLE"),
+                new Manifest(requested.resolve("build.gradle.kts"), "GRADLE"),
+                new Manifest(requested.resolve("package.json"), "NPM"));
+        return candidates.stream()
+                .filter(candidate -> ecosystem.equals("UNKNOWN") || ecosystem.equals(candidate.ecosystem()))
+                .filter(candidate -> Files.isRegularFile(candidate.path(), LinkOption.NOFOLLOW_LINKS))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("no supported dependency manifest found in module"));
+    }
+
+    private static String ecosystemForManifest(String name) {
+        return switch (name) {
+            case "pom.xml" -> "MAVEN";
+            case "build.gradle", "build.gradle.kts" -> "GRADLE";
+            case "package.json" -> "NPM";
+            default -> null;
+        };
+    }
+
+    private List<Dependency> parseMaven(Path workspace, Path manifest) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        Element project;
+        try (var input = Files.newInputStream(manifest)) {
+            project = factory.newDocumentBuilder().parse(input).getDocumentElement();
+        }
+        Element declarations = child(project, "dependencies");
+        if (declarations == null) return List.of();
+        List<String> lines = Files.readAllLines(manifest, StandardCharsets.UTF_8);
+        List<Dependency> result = new ArrayList<>();
+        for (Element declaration : children(declarations, "dependency")) {
+            String group = childText(declaration, "groupId");
+            String artifact = childText(declaration, "artifactId");
+            if (group == null || artifact == null) continue;
+            String version = childText(declaration, "version");
+            String scope = mavenScope(childText(declaration, "scope"), childText(declaration, "optional"));
+            result.add(dependency(group + ':' + artifact, version, scope,
+                    normalizedRelative(workspace, manifest), declarationLine(lines, artifact)));
+        }
+        return List.copyOf(result);
+    }
+
+    private List<Dependency> parseGradle(Path workspace, Path manifest) throws IOException {
+        Pattern coordinate = Pattern.compile("^\\s*([A-Za-z][A-Za-z0-9_]*)\\s*(?:\\(|\\s)\\s*['\"]([^'\"]+)['\"]");
+        List<String> lines = Files.readAllLines(manifest, StandardCharsets.UTF_8);
+        List<Dependency> result = new ArrayList<>();
+        for (int index = 0; index < lines.size(); index++) {
+            java.util.regex.Matcher match = coordinate.matcher(lines.get(index));
+            if (!match.find()) continue;
+            String[] parts = match.group(2).split(":", 3);
+            if (parts.length < 2) continue;
+            result.add(dependency(parts[0] + ':' + parts[1], parts.length == 3 ? parts[2] : null,
+                    gradleScope(match.group(1)), normalizedRelative(workspace, manifest), index + 1));
+        }
+        return List.copyOf(result);
+    }
+
+    private List<Dependency> parseNpm(Path workspace, Path manifest) throws IOException {
+        JsonNode root = objectMapper.readTree(Files.readAllBytes(manifest));
+        if (!root.isObject()) throw new IllegalArgumentException("package.json must contain a JSON object");
+        List<String> lines = Files.readAllLines(manifest, StandardCharsets.UTF_8);
+        List<Dependency> result = new ArrayList<>();
+        addNpmDependencies(result, root.path("dependencies"), "RUNTIME", workspace, manifest, lines);
+        addNpmDependencies(result, root.path("devDependencies"), "DEVELOPMENT", workspace, manifest, lines);
+        addNpmDependencies(result, root.path("peerDependencies"), "COMPILE", workspace, manifest, lines);
+        addNpmDependencies(result, root.path("optionalDependencies"), "OPTIONAL", workspace, manifest, lines);
+        return List.copyOf(result);
+    }
+
+    private static void addNpmDependencies(List<Dependency> result, JsonNode declarations, String scope,
+                                           Path workspace, Path manifest, List<String> lines) {
+        if (!declarations.isObject()) return;
+        declarations.fields().forEachRemaining(entry -> {
+            if (entry.getValue().isTextual()) {
+                result.add(dependency(entry.getKey(), entry.getValue().textValue(), scope,
+                        normalizedRelative(workspace, manifest), declarationLine(lines, '"' + entry.getKey() + '"')));
+            }
+        });
+    }
+
+    private static Dependency dependency(String name, String version, String scope, String path, int line) {
+        if (name == null || name.isBlank() || name.length() > 512 || version != null && version.length() > 256
+                || path == null || path.isBlank() || path.length() > 1024 || line < 1) {
+            throw new IllegalArgumentException("dependency declaration exceeds contract limits");
+        }
+        return new Dependency(name, version, scope, true, path, line);
+    }
+
+    private static String mavenScope(String scope, String optional) {
+        if ("true".equalsIgnoreCase(optional)) return "OPTIONAL";
+        if (scope == null || scope.isBlank() || scope.equals("compile") || scope.equals("provided")) return "COMPILE";
+        return switch (scope.toLowerCase(Locale.ROOT)) {
+            case "runtime" -> "RUNTIME";
+            case "test" -> "TEST";
+            case "system", "import" -> "BUILD";
+            default -> "UNKNOWN";
+        };
+    }
+
+    private static String gradleScope(String configuration) {
+        String lower = configuration.toLowerCase(Locale.ROOT);
+        if (lower.contains("test")) return "TEST";
+        if (lower.contains("runtime")) return "RUNTIME";
+        if (lower.contains("development")) return "DEVELOPMENT";
+        if (lower.contains("compile") || lower.equals("implementation") || lower.equals("api")) return "COMPILE";
+        if (lower.contains("annotationprocessor") || lower.contains("classpath")) return "BUILD";
+        return "UNKNOWN";
+    }
+
+    private static int declarationLine(List<String> lines, String needle) {
+        for (int index = 0; index < lines.size(); index++) {
+            if (lines.get(index).contains(needle)) return index + 1;
+        }
+        return 1;
+    }
+
+    private static Element child(Element parent, String name) {
+        for (Node node = parent.getFirstChild(); node != null; node = node.getNextSibling()) {
+            if (node instanceof Element element && localName(element).equals(name)) return element;
+        }
+        return null;
+    }
+
+    private static List<Element> children(Element parent, String name) {
+        List<Element> result = new ArrayList<>();
+        for (Node node = parent.getFirstChild(); node != null; node = node.getNextSibling()) {
+            if (node instanceof Element element && localName(element).equals(name)) result.add(element);
+        }
+        return result;
+    }
+
+    private static String childText(Element parent, String name) {
+        Element child = child(parent, name);
+        if (child == null) return null;
+        String value = child.getTextContent().strip();
+        return value.isEmpty() ? null : value;
+    }
+
+    private static String localName(Element element) {
+        return element.getLocalName() == null ? element.getTagName() : element.getLocalName();
+    }
+
+    private GetDependenciesResult continueDependencies(GetDependenciesRequest request) {
+        DependencyCursor state = dependencyCursors.remove(request.cursor());
+        if (state == null || state.expiresAt().isBefore(Instant.now())) {
+            throw new IllegalArgumentException("unknown or expired dependency cursor");
+        }
+        if (!state.taskId().equals(request.taskId()) || !state.sourceCommit().equals(request.sourceCommit())
+                || !state.module().equals(request.module())) {
+            throw new SecurityException("dependency cursor does not belong to this task, commit and module");
+        }
+        return dependencyPage(state.taskId(), state.sourceCommit(), state.module(), state.ecosystem(),
+                state.dependencies(), state.offset(), state.pageSize(), state.hardTruncated());
+    }
+
+    private GetDependenciesResult dependencyPage(String taskId, String sourceCommit, String module, String ecosystem,
+                                                 List<Dependency> dependencies, int offset, int pageSize,
+                                                 boolean hardTruncated) {
+        int end = Math.min(dependencies.size(), offset + pageSize);
+        String nextCursor = null;
+        if (end < dependencies.size()) {
+            nextCursor = randomCursor();
+            dependencyCursors.put(nextCursor, new DependencyCursor(taskId, sourceCommit, module, ecosystem,
+                    dependencies, end, pageSize, hardTruncated, Instant.now().plus(CURSOR_TTL)));
+        }
+        return new GetDependenciesResult(sourceCommit, module, ecosystem,
+                List.copyOf(dependencies.subList(offset, end)), hardTruncated || nextCursor != null, nextCursor);
+    }
+
+    private void pruneDependencyCursors() {
+        Instant now = Instant.now();
+        dependencyCursors.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
     }
 
     private ReadFileResult read(Path workspace, String requestedPath, Integer requestedStart, Integer requestedEnd,
@@ -555,6 +815,21 @@ public class RepositoryContextTools {
             String taskId,
             String sourceCommit,
             List<TreeEntry> entries,
+            int offset,
+            int pageSize,
+            boolean hardTruncated,
+            Instant expiresAt) {
+    }
+
+    private record Manifest(Path path, String ecosystem) {
+    }
+
+    private record DependencyCursor(
+            String taskId,
+            String sourceCommit,
+            String module,
+            String ecosystem,
+            List<Dependency> dependencies,
             int offset,
             int pageSize,
             boolean hardTruncated,

@@ -56,6 +56,25 @@ class McpResponseValidatorTest {
                 .hasMessageContaining("byte limit");
     }
 
+    @Test
+    void validatesStaticDependencyResultsWithProvenance() throws Exception {
+        McpResponseValidator validator = new McpResponseValidator(mapper, properties(65_536));
+
+        assertThatNoException().isThrownBy(() -> validator.validate("context.get_dependencies", mapper.readTree("""
+                {
+                  "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "module": ".",
+                  "ecosystem": "MAVEN",
+                  "dependencies": [{
+                    "name": "org.example:library", "version": "1.0", "scope": "COMPILE",
+                    "direct": true, "declaration_path": "pom.xml", "declaration_line": 12
+                  }],
+                  "truncated": false,
+                  "next_cursor": null
+                }
+                """)));
+    }
+
     private static McpClientProperties properties(int maxResponseBytes) {
         McpClientProperties.RetryPolicy readOnly = new McpClientProperties.RetryPolicy(
                 3, Duration.ofMillis(200), Duration.ofSeconds(2), 2.0, 0.2);

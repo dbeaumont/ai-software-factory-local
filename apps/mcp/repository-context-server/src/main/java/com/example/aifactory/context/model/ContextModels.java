@@ -154,6 +154,49 @@ public final class ContextModels {
             List<RepositoryRule> rules) {
     }
 
+    public record GetDependenciesRequest(
+            String schemaVersion,
+            String taskId,
+            String attemptId,
+            String sourceCommit,
+            String actor,
+            String traceId,
+            String traceparent,
+            String deadline,
+            String module,
+            String ecosystem,
+            Integer maxDependencies,
+            String cursor) {
+        public RequestContext context() {
+            return new RequestContext(schemaVersion, taskId, attemptId, sourceCommit, actor, traceId, traceparent, deadline);
+        }
+
+        public GetDependenciesRequest(String schemaVersion, String taskId, String sourceCommit, String actor,
+                                      String traceId, String module, String ecosystem, Integer maxDependencies) {
+            this(schemaVersion, taskId, "attempt-test", sourceCommit, actor, traceId,
+                    ContextModels.traceparent(traceId), ContextModels.deadline(), module, ecosystem,
+                    maxDependencies, null);
+        }
+    }
+
+    public record Dependency(
+            String name,
+            String version,
+            String scope,
+            boolean direct,
+            @JsonProperty("declaration_path") String declarationPath,
+            @JsonProperty("declaration_line") int declarationLine) {
+    }
+
+    public record GetDependenciesResult(
+            @JsonProperty("source_commit") String sourceCommit,
+            String module,
+            String ecosystem,
+            List<Dependency> dependencies,
+            boolean truncated,
+            @JsonProperty("next_cursor") String nextCursor) {
+    }
+
     private static String traceparent(String traceId) {
         return "00-" + traceId + "-0123456789abcdef-01";
     }

@@ -13,7 +13,7 @@ Un outil sans schéma local est refusé. Les schémas utilisent `additionalPrope
 
 ## Schémas actifs
 
-Les schémas embarqués depuis `resources/mcp/schemas` couvrent les quatre outils `repository-context-mcp` et les sept outils `sandbox-execution-mcp`. Les résultats de contexte sont normalisés en `snake_case`, comme ceux du sandbox, afin que les noms sérialisés correspondent aux contrats du protocole.
+Les schémas embarqués depuis `resources/mcp/schemas` couvrent les cinq outils `repository-context-mcp` et les sept outils `sandbox-execution-mcp`. Les résultats de contexte sont normalisés en `snake_case`, comme ceux du sandbox, afin que les noms sérialisés correspondent aux contrats du protocole.
 
 Les schémas `*-runtime-v1.schema.json` décrivent les objets effectivement retournés aujourd'hui par les serveurs. Les schémas enveloppés existants restent la cible d'industrialisation ; leur adoption nécessitera une évolution coordonnée client/serveur et une nouvelle version de contrat.
 

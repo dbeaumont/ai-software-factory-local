@@ -16,7 +16,7 @@ Les valeurs initiales sont :
 
 | Serveur | Version | Outils autorisés |
 |---|---:|---|
-| `repository-context-mcp` | `0.1.0` | `context.get_repository_rules`, `context.list_tree`, `context.read_file`, `context.search_code` |
+| `repository-context-mcp` | `0.2.0` | `context.get_dependencies`, `context.get_repository_rules`, `context.list_tree`, `context.read_file`, `context.search_code` |
 | `sandbox-execution-mcp` | `0.1.0` | `sandbox.validate_patch`, `sandbox.apply_patch`, `sandbox.run_tests`, `sandbox.run_quality`, `sandbox.run_security`, `sandbox.get_execution`, `sandbox.cancel_execution` |
 
 Les versions de protocole acceptées sont `2025-11-25` puis `2025-06-18`, afin de couvrir la version négociée par le SDK courant et la révision précédente. Une modification de cette liste, d'une version serveur ou d'une allowlist est un changement de configuration contrôlé.

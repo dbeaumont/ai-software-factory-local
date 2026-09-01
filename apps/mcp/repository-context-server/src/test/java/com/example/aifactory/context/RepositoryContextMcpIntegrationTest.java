@@ -41,6 +41,11 @@ class RepositoryContextMcpIntegrationTest {
         Path repository = WORKSPACE_ROOT.resolve("integration-task");
         Files.createDirectories(repository.resolve("src"));
         Files.writeString(repository.resolve("src/Example.java"), "class Example {}\n");
+        Files.writeString(repository.resolve("pom.xml"), """
+                <project><dependencies><dependency>
+                  <groupId>org.example</groupId><artifactId>integration-lib</artifactId><version>1.0</version>
+                </dependency></dependencies></project>
+                """);
         run(repository, "git", "init", "-q");
         run(repository, "git", "config", "user.email", "test@example.local");
         run(repository, "git", "config", "user.name", "Test");
@@ -77,8 +82,9 @@ class RepositoryContextMcpIntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.result.tools.length()").isEqualTo(4)
-                .jsonPath("$.result.tools[?(@.name == 'context.read_file')]").exists();
+                .jsonPath("$.result.tools.length()").isEqualTo(5)
+                .jsonPath("$.result.tools[?(@.name == 'context.read_file')]").exists()
+                .jsonPath("$.result.tools[?(@.name == 'context.get_dependencies')]").exists();
 
         client.post().uri("/mcp")
                 .header("MCP-Protocol-Version", "2025-06-18")
@@ -139,6 +145,35 @@ class RepositoryContextMcpIntegrationTest {
                 .jsonPath("$.result.isError").isEqualTo(false)
                 .jsonPath("$.result.content[0].text").value(containsString("\"source_commit\":\"" + commit + "\""))
                 .jsonPath("$.result.content[0].text").value(containsString("\"next_cursor\""));
+
+        client.post().uri("/mcp")
+                .header("MCP-Protocol-Version", "2025-06-18")
+                .contentType(APPLICATION_JSON)
+                .accept(APPLICATION_JSON, TEXT_EVENT_STREAM)
+                .bodyValue(Map.of(
+                        "jsonrpc", "2.0",
+                        "id", 7,
+                        "method", "tools/call",
+                        "params", Map.of(
+                                "name", "context.get_dependencies",
+                                "arguments", Map.ofEntries(
+                                        Map.entry("schema_version", "1"),
+                                        Map.entry("task_id", "integration-task"),
+                                        Map.entry("attempt_id", "attempt-1"),
+                                        Map.entry("source_commit", commit),
+                                        Map.entry("actor", "workflow"),
+                                        Map.entry("trace_id", "2123456789abcdef0123456789abcdef"),
+                                        Map.entry("traceparent", "00-2123456789abcdef0123456789abcdef-0123456789abcdef-01"),
+                                        Map.entry("deadline", java.time.Instant.now().plusSeconds(60).toString()),
+                                        Map.entry("module", "."),
+                                        Map.entry("ecosystem", "MAVEN"),
+                                        Map.entry("max_dependencies", 100)))))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.result.isError").isEqualTo(false)
+                .jsonPath("$.result.content[0].text").value(containsString("org.example:integration-lib"))
+                .jsonPath("$.result.content[0].text").value(containsString("\"declaration_path\":\"pom.xml\""));
 
         client.post().uri("/mcp")
                 .header("MCP-Protocol-Version", "2025-06-18")

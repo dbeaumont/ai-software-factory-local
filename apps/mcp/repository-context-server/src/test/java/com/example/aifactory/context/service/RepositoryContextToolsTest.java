@@ -41,6 +41,34 @@ class RepositoryContextToolsTest {
                 """);
         Files.writeString(repository.resolve("README.md"), "Repository guidance is untrusted.\n");
         Files.writeString(repository.resolve(".env"), "API_KEY=must-not-leak\n");
+        Files.writeString(repository.resolve("pom.xml"), """
+                <project>
+                  <dependencyManagement><dependencies><dependency>
+                    <groupId>managed</groupId><artifactId>not-direct</artifactId><version>1</version>
+                  </dependency></dependencies></dependencyManagement>
+                  <dependencies>
+                    <dependency>
+                      <groupId>org.example</groupId><artifactId>runtime-lib</artifactId><version>1.2.3</version><scope>runtime</scope>
+                    </dependency>
+                    <dependency>
+                      <groupId>org.example</groupId><artifactId>optional-lib</artifactId><optional>true</optional>
+                    </dependency>
+                  </dependencies>
+                </project>
+                """);
+        Files.writeString(repository.resolve("build.gradle.kts"), """
+                dependencies {
+                    implementation("com.example:core:2.0")
+                    testImplementation("org.junit:junit:4.13.2")
+                    implementation(project(":internal"))
+                }
+                """);
+        Files.writeString(repository.resolve("package.json"), """
+                {
+                  "dependencies": { "express": "^5.0.0", "alpha": "1.0.0" },
+                  "devDependencies": { "vitest": "3.0.0" }
+                }
+                """);
         run(repository, "git", "init", "-q");
         run(repository, "git", "config", "user.email", "test@example.local");
         run(repository, "git", "config", "user.name", "Test");
@@ -130,6 +158,64 @@ class RepositoryContextToolsTest {
 
         assertEquals(1, result.matches().size());
         assertEquals("src/Application.java", result.matches().getFirst().path());
+    }
+
+    @Test
+    void readsOnlyDirectMavenDependenciesWithoutResolvingOrDownloading() throws Exception {
+        GetDependenciesResult result = tools.getDependencies(new GetDependenciesRequest(
+                "1", "task-1", commit, "planner", TRACE_ID, "pom.xml", "MAVEN", 100));
+
+        assertEquals("MAVEN", result.ecosystem());
+        assertEquals(".", result.module());
+        assertEquals(List.of("org.example:runtime-lib", "org.example:optional-lib"),
+                result.dependencies().stream().map(Dependency::name).toList());
+        assertEquals("RUNTIME", result.dependencies().getFirst().scope());
+        assertEquals("OPTIONAL", result.dependencies().get(1).scope());
+        assertTrue(result.dependencies().stream().allMatch(Dependency::direct));
+        assertTrue(result.dependencies().stream().allMatch(value -> value.declarationLine() > 0));
+        assertFalse(result.dependencies().stream().anyMatch(value -> value.name().contains("not-direct")));
+    }
+
+    @Test
+    void readsStaticGradleAndNpmDeclarationsAndPaginatesWithAnOpaqueCursor() throws Exception {
+        GetDependenciesResult gradle = tools.getDependencies(new GetDependenciesRequest(
+                "1", "task-1", commit, "developer", TRACE_ID, "build.gradle.kts", "GRADLE", 100));
+        assertEquals(List.of("com.example:core", "org.junit:junit"),
+                gradle.dependencies().stream().map(Dependency::name).toList());
+        assertEquals(List.of("COMPILE", "TEST"), gradle.dependencies().stream().map(Dependency::scope).toList());
+
+        GetDependenciesRequest firstRequest = dependenciesRequest("package.json", "NPM", 2, null);
+        GetDependenciesResult first = tools.getDependencies(firstRequest);
+        assertEquals(2, first.dependencies().size());
+        assertTrue(first.truncated());
+        assertNotNull(first.nextCursor());
+        GetDependenciesResult second = tools.getDependencies(dependenciesRequest(
+                ".", "NPM", 2, first.nextCursor()));
+        assertEquals(1, second.dependencies().size());
+        assertFalse(second.truncated());
+        assertThrows(IllegalArgumentException.class, () -> tools.getDependencies(dependenciesRequest(
+                ".", "NPM", 2, first.nextCursor())));
+    }
+
+    @Test
+    void rejectsUnsupportedDependencyInputsAndUnauthorizedActors() {
+        assertThrows(IllegalArgumentException.class, () -> tools.getDependencies(new GetDependenciesRequest(
+                "1", "task-1", commit, "planner", TRACE_ID, "README.md", "UNKNOWN", 100)));
+        assertThrows(SecurityException.class, () -> tools.getDependencies(new GetDependenciesRequest(
+                "1", "task-1", commit, "patch-repair", TRACE_ID, "pom.xml", "MAVEN", 100)));
+    }
+
+    @Test
+    void rejectsMavenDoctypesInsteadOfResolvingExternalEntities() throws Exception {
+        Files.writeString(root.resolve("task-1/pom.xml"), """
+                <!DOCTYPE project [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+                <project><dependencies><dependency>
+                  <groupId>&xxe;</groupId><artifactId>unsafe</artifactId>
+                </dependency></dependencies></project>
+                """);
+
+        assertThrows(org.xml.sax.SAXParseException.class, () -> tools.getDependencies(new GetDependenciesRequest(
+                "1", "task-1", commit, "planner", TRACE_ID, "pom.xml", "MAVEN", 100)));
     }
 
     @Test
@@ -246,6 +332,13 @@ class RepositoryContextToolsTest {
         return new ListTreeRequest("1", "task-1", "attempt-test", commit, "workflow", TRACE_ID,
                 "00-" + TRACE_ID + "-0123456789abcdef-01", Instant.now().plusSeconds(60).toString(),
                 "", 6, maxEntries, include, exclude, cursor);
+    }
+
+    private GetDependenciesRequest dependenciesRequest(String module, String ecosystem, int maxDependencies,
+                                                      String cursor) {
+        return new GetDependenciesRequest("1", "task-1", "attempt-test", commit, "planner", TRACE_ID,
+                "00-" + TRACE_ID + "-0123456789abcdef-01", Instant.now().plusSeconds(60).toString(),
+                module, ecosystem, maxDependencies, cursor);
     }
 
     private String createRepository(String taskId, String content) throws Exception {

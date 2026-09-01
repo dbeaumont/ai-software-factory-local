@@ -70,8 +70,8 @@ ai-factory:
           audience: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_AUDIENCE:repository-context-mcp}
           request-timeout: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_TIMEOUT:${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}}
           expected-name: repository-context-mcp
-          expected-version: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_VERSION:0.1.0}
-          allowed-tools: context.get_repository_rules,context.list_tree,context.read_file,context.search_code
+          expected-version: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_VERSION:0.2.0}
+          allowed-tools: context.get_dependencies,context.get_repository_rules,context.list_tree,context.read_file,context.search_code
         sandbox-execution:
           enabled: ${AI_FACTORY_MCP_SANDBOX_ENABLED:false}
           uri: ${AI_FACTORY_MCP_SANDBOX_URL:http://sandbox-execution-mcp:8092}

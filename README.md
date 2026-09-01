@@ -163,8 +163,10 @@ Tous les appels passent par LiteLLM vers le modèle cloud `factory-code-cloud` (
 
 ## Contexte dépôt via MCP
 
-Le premier incrément MCP fournit quatre outils en lecture seule : `context.list_tree`, `context.search_code`,
-`context.read_file` et `context.get_repository_rules`. Le serveur vérifie que chaque demande cible le workspace
+Le serveur MCP de contexte fournit cinq outils en lecture seule : `context.list_tree`, `context.search_code`,
+`context.read_file`, `context.get_repository_rules` et `context.get_dependencies`. Ce dernier lit uniquement les
+dépendances directes déclarées dans `pom.xml`, `build.gradle(.kts)` ou `package.json`, sans lancer de build ni
+télécharger de dépendance. Le serveur vérifie que chaque demande cible le workspace
 d'une tâche et son commit Git immuable, borne les résultats, exclut les chemins sensibles et refuse les sorties
 de workspace par traversal ou lien symbolique.
 
