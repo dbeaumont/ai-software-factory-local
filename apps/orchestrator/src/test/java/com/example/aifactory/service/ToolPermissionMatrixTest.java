@@ -30,4 +30,14 @@ class ToolPermissionMatrixTest {
         assertFalse(matrix.isAllowed(planner, "scm.create_draft_pull_request"));
         assertFalse(matrix.isAllowed(reviewer, "sandbox.run_tests"));
     }
+
+    @Test
+    void effectfulPipelineOperationsRemainWorkflowOnly() {
+        for (String tool : ToolPermissionMatrix.WORKFLOW_EFFECTS) {
+            assertTrue(matrix.isAllowed(new AgentToolLoop.Actor("engine", "workflow"), tool), tool);
+            for (String role : new String[]{"planner", "developer", "patch-repair", "tester", "reviewer"}) {
+                assertFalse(matrix.isAllowed(new AgentToolLoop.Actor("agent", role), tool), role + " / " + tool);
+            }
+        }
+    }
 }

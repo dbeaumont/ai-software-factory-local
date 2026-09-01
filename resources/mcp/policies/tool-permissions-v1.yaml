@@ -16,6 +16,7 @@ roles:
       - sandbox.run_security
       - sandbox.get_execution
       - sandbox.cancel_execution
+      - scm.create_draft_pull_request
   planner:
     tools:
       - context.list_tree
@@ -62,5 +63,8 @@ limits:
     maxRetainedJobs: 500
     maxPatchBytes: 1048576
     maxOutputBytes: 65536
+    effectfulActors:
+      - workflow
+  scm:
     effectfulActors:
       - workflow

@@ -5,6 +5,10 @@ import java.util.Set;
 
 /** Deny-by-default host policy. Roles are supplied by the workflow identity, never by model output. */
 public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorization {
+    public static final Set<String> WORKFLOW_EFFECTS = Set.of(
+            "sandbox.validate_patch", "sandbox.apply_patch", "sandbox.run_tests",
+            "sandbox.run_quality", "sandbox.run_security", "sandbox.cancel_execution",
+            "scm.create_draft_pull_request");
     private final Map<String, Set<String>> permissions;
 
     public ToolPermissionMatrix(Map<String, Set<String>> permissions) {
@@ -25,6 +29,7 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
                 "context.list_tree", "context.search_code", "context.read_file",
                 "context.get_repository_rules", "context.get_dependencies", "context.get_symbols");
         return new ToolPermissionMatrix(Map.of(
+                "workflow", union(context, WORKFLOW_EFFECTS),
                 "planner", union(context, Set.of("evidence.get_summary")),
                 "reviewer", union(context, Set.of("evidence.get_summary", "evidence.read")),
                 "developer", context,
