@@ -67,7 +67,7 @@ Source : `apps/orchestrator/src/main/java/com/example/aifactory/service/Reposito
 | Agrégation de 80 fichiers/40 000 caractères | combinaison de `context.list_tree`, `context.search_code` et `context.read_file` | Supprimer l'agrégation monolithique après stabilisation de `MCP_ACTIVE`. |
 | Découverte de règles du dépôt | `context.get_repository_rules` | Retourner règles, ordre d'applicabilité et provenance sans en faire des instructions système. |
 
-`RepositoryContextService` reste uniquement l'implémentation de repli des modes `DIRECT` et `MCP_SHADOW`. Son retrait est conditionné par MCP-057.
+`RepositoryContextService` et le gateway de migration ont été supprimés par MCP-057 après les deux canaries MCP_ACTIVE. `McpRepositoryContextService` est l'unique `RepositoryContextProvider`; une configuration `DIRECT` ou `MCP_SHADOW` échoue explicitement et ne restaure aucun accès direct.
 
 ## 5. `SandboxService`
 
@@ -132,4 +132,3 @@ Pour chaque retrait, la bascule est effectuée par opération, avec les états `
 - [x] Les mutations et secrets actuellement détenus par l'orchestrateur sont identifiés.
 - [x] Les écarts empêchant la suppression complète des accès directs sont documentés.
 - [x] Les jalons de retrait et leurs conditions sont rattachés au plan MCP.
-

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class McpRepositoryContextServiceTest {
@@ -90,5 +91,39 @@ class McpRepositoryContextServiceTest {
 
         assertTrue(context.contains("src/Later.java"));
         assertEquals(2, listCalls.get());
+    }
+
+    @Test
+    void refusesLegacyModesAfterTheDirectCollectorIsRetired() {
+        McpRepositoryContextService service = new McpRepositoryContextService(unusedInvoker(),
+                new McpFactoryProperties(true, McpFactoryProperties.ContextMode.DIRECT,
+                        "repository-context-mcp"), new SimpleMeterRegistry());
+
+        assertThrows(IllegalStateException.class,
+                () -> service.collectForRole(Path.of("unused"), "task-1", "a".repeat(40), "planner"));
+    }
+
+    @Test
+    void refusesARoleOutsideTheActiveAllowList() {
+        McpRepositoryContextService service = new McpRepositoryContextService(unusedInvoker(),
+                new McpFactoryProperties(true, McpFactoryProperties.ContextMode.MCP_ACTIVE,
+                        "repository-context-mcp"), new SimpleMeterRegistry());
+
+        assertThrows(IllegalStateException.class,
+                () -> service.collectForRole(Path.of("unused"), "task-1", "a".repeat(40), "reviewer"));
+    }
+
+    private static McpToolInvoker unusedInvoker() {
+        return new McpToolInvoker() {
+            @Override
+            public JsonNode call(String serverName, String toolName, Map<String, Object> arguments) {
+                throw new AssertionError("The MCP server must not be called");
+            }
+
+            @Override
+            public Availability availability(String serverName) {
+                return new Availability(true, null);
+            }
+        };
     }
 }

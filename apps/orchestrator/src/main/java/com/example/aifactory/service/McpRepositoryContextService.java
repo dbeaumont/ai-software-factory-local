@@ -5,6 +5,7 @@ import tools.jackson.databind.JsonNode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
@@ -13,7 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
-public class McpRepositoryContextService implements McpContextProvider {
+@Primary
+public class McpRepositoryContextService implements McpContextProvider, RepositoryContextProvider {
     private static final Set<String> ACCEPTED_NAMES = Set.of("pom.xml", "Dockerfile", "Makefile");
     private static final Set<String> ACCEPTED_EXTENSIONS = Set.of(
             ".java", ".kt", ".xml", ".yml", ".yaml", ".json", ".ts", ".js", ".properties", ".gradle", ".md");
@@ -101,6 +103,17 @@ public class McpRepositoryContextService implements McpContextProvider {
                 throw exception;
             }
         });
+    }
+
+    @Override
+    public String collectForRole(Path repository, String taskId, String sourceCommit, String role) {
+        if (properties.repositoryContextMode() != McpFactoryProperties.ContextMode.MCP_ACTIVE) {
+            throw new IllegalStateException("Repository context is MCP-only after MCP-057; MCP_ACTIVE is required");
+        }
+        if (!properties.repositoryContextActiveRoles().contains(role)) {
+            throw new IllegalStateException("Repository context role is not enabled for MCP_ACTIVE: " + role);
+        }
+        return collect(repository, taskId, sourceCommit);
     }
 
     public Availability availability() {

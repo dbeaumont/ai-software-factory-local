@@ -171,15 +171,17 @@ télécharger de dépendance. Le serveur vérifie que chaque demande cible le wo
 d'une tâche et son commit Git immuable, borne les résultats, exclut les chemins sensibles et refuse les sorties
 de workspace par traversal ou lien symbolique.
 
-La migration est désactivée par défaut :
+Après validation de MCP-057, le contexte dépôt est exclusivement fourni par MCP :
 
 ```bash
 AI_FACTORY_MCP_ENABLED=true
-AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE=MCP_SHADOW
+AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE=MCP_ACTIVE
+AI_FACTORY_MCP_REPOSITORY_CONTEXT_ACTIVE_ROLES=planner,developer,patch-repair
 ```
 
-Les modes disponibles sont `DIRECT`, `MCP_SHADOW` (le résultat direct reste autoritatif) et `MCP_ACTIVE`
-(une erreur MCP bloque la contextualisation). Le endpoint MCP reste privé au réseau Compose et n'est pas publié
+Les anciennes valeurs `DIRECT` et `MCP_SHADOW` sont conservées dans l'énumération de configuration pour détecter
+explicitement une configuration obsolète, mais elles sont refusées lors d'une collecte. Une erreur MCP bloque la
+contextualisation sans fallback. Le endpoint MCP reste privé au réseau Compose et n'est pas publié
 sur un port hôte. L'authentification du transport fait partie du chantier de durcissement avant toute exposition.
 
 ## Exécution sandbox via MCP
