@@ -201,6 +201,9 @@ AI_FACTORY_MCP_SANDBOX_MODE=MCP_ACTIVE
 AI_FACTORY_MCP_SANDBOX_ACTIVE_OPERATIONS=validate_patch,apply_patch,run_tests,run_quality,run_security
 ```
 
+Le chemin Docker historique de l'orchestrateur a été supprimé. Une opération absente de la liste, un serveur MCP
+désactivé ou un ancien mode `DIRECT`/`MCP_SHADOW` échoue fermé, sans réintroduire la socket ou les secrets.
+
 Le contrôleur reste une solution locale POC-only : lui seul monte encore `/var/run/docker.sock`. Son conteneur est
 non-root, read-only, sans capabilities, sans port hôte et attaché uniquement au réseau MCP interne. En production,
 ce backend devra être remplacé par des Jobs Kubernetes ou une Sandbox API sans modifier les outils MCP.

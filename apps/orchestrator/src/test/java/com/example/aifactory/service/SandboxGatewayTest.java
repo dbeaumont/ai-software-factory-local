@@ -1,96 +1,62 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.config.McpFactoryProperties;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
-import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SandboxGatewayTest {
     @Test
-    void activeModeNeverCallsTheDirectDockerPath() throws Exception {
-        AtomicInteger directCalls = new AtomicInteger();
-        SandboxService direct = direct(directCalls, "direct");
-        McpFactoryProperties properties = McpSandboxServiceTest.properties(true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
-        McpSandboxService mcp = mcp(properties, "mcp");
-        SandboxGateway gateway = new SandboxGateway(direct, mcp, properties, new SimpleMeterRegistry());
+    void activeModeDelegatesExclusivelyToMcp() throws Exception {
+        McpFactoryProperties properties = McpSandboxServiceTest.properties(true,
+                McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+        SandboxGateway gateway = new SandboxGateway(mcp(properties, "mcp"), properties);
 
         assertEquals("mcp", gateway.checkPatch(Path.of("unused"), "task-1", "a".repeat(40)));
-        assertEquals(0, directCalls.get());
     }
 
     @Test
-    void activeModeRejectsDisabledMcpInsteadOfFallingBackToDocker() {
-        AtomicInteger directCalls = new AtomicInteger();
-        McpFactoryProperties properties = McpSandboxServiceTest.properties(false, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
-        SandboxGateway gateway = new SandboxGateway(direct(directCalls, "direct"), mcp(properties, "mcp"), properties,
-                new SimpleMeterRegistry());
+    void activeModeRejectsDisabledMcp() {
+        McpFactoryProperties properties = McpSandboxServiceTest.properties(false,
+                McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+        SandboxGateway gateway = new SandboxGateway(mcp(properties, "mcp"), properties);
 
         assertThrows(IllegalStateException.class,
                 () -> gateway.checkPatch(Path.of("unused"), "task-1", "a".repeat(40)));
-        assertEquals(0, directCalls.get());
     }
 
     @Test
-    void activeOperationsCanBeSwitchedIndependently() throws Exception {
-        AtomicInteger directCalls = new AtomicInteger();
+    void disabledOperationFailsClosedWithoutDirectFallback() {
         McpFactoryProperties base = McpSandboxServiceTest.properties(true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
         McpFactoryProperties properties = new McpFactoryProperties(base.enabled(), base.repositoryContextMode(),
                 base.repositoryContextServerName(), base.sandboxEnabled(), base.sandboxMode(), base.sandboxServerName(),
                 base.sandboxPollInterval(), base.sandboxPollTimeout(), base.repositoryContextActiveRoles(),
                 Set.of("run_tests"));
-        SandboxGateway gateway = new SandboxGateway(direct(directCalls, "direct"), mcp(properties, "mcp"),
-                properties, new SimpleMeterRegistry());
+        SandboxGateway gateway = new SandboxGateway(mcp(properties, "mcp"), properties);
 
-        assertEquals("direct", gateway.checkPatch(Path.of("unused"), "task-1", "a".repeat(40)));
-        assertEquals("mcp", gateway.test(Path.of("unused"), "task-1", "a".repeat(40)));
-        assertEquals(1, directCalls.get());
+        assertThrows(IllegalStateException.class,
+                () -> gateway.checkPatch(Path.of("unused"), "task-1", "a".repeat(40)));
     }
 
     @Test
-    void shadowModeRecordsSuccessfulComparisonWithoutChangingDirectResult() throws Exception {
-        AtomicInteger directCalls = new AtomicInteger();
-        SimpleMeterRegistry metrics = new SimpleMeterRegistry();
+    void obsoleteShadowModeFailsClosed() {
         McpFactoryProperties properties = McpSandboxServiceTest.properties(true,
                 McpFactoryProperties.SandboxMode.MCP_SHADOW);
-        SandboxGateway gateway = new SandboxGateway(direct(directCalls, "same"), mcp(properties, "same"),
-                properties, metrics);
+        SandboxGateway gateway = new SandboxGateway(mcp(properties, "mcp"), properties);
 
-        assertEquals("same", gateway.checkPatch(Path.of("unused"), "task-1", "a".repeat(40)));
-        assertEquals(1, directCalls.get());
-        assertEquals(1.0, metrics.counter("ai_factory_mcp_sandbox_shadow_runs", "operation", "validate_patch",
-                "outcome", "success").count());
-        assertEquals(1.0, metrics.counter("ai_factory_mcp_sandbox_shadow_comparisons", "operation",
-                "validate_patch", "result", "equal").count());
-        assertEquals(4.0, metrics.get("ai_factory_mcp_sandbox_shadow_chars")
-                .tags("operation", "validate_patch", "source", "mcp").summary().mean());
-    }
-
-    private static SandboxService direct(AtomicInteger calls, String result) {
-        return new SandboxService(null, null) {
-            @Override
-            public String checkPatch(Path workspace, String taskId, String sourceCommit) {
-                calls.incrementAndGet();
-                return result;
-            }
-
-            @Override
-            public String test(Path workspace, String taskId, String sourceCommit) {
-                calls.incrementAndGet();
-                return result;
-            }
-        };
+        assertThrows(IllegalStateException.class,
+                () -> gateway.test(Path.of("unused"), "task-1", "a".repeat(40)));
     }
 
     private static McpSandboxService mcp(McpFactoryProperties properties, String output) {

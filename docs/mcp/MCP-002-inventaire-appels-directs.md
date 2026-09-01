@@ -86,7 +86,7 @@ Source : `apps/orchestrator/src/main/java/com/example/aifactory/service/SandboxS
 | Syft et Trivy | `sandbox.run_security` | Épingler les versions, produire SBOM/rapport et retourner leurs digests/URI. |
 | attente synchrone et sortie texte | `sandbox.get_execution` / `sandbox.cancel_execution` | Passer à un handle d'exécution, heartbeat, pagination bornée et état final explicite. |
 
-`SandboxService` reste le repli des modes `DIRECT` et `MCP_SHADOW`. Son retrait complet, opération par opération, est conditionné par MCP-089 puis par le retrait de `docker.sock`.
+`SandboxService` a été supprimé par MCP-089 après la campagne shadow et l'activation indépendante des cinq opérations. Une configuration sandbox `DIRECT`/`MCP_SHADOW`, un serveur désactivé ou une opération absente de l'allow-list échoue désormais explicitement, sans fallback Docker.
 
 ## 6. `GiteaService`
 

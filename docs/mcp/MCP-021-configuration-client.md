@@ -53,7 +53,7 @@ Les audiences sont enregistrées dès maintenant pour préparer OAuth/workload i
 - `AI_FACTORY_MCP_ENABLED` active la capacité de contexte dépôt.
 - `AI_FACTORY_MCP_SANDBOX_ENABLED` active la capacité sandbox.
 - `AI_FACTORY_MCP_SANDBOX_ACTIVE_OPERATIONS` sélectionne indépendamment les opérations basculées vers MCP (`validate_patch`, `apply_patch`, `run_tests`, `run_quality`, `run_security`).
-- Les modes `DIRECT`, `MCP_SHADOW` et `MCP_ACTIVE` restent indépendants des flags d'activation.
+- Les anciennes valeurs sandbox `DIRECT` et `MCP_SHADOW` sont seulement reconnues pour produire une erreur de configuration explicite depuis MCP-089 ; seul `MCP_ACTIVE` possède un chemin d'exécution.
 
 Un mode `MCP_ACTIVE` avec serveur désactivé continue d'échouer fermé ; il ne déclenche aucun fallback direct implicite.
 
