@@ -28,8 +28,7 @@ La stack actuelle contient :
 | Contexte MCP | Serveur MCP stateless en lecture seule (`repository-context-mcp`) |
 | Exécution MCP | Contrôleur de jobs à profils immuables (`sandbox-execution-mcp`) |
 | Passerelle LLM | LiteLLM (port 4000 interne) |
-| Modèle local | Ollama (`qwen2.5-coder:7b` par défaut) |
-| Modèle cloud optionnel | OpenAI via LiteLLM (`gpt-5.6-luna` configurable) |
+| Modèle cloud | OpenAI via LiteLLM (`gpt-5.6-luna` configurable) |
 | SCM / PR | Gitea + PostgreSQL 16 |
 | Sandbox d'exécution | Conteneurs Docker éphémères (`ai-factory-sandbox:local`) |
 | Build et tests | Maven / Gradle / npm selon le dépôt |
@@ -62,14 +61,13 @@ La stack actuelle contient :
 - `make`, `curl`, `git`, `bash`
 - Python 3 (pour les scripts de bootstrap)
 - `jq` recommandé pour manipuler les réponses API
-- Environ 24 Go de RAM recommandés pour la stack complète avec LLM local
+- Environ 16 Go de RAM recommandés pour la stack complète
 
 ## Démarrage rapide
 
 ```bash
 make init
 make up
-make model
 make bootstrap
 ```
 
@@ -82,7 +80,6 @@ URLs principales :
 - Artifactory : `http://localhost:8082` (utilisateur `admin`, mot de passe `password`)
 - Prometheus : `http://localhost:9090`
 - Grafana : `http://localhost:3001`
-- Ollama API : `http://localhost:11434`
 
 Le script `make bootstrap` initialise le compte Gitea `aiadmin`, le compte reviewer `reviewer`, le dépôt de démonstration `customer-api`, pousse le contenu de `examples/customer-api/`, et génère automatiquement les jetons `GITEA_TOKEN` et `SONAR_TOKEN` dans le fichier `.env`.
 
@@ -96,7 +93,7 @@ L'interface permet de :
 
 - rédiger un ticket structuré (résumé, objectif métier, périmètre, comportement actuel/attendu, critères d'acceptation) ;
 - utiliser le bouton de pré-remplissage de démo ("Préremplir le modèle") ;
-- choisir le mode `LOCAL` (Ollama) ou `CLOUD` (OpenAI via LiteLLM) ;
+- utiliser le modèle cloud configuré derrière LiteLLM ;
 - suivre la progression en temps réel (stepper, logs, progression) ;
 - consulter l'historique complet des exécutions (vue "Exécutions") ;
 - ouvrir le menu "Documentation" puis "Workflow" pour afficher le diagramme du pipeline ;
@@ -114,7 +111,7 @@ curl -s -X POST http://localhost:8080/api/tasks \
     "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
     "baseBranch":"main",
     "requirement":"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
-    "llmMode":"LOCAL"
+    "llmMode":"CLOUD"
   }'
 ```
 
@@ -160,12 +157,9 @@ Les 13 statuts du cycle de vie d'une tâche sont :
 12. `PR_CREATED` : Branche créée, commit effectué, push réalisé et Pull Request ouverte sur Gitea.
 13. `FAILED` : Échec rencontré à l'une des étapes (diff invalide non réparable, erreur de build, etc.).
 
-## Modes LLM
+## Modèle LLM
 
-Le routage des modèles s'effectue via LiteLLM :
-
-- `LOCAL` -> modèle `factory-code-local` -> Ollama (`qwen2.5-coder:7b`)
-- `CLOUD` -> modèle `factory-code-cloud` -> OpenAI (`gpt-5.6-luna` par défaut)
+Tous les appels passent par LiteLLM vers le modèle cloud `factory-code-cloud` (`gpt-5.6-luna` par défaut).
 
 ## Contexte dépôt via MCP
 
@@ -242,7 +236,6 @@ Le mode cloud n'est accessible que si `AI_FACTORY_CLOUD_ENABLED=true` dans `.env
 Variables de configuration principales :
 
 ```bash
-OLLAMA_MODEL=qwen2.5-coder:7b
 OPENAI_MODEL=gpt-5.6-luna
 AI_FACTORY_CLOUD_ENABLED=true
 LITELLM_MASTER_KEY=local-dev-litellm-key
@@ -285,7 +278,6 @@ make demo
 | `make build` | Construit l'image sandbox et les services Compose |
 | `make up` | Démarre la stack complète en arrière-plan |
 | `make all` | Remet à zéro les données et démarre une stack entièrement bootstrappée |
-| `make model` | Télécharge le modèle Ollama configuré |
 | `make bootstrap` | Initialise Gitea, SonarQube et génère les jetons d'accès |
 | `make tokens` | Régénère ou valide les jetons Gitea et SonarQube |
 | `make demo` | Soumet une tâche de démo à l'orchestrateur |

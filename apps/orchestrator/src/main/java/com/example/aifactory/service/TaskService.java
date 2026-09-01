@@ -58,14 +58,12 @@ public class TaskService {
     public TaskView create(TaskRequest request) {
         if (request.repositoryUrl() == null || request.repositoryUrl().isBlank()) throw new IllegalArgumentException("repositoryUrl is required");
         if (request.requirement() == null || request.requirement().isBlank()) throw new IllegalArgumentException("requirement is required");
-        if (request.effectiveLlmMode() == LlmMode.CLOUD && !props.cloudEnabled()) {
+        if (!props.cloudEnabled()) {
             throw new IllegalArgumentException("Cloud LLM is disabled by configuration");
         }
-        if (request.effectiveLlmMode() == LlmMode.CLOUD) {
-            CloudAvailability availability = llm.cloudAvailability();
-            if (!availability.available()) {
-                throw new IllegalStateException(availability.error());
-            }
+        CloudAvailability availability = llm.cloudAvailability();
+        if (!availability.available()) {
+            throw new IllegalStateException(availability.error());
         }
         String id = UUID.randomUUID().toString().substring(0, 8);
         String ticketNumber = nextTicketNumber();
@@ -115,7 +113,7 @@ public class TaskService {
             s.transition(TaskStatus.CLONING, "Cloning repository");
             runner.run(List.of("git", "clone", "--depth", "1", "--branch", s.request.effectiveBranch(), s.request.repositoryUrl(), ws.toString()), null, Duration.ofMinutes(2));
             s.sourceCommit = runner.run(List.of("git", "rev-parse", "HEAD"), ws, Duration.ofSeconds(10)).strip();
-            s.model = llm.modelName(s.request.effectiveLlmMode());
+            s.model = llm.modelName();
             log.info("Task {} ({}) cloned source commit {} using model {}", s.id, s.ticketNumber, s.sourceCommit, s.model);
             String context = contextService.collect(ws, s.id, s.sourceCommit);
             writeRunMetadata(ws, s);
@@ -262,10 +260,21 @@ public class TaskService {
         state.promptFingerprints.put(promptName, fingerprint);
         log.info("Task {} ({}) invoking {} agent with prompt sha256={}",
                 state.id, state.ticketNumber, promptName, fingerprint.substring(0, 12));
-        String response = llm.chat(state.request.effectiveLlmMode(), prompts.load(promptName), untrustedInput);
+        String response = llm.chat(prompts.load(promptName), untrustedInput,
+                maxTokensFor(promptName));
         log.info("Task {} ({}) {} agent completed; response_chars={}",
                 state.id, state.ticketNumber, promptName, response.length());
         return response;
+    }
+
+    static int maxTokensFor(String promptName) {
+        return switch (promptName) {
+            case "planner" -> 1_200;
+            case "developer" -> 1_200;
+            case "patch-repair" -> 1_600;
+            case "tester", "reviewer", "reviewer-prod" -> 1_200;
+            default -> 1_200;
+        };
     }
 
     private static String untrusted(String label, String content) {

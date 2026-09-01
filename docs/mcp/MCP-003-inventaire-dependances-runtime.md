@@ -19,7 +19,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | Capacité | Composant actuel | Secret runtime | Stockage/volume | Réseau et destinations | Propriétaire cible |
 |---|---|---|---|---|---|
 | Orchestration | `orchestrator` | `LITELLM_MASTER_KEY`, encore `GITEA_TOKEN` | `factory-workspace` en lecture/écriture, prompts en lecture seule | `factory` vers LiteLLM et encore Gitea ; `mcp-internal` vers les serveurs MCP | `sa-orchestrator` ; aucun secret Gitea/Sonar/Artifactory/Docker |
-| Inférence | `litellm`, Ollama, fournisseur cloud optionnel | `LITELLM_MASTER_KEY`, `VAULT_OPENAI_API_KEY`/`OPENAI_API_KEY` | `ollama-data` | `factory` vers Ollama ; egress TLS optionnel vers le fournisseur cloud | identité LiteLLM dédiée, secrets fournisseur dans Secret Manager |
+| Inférence | `litellm`, fournisseur cloud | `LITELLM_MASTER_KEY`, `VAULT_OPENAI_API_KEY`/`OPENAI_API_KEY` | aucun volume de modèle | egress TLS vers le fournisseur cloud | identité LiteLLM dédiée, secrets fournisseur dans Secret Manager |
 | Contexte dépôt | `RepositoryContextService` ou `repository-context-mcp` | aucun secret runtime | `factory-workspace:/workspace/tasks:ro` pour MCP | uniquement `mcp-internal`; aucun egress attendu | `sa-repository-context-mcp`, lecture limitée au workspace de la tentative |
 | Validation/application de patch | `sandbox-execution-mcp` et conteneur sandbox | aucun secret fonctionnel | workspace partagé ; `sandbox-job-state`; socket Docker local | MCP sur `mcp-internal`; job avec réseau `none` | `sa-sandbox-controller` puis identité éphémère de tentative GKE |
 | Tests | jobs sandbox `test-maven-v1`, `test-gradle-v1`, `test-node-v1` | `ARTIFACTORY_TOKEN` si miroir authentifié | workspace ; cache `ai-factory-m2` réservé à Maven | actuellement réseau `factory`; destination requise : miroirs Maven/Gradle/npm approuvés uniquement | contrôleur sandbox/identité de job, secret à durée courte |
@@ -68,7 +68,6 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | `gitea-data`, `gitea-db-data` | Gitea/PostgreSQL | persistants | données SCM | service SCM d'entreprise, hors serveurs MCP |
 | `sonar-data`, `sonar-logs`, `sonar-extensions`, `sonar-db-data` | SonarQube/PostgreSQL | persistants | moteur de qualité | service SonarQube d'entreprise, hors serveurs MCP |
 | `artifactory-data`, `artifactory-db-data` | Artifactory/PostgreSQL | persistants | dépôt de dépendances | service Artifactory/Artifact Registry, hors serveurs MCP |
-| `ollama-data` | Ollama | persistant | modèles locaux | endpoint de modèle dédié, séparé des sandboxes |
 | `grafana-data` | Grafana | persistant | tableaux de bord | plateforme d'observabilité |
 | stockage de preuves | non implémenté ; actuellement fichiers du workspace | mutable | aucune immutabilité/rétention garantie | volume objet local puis Cloud Storage versionné, rétention et Bucket Lock après validation |
 

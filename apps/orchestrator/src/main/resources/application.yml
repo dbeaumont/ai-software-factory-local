@@ -82,7 +82,6 @@ ai-factory:
           allowed-tools: sandbox.validate_patch,sandbox.apply_patch,sandbox.run_tests,sandbox.run_quality,sandbox.run_security,sandbox.get_execution,sandbox.cancel_execution
   llm-base-url: ${AI_FACTORY_LLM_BASE_URL}
   llm-api-key: ${AI_FACTORY_LLM_API_KEY}
-  local-model: ${AI_FACTORY_LOCAL_MODEL}
   cloud-model: ${AI_FACTORY_CLOUD_MODEL}
   cloud-enabled: ${AI_FACTORY_CLOUD_ENABLED}
   workspace-root: ${AI_FACTORY_WORKSPACE_ROOT}

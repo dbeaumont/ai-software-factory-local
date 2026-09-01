@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record AiFactoryProperties(
         String llmBaseUrl,
         String llmApiKey,
-        String localModel,
         String cloudModel,
         boolean cloudEnabled,
         String workspaceRoot,

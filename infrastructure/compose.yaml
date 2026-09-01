@@ -45,21 +45,7 @@ services:
       retries: 30
     networks: [factory]
 
-  # Local LLM runtime. Model files are retained across stack restarts.
-  ollama:
-    image: ollama/ollama:0.11.4
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-    networks: [factory]
-
-  # Model gateway; .vault supplies optional cloud credentials at runtime.
+  # Cloud model gateway; .vault supplies provider credentials at runtime.
   litellm:
     build:
       context: ./litellm
@@ -68,13 +54,9 @@ services:
     env_file:
       - ../.vault
     environment:
-      OLLAMA_MODEL: ${OLLAMA_MODEL}
       OPENAI_MODEL: ${OPENAI_MODEL}
       OPENAI_CA_CERT_HOST: ${OPENAI_CA_CERT_HOST:-api.openai.com:443}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
-    depends_on:
-      ollama:
-        condition: service_healthy
     healthcheck:
       # LiteLLM needs a few seconds after its process starts to load its model
       # configuration and begin listening on port 4000.
@@ -175,7 +157,6 @@ services:
     environment:
       AI_FACTORY_LLM_BASE_URL: ${AI_FACTORY_LLM_BASE_URL}
       AI_FACTORY_LLM_API_KEY: ${LITELLM_MASTER_KEY}
-      AI_FACTORY_LOCAL_MODEL: ${AI_FACTORY_LOCAL_MODEL}
       AI_FACTORY_CLOUD_MODEL: ${AI_FACTORY_CLOUD_MODEL}
       AI_FACTORY_CLOUD_ENABLED: ${AI_FACTORY_CLOUD_ENABLED}
       AI_FACTORY_WORKSPACE_ROOT: ${AI_FACTORY_WORKSPACE_ROOT}
@@ -370,7 +351,6 @@ volumes:
   # Persistent service state. `factory-workspace` is shared with ephemeral task sandboxes.
   gitea-db-data:
   gitea-data:
-  ollama-data:
   factory-workspace:
     name: ${AI_FACTORY_WORKSPACE_VOLUME}
   sandbox-job-state:

@@ -6,10 +6,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class TaskRequestTest {
     @Test
-    void defaultsToLocalModeWhenNoModeIsProvided() {
+    void defaultsToCloudModeWhenNoModeIsProvided() {
         TaskRequest request = new TaskRequest("repo", "main", "requirement", null);
 
-        assertThat(request.effectiveLlmMode()).isEqualTo(LlmMode.LOCAL);
+        assertThat(request.effectiveLlmMode()).isEqualTo(LlmMode.CLOUD);
     }
 
     @Test

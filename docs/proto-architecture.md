@@ -19,7 +19,6 @@ flowchart TB
   PROXY -->|/| WEB[factory-web UI]
   PROXY -->|/api/| ORCH[Orchestrateur Spring Boot]
   ORCH --> LLM[LiteLLM]
-  LLM -->|LOCAL| OLLAMA[Ollama]
   LLM -->|CLOUD| OPENAI[OpenAI]
   ORCH --> GITEA[Gitea SCM]
   ORCH --> CTX[Repository Context Service]
@@ -40,8 +39,7 @@ flowchart TB
 |---|---|
 | `gitea-db` | Base PostgreSQL 16 de Gitea |
 | `gitea` | Gestionnaire de dépôts Git, API REST, branches et Pull Requests (v1.23) |
-| `ollama` | Moteur d'exécution local du modèle LLM (`qwen2.5-coder:7b`) |
-| `litellm` | Passerelle OpenAI-compatible, alias de modèles et routage local/cloud |
+| `litellm` | Passerelle OpenAI-compatible vers le modèle cloud configuré |
 | `orchestrator` | Moteur principal du workflow (Spring Boot 3.5 / Java 21) |
 | `repository-context-mcp` | Lecture bornée des workspaces sur le réseau MCP interne |
 | `sandbox-execution-mcp` | Contrôleur de jobs Docker à profils immuables, seul détenteur local du socket |
@@ -65,7 +63,7 @@ flowchart TB
   ORCH -->|depends_on| GITEA[gitea]
   GITEA -->|depends_on: healthy| GITEA_DB[(gitea-db<br/>PostgreSQL)]
   ORCH -->|depends_on| LITELLM[litellm]
-  LITELLM -->|depends_on: healthy| OLLAMA[ollama]
+  LITELLM -.->|HTTPS| OPENAI[OpenAI]
   ORCH -->|depends_on: healthy| ARTIFACTORY[artifactory]
 
   SONAR[sonarqube] -->|depends_on| SONAR_DB[(sonar-db<br/>PostgreSQL)]
@@ -138,7 +136,7 @@ sequenceDiagram
 
 - `factory-web` construit un besoin structuré à partir du formulaire de ticket (résumé, objectif métier, périmètre, comportement attendu, critères d'acceptation).
 - `POST /api/tasks` crée une tâche en mémoire avec une référence ticket de type `AF-%04d` (ex: `AF-0001`) et lance le pipeline asynchrone.
-- Par défaut, `baseBranch` vaut `main` et `llmMode` vaut `LOCAL`.
+- Par défaut, `baseBranch` vaut `main` et `llmMode` vaut `CLOUD`.
 
 ### 2. Contextualisation
 
@@ -206,7 +204,7 @@ Exemple de requête :
   "repositoryUrl": "http://gitea:3000/aiadmin/customer-api.git",
   "baseBranch": "main",
   "requirement": "Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
-  "llmMode": "LOCAL"
+  "llmMode": "CLOUD"
 }
 ```
 
@@ -226,7 +224,7 @@ Retourne l'état complet d'une tâche (`TaskView`) :
   "repositoryUrl": "http://gitea:3000/aiadmin/customer-api.git",
   "baseBranch": "main",
   "requirement": "Add GET /customers/{id}...",
-  "llmMode": "LOCAL",
+  "llmMode": "CLOUD",
   "workspace": "/workspace/tasks/a1b2c3d4",
   "plan": "...",
   "patch": "...",
@@ -270,7 +268,7 @@ Retourne les fonctionnalités système activées (ex: mode cloud disponible) :
 
 - L'état des tâches est conservé en mémoire dans l'orchestrateur.
 - Un redémarrage réinitialise l'historique API.
-- Les conteneurs Gitea, PostgreSQL, SonarQube, Artifactory, Ollama et Grafana disposent de volumes Docker persistants.
+- Les conteneurs Gitea, PostgreSQL, SonarQube, Artifactory et Grafana disposent de volumes Docker persistants.
 - Les espaces de travail sous `/workspace/tasks` restent présents sur le volume `factory-workspace`.
 
 ## Écarts avec une cible industrielle

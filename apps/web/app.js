@@ -31,12 +31,9 @@ const reviewDecision = document.querySelector('#review-decision');
 const reviewFindings = document.querySelector('#review-findings');
 const reviewHumanPoints = document.querySelector('#review-human-points');
 const reviewRaw = document.querySelector('#review-raw');
-const llmMode = document.querySelector('#llm-mode');
 const llmDescription = document.querySelector('#llm-mode-description');
-const cloudWarning = document.querySelector('#cloud-warning');
 const cloudUnavailable = document.querySelector('#cloud-unavailable');
 const taskLlmMode = document.querySelector('#task-llm-mode');
-const llmChoice = document.querySelector('.llm-choice');
 const advancedDetails = document.querySelector('.advanced-details');
 const breadcrumbs = document.querySelector('#breadcrumbs');
 const views = document.querySelectorAll('.app-view');
@@ -68,17 +65,6 @@ headerMenus.forEach((menu) => {
   });
 });
 
-function renderLlmMode() {
-  const cloud = llmMode.checked;
-  llmChoice.classList.toggle('cloud-selected', cloud);
-  llmDescription.textContent = cloud
-    ? "Le ticket sera traité par le modèle cloud configuré dans LiteLLM."
-    : "Le code et la spécification restent dans l'environnement Docker local via Ollama.";
-  cloudWarning.hidden = !cloud;
-}
-
-llmMode.addEventListener('change', renderLlmMode);
-
 const CAPABILITIES_RETRY_DELAY_MS = 3_000;
 const MAX_CAPABILITIES_RETRIES = 2;
 
@@ -88,30 +74,27 @@ async function loadCapabilities(attempt = 0) {
     if (!response.ok) return;
     const capabilities = await response.json();
     if (!capabilities.cloudEnabled) {
-      llmMode.disabled = true;
       llmDescription.textContent = 'Le mode cloud est désactivé par la configuration de cette usine.';
+      cloudUnavailable.textContent = 'Aucun moteur LLM n’est disponible.';
+      cloudUnavailable.hidden = false;
       return;
     }
     if (capabilities.cloudAvailable) {
-      llmMode.disabled = false;
       cloudUnavailable.hidden = true;
-      renderLlmMode();
       return;
     }
 
     if (!capabilities.cloudAvailable) {
-      llmMode.checked = false;
-      llmMode.disabled = true;
       llmDescription.textContent = 'Le mode cloud est temporairement indisponible.';
       cloudUnavailable.textContent = capabilities.cloudError || 'L’API LLM externe est inaccessible.';
       cloudUnavailable.hidden = false;
-      renderLlmMode();
       if (attempt < MAX_CAPABILITIES_RETRIES) {
         window.setTimeout(() => loadCapabilities(attempt + 1), CAPABILITIES_RETRY_DELAY_MS);
       }
     }
   } catch {
-    // The local mode remains available when the status endpoint is temporarily unavailable.
+    cloudUnavailable.textContent = 'Impossible de vérifier la disponibilité du LLM cloud.';
+    cloudUnavailable.hidden = false;
   }
 }
 
@@ -151,7 +134,6 @@ function resetTicketDraft() {
   activeTask = undefined;
   form.reset();
   delete form.dataset.taskId;
-  renderLlmMode();
   message.textContent = '';
   submitButton.disabled = false;
   submitButton.innerHTML = 'Créer le ticket <span aria-hidden="true">→</span>';
@@ -159,7 +141,7 @@ function resetTicketDraft() {
   taskStatus.hidden = true;
   statusPanel.classList.remove('failed');
   statusLabel.textContent = 'QUEUED';
-  taskLlmMode.textContent = 'LOCAL';
+  taskLlmMode.textContent = 'CLOUD';
   taskId.textContent = '';
   ticketKey.innerHTML = 'AF-NEW <span>·</span> DEMANDE DE LIVRAISON';
   ticketTitle.textContent = "Créer un ticket pour l'usine";
@@ -219,18 +201,14 @@ function restoreTicketFields(task) {
   });
   form.elements.namedItem('repository').value = task.repositoryUrl || '';
   form.elements.namedItem('branch').value = task.baseBranch || 'main';
-  llmMode.checked = task.llmMode === 'CLOUD';
   advancedDetails.open = Boolean(values.technicalConstraints || values.outOfScope || values.validation);
   form.dataset.taskId = task.id;
-  renderLlmMode();
 }
 
 debugFillButton.addEventListener('click', () => {
   Object.entries(ticketTemplate).forEach(([name, value]) => {
     form.elements.namedItem(name).value = value;
   });
-  llmMode.checked = false;
-  renderLlmMode();
   message.textContent = 'Modèle de ticket chargé. Vérifiez les valeurs avant envoi.';
   document.querySelector('#summary').focus();
 });
@@ -310,8 +288,8 @@ function renderExecutionList(tasks) {
     title.querySelector('.execution-title').textContent = taskTitle(task);
     title.querySelector('.execution-key').textContent = displayTicketNumber(task);
     const mode = document.createElement('span');
-    mode.className = `execution-mode ${(task.llmMode || 'LOCAL').toLowerCase()}`;
-    mode.textContent = task.llmMode || 'LOCAL';
+    mode.className = `execution-mode ${(task.llmMode || 'CLOUD').toLowerCase()}`;
+    mode.textContent = task.llmMode || 'CLOUD';
     const step = document.createElement('span');
     step.className = 'execution-step';
     step.textContent = activeStep(task);
@@ -417,7 +395,7 @@ function renderTask(task) {
   taskStatus.hidden = false;
   statusPanel.classList.toggle('failed', task.status === 'FAILED');
   statusLabel.textContent = task.status.replaceAll('_', ' ');
-  taskLlmMode.textContent = task.llmMode || 'LOCAL';
+  taskLlmMode.textContent = task.llmMode || 'CLOUD';
   taskId.textContent = displayTicketNumber(task);
   ticketKey.textContent = `Ticket ${displayTicketNumber(task)}`;
   ticketTitle.textContent = taskTitle(task);
@@ -575,7 +553,6 @@ approveButton.addEventListener('click', async () => {
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(form));
-  const selectedLlmMode = llmMode.checked ? 'CLOUD' : 'LOCAL';
   message.textContent = '';
   submitButton.disabled = true;
   submitButton.textContent = 'Transmission...';
@@ -587,7 +564,7 @@ form.addEventListener('submit', async (event) => {
         repositoryUrl: data.repository,
         baseBranch: data.branch,
         requirement: buildRequirement(data),
-        llmMode: selectedLlmMode
+        llmMode: 'CLOUD'
       })
     });
     const task = await readApiResponse(response);

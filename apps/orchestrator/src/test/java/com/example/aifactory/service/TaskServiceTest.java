@@ -59,11 +59,20 @@ class TaskServiceTest {
     }
 
     @Test
+    void boundsLlmOutputByAgentRole() {
+        assertEquals(1_200, TaskService.maxTokensFor("planner"));
+        assertEquals(1_200, TaskService.maxTokensFor("developer"));
+        assertEquals(1_600, TaskService.maxTokensFor("patch-repair"));
+        assertEquals(1_200, TaskService.maxTokensFor("reviewer"));
+        assertEquals(1_200, TaskService.maxTokensFor("unknown"));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void rejectsApprovalBeforeTheHumanApprovalGate() {
         TestableTaskService service = new TestableTaskService();
         TaskState state = new TaskState("task-1", "AF-0001", new TaskRequest(
-                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.LOCAL));
+                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
         Map<String, TaskState> tasks = (Map<String, TaskState>) ReflectionTestUtils.getField(service, "tasks");
         assertNotNull(tasks);
         tasks.put(state.id, state);

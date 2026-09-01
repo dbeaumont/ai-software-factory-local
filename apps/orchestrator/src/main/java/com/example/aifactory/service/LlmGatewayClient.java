@@ -2,7 +2,6 @@ package com.example.aifactory.service;
 
 import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.CloudAvailability;
-import com.example.aifactory.model.LlmMode;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,16 +81,20 @@ public class LlmGatewayClient {
         }
     }
 
-    public String chat(LlmMode mode, String system, String user) {
-        if (mode == LlmMode.CLOUD && !props.cloudEnabled()) {
+    public String chat(String system, String user, int maxTokens) {
+        if (!props.cloudEnabled()) {
             throw new IllegalStateException("Cloud LLM is disabled by configuration");
         }
+        if (maxTokens < 1 || maxTokens > 8_192) {
+            throw new IllegalArgumentException("maxTokens must be between 1 and 8192");
+        }
         Map<String, Object> body = Map.of(
-                "model", mode == LlmMode.CLOUD ? props.cloudModel() : props.localModel(),
+                "model", props.cloudModel(),
                 "messages", List.of(
                         Map.of("role", "system", "content", system),
                         Map.of("role", "user", "content", user)
-                ));
+                ),
+                "max_tokens", maxTokens);
         JsonNode response = client.post()
                 .uri("/chat/completions")
                 .headers(headers -> addAuthorization(headers))
@@ -106,8 +109,8 @@ public class LlmGatewayClient {
         return content.asText();
     }
 
-    public String modelName(LlmMode mode) {
-        return mode == LlmMode.CLOUD ? props.cloudModel() : props.localModel();
+    public String modelName() {
+        return props.cloudModel();
     }
 
     private void addAuthorization(HttpHeaders headers) {

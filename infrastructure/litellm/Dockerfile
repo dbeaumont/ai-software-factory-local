@@ -1,4 +1,4 @@
-# OpenAI-compatible gateway that routes requests to the local Ollama model or the optional cloud model.
+# OpenAI-compatible gateway that routes requests to the configured cloud model.
 # The default uses the corporate Docker proxy to avoid direct TLS access to GHCR.
 ARG LITELLM_IMAGE
 FROM ${LITELLM_IMAGE}

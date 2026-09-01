@@ -6,5 +6,5 @@ public record TaskRequest(
         String requirement,
         LlmMode llmMode) {
     public String effectiveBranch() { return baseBranch == null || baseBranch.isBlank() ? "main" : baseBranch; }
-    public LlmMode effectiveLlmMode() { return llmMode == null ? LlmMode.LOCAL : llmMode; }
+    public LlmMode effectiveLlmMode() { return LlmMode.CLOUD; }
 }

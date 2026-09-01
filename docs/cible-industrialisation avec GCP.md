@@ -84,7 +84,6 @@ Le prototype assemble, dans Docker Compose :
 | Orchestration | Spring Boot 3.5 / Java 21, exécution asynchrone |
 | Rôles IA | `Planner`, `Developer`, `PatchRepair`, `Tester`, `Reviewer` |
 | Passerelle LLM | LiteLLM |
-| Modèle local | Ollama, `qwen2.5-coder:7b` par défaut |
 | Modèle cloud | OpenAI configurable via LiteLLM |
 | SCM et PR | Gitea + PostgreSQL |
 | Exécution | Conteneurs Docker éphémères lancés via `/var/run/docker.sock` |
@@ -99,8 +98,7 @@ flowchart TB
   W --> O[Orchestrateur Spring Boot]
   O --> C[Contexte du dépôt]
   O --> L[LiteLLM]
-  L --> M1[Ollama]
-  L --> M2[Modèle cloud]
+  L --> M[Modèle cloud]
   O --> D[Docker socket]
   D --> S[Sandbox éphémère]
   S --> T[Tests]
@@ -126,7 +124,7 @@ La [note de sécurité](https://github.com/dbeaumont/ai-software-factory-local/b
 
 #### Une abstraction de modèles
 
-LiteLLM apporte une interface commune et permet un routage local/cloud. Cette abstraction est utile pour comparer les modèles, maîtriser les coûts, organiser un repli et réduire l’adhérence fournisseur.
+LiteLLM apporte une interface commune vers le fournisseur cloud. Cette abstraction reste utile pour comparer les modèles, maîtriser les coûts, organiser un repli cloud et réduire l’adhérence fournisseur.
 
 #### Un workflow visible et compréhensible
 
@@ -331,7 +329,6 @@ Des Shared VPC, règles de firewall, Private Service Connect et périmètres VPC
 | Volume workspace | disque éphémère + Cloud Storage versionné | suppression automatique et rétention réglementée |
 | `.env` / `.vault` | Secret Manager + Workload Identity | aucune clé de service account |
 | LiteLLM | LiteLLM HA sur GKE ou gateway interne équivalente | conserver si multi-modèles requis |
-| Ollama | Vertex AI endpoints ou pool GPU GKE dédié | ne pas mélanger avec les sandboxes de code |
 | OpenAI direct | appel via gateway et egress contrôlé | politique par classification de dépôt |
 | Gitea | SCM d’entreprise existant | ne pas recréer le SCM sans besoin métier |
 | Artifactory | Artifactory entreprise ou Artifact Registry | garder l’existant si standard groupe |

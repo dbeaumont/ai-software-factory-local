@@ -6,10 +6,10 @@ Le pipeline transforme un besoin exprime sous forme de ticket en Pull Request Gi
 
 | Sujet | Étape | Objectif | Outils et composants |
 |---|---|---|---|
-| Préparation | 1. Saisie du besoin | Rédiger le ticket structuré et choisir le mode LLM (`LOCAL` / `CLOUD`) | `factory-web` (SPA), Nginx |
+| Préparation | 1. Saisie du besoin | Rédiger le ticket structuré ; l'inférence utilise le modèle cloud configuré | `factory-web` (SPA), Nginx |
 | Préparation | 2. Création de la tâche | Attribuer une référence (`AF-0001`), instancier l'état en mémoire et démarrer le pipeline asynchrone | `orchestrator` (Spring Boot / API REST) |
 | Préparation | 3. Analyse du contexte | Cloner le dépôt Git cible et extraire la structure du projet | Gitea, Git, `RepositoryContextService` |
-| Conception | 4. Planification | Générer une feuille de route détaillée (`.ai-plan.md`) | Agent `Planner`, LiteLLM (Ollama ou OpenAI) |
+| Conception | 4. Planification | Générer une feuille de route détaillée (`.ai-plan.md`) | Agent `Planner`, LiteLLM, OpenAI |
 | Développement | 5. Développement | Produire un patch unifié (`unified diff`) à partir du besoin et du plan | Agent `Developer`, `UnifiedDiffNormalizer` |
 | Développement | 6. Validation du patch | Vérifier l'applicabilité du diff sans accès réseau (`git apply --check`) | Sandbox Docker (`ai-factory-sandbox:local`) |
 | Développement | 7. Réparation de patch | Régénérer un diff unifié valide si la première version échoue à l'application | Agent `PatchRepair`, LiteLLM |
@@ -21,4 +21,4 @@ Le pipeline transforme un besoin exprime sous forme de ticket en Pull Request Gi
 | Validation | 13. Décision humaine | Examiner la proposition et autoriser la livraison (`POST /api/tasks/{id}/approve`) | API Spring Boot, IHM `factory-web` |
 | Livraison | 14. Livraison SCM | Basculer sur une branche dédiée, nettoyer les fichiers temporaires IA, committer, pousser et créer la PR | Git, Gitea REST API |
 
-Le modèle de langage est sollicité localement via Ollama (`qwen2.5-coder:7b`) ou dans le cloud via OpenAI (`gpt-5.6-luna` par défaut) lorsque le mode cloud est activé. LiteLLM constitue le point de passage unique et homogène pour tous les appels de modèles.
+Le modèle de langage est sollicité dans le cloud via OpenAI (`gpt-5.6-luna` par défaut). LiteLLM constitue le point de passage unique et homogène pour tous les appels de modèles.

@@ -17,7 +17,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all model bootstrap tokens demo test test-sandbox-runtime mcp-shadow-report package config status restart logs urls down clean
+.PHONY: help init build up all bootstrap tokens demo test test-sandbox-runtime mcp-shadow-report package config status restart logs urls down clean
 
 help:
 	$(log-target)
@@ -26,7 +26,6 @@ help:
 	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
 	@echo -e "  $(CYAN)make up$(NC)         - start the complete local factory stack"
 	@echo -e "  $(CYAN)make all$(NC)        - reset data and start a fully bootstrapped local factory"
-	@echo -e "  $(CYAN)make model$(NC)      - pull configured Ollama model"
 	@echo -e "  $(CYAN)make bootstrap$(NC)  - initialize demo Gitea repository and service tokens"
 	@echo -e "  $(CYAN)make tokens$(NC)     - validate or regenerate local Gitea and SonarQube tokens"
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
@@ -74,16 +73,8 @@ all:
 	@echo -e "$(YELLOW)Resetting and bootstrapping complete factory...$(NC)"
 	$(MAKE) clean
 	$(MAKE) up
-	$(MAKE) model
 	$(MAKE) bootstrap
 	@echo -e "$(GREEN)Full factory ready!$(NC)"
-
-model:
-	$(log-target)
-	@test -n "$(OLLAMA_MODEL)" || (echo "OLLAMA_MODEL must be defined in .env" >&2; exit 1)
-	@echo -e "$(BLUE)Pulling Ollama model $(OLLAMA_MODEL)...$(NC)"
-	$(COMPOSE) exec -T ollama ollama pull "$(OLLAMA_MODEL)"
-	@echo -e "$(GREEN)Model $(OLLAMA_MODEL) pulled!$(NC)"
 
 bootstrap: init
 	$(log-target)
@@ -163,7 +154,6 @@ urls:
 	@echo -e "  - Gitea API:    $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/api/v1$(NC)"
 	@echo -e "  - Gitea SSH:    $(GREEN)ssh://git@localhost:$(GITEA_SSH_PORT)$(NC)"
 	@echo -e "  - Demo repo:    $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/$(GITEA_ADMIN_USER)/customer-api$(NC)"
-	@echo -e "  - Ollama API:   $(GREEN)http://localhost:$(OLLAMA_PORT)$(NC)"
 	@echo -e "  - Orchestrator: $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)$(NC)"
 	@echo -e "  - Tasks API:    $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks$(NC)"
 	@echo -e "  - Create task:  POST $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks$(NC)"

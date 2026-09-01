@@ -100,7 +100,7 @@
   <text x="454" y="513" class="card-title">Plan</text>
   <text x="454" y="538" class="card-tool">Agent Planner</text>
   <text x="454" y="559" class="card-tool">LiteLLM  •  LLM</text>
-  <text x="454" y="581" class="card-tool">Ollama ou OpenAI</text>
+  <text x="454" y="581" class="card-tool">OpenAI cloud</text>
 
   <!-- 3 Patch -->
   <g filter="url(#shadow)"><rect x="714" y="438" width="160" height="156" rx="15" fill="#fff" stroke="#9ad4c1" stroke-width="1.5"/></g>
@@ -192,7 +192,7 @@
   <circle cx="1600" cy="328" r="7" fill="#0c66e4"/><text x="1617" y="332" class="service-name">LiteLLM</text><text x="1617" y="349" class="service-desc">Routage des appels aux modeles</text>
 
   <g filter="url(#soft-shadow)"><rect x="1577" y="366" width="226" height="50" rx="12" fill="#fff"/></g>
-  <circle cx="1600" cy="386" r="7" fill="#0c66e4"/><text x="1617" y="390" class="service-name">Ollama</text><text x="1617" y="407" class="service-desc">Execution des modeles locaux</text>
+  <circle cx="1600" cy="386" r="7" fill="#f5a623"/><text x="1617" y="390" class="service-name">OpenAI</text><text x="1617" y="407" class="service-desc">Execution du modele cloud</text>
 
   <g filter="url(#soft-shadow)"><rect x="1577" y="424" width="226" height="50" rx="12" fill="#fff"/></g>
   <circle cx="1600" cy="444" r="7" fill="#b7791f"/><text x="1617" y="448" class="service-name">Syft</text><text x="1617" y="465" class="service-desc">Generation du SBOM CycloneDX</text>
