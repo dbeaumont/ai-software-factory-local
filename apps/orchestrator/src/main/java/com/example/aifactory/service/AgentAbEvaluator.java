@@ -1,0 +1,78 @@
+package com.example.aifactory.service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/** Produces a fail-closed A/B qualification from paired reference-suite observations. */
+public final class AgentAbEvaluator {
+    public Report evaluate(List<Observation> observations, Thresholds thresholds) {
+        Map<String, List<Observation>> byCase = observations.stream().collect(Collectors.groupingBy(Observation::caseId));
+        if (byCase.size() < thresholds.minimumCases()
+                || byCase.values().stream().anyMatch(values -> variants(values).size() != 2)) {
+            return new Report("INCOMPLETE", byCase.size(), null, null,
+                    List.of("paired_reference_suite_required"));
+        }
+        Metrics baseline = metrics(observations, Variant.BASELINE);
+        Metrics candidate = metrics(observations, Variant.CANDIDATE);
+        java.util.ArrayList<String> failures = new java.util.ArrayList<>();
+        if (candidate.firstPatchSuccessRate() < baseline.firstPatchSuccessRate() - thresholds.maxQualityRegression())
+            failures.add("first_patch_success_regression");
+        if (candidate.testSuccessRate() < baseline.testSuccessRate() - thresholds.maxQualityRegression())
+            failures.add("test_success_regression");
+        if (candidate.humanAcceptanceRate() < baseline.humanAcceptanceRate() - thresholds.maxQualityRegression())
+            failures.add("human_acceptance_regression");
+        if (candidate.securityFailures() > 0) failures.add("security_regression");
+        if (candidate.averageRepairs() > baseline.averageRepairs() + thresholds.maxRepairIncrease())
+            failures.add("repair_regression");
+        if (candidate.averageTokens() > baseline.averageTokens() * (1 + thresholds.maxResourceIncrease()))
+            failures.add("token_regression");
+        if (candidate.averageDurationMillis() > baseline.averageDurationMillis() * (1 + thresholds.maxResourceIncrease()))
+            failures.add("duration_regression");
+        if (candidate.averageCostMicros() > baseline.averageCostMicros() * (1 + thresholds.maxResourceIncrease()))
+            failures.add("cost_regression");
+        return new Report(failures.isEmpty() ? "QUALIFIED" : "REJECTED", byCase.size(), baseline, candidate,
+                List.copyOf(failures));
+    }
+
+    private static Set<Variant> variants(List<Observation> values) {
+        return values.stream().map(Observation::variant).collect(Collectors.toSet());
+    }
+
+    private static Metrics metrics(List<Observation> all, Variant variant) {
+        List<Observation> values = all.stream().filter(value -> value.variant() == variant).toList();
+        int count = values.size();
+        return new Metrics(rate(values, Observation::firstPatchSuccess),
+                values.stream().mapToInt(Observation::repairs).average().orElse(0),
+                rate(values, Observation::testsPassed), rate(values, Observation::humanAccepted),
+                values.stream().mapToLong(Observation::tokens).average().orElse(0),
+                values.stream().mapToLong(Observation::durationMillis).average().orElse(0),
+                values.stream().mapToLong(Observation::costMicros).average().orElse(0),
+                (int) values.stream().filter(Observation::securityFailure).count(), count);
+    }
+
+    private static double rate(List<Observation> values, java.util.function.Predicate<Observation> predicate) {
+        return values.isEmpty() ? 0 : (double) values.stream().filter(predicate).count() / values.size();
+    }
+
+    public enum Variant { BASELINE, CANDIDATE }
+
+    public record Observation(String caseId, Variant variant, boolean firstPatchSuccess, int repairs,
+                              boolean testsPassed, boolean humanAccepted, long tokens,
+                              long durationMillis, long costMicros, boolean securityFailure) {
+    }
+
+    public record Thresholds(int minimumCases, double maxQualityRegression, double maxRepairIncrease,
+                             double maxResourceIncrease) {
+    }
+
+    public record Metrics(double firstPatchSuccessRate, double averageRepairs, double testSuccessRate,
+                          double humanAcceptanceRate, double averageTokens, double averageDurationMillis,
+                          double averageCostMicros, int securityFailures, int cases) {
+    }
+
+    public record Report(String verdict, int pairedCases, Metrics baseline, Metrics candidate,
+                         List<String> failures) {
+    }
+}
