@@ -89,7 +89,8 @@ public class ScmDeliveryService {
                 || request.patchDigest() == null || !request.patchDigest().matches("[0-9a-f]{64}")
                 || request.evidenceDigests() == null || !request.evidenceDigests().keySet().equals(EVIDENCE_PATHS.keySet())
                 || request.evidenceDigests().values().stream().anyMatch(value -> value == null || !value.matches("[0-9a-f]{64}"))
-                || request.idempotencyKey() == null || !request.idempotencyKey().matches("[A-Za-z0-9._:-]{8,128}")) {
+                || request.idempotencyKey() == null || !request.idempotencyKey().matches("[A-Za-z0-9._:-]{8,128}")
+                || request.approvalProof() == null) {
             throw new IllegalArgumentException("invalid SCM delivery request");
         }
     }

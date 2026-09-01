@@ -13,10 +13,12 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ScmDeliveryServiceTest {
     @Test
@@ -88,6 +90,77 @@ class ScmDeliveryServiceTest {
         org.junit.jupiter.api.Assertions.assertTrue(auditEvents.contains("AFTER_WRITE"));
         org.junit.jupiter.api.Assertions.assertTrue(auditEvents.contains("delivery-task-1-attempt-1"));
         org.junit.jupiter.api.Assertions.assertTrue(auditEvents.contains("pull_request_id"));
+
+        ScmDeliveryService.CreateRequest missingApproval = new ScmDeliveryService.CreateRequest("1", "task-1",
+                "attempt-missing", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "title",
+                "delivery", "delivery-task-1-missing", null);
+        assertThrows(IllegalArgumentException.class, () -> service.create(missingApproval));
+
+        ApprovalProof divergentProof = ApprovalProof.sign("task-1", "attempt-sha", "customer-api", "d".repeat(40),
+                patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
+        ScmDeliveryService.CreateRequest divergentSha = new ScmDeliveryService.CreateRequest("1", "task-1",
+                "attempt-sha", "customer-api", "d".repeat(40), patchDigest, evidenceDigests, "main", "title",
+                "delivery", "delivery-task-1-sha", divergentProof);
+        assertThrows(SecurityException.class, () -> service.create(divergentSha));
+
+        ApprovalProof outsideProof = ApprovalProof.sign("task-1", "attempt-outside", "outside-repository",
+                sourceCommit, patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600),
+                credentials.approvalKey());
+        ScmDeliveryService.CreateRequest outsideRepository = new ScmDeliveryService.CreateRequest("1", "task-1",
+                "attempt-outside", "outside-repository", sourceCommit, patchDigest, evidenceDigests, "main", "title",
+                "delivery", "delivery-task-1-outside", outsideProof);
+        assertThrows(IllegalArgumentException.class, () -> service.create(outsideRepository));
+
+        ApprovalProof existingProof = ApprovalProof.sign("task-1", "attempt-existing", "customer-api", sourceCommit,
+                patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
+        ScmDeliveryService.CreateRequest existingRequest = new ScmDeliveryService.CreateRequest("1", "task-1",
+                "attempt-existing", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "title",
+                "delivery", "delivery-task-1-existing", existingProof);
+        AtomicInteger existingCreates = new AtomicInteger();
+        ScmDeliveryBackend existingBackend = new ScmDeliveryBackend() {
+            @Override
+            public DeliveryResult findExisting(DeliveryCommand command) {
+                return new DeliveryResult("customer-api", command.branch(), "e".repeat(40), 43,
+                        "http://localhost:3000/aiadmin/customer-api/pulls/43", true);
+            }
+
+            @Override
+            public DeliveryResult createDraftPullRequest(DeliveryCommand command) {
+                existingCreates.incrementAndGet();
+                throw new AssertionError("existing branch/PR must be reused");
+            }
+        };
+        ScmDeliveryService existingService = new ScmDeliveryService(properties, credentials, registry, existingBackend,
+                store, audit);
+        assertEquals(43, existingService.create(existingRequest).pullRequestId());
+        assertEquals(0, existingCreates.get());
+
+        ApprovalProof timeoutProof = ApprovalProof.sign("task-1", "attempt-timeout", "customer-api", sourceCommit,
+                patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
+        ScmDeliveryService.CreateRequest timeoutRequest = new ScmDeliveryService.CreateRequest("1", "task-1",
+                "attempt-timeout", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "title",
+                "delivery", "delivery-task-1-timeout", timeoutProof);
+        AtomicBoolean remotelyCreated = new AtomicBoolean();
+        AtomicInteger timeoutCreates = new AtomicInteger();
+        ScmDeliveryBackend timeoutBackend = new ScmDeliveryBackend() {
+            @Override
+            public DeliveryResult findExisting(DeliveryCommand command) {
+                return remotelyCreated.get() ? new DeliveryResult("customer-api", command.branch(), "f".repeat(40),
+                        44, "http://localhost:3000/aiadmin/customer-api/pulls/44", true) : null;
+            }
+
+            @Override
+            public DeliveryResult createDraftPullRequest(DeliveryCommand command) {
+                timeoutCreates.incrementAndGet();
+                remotelyCreated.set(true);
+                throw new IllegalStateException("simulated timeout after remote PR creation");
+            }
+        };
+        ScmDeliveryService timeoutService = new ScmDeliveryService(properties, credentials, registry, timeoutBackend,
+                store, audit);
+        assertThrows(IllegalStateException.class, () -> timeoutService.create(timeoutRequest));
+        assertEquals(44, timeoutService.create(timeoutRequest).pullRequestId());
+        assertEquals(1, timeoutCreates.get());
     }
 
     private static Map<String, String> evidence(Path workspace) throws Exception {
