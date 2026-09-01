@@ -1,7 +1,7 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.config.McpClientProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;

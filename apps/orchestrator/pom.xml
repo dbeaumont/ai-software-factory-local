@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.16</version>
+    <version>4.1.1</version>
     <relativePath/>
   </parent>
   <groupId>com.example</groupId>
@@ -12,8 +12,8 @@
   <version>0.1.0</version>
   <name>ai-factory-orchestrator</name>
   <properties>
-    <java.version>21</java.version>
-    <spring-ai.version>1.1.8</spring-ai.version>
+    <java.version>25</java.version>
+    <spring-ai.version>2.0.1</spring-ai.version>
     <mcp.schemas.directory>../../resources/mcp/schemas</mcp.schemas.directory>
   </properties>
   <dependencyManagement>
@@ -47,7 +47,7 @@
     <dependency>
       <groupId>com.networknt</groupId>
       <artifactId>json-schema-validator</artifactId>
-      <version>2.0.0</version>
+      <version>3.0.6</version>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>

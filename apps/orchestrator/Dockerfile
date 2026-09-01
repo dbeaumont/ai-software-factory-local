@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Build stage
 # ─────────────────────────────────────────────────────────────────────────────
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+FROM maven:3.9.16-eclipse-temurin-25 AS build
 
 # Variable de configuration build — utilisée uniquement pour rediriger Maven vers le miroir interne
 ARG MAVEN_MIRROR_URL
@@ -62,7 +62,7 @@ RUN --mount=type=secret,id=artifactory_token \
 # ─────────────────────────────────────────────────────────────────────────────
 # Runtime stage
 # ─────────────────────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 # The orchestrator starts isolated sandbox containers through the mounted Docker socket.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git curl ca-certificates docker.io \

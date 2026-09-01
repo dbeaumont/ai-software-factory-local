@@ -1,7 +1,7 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.config.AiFactoryProperties;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 

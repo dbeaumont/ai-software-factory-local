@@ -5,7 +5,7 @@ import com.example.aifactory.sandbox.model.SandboxModels.EvidenceStatus;
 import com.example.aifactory.sandbox.model.SandboxModels.ExecutionStatus;
 import com.example.aifactory.sandbox.model.SandboxModels.Operation;
 import com.example.aifactory.sandbox.model.SandboxModels.Verdict;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;

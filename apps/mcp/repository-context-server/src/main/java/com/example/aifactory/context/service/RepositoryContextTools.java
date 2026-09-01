@@ -2,8 +2,8 @@ package com.example.aifactory.context.service;
 
 import com.example.aifactory.context.config.RepositoryContextProperties;
 import com.example.aifactory.context.model.ContextModels.*;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
@@ -378,7 +378,7 @@ public class RepositoryContextTools {
     private static void addNpmDependencies(List<Dependency> result, JsonNode declarations, String scope,
                                            Path workspace, Path manifest, List<String> lines) {
         if (!declarations.isObject()) return;
-        declarations.fields().forEachRemaining(entry -> {
+        declarations.properties().forEach(entry -> {
             if (entry.getValue().isTextual()) {
                 result.add(dependency(entry.getKey(), entry.getValue().textValue(), scope,
                         normalizedRelative(workspace, manifest), declarationLine(lines, '"' + entry.getKey() + '"')));

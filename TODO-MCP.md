@@ -2,7 +2,7 @@
 
 > Feuille de route exécutable pour découpler les outils de l'AI Software Factory, réduire les privilèges de l'orchestrateur et préparer la cible GCP.
 >
-> État de référence : prototype local Spring Boot 3.5 / Java 21, Docker Compose, tâches en mémoire, agents sans outils, sandbox lancée via `/var/run/docker.sock`.
+> État de référence : prototype local Spring Boot 4.1 / Spring AI 2.0 / Java 25, Docker Compose, tâches en mémoire, agents sans outils, sandbox lancée via `/var/run/docker.sock`.
 
 ## 1. Résultat recherché
 
@@ -248,7 +248,7 @@ Objectif : rendre les décisions vérifiables avant d'ajouter des dépendances o
 - [x] **MCP-003** — Inventorier secrets, volumes, réseaux, comptes techniques et destinations utilisés par chaque capacité. _(Baseline Compose et propriété cible documentées dans `docs/mcp/MCP-003-inventaire-dependances-runtime.md`, sans lecture ni copie des valeurs de `.env`/`.vault`.)_
 - [x] **MCP-004** — Définir les actifs et frontières de confiance : ticket, dépôt, source SHA, patch, workspace, preuves, approbation, jetons et PR. _(Registre des actifs, zones, frontières, liaisons anti-rejeu et règles fail-closed dans `docs/mcp/MCP-004-actifs-frontieres-confiance.md`.)_
 - [x] **MCP-005** — Réaliser un threat model couvrant prompt injection, tool poisoning, path traversal, SSRF, confused deputy, token passthrough, fuite de logs, handle hijacking, rejeu, déni de service et serveur compromis. _(16 scénarios cotés, contrôles, tests, risques ouverts et gouvernance documentés dans `docs/mcp/MCP-005-threat-model.md`.)_
-- [x] **MCP-006** — Décider par ADR entre le SDK Java officiel et les starters Spring AI ; vérifier explicitement la compatibilité avec Spring Boot 3.5.16, WebFlux, Jackson et la version de protocole retenue.
+- [x] **MCP-006** — Décider par ADR entre le SDK Java officiel et les starters Spring AI ; vérifier explicitement la compatibilité avec Spring Boot, WebFlux, Jackson et la version de protocole retenue. _(Matrice réévaluée après migration : Java 25, Spring Boot 4.1.1, Spring AI 2.0.1, MCP Java SDK 2.0.0 et Jackson 3.1.5 ; voir `docs/migrations/JDK25-spring-boot-4.md`.)_
 - [x] **MCP-007** — Épingler un BOM/version de SDK MCP et documenter le processus de montée de version avec tests de conformité.
 - [x] **MCP-008** — Définir une convention de nommage/versionnement pour outils, ressources, schémas et serveurs. _(Convention normative, compatibilité N/N-1 et écarts à normaliser documentés dans `docs/mcp/MCP-008-conventions-nommage-versionnement.md`.)_
 - [x] **MCP-009** — Écrire les JSON Schema du tronc commun, des erreurs et des cinq premiers outils dans `resources/mcp/schemas/`. _(Tronc requête/réponse, erreurs et couples request/result de `context.list_tree`, `context.search_code`, `context.read_file`, `context.get_symbols` et `context.get_dependencies` créés en Draft 2020-12 ; catalogue `contract-catalog-v1.json` ajouté.)_

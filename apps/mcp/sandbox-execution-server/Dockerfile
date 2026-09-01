@@ -1,4 +1,4 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+FROM maven:3.9.16-eclipse-temurin-25 AS build
 ARG MAVEN_MIRROR_URL
 WORKDIR /src
 COPY pom.xml ./
@@ -12,7 +12,7 @@ RUN --mount=type=secret,id=artifactory_token \
       mvn -B -DskipTests package; \
     fi
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates git docker.io \
     && rm -rf /var/lib/apt/lists/* \

@@ -1,6 +1,6 @@
 package com.example.aifactory.context.service;
 
-import org.springaicommunity.mcp.annotation.McpResource;
+import org.springframework.ai.mcp.annotation.McpResource;
 import org.springframework.stereotype.Component;
 
 @Component

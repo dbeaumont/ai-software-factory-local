@@ -3,8 +3,9 @@ package com.example.aifactory.sandbox.service;
 import com.example.aifactory.sandbox.config.SandboxExecutionProperties;
 import com.example.aifactory.sandbox.model.SandboxModels.*;
 import com.example.aifactory.sandbox.service.SandboxJobStore.JobSnapshot;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.json.JsonMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,7 +61,7 @@ class SandboxJobServiceTest {
                 "network", 2, 32, 2, 100, Duration.ofHours(1), Duration.ofSeconds(15),
                 65_536, 1_048_576,
                 "mirror", "artifact-token", "sonar", "sonar-token");
-        store = new SandboxJobStore(new ObjectMapper().findAndRegisterModules(), properties);
+        store = new SandboxJobStore(JsonMapper.builder().findAndAddModules().build(), properties);
         runtime = new FakeRuntime();
         clock = Clock.systemUTC();
         jobs = service(runtime);
@@ -393,7 +394,7 @@ class SandboxJobServiceTest {
         jobs.shutdown();
 
         Path snapshot = properties.stateRoot().resolve(submitted.executionId() + ".json");
-        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        ObjectMapper mapper = JsonMapper.builder().findAndAddModules().build();
         ObjectNode tampered = (ObjectNode) mapper.readTree(snapshot.toFile());
         tampered.put("output", "tampered");
         Files.writeString(snapshot, mapper.writeValueAsString(tampered));
@@ -410,7 +411,7 @@ class SandboxJobServiceTest {
         properties = new SandboxExecutionProperties(root, root.resolve(".sandbox-jobs"), "workspace", "image",
                 "network", concurrent, queued, perTask, 100, Duration.ofHours(1), Duration.ofSeconds(15),
                 65_536, 1_048_576, "mirror", "artifact-token", "sonar", "sonar-token");
-        store = new SandboxJobStore(new ObjectMapper().findAndRegisterModules(), properties);
+        store = new SandboxJobStore(JsonMapper.builder().findAndAddModules().build(), properties);
         runtime = new FakeRuntime();
         jobs = service(runtime);
     }

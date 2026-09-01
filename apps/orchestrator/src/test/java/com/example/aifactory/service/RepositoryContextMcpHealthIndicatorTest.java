@@ -2,9 +2,9 @@ package com.example.aifactory.service;
 
 import com.example.aifactory.config.McpFactoryProperties;
 import com.example.aifactory.config.McpClientProperties;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.actuate.health.Status;
+import org.springframework.boot.health.contributor.Status;
 
 import java.net.URI;
 import java.time.Duration;

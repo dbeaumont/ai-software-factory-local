@@ -2,7 +2,7 @@ package com.example.aifactory.service;
 
 import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.CloudAvailability;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;

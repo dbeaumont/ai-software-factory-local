@@ -60,7 +60,7 @@ L’analyse du dépôt s’appuie en particulier sur :
 - [`docs/proto-security.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-security.md) ;
 - [`docs/proto-workflow.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-workflow.md) ;
 - [`docs/cible-industrialisation avec GCP.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/cible-industrialisation%20avec%20GCP.md) ;
-- le `pom.xml` de l’orchestrateur Spring Boot 3.5 / Java 21.
+- le `pom.xml` de l’orchestrateur Spring Boot 4.1 / Spring AI 2.0 / Java 25.
 
 L’état de l’art est fondé prioritairement sur la documentation des éditeurs et des standards ouverts. Les offres changent rapidement ; les principes d’architecture proposés cherchent donc à limiter la dépendance à un modèle ou à un fournisseur particulier.
 
@@ -81,7 +81,7 @@ Le prototype assemble, dans Docker Compose :
 | Capacité | Implémentation actuelle |
 |---|---|
 | Entrée web | Nginx `reverse-proxy` + SPA `factory-web` |
-| Orchestration | Spring Boot 3.5 / Java 21, exécution asynchrone |
+| Orchestration | Spring Boot 4.1 / Spring AI 2.0 / Java 25, exécution asynchrone |
 | Rôles IA | `Planner`, `Developer`, `PatchRepair`, `Tester`, `Reviewer` |
 | Passerelle LLM | LiteLLM |
 | Modèle cloud | OpenAI configurable via LiteLLM |

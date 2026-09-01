@@ -4,7 +4,7 @@ import com.example.aifactory.model.LlmMode;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 

@@ -24,7 +24,7 @@ La stack actuelle contient :
 |---|---|
 | Point d'entrée HTTP | `reverse-proxy` Nginx (port 8080) |
 | Interface de saisie & suivi | `factory-web` (SPA HTML/JS/CSS servie par Nginx) |
-| Orchestration | Spring Boot 3.5 / Java 21 (`orchestrator`) |
+| Orchestration | Spring Boot 4.1 / Spring AI 2.0 / Java 25 (`orchestrator`) |
 | Contexte MCP | Serveur MCP stateless en lecture seule (`repository-context-mcp`) |
 | Exécution MCP | Contrôleur de jobs à profils immuables (`sandbox-execution-mcp`) |
 | Passerelle LLM | LiteLLM (port 4000 interne) |
@@ -59,6 +59,7 @@ La stack actuelle contient :
 
 - Docker Desktop ou Docker Engine avec Compose v2
 - `make`, `curl`, `git`, `bash`
+- JDK 25 et Maven 3.6.3+ pour compiler ou tester les modules Java hors Docker (les images Docker embarquent déjà Temurin 25)
 - Python 3 (pour les scripts de bootstrap)
 - `jq` recommandé pour manipuler les réponses API
 - Environ 16 Go de RAM recommandés pour la stack complète

@@ -1,7 +1,7 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.config.McpFactoryProperties;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;

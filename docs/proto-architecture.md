@@ -40,7 +40,7 @@ flowchart TB
 | `gitea-db` | Base PostgreSQL 16 de Gitea |
 | `gitea` | Gestionnaire de dépôts Git, API REST, branches et Pull Requests (v1.23) |
 | `litellm` | Passerelle OpenAI-compatible vers le modèle cloud configuré |
-| `orchestrator` | Moteur principal du workflow (Spring Boot 3.5 / Java 21) |
+| `orchestrator` | Moteur principal du workflow (Spring Boot 4.1 / Spring AI 2.0 / Java 25) |
 | `repository-context-mcp` | Lecture bornée des workspaces sur le réseau MCP interne |
 | `sandbox-execution-mcp` | Contrôleur de jobs Docker à profils immuables, seul détenteur local du socket |
 | `factory-web` | Interface utilisateur SPA HTML/JS/CSS, servie par Nginx |

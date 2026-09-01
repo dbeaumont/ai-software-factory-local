@@ -1,5 +1,5 @@
 # Ephemeral execution image used for patch validation, builds, tests, SBOM generation and vulnerability scans.
-FROM maven:3.9.9-eclipse-temurin-21
+FROM maven:3.9.16-eclipse-temurin-25
 
 # Tool versions are explicit so sandbox evidence remains reproducible.
 ARG TRIVY_VERSION

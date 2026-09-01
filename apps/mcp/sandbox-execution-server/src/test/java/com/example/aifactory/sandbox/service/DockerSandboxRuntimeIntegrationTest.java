@@ -2,8 +2,8 @@ package com.example.aifactory.sandbox.service;
 
 import com.example.aifactory.sandbox.config.SandboxExecutionProperties;
 import com.example.aifactory.sandbox.model.SandboxModels.Operation;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
