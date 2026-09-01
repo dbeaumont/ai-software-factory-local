@@ -63,10 +63,19 @@ public class RepositoryContextGateway implements RepositoryContextProvider {
     @Override
     public String collect(Path repository, String taskId, String sourceCommit) throws Exception {
         if (properties.repositoryContextMode() == McpFactoryProperties.ContextMode.MCP_ACTIVE) {
-            if (!properties.enabled()) {
-                throw new IllegalStateException("MCP context mode is active but MCP is disabled");
+            return collectActive(repository, taskId, sourceCommit, "workflow");
+        }
+        return collectForRole(repository, taskId, sourceCommit, "workflow");
+    }
+
+    @Override
+    public String collectForRole(Path repository, String taskId, String sourceCommit, String role) throws Exception {
+        if (properties.repositoryContextMode() == McpFactoryProperties.ContextMode.MCP_ACTIVE) {
+            if (!properties.repositoryContextActiveRoles().contains(role)) {
+                log.info("Repository context remains direct for inactive MCP role={}", role);
+                return direct.collect(repository, taskId, sourceCommit);
             }
-            return mcp.collect(repository, taskId, sourceCommit);
+            return collectActive(repository, taskId, sourceCommit, role);
         }
         String directContext = direct.collect(repository, taskId, sourceCommit);
         if (!properties.enabled() || properties.repositoryContextMode() == McpFactoryProperties.ContextMode.DIRECT) {
@@ -83,6 +92,14 @@ public class RepositoryContextGateway implements RepositoryContextProvider {
             log.warn("MCP shadow context failed for task={}: {}", taskId, exception.getMessage());
         }
         return directContext;
+    }
+
+    private String collectActive(Path repository, String taskId, String sourceCommit, String role) {
+        if (!properties.enabled()) {
+            throw new IllegalStateException("MCP context mode is active but MCP is disabled");
+        }
+        log.info("Repository context uses MCP_ACTIVE for role={}", role);
+        return mcp.collect(repository, taskId, sourceCommit);
     }
 
     private void recordComparison(String directContext, String mcpContext) {

@@ -17,7 +17,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap tokens demo test test-sandbox-runtime mcp-shadow-campaign mcp-shadow-report package config status restart logs urls down clean
+.PHONY: help init build up all bootstrap tokens demo test test-sandbox-runtime mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls down clean
 
 help:
 	$(log-target)
@@ -32,6 +32,7 @@ help:
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify effective Docker sandbox constraints"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
+	@echo -e "  $(CYAN)make mcp-active-campaign$(NC) - run the role-scoped MCP_ACTIVE canary"
 	@echo -e "  $(CYAN)make mcp-shadow-report$(NC) - generate the MCP shadow campaign report"
 	@echo -e "  $(CYAN)make package$(NC)    - package orchestrator without tests"
 	@echo -e "  $(CYAN)make config$(NC)     - validate and render Docker Compose configuration"
@@ -117,6 +118,10 @@ test-sandbox-runtime:
 mcp-shadow-campaign:
 	$(log-target)
 	./scripts/mcp-context-shadow-campaign.sh $(CAMPAIGN_ARGS)
+
+mcp-active-campaign:
+	$(log-target)
+	AI_FACTORY_CONTEXT_CAMPAIGN_KIND=active ./scripts/mcp-context-shadow-campaign.sh $(CAMPAIGN_ARGS)
 
 mcp-shadow-report:
 	$(log-target)

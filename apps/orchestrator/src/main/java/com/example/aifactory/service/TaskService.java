@@ -121,18 +121,19 @@ public class TaskService {
             s.sourceCommit = runner.run(List.of("git", "rev-parse", "HEAD"), ws, Duration.ofSeconds(10)).strip();
             s.model = llm.modelName();
             log.info("Task {} ({}) cloned source commit {} using model {}", s.id, s.ticketNumber, s.sourceCommit, s.model);
-            String context = contextService.collect(ws, s.id, s.sourceCommit);
+            String plannerContext = contextService.collectForRole(ws, s.id, s.sourceCommit, "planner");
             writeRunMetadata(ws, s);
 
             s.transition(TaskStatus.PLANNING, "Planner agent analyzing requirement and repository context");
-            s.plan = chat(s, "planner", untrusted("REQUIREMENT", s.request.requirement()) + untrusted("REPOSITORY_CONTEXT", context));
+            s.plan = chat(s, "planner", untrusted("REQUIREMENT", s.request.requirement()) + untrusted("REPOSITORY_CONTEXT", plannerContext));
             agentResponses.requireImplementablePlan(s.plan);
             Files.writeString(ws.resolve(".ai-plan.md"), s.plan);
             writeRunMetadata(ws, s);
 
             s.transition(TaskStatus.GENERATING_PATCH, "Developer agent generating a unified diff");
+            String developerContext = contextService.collectForRole(ws, s.id, s.sourceCommit, "developer");
             String rawPatch = chat(s, "developer", untrusted("REQUIREMENT", s.request.requirement()) +
-                    untrusted("PLAN", s.plan) + untrusted("REPOSITORY_CONTEXT", context));
+                    untrusted("PLAN", s.plan) + untrusted("REPOSITORY_CONTEXT", developerContext));
             writeRunMetadata(ws, s);
             s.patch = validateAndRepairPatch(s, ws, rawPatch);
 

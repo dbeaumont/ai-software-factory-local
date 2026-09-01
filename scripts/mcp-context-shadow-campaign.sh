@@ -9,6 +9,7 @@ if [ -n "$campaign_consent_override" ]; then
 fi
 
 manifest="${AI_FACTORY_SHADOW_CAMPAIGN_MANIFEST:-resources/mcp/baselines/context-shadow-campaign-v1.json}"
+campaign_kind="${AI_FACTORY_CONTEXT_CAMPAIGN_KIND:-shadow}"
 mode="${1:---dry-run}"
 port="${ORCHESTRATOR_PORT:-8088}"
 api="${AI_FACTORY_SHADOW_CAMPAIGN_API:-http://localhost:$port}"
@@ -19,6 +20,20 @@ user="${GITEA_ADMIN_USER:-aiadmin}"
 if [ "$mode" != "--dry-run" ] && [ "$mode" != "--execute" ]; then
   echo "Usage: $0 [--dry-run|--execute]" >&2
   exit 2
+fi
+if [ "$campaign_kind" != "shadow" ] && [ "$campaign_kind" != "active" ]; then
+  echo "AI_FACTORY_CONTEXT_CAMPAIGN_KIND must be shadow or active" >&2
+  exit 2
+fi
+if [ "$campaign_kind" = "active" ]; then
+  if [ "${AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE:-}" != "MCP_ACTIVE" ]; then
+    echo "Active campaign requires AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE=MCP_ACTIVE" >&2
+    exit 2
+  fi
+  if [ -z "${AI_FACTORY_MCP_REPOSITORY_CONTEXT_ACTIVE_ROLES:-}" ]; then
+    echo "Active campaign requires at least one explicitly active role" >&2
+    exit 2
+  fi
 fi
 if ! command -v jq >/dev/null; then
   echo "jq is required to validate and execute the campaign" >&2
@@ -42,6 +57,10 @@ fi
 
 task_count=$(jq '.tasks | length' "$manifest")
 echo "Campaign manifest: $manifest"
+echo "Campaign kind: $campaign_kind"
+if [ "$campaign_kind" = "active" ]; then
+  echo "Active roles: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_ACTIVE_ROLES}"
+fi
 echo "Tasks: $task_count"
 jq -r '.tasks | group_by(.ecosystem)[] | "  \(.[0].ecosystem): \(length)"' "$manifest"
 jq -r '.tasks | group_by(.category)[] | "  \(.[0].category): \(length)"' "$manifest"
@@ -71,8 +90,8 @@ if ! jq -e '.cloudAvailable == true and .mcpEnabled == true and .repositoryConte
 fi
 
 timestamp=$(date -u +%Y%m%d-%H%M%S)
-results="docs/mcp/baselines/MCP-context-shadow-campaign-$timestamp.jsonl"
-report="docs/mcp/baselines/MCP-shadow-$timestamp.md"
+results="docs/mcp/baselines/MCP-context-$campaign_kind-campaign-$timestamp.jsonl"
+report="docs/mcp/baselines/MCP-$campaign_kind-$timestamp.md"
 : > "$results"
 
 while IFS= read -r task; do
@@ -112,11 +131,39 @@ while IFS= read -r task; do
     --arg ecosystem "$ecosystem" --arg category "$category" --arg status "$status" \
     --argjson plan_present "$(jq '(.plan // "") | length > 0' <<<"$state")" \
     --argjson plan_chars "$(jq '(.plan // "") | length' <<<"$state")" \
+    --arg plan_status "$(jq -r 'try ((.plan // "") | fromjson | .status) catch "INVALID"' <<<"$state")" \
     --argjson error_present "$(jq '(.error // "") | length > 0' <<<"$state")" \
-    '{case_id:$case_id,task_id:$task_id,repository:$repository,ecosystem:$ecosystem,category:$category,status:$status,plan_present:$plan_present,plan_chars:$plan_chars,error_present:$error_present}' \
+    --arg context_campaign "$campaign_kind" \
+    --arg active_roles "${AI_FACTORY_MCP_REPOSITORY_CONTEXT_ACTIVE_ROLES:-}" \
+    '{case_id:$case_id,task_id:$task_id,repository:$repository,ecosystem:$ecosystem,category:$category,status:$status,plan_present:$plan_present,plan_chars:$plan_chars,plan_status:$plan_status,error_present:$error_present,context_campaign:$context_campaign,active_roles:$active_roles}' \
     >> "$results"
 done < <(jq -c '.tasks[]' "$manifest")
 
-AI_FACTORY_REPORT_ORCHESTRATOR_URL="$api" ./scripts/mcp-shadow-report.sh "$report"
+if [ "$campaign_kind" = "shadow" ]; then
+  AI_FACTORY_REPORT_ORCHESTRATOR_URL="$api" ./scripts/mcp-shadow-report.sh "$report"
+else
+  total=$(wc -l < "$results" | tr -d ' ')
+  plans=$(jq -s 'map(select(.plan_present == true)) | length' "$results")
+  invalid=$(jq -s 'map(select(.plan_status == "INVALID" or .plan_status == "")) | length' "$results")
+  clarifications=$(jq -s 'map(select(.plan_status == "NEEDS_CLARIFICATION")) | length' "$results")
+  {
+    echo "# Rapport de campagne MCP_ACTIVE du contexte dépôt"
+    echo
+    echo "- Généré à : \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+    echo "- Rôles actifs : \`${AI_FACTORY_MCP_REPOSITORY_CONTEXT_ACTIVE_ROLES}\`"
+    echo "- Manifeste : \`$manifest\`"
+    echo
+    echo "## Résultats"
+    echo
+    echo "| Mesure | Valeur |"
+    echo "|---|---:|"
+    echo "| Tâches terminales | $total |"
+    echo "| Plans présents | $plans |"
+    echo "| Contrats Planner invalides | $invalid |"
+    echo "| Décisions NEEDS_CLARIFICATION | $clarifications |"
+    echo
+    echo "Le détail minimisé est conservé dans \`$(basename "$results")\`. Aucun prompt, plan intégral, secret ou réponse brute n'est enregistré."
+  } > "$report"
+fi
 echo "Campaign results: $results"
-echo "Shadow metrics report: $report"
+echo "Campaign report: $report"

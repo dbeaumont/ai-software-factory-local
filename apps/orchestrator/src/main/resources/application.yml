@@ -37,6 +37,7 @@ ai-factory:
   mcp:
     enabled: ${AI_FACTORY_MCP_ENABLED:false}
     repository-context-mode: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE:DIRECT}
+    repository-context-active-roles: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_ACTIVE_ROLES:planner}
     repository-context-server-name: repository-context-mcp
     sandbox-enabled: ${AI_FACTORY_MCP_SANDBOX_ENABLED:false}
     sandbox-mode: ${AI_FACTORY_MCP_SANDBOX_MODE:DIRECT}
