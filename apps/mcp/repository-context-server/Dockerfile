@@ -14,7 +14,7 @@ RUN --mount=type=secret,id=artifactory_token \
 
 FROM eclipse-temurin:21-jre
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && apt-get install -y --no-install-recommends curl ca-certificates git \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 --create-home context-mcp \
     && mkdir -p /var/lib/ai-factory/context-registry \

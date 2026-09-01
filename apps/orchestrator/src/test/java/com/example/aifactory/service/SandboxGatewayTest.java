@@ -23,7 +23,7 @@ class SandboxGatewayTest {
         SandboxService direct = direct(directCalls, "direct");
         McpFactoryProperties properties = McpSandboxServiceTest.properties(true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
         McpSandboxService mcp = mcp(properties, "mcp");
-        SandboxGateway gateway = new SandboxGateway(direct, mcp, properties);
+        SandboxGateway gateway = new SandboxGateway(direct, mcp, properties, new SimpleMeterRegistry());
 
         assertEquals("mcp", gateway.checkPatch(Path.of("unused"), "task-1", "a".repeat(40)));
         assertEquals(0, directCalls.get());
@@ -33,11 +33,31 @@ class SandboxGatewayTest {
     void activeModeRejectsDisabledMcpInsteadOfFallingBackToDocker() {
         AtomicInteger directCalls = new AtomicInteger();
         McpFactoryProperties properties = McpSandboxServiceTest.properties(false, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
-        SandboxGateway gateway = new SandboxGateway(direct(directCalls, "direct"), mcp(properties, "mcp"), properties);
+        SandboxGateway gateway = new SandboxGateway(direct(directCalls, "direct"), mcp(properties, "mcp"), properties,
+                new SimpleMeterRegistry());
 
         assertThrows(IllegalStateException.class,
                 () -> gateway.checkPatch(Path.of("unused"), "task-1", "a".repeat(40)));
         assertEquals(0, directCalls.get());
+    }
+
+    @Test
+    void shadowModeRecordsSuccessfulComparisonWithoutChangingDirectResult() throws Exception {
+        AtomicInteger directCalls = new AtomicInteger();
+        SimpleMeterRegistry metrics = new SimpleMeterRegistry();
+        McpFactoryProperties properties = McpSandboxServiceTest.properties(true,
+                McpFactoryProperties.SandboxMode.MCP_SHADOW);
+        SandboxGateway gateway = new SandboxGateway(direct(directCalls, "same"), mcp(properties, "same"),
+                properties, metrics);
+
+        assertEquals("same", gateway.checkPatch(Path.of("unused"), "task-1", "a".repeat(40)));
+        assertEquals(1, directCalls.get());
+        assertEquals(1.0, metrics.counter("ai_factory_mcp_sandbox_shadow_runs", "operation", "validate_patch",
+                "outcome", "success").count());
+        assertEquals(1.0, metrics.counter("ai_factory_mcp_sandbox_shadow_comparisons", "operation",
+                "validate_patch", "result", "equal").count());
+        assertEquals(4.0, metrics.get("ai_factory_mcp_sandbox_shadow_chars")
+                .tags("operation", "validate_patch", "source", "mcp").summary().mean());
     }
 
     private static SandboxService direct(AtomicInteger calls, String result) {

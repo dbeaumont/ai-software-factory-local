@@ -33,7 +33,8 @@ public class SpringMcpToolInvoker implements McpToolInvoker {
                     "DEPENDENCY_UNAVAILABLE", true, "MCP server is unavailable: " + serverName, exception);
         }
         if (Boolean.TRUE.equals(result.isError())) {
-            throw new McpInvocationException("TOOL_ERROR", false, "MCP tool failed: " + toolName);
+            throw new McpInvocationException("TOOL_ERROR", false,
+                    "MCP tool failed: " + toolName + errorDetail(result));
         }
         if (result.structuredContent() != null) {
             return objectMapper.valueToTree(result.structuredContent());
@@ -50,6 +51,16 @@ public class SpringMcpToolInvoker implements McpToolInvoker {
         }
         throw new McpInvocationException(
                 "INCOMPATIBLE_SCHEMA", false, "MCP tool returned no structured result: " + toolName);
+    }
+
+    private static String errorDetail(McpSchema.CallToolResult result) {
+        for (McpSchema.Content content : result.content()) {
+            if (content instanceof McpSchema.TextContent text && text.text() != null && !text.text().isBlank()) {
+                String detail = text.text().replaceAll("[\\r\\n\\t]+", " ").strip();
+                return " (" + detail.substring(0, Math.min(detail.length(), 300)) + ")";
+            }
+        }
+        return "";
     }
 
     @Override

@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.nio.file.Path;
 
@@ -16,11 +18,14 @@ public class SandboxGateway implements SandboxExecutor {
     private final SandboxService direct;
     private final McpSandboxService mcp;
     private final McpFactoryProperties properties;
+    private final MeterRegistry metrics;
 
-    public SandboxGateway(SandboxService direct, McpSandboxService mcp, McpFactoryProperties properties) {
+    public SandboxGateway(SandboxService direct, McpSandboxService mcp, McpFactoryProperties properties,
+                          MeterRegistry metrics) {
         this.direct = direct;
         this.mcp = mcp;
         this.properties = properties;
+        this.metrics = metrics;
     }
 
     @Override
@@ -30,6 +35,8 @@ public class SandboxGateway implements SandboxExecutor {
         }
         String result = direct.applyPatch(workspace, taskId, sourceCommit);
         if (shadow()) {
+            metrics.counter("ai_factory_mcp_sandbox_shadow_runs", "operation", "apply_patch", "outcome", "skipped")
+                    .increment();
             log.info("Sandbox shadow skips duplicate apply_patch for task={} because the operation mutates the shared workspace", taskId);
         }
         return result;
@@ -61,17 +68,41 @@ public class SandboxGateway implements SandboxExecutor {
         if (active()) {
             return mcpCall.call(workspace, taskId, sourceCommit);
         }
-        String directResult = directCall.call(workspace, taskId, sourceCommit);
+        String directResult;
+        try {
+            directResult = directCall.call(workspace, taskId, sourceCommit);
+        } catch (Exception exception) {
+            if (shadow()) {
+                metrics.counter("ai_factory_mcp_sandbox_shadow_runs", "operation", operation,
+                        "outcome", "direct_failure").increment();
+            }
+            throw exception;
+        }
         if (shadow()) {
+            recordChars(operation, "direct", directResult.length());
             try {
                 String mcpResult = mcpCall.call(workspace, taskId, sourceCommit);
+                recordChars(operation, "mcp", mcpResult.length());
+                metrics.counter("ai_factory_mcp_sandbox_shadow_runs", "operation", operation,
+                        "outcome", "success").increment();
+                metrics.counter("ai_factory_mcp_sandbox_shadow_comparisons", "operation", operation,
+                        "result", directResult.equals(mcpResult) ? "equal" : "different").increment();
                 log.info("Sandbox shadow operation={} task={}: direct_chars={}, mcp_chars={}, equal={}",
                         operation, taskId, directResult.length(), mcpResult.length(), directResult.equals(mcpResult));
             } catch (Exception exception) {
+                metrics.counter("ai_factory_mcp_sandbox_shadow_runs", "operation", operation,
+                        "outcome", "mcp_failure").increment();
                 log.warn("Sandbox shadow operation={} failed for task={}: {}", operation, taskId, exception.getMessage());
             }
         }
         return directResult;
+    }
+
+    private void recordChars(String operation, String source, int chars) {
+        DistributionSummary.builder("ai_factory_mcp_sandbox_shadow_chars")
+                .tags("operation", operation, "source", source)
+                .register(metrics)
+                .record(chars);
     }
 
     private boolean active() {

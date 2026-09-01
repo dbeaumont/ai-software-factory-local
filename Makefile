@@ -17,7 +17,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all model bootstrap tokens demo test test-sandbox-runtime package config status restart logs urls down clean
+.PHONY: help init build up all model bootstrap tokens demo test test-sandbox-runtime mcp-shadow-report package config status restart logs urls down clean
 
 help:
 	$(log-target)
@@ -32,6 +32,7 @@ help:
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify effective Docker sandbox constraints"
+	@echo -e "  $(CYAN)make mcp-shadow-report$(NC) - generate the MCP shadow campaign report"
 	@echo -e "  $(CYAN)make package$(NC)    - package orchestrator without tests"
 	@echo -e "  $(CYAN)make config$(NC)     - validate and render Docker Compose configuration"
 	@echo -e "  $(CYAN)make status$(NC)     - show containers"
@@ -79,8 +80,9 @@ all:
 
 model:
 	$(log-target)
+	@test -n "$(OLLAMA_MODEL)" || (echo "OLLAMA_MODEL must be defined in .env" >&2; exit 1)
 	@echo -e "$(BLUE)Pulling Ollama model $(OLLAMA_MODEL)...$(NC)"
-#	$(COMPOSE) exec ollama ollama pull $(OLLAMA_MODEL)
+	$(COMPOSE) exec -T ollama ollama pull "$(OLLAMA_MODEL)"
 	@echo -e "$(GREEN)Model $(OLLAMA_MODEL) pulled!$(NC)"
 
 bootstrap: init
@@ -116,6 +118,10 @@ test-sandbox-runtime:
 	@echo -e "$(BLUE)Verifying effective Docker sandbox constraints...$(NC)"
 	AI_FACTORY_RUN_DOCKER_INTEGRATION_TESTS=true mvn -f apps/mcp/sandbox-execution-server/pom.xml -Dtest=DockerSandboxRuntimeIntegrationTest test
 	@echo -e "$(GREEN)Docker sandbox constraints verified!$(NC)"
+
+mcp-shadow-report:
+	$(log-target)
+	ORCHESTRATOR_PORT="$(ORCHESTRATOR_PORT)" ./scripts/mcp-shadow-report.sh
 
 package:
 	$(log-target)

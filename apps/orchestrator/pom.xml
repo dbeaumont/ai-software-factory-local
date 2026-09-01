@@ -14,6 +14,7 @@
   <properties>
     <java.version>21</java.version>
     <spring-ai.version>1.1.8</spring-ai.version>
+    <mcp.schemas.directory>../../resources/mcp/schemas</mcp.schemas.directory>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -66,7 +67,7 @@
         <directory>src/main/resources</directory>
       </resource>
       <resource>
-        <directory>../../resources/mcp/schemas</directory>
+        <directory>${mcp.schemas.directory}</directory>
         <targetPath>mcp/schemas</targetPath>
       </resource>
     </resources>

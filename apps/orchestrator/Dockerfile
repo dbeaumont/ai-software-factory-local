@@ -45,13 +45,15 @@ RUN --mount=type=secret,id=artifactory_token  \
 # Copier les sources après le go-offline pour que cette couche soit invalidée
 # uniquement lors d'un changement de code source (pas de dépendance)
 COPY src ./src
+COPY --from=mcp-schemas . /src/external-schemas
 
 # Build du projet avec le profil prod (tests ignorés — ils sont exécutés en CI séparément) avec le profil prod.
 # MAVEN_CONFIG est aussi neutralisé ici pour conserver le comportement du Maven Wrapper de l'étape précédente.
 RUN --mount=type=secret,id=artifactory_token \
   export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token) \
   && unset MAVEN_CONFIG \
-  && ./mvnw package -DskipTests -B -s .mvn/settings.xml
+  && ./mvnw package -DskipTests -B -s .mvn/settings.xml \
+       -Dmcp.schemas.directory=/src/external-schemas
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Runtime stage

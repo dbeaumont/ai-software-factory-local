@@ -3,6 +3,7 @@ model_list:
     litellm_params:
       model: ollama/__OLLAMA_MODEL__
       api_base: http://ollama:11434
+      timeout: 600
 
   - model_name: factory-code-cloud
     litellm_params:

@@ -78,9 +78,9 @@ services:
     healthcheck:
       # LiteLLM needs a few seconds after its process starts to load its model
       # configuration and begin listening on port 4000.
-      test: ["CMD-SHELL", "python -c \"import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:4000/health', headers={'Authorization': 'Bearer ' + os.environ['LITELLM_MASTER_KEY']}); urllib.request.urlopen(request, timeout=20)\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=5)\""]
       interval: 5s
-      timeout: 25s
+      timeout: 10s
       retries: 12
       start_period: 5s
     networks: [factory]
@@ -166,6 +166,8 @@ services:
   orchestrator:
     build:
       context: ../apps/orchestrator
+      additional_contexts:
+        mcp-schemas: ../resources/mcp/schemas
       args:
         MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
       secrets:
@@ -195,7 +197,7 @@ services:
       AI_FACTORY_MCP_MAX_RESPONSE_BYTES: ${AI_FACTORY_MCP_MAX_RESPONSE_BYTES:-65536}
       AI_FACTORY_MCP_MAX_INFLIGHT_PER_SERVER: ${AI_FACTORY_MCP_MAX_INFLIGHT_PER_SERVER:-16}
       AI_FACTORY_MCP_MAX_INFLIGHT_PER_TASK: ${AI_FACTORY_MCP_MAX_INFLIGHT_PER_TASK:-4}
-      AI_FACTORY_MCP_ACCEPTED_PROTOCOL_VERSIONS: ${AI_FACTORY_MCP_ACCEPTED_PROTOCOL_VERSIONS:-2025-06-18}
+      AI_FACTORY_MCP_ACCEPTED_PROTOCOL_VERSIONS: ${AI_FACTORY_MCP_ACCEPTED_PROTOCOL_VERSIONS:-2025-11-25,2025-06-18}
       AI_FACTORY_MCP_REPOSITORY_CONTEXT_VERSION: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_VERSION:-0.1.0}
       AI_FACTORY_MCP_READ_RETRY_MAX_ATTEMPTS: ${AI_FACTORY_MCP_READ_RETRY_MAX_ATTEMPTS:-3}
       AI_FACTORY_MCP_READ_RETRY_INITIAL_BACKOFF: ${AI_FACTORY_MCP_READ_RETRY_INITIAL_BACKOFF:-200ms}

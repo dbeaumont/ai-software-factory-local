@@ -26,7 +26,8 @@ class McpClientPropertiesTest {
             assertThat(properties.maxResponseBytes()).isEqualTo(65_536);
             assertThat(properties.maxInflightPerServer()).isEqualTo(16);
             assertThat(properties.maxInflightPerTask()).isEqualTo(4);
-            assertThat(properties.acceptedProtocolVersions()).containsExactly("2025-06-18");
+            assertThat(properties.acceptedProtocolVersions())
+                    .containsExactlyInAnyOrder("2025-11-25", "2025-06-18");
             assertThat(properties.retry().readOnly().maxAttempts()).isEqualTo(3);
             assertThat(properties.retry().effectful().maxAttempts()).isEqualTo(2);
             assertThat(properties.servers()).containsOnlyKeys("repository-context", "sandbox-execution");
@@ -63,7 +64,7 @@ class McpClientPropertiesTest {
                 "ai-factory.mcp.client.max-response-bytes=65536",
                 "ai-factory.mcp.client.max-inflight-per-server=16",
                 "ai-factory.mcp.client.max-inflight-per-task=4",
-                "ai-factory.mcp.client.accepted-protocol-versions=2025-06-18",
+                "ai-factory.mcp.client.accepted-protocol-versions=2025-11-25,2025-06-18",
                 "ai-factory.mcp.client.retry.read-only.max-attempts=3",
                 "ai-factory.mcp.client.retry.read-only.initial-backoff=200ms",
                 "ai-factory.mcp.client.retry.read-only.max-backoff=2s",

@@ -1,5 +1,7 @@
 package com.example.aifactory.context.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.Instant;
 import java.util.List;
 
@@ -48,7 +50,11 @@ public final class ContextModels {
     public record TreeEntry(String path, String type, long size) {
     }
 
-    public record ListTreeResult(String sourceCommit, List<TreeEntry> entries, boolean truncated, String nextCursor) {
+    public record ListTreeResult(
+            @JsonProperty("source_commit") String sourceCommit,
+            List<TreeEntry> entries,
+            boolean truncated,
+            @JsonProperty("next_cursor") String nextCursor) {
     }
 
     public record ReadFileRequest(
@@ -77,10 +83,10 @@ public final class ContextModels {
 
     public record ReadFileResult(
             String path,
-            int startLine,
-            int endLine,
+            @JsonProperty("start_line") int startLine,
+            @JsonProperty("end_line") int endLine,
             String content,
-            String mimeType,
+            @JsonProperty("mime_type") String mimeType,
             String sha256,
             boolean truncated) {
     }
@@ -111,7 +117,10 @@ public final class ContextModels {
     public record SearchMatch(String path, int line, String excerpt) {
     }
 
-    public record SearchCodeResult(String sourceCommit, List<SearchMatch> matches, boolean truncated) {
+    public record SearchCodeResult(
+            @JsonProperty("source_commit") String sourceCommit,
+            List<SearchMatch> matches,
+            boolean truncated) {
     }
 
     public record RepositoryRulesRequest(
@@ -134,10 +143,15 @@ public final class ContextModels {
         }
     }
 
-    public record RepositoryRule(ReadFileResult document, int applicabilityOrder, String provenance) {
+    public record RepositoryRule(
+            ReadFileResult document,
+            @JsonProperty("applicability_order") int applicabilityOrder,
+            String provenance) {
     }
 
-    public record RepositoryRulesResult(String sourceCommit, List<RepositoryRule> rules) {
+    public record RepositoryRulesResult(
+            @JsonProperty("source_commit") String sourceCommit,
+            List<RepositoryRule> rules) {
     }
 
     private static String traceparent(String traceId) {
