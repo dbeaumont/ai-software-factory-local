@@ -75,3 +75,18 @@ L'orchestrateur valide désormais le contrat immédiatement après le premier ap
 Le rejeu est journalisé et compté par `ai_factory_planner_contract_retries`. Les tests unitaires prouvent l'absence de rejeu d'un contrat valide et la borne de deux appels au total ; la suite orchestrateur complète passe avec 75 tests sans échec.
 
 La recommandation demeure **NO-GO** pour MCP-056 jusqu'à une nouvelle campagne cloud explicitement autorisée. Cette campagne devra obtenir 20 contrats valides sur 20 et comptabiliser les rejeux ; son autorisation devra couvrir le fait qu'un scénario dont la première réponse est invalide peut envoyer une seconde fois le même contenu Planner à OpenAI.
+
+## Résultat de qualification de la reprise bornée
+
+La campagne autorisée `20260901-154935` a exécuté les 20 scénarios avec la reprise déployée :
+
+- 20/20 reconstructions Context shadow réussies, couverture 92 % et citations 100 % ;
+- 19/20 contrats Planner valides ;
+- un seul retry déclenché, conformément à la métrique `ai_factory_planner_contract_retries=1` ;
+- `CTX-011` (Gradle, multi-fichier) reste invalide après deux réponses successives sans champ `status` ;
+- cinq décisions `NEEDS_CLARIFICATION` valides n'ont pas été rejouées ;
+- latence MCP Context moyenne de 48,2 ms et volumes inchangés, soit une réduction de contexte de 29,2 %.
+
+Le mécanisme est donc correctement borné et sélectif, mais n'atteint pas le seuil de qualité requis. L'échec était `CTX-020` dans la campagne précédente et concerne désormais `CTX-011` : il n'est pas reproductiblement lié à un scénario. Avant toute nouvelle consommation cloud, la prochaine remédiation doit capturer et classifier de façon non sensible le `finish_reason` du fournisseur et distinguer explicitement troncature, refus et violation de schéma. Le plafond Planner de 1 200 tokens devra être réévalué sur la base de cette télémétrie, sans l'augmenter à l'aveugle.
+
+Décision technique maintenue : **NO-GO pour MCP-056**.
