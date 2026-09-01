@@ -25,15 +25,17 @@ public class ScmDeliveryService {
     private final RepositoryRegistry repositories;
     private final ScmDeliveryBackend backend;
     private final ScmIdempotencyStore idempotency;
+    private final ScmAuditLog audit;
 
     public ScmDeliveryService(ScmDeliveryProperties properties, ScmCredentials credentials,
                               RepositoryRegistry repositories, ScmDeliveryBackend backend,
-                              ScmIdempotencyStore idempotency) {
+                              ScmIdempotencyStore idempotency, ScmAuditLog audit) {
         this.properties = properties;
         this.credentials = credentials;
         this.repositories = repositories;
         this.backend = backend;
         this.idempotency = idempotency;
+        this.audit = audit;
     }
 
     public ScmDeliveryBackend.DeliveryResult create(CreateRequest request) throws Exception {
@@ -67,6 +69,7 @@ public class ScmDeliveryService {
         String title = "AI Factory: " + abbreviate(request.title(), 90);
         ScmDeliveryBackend.DeliveryCommand command = new ScmDeliveryBackend.DeliveryCommand(repository, workspace,
                 request.taskId(), request.sourceCommit(), request.baseBranch(), branch, title);
+        audit.before(request, branch);
         ScmDeliveryBackend.DeliveryResult result = backend.findExisting(command);
         if (result == null) {
             result = backend.createDraftPullRequest(command);
@@ -74,6 +77,7 @@ public class ScmDeliveryService {
         if (idempotency != null) {
             idempotency.save(request.idempotencyKey(), fingerprint, result);
         }
+        audit.after(request, result);
         return result;
     }
 

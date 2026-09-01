@@ -65,7 +65,8 @@ class ScmDeliveryServiceTest {
             }
         };
         ScmIdempotencyStore store = new ScmIdempotencyStore(properties, new ObjectMapper());
-        ScmDeliveryService service = new ScmDeliveryService(properties, credentials, registry, backend, store);
+        ScmAuditLog audit = new ScmAuditLog(properties, new ObjectMapper());
+        ScmDeliveryService service = new ScmDeliveryService(properties, credentials, registry, backend, store, audit);
         Instant approvedAt = Instant.now().minusSeconds(5);
         ApprovalProof proof = ApprovalProof.sign("task-1", "attempt-1", "customer-api", sourceCommit,
                 patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
@@ -81,6 +82,12 @@ class ScmDeliveryServiceTest {
         assertEquals(workspace, captured.get().workspace());
         assertEquals(result, replay);
         assertEquals(1, creates.get());
+        String auditEvents = Files.readString(root.resolve("state/audit/scm-delivery.jsonl"));
+        assertEquals(2, auditEvents.lines().count());
+        org.junit.jupiter.api.Assertions.assertTrue(auditEvents.contains("BEFORE_WRITE"));
+        org.junit.jupiter.api.Assertions.assertTrue(auditEvents.contains("AFTER_WRITE"));
+        org.junit.jupiter.api.Assertions.assertTrue(auditEvents.contains("delivery-task-1-attempt-1"));
+        org.junit.jupiter.api.Assertions.assertTrue(auditEvents.contains("pull_request_id"));
     }
 
     private static Map<String, String> evidence(Path workspace) throws Exception {
