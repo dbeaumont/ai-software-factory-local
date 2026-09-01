@@ -158,12 +158,20 @@ public class LlmGatewayClient {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", model);
         body.put("messages", List.copyOf(messages));
-        body.put("tools", tools.stream().map(tool -> Map.of(
+        body.put("tools", tools.stream().map(tool -> {
+            if (tool.name() == null || !tool.name().matches("[a-z][a-z0-9_-]{0,63}\\.[a-z][a-z0-9_-]{0,63}")) {
+                throw new IllegalArgumentException("Invalid namespaced tool name");
+            }
+            String description = tool.description() == null ? "" : tool.description()
+                    .replaceAll("[\\p{Cntrl}&&[^\\r\\n\\t]]", "").strip();
+            if (description.length() > 300) description = description.substring(0, 300);
+            return Map.of(
                 "type", "function",
                 "function", Map.of(
                         "name", tool.name(),
-                        "description", tool.description(),
-                        "parameters", tool.inputSchema()))).toList());
+                        "description", "UNTRUSTED TOOL METADATA: " + description,
+                        "parameters", tool.inputSchema()));
+        }).toList());
         body.put("tool_choice", "auto");
         body.put("max_tokens", maxTokens);
         return Map.copyOf(body);

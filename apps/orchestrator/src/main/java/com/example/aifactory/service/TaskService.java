@@ -369,8 +369,13 @@ public class TaskService {
         };
     }
 
-    private static String untrusted(String label, String content) {
-        return "\n<" + label + " trust=\"untrusted\">\n" + (content == null ? "" : content)
+    static String untrusted(String label, String content) {
+        if (label == null || !label.matches("[A-Z][A-Z0-9_]{0,63}")) {
+            throw new IllegalArgumentException("Invalid untrusted-data label");
+        }
+        String escaped = (content == null ? "" : content)
+                .replace("</" + label + ">", "&lt;/" + label + "&gt;");
+        return "\n<" + label + " trust=\"untrusted\">\n" + escaped
                 + "\n</" + label + ">\n";
     }
 
