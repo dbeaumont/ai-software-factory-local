@@ -7,6 +7,7 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -60,6 +61,24 @@ class AgentToolLoopTest {
                 messages -> new AgentToolLoop.Turn(AgentToolLoop.Stop.FINAL, "", List.of(), 1, 1, 0),
                 call -> "ok");
         assertEquals("invalid_final", exceptionFor(invalidFinal, BUDGET).reason());
+    }
+
+    @Test
+    void hostRoleDeniesUnauthorizedToolBeforeExecution() {
+        AtomicInteger executions = new AtomicInteger();
+        AgentToolLoop loop = new AgentToolLoop(messages -> new AgentToolLoop.Turn(
+                AgentToolLoop.Stop.TOOL_CALLS, null,
+                List.of(new AgentToolLoop.ToolCall("call-effect", "sandbox.apply_patch", Map.of())),
+                1, 1, 0), call -> {
+            executions.incrementAndGet();
+            return "must-not-run";
+        }, ToolPermissionMatrix.readOnlyAgents());
+
+        AgentToolLoop.AgentLoopException error = assertThrows(AgentToolLoop.AgentLoopException.class,
+                () -> loop.run(new AgentToolLoop.Actor("task-172", "planner"), "system", "user", BUDGET));
+
+        assertEquals("tool_denied", error.reason());
+        assertEquals(0, executions.get());
     }
 
     private static AgentToolLoop.AgentLoopException exceptionFor(AgentToolLoop loop, AgentToolLoop.Budget budget) {

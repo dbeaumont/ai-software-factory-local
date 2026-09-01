@@ -11,19 +11,34 @@ import java.util.function.LongSupplier;
 public final class AgentToolLoop {
     private final Model model;
     private final ToolExecutor tools;
+    private final ToolAuthorization authorization;
     private final LongSupplier nanoTime;
 
     public AgentToolLoop(Model model, ToolExecutor tools) {
-        this(model, tools, System::nanoTime);
+        this(model, tools, (actor, tool) -> true, System::nanoTime);
     }
 
     AgentToolLoop(Model model, ToolExecutor tools, LongSupplier nanoTime) {
+        this(model, tools, (actor, tool) -> true, nanoTime);
+    }
+
+    public AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization) {
+        this(model, tools, authorization, System::nanoTime);
+    }
+
+    AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization, LongSupplier nanoTime) {
         this.model = Objects.requireNonNull(model);
         this.tools = Objects.requireNonNull(tools);
+        this.authorization = Objects.requireNonNull(authorization);
         this.nanoTime = Objects.requireNonNull(nanoTime);
     }
 
     public Result run(String systemPrompt, String userPrompt, Budget budget) {
+        return run(new Actor("legacy-host", "planner"), systemPrompt, userPrompt, budget);
+    }
+
+    public Result run(Actor actor, String systemPrompt, String userPrompt, Budget budget) {
+        Objects.requireNonNull(actor, "Host actor is required");
         Objects.requireNonNull(budget).validate();
         long started = nanoTime.getAsLong();
         long deadline = Math.addExact(started, budget.deadline().toNanos());
@@ -54,6 +69,10 @@ public final class AgentToolLoop {
             messages.add(new Message("assistant", "", turn.toolCalls()));
             for (ToolCall call : turn.toolCalls()) {
                 requireWithinDeadline(deadline);
+                if (!authorization.isAllowed(actor, call.name())) {
+                    throw new AgentLoopException("tool_denied",
+                            "Host policy denied tool " + call.name() + " for role " + actor.role());
+                }
                 String output = tools.execute(call);
                 messages.add(new Message("tool", output, List.of(call)));
             }
@@ -84,7 +103,19 @@ public final class AgentToolLoop {
         String execute(ToolCall call);
     }
 
+    public interface ToolAuthorization {
+        boolean isAllowed(Actor actor, String toolName);
+    }
+
     public enum Stop { TOOL_CALLS, FINAL }
+
+    public record Actor(String subject, String role) {
+        public Actor {
+            if (subject == null || subject.isBlank() || role == null || role.isBlank()) {
+                throw new IllegalArgumentException("Host actor subject and role are required");
+            }
+        }
+    }
 
     public record Budget(int maxTurns, Duration deadline, int maxTokens, long maxCostMicros) {
         void validate() {
