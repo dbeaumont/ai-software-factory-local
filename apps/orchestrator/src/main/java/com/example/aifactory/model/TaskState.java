@@ -26,6 +26,7 @@ public class TaskState {
     public String securitySummary;
     public final Map<String, Object> assuranceResults = new LinkedHashMap<>();
     public String review;
+    public PendingEffect pendingEffect;
     public String pullRequestUrl;
     public String error;
     public final List<AgentStep> steps = new ArrayList<>();
@@ -56,7 +57,7 @@ public class TaskState {
     public synchronized TaskView view() {
         return new TaskView(id, ticketNumber, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
                 request.effectiveLlmMode(), workspace, sourceCommit, model, Map.copyOf(promptFingerprints), plan, patch,
-                testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), review,
+                testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), review, pendingEffect,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
     }
 

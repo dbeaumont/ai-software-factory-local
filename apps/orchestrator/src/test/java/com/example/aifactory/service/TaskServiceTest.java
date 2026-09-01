@@ -143,6 +143,23 @@ class TaskServiceTest {
         assertEquals(0, state.steps.size());
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void rejectsApprovalWithoutAPolicyApprovedPendingEffect() {
+        TestableTaskService service = new TestableTaskService();
+        TaskState state = new TaskState("task-175", "AF-0175", new TaskRequest(
+                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
+        state.status = TaskStatus.WAITING_APPROVAL;
+        Map<String, TaskState> tasks = (Map<String, TaskState>) ReflectionTestUtils.getField(service, "tasks");
+        assertNotNull(tasks);
+        tasks.put(state.id, state);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> service.approve(state.id));
+
+        assertEquals("No policy-approved effect is awaiting confirmation", error.getMessage());
+        assertEquals(TaskStatus.WAITING_APPROVAL, state.status);
+    }
+
     private static final class TestableTaskService extends TaskService {
         private TestableTaskService() {
             super(null, null, null, null, null, new AgentResponseValidator(new ObjectMapper()), null, null, null,

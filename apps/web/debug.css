@@ -30,6 +30,24 @@
   background: #164b36;
 }
 
+.effect-confirmation {
+  margin: 18px 0 0;
+  padding: 14px;
+  border: 1px solid var(--blue);
+  border-radius: 4px;
+  background: var(--blue-soft);
+}
+
+.effect-confirmation dl {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: 4px 10px;
+  overflow-wrap: anywhere;
+}
+
+.effect-confirmation dt { font-weight: 700; }
+.effect-confirmation dd { margin: 0; }
+
 .approve-button:disabled {
   cursor: wait;
   opacity: .65;

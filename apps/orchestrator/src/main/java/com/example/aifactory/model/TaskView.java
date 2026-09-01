@@ -22,6 +22,7 @@ public record TaskView(
         String securitySummary,
         java.util.Map<String, Object> assuranceResults,
         String review,
+        PendingEffect pendingEffect,
         String pullRequestUrl,
         String error,
         List<AgentStep> steps,

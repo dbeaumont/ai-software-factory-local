@@ -15,6 +15,11 @@ const steps = document.querySelector('#steps');
 const pipelineProgress = document.querySelector('#pipeline-progress');
 const prLink = document.querySelector('#pr-link');
 const approveButton = document.querySelector('#approve-button');
+const effectConfirmation = document.querySelector('#effect-confirmation');
+const effectTool = document.querySelector('#effect-tool');
+const effectArguments = document.querySelector('#effect-arguments');
+const effectImpact = document.querySelector('#effect-impact');
+const effectPolicy = document.querySelector('#effect-policy');
 const proposalButton = document.querySelector('#proposal-button');
 const reviewButton = document.querySelector('#review-button');
 const proposalDialog = document.querySelector('#proposal-dialog');
@@ -406,8 +411,25 @@ function renderTask(task) {
   proposalButton.hidden = !task.patch || task.status === 'PR_CREATED';
   reviewButton.hidden = !task.review;
   approveButton.hidden = task.status !== 'WAITING_APPROVAL';
+  renderPendingEffect(task.pendingEffect, task.status === 'WAITING_APPROVAL');
   prLink.hidden = !task.pullRequestUrl;
   if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);
+}
+
+function renderPendingEffect(effect, visible) {
+  effectConfirmation.hidden = !visible || !effect;
+  effectArguments.replaceChildren();
+  if (!visible || !effect) return;
+  effectTool.textContent = effect.tool || 'Outil non précisé';
+  Object.entries(effect.safeArguments || {}).forEach(([name, value]) => {
+    const term = document.createElement('dt');
+    term.textContent = name;
+    const detail = document.createElement('dd');
+    detail.textContent = String(value);
+    effectArguments.append(term, detail);
+  });
+  effectImpact.textContent = `Impact : ${effect.impact || 'non précisé'}`;
+  effectPolicy.textContent = `Policy gate : ${effect.policyDecision || 'INDETERMINATE'}`;
 }
 
 proposalButton.addEventListener('click', () => {

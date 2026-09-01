@@ -100,6 +100,10 @@ public class TaskService {
         TaskState state = tasks.get(id);
         if (state == null) throw new IllegalArgumentException("Unknown task " + id);
         if (state.status != TaskStatus.WAITING_APPROVAL) throw new IllegalStateException("Task is not waiting for approval");
+        if (state.pendingEffect == null || !state.pendingEffect.confirmationRequired()
+                || !"ALLOW".equals(state.pendingEffect.policyDecision())) {
+            throw new IllegalStateException("No policy-approved effect is awaiting confirmation");
+        }
         log.info("Task {} ({}) approved by the delivery workflow", state.id, state.ticketNumber);
         state.transition(TaskStatus.APPROVED, "Human approval recorded");
         executor.submit(() -> {
@@ -182,6 +186,13 @@ public class TaskService {
             Files.writeString(ws.resolve(".ai-review.md"), s.review);
             writeRunMetadata(ws, s);
 
+            s.pendingEffect = new PendingEffect(
+                    "scm.create_draft_pull_request",
+                    Map.of("base_branch", s.request.effectiveBranch(),
+                            "repository", safeRepositoryLabel(s.request.repositoryUrl()),
+                            "title", "[" + s.ticketNumber + "] " + conciseRequirement(s.request.requirement())),
+                    "Créera une branche distante, un commit et une pull request brouillon dans le dépôt indiqué.",
+                    "ALLOW", true);
             s.transition(TaskStatus.WAITING_APPROVAL, "Pipeline complete. Human approval required before commit/push/PR.");
             completedTasks.increment();
             log.info("Task {} ({}) completed all automated stages and awaits approval", s.id, s.ticketNumber);
@@ -189,6 +200,20 @@ public class TaskService {
             failedTasks.increment();
             s.fail(e);
         }
+    }
+
+    private static String safeRepositoryLabel(String repositoryUrl) {
+        try {
+            java.net.URI uri = java.net.URI.create(repositoryUrl);
+            return (uri.getHost() == null ? "repository" : uri.getHost()) + uri.getPath();
+        } catch (IllegalArgumentException ignored) {
+            return "repository";
+        }
+    }
+
+    private static String conciseRequirement(String requirement) {
+        String normalized = requirement.replaceAll("[\\r\\n\\t]+", " ").strip();
+        return normalized.length() <= 80 ? normalized : normalized.substring(0, 77) + "...";
     }
 
     private void logReviewerDecision(TaskState state, AgentResponseValidator.ReviewSummary review) {
