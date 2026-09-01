@@ -15,4 +15,19 @@ class ToolPermissionMatrixTest {
         assertFalse(matrix.isAllowed(new AgentToolLoop.Actor("task", "model-claims-workflow"), "context.read_file"));
         assertFalse(matrix.isAllowed(new AgentToolLoop.Actor("task", "planner"), "unknown.dynamic_tool"));
     }
+
+    @Test
+    void plannerAndReviewerReceiveOnlyTheirAuthorizedReadSurface() {
+        var planner = new AgentToolLoop.Actor("task", "planner");
+        var reviewer = new AgentToolLoop.Actor("task", "reviewer");
+
+        assertTrue(matrix.isAllowed(planner, "evidence.get_summary"));
+        assertFalse(matrix.isAllowed(planner, "evidence.read"));
+        assertTrue(matrix.isAllowed(reviewer, "evidence.get_summary"));
+        assertTrue(matrix.isAllowed(reviewer, "evidence.read"));
+        assertFalse(matrix.isAllowed(planner, "evidence.store"));
+        assertFalse(matrix.isAllowed(reviewer, "evidence.create_manifest"));
+        assertFalse(matrix.isAllowed(planner, "scm.create_draft_pull_request"));
+        assertFalse(matrix.isAllowed(reviewer, "sandbox.run_tests"));
+    }
 }
