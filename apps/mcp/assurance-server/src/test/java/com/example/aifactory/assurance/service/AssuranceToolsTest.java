@@ -3,6 +3,7 @@ package com.example.aifactory.assurance.service;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +41,20 @@ class AssuranceToolsTest {
         assertEquals("DENY", policy(Map.of("tests", "PASSED", "quality", "REJECTED", "security", "PASSED", "sbom", "PASSED"), digests));
         assertEquals("INDETERMINATE", policy(Map.of("tests", "PASSED", "quality", "INDETERMINATE", "security", "PASSED", "sbom", "PASSED"), digests));
         assertEquals("INDETERMINATE", policy(Map.of("tests", "PASSED", "quality", "PASSED", "security", "PASSED"), digests));
+    }
+
+    @Test
+    void partialAndUnknownScannerEvidenceNeverPasses() {
+        AssuranceTools.RawFinding unknown = new AssuranceTools.RawFinding("X-1", "UNMAPPED", "component",
+                null, "rule", "proof", "recommendation");
+        AssuranceTools.VulnerabilityResult partial = tools.normalizeFindings("1", "task-1", "attempt-1",
+                "a".repeat(40), "Trivy", List.of(unknown), "evidence://task-1/attempt-1/trivy",
+                "b".repeat(64), "PARTIAL");
+        assertEquals("INDETERMINATE", partial.verdict());
+        assertEquals("UNKNOWN", partial.findings().getFirst().severity());
+        assertThrows(IllegalArgumentException.class, () -> tools.normalizeFindings("1", "task-1", "attempt-1",
+                "a".repeat(40), "UnknownScanner", List.of(), "evidence://task-1/attempt-1/security",
+                "b".repeat(64), "COMPLETE"));
     }
 
     private String policy(Map<String, String> verdicts, Map<String, String> digests) {

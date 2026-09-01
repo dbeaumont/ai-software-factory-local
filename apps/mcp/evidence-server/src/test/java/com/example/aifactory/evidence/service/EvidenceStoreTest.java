@@ -55,11 +55,21 @@ class EvidenceStoreTest {
         byte[] encryptedManifest = java.nio.file.Files.readAllBytes(root.resolve("task-1/attempt-1/manifest-" + first.manifestId() + ".json"));
         assertFalse(new String(encryptedManifest, StandardCharsets.UTF_8).contains("policy_decision"));
         assertEquals("CONFIDENTIAL", first.classification());
+        Map<String, EvidenceStore.EvidenceReference> incomplete = new LinkedHashMap<>(artifacts);
+        incomplete.remove("approval");
+        assertThrows(IllegalArgumentException.class, () -> store.createManifest("task-1", "attempt-1", "customer-api",
+                "a".repeat(40), patchDigest, incomplete, decision));
         Map<String, EvidenceStore.EvidenceReference> crossTask = new LinkedHashMap<>(artifacts);
         crossTask.put("tests", new EvidenceStore.EvidenceReference(
                 artifacts.get("tests").uri().replace("task-1", "task-2"), artifacts.get("tests").digest(), "COMPLETE"));
         assertThrows(SecurityException.class, () -> store.createManifest("task-1", "attempt-1", "customer-api",
                 "a".repeat(40), patchDigest, crossTask, decision));
+        Path testsFile = root.resolve("task-1/attempt-1/tests-" + artifacts.get("tests").digest() + ".bin");
+        byte[] encrypted = java.nio.file.Files.readAllBytes(testsFile);
+        encrypted[encrypted.length - 1] ^= 1;
+        java.nio.file.Files.write(testsFile, encrypted);
+        assertThrows(SecurityException.class, () -> store.createManifest("task-1", "attempt-1", "customer-api",
+                "a".repeat(40), patchDigest, artifacts, decision));
     }
 
     @Test
