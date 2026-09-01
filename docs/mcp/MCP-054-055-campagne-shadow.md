@@ -81,3 +81,11 @@ Le chemin d'inférence local a été retiré le 1er septembre 2026. LiteLLM util
 ## Préparation de la campagne multi-technologies — 2026-09-01
 
 Le corpus de 20 tâches, les fixtures Maven/Gradle/npm, leur bootstrap Gitea et le lanceur à activation explicite sont versionnés. Cette préparation lève le manque d'échantillon, mais `MCP-054` et `MCP-055` restent ouverts jusqu'à l'exécution cloud complète, la qualification des échecs et la revue manuelle de la qualité des plans.
+
+## Déploiement local du mode shadow — 2026-09-01
+
+La pile locale utilise désormais `AI_FACTORY_MCP_ENABLED=true` et `AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE=MCP_SHADOW`. L'orchestrateur négocie avec succès le protocole `2025-11-25`, le serveur `repository-context-mcp` `0.3.0` et son allow-list de cinq outils. `/api/capabilities` confirme simultanément la disponibilité cloud, du contexte MCP et du sandbox MCP.
+
+Le premier redémarrage sous Spring Boot 4.1.1 a exposé l'absence de `WebClient.Builder` : Boot 4 sépare l'auto-configuration client dans `spring-boot-starter-webclient`. Le starter est maintenant déclaré explicitement dans l'orchestrateur et couvert par `WebClientBoot4ConfigurationTest`.
+
+Le dry-run du manifeste valide les 20 cas et leur répartition Maven, Gradle, npm et catégories fonctionnelles. Aucune tâche cloud n'a été soumise : `AI_FACTORY_RUN_CLOUD_CAMPAIGN=false` reste la barrière explicite avant consommation de capacité externe.
