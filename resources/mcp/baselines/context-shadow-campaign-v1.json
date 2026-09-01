@@ -1,0 +1,25 @@
+{
+  "version": "1",
+  "tasks": [
+    {"id":"CTX-001","repository":"customer-api","ecosystem":"MAVEN","category":"SIMPLE","requirement":"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist and add automated tests."},
+    {"id":"CTX-002","repository":"customer-api","ecosystem":"MAVEN","category":"VALIDATION","requirement":"Add an optional name query parameter to GET /customers and reject values longer than 80 characters with HTTP 400."},
+    {"id":"CTX-003","repository":"customer-api","ecosystem":"MAVEN","category":"MULTI_FILE","requirement":"Introduce a Customer response DTO and update the controller and tests so internal maps are no longer exposed."},
+    {"id":"CTX-004","repository":"customer-api","ecosystem":"MAVEN","category":"SIMPLE","requirement":"Sort the customer list by name while preserving the current response fields and add a regression test."},
+    {"id":"CTX-005","repository":"customer-api","ecosystem":"MAVEN","category":"VALIDATION","requirement":"Add a limit query parameter between 1 and 100 to GET /customers and return HTTP 400 outside that range."},
+    {"id":"CTX-006","repository":"customer-api","ecosystem":"MAVEN","category":"MULTI_FILE","requirement":"Add a service layer for customer lookup, move lookup logic out of the controller, and cover both layers with tests."},
+    {"id":"CTX-007","repository":"customer-api","ecosystem":"MAVEN","category":"NEGATIVE","requirement":"Document why customer deletion is intentionally unsupported. Do not add a DELETE endpoint or change runtime behavior."},
+    {"id":"CTX-008","repository":"customer-api","ecosystem":"MAVEN","category":"SIMPLE","requirement":"Add a health-oriented GET /customers/count endpoint returning the current customer count and add a controller test."},
+    {"id":"CTX-009","repository":"inventory-gradle","ecosystem":"GRADLE","category":"RULES","requirement":"Add a decrement operation that rejects insufficient stock and follows every rule in CONTRIBUTING.md with unit tests."},
+    {"id":"CTX-010","repository":"inventory-gradle","ecosystem":"GRADLE","category":"VALIDATION","requirement":"Normalize SKU values by trimming surrounding spaces, but continue rejecting blank values. Add focused unit tests."},
+    {"id":"CTX-011","repository":"inventory-gradle","ecosystem":"GRADLE","category":"MULTI_FILE","requirement":"Introduce an immutable StockLevel value object and adapt InventoryService and its tests to use it."},
+    {"id":"CTX-012","repository":"inventory-gradle","ecosystem":"GRADLE","category":"RULES","requirement":"Add a reserve operation without adding an HTTP framework dependency and cover all stock transitions with tests."},
+    {"id":"CTX-013","repository":"inventory-gradle","ecosystem":"GRADLE","category":"NEGATIVE","requirement":"Clarify in the README that negative quantities remain invalid. Do not clamp values or weaken the existing exception."},
+    {"id":"CTX-014","repository":"inventory-gradle","ecosystem":"GRADLE","category":"SIMPLE","requirement":"Add a containsSku method distinguishing an unknown SKU from a known SKU whose quantity is zero, with tests."},
+    {"id":"CTX-015","repository":"checkout-node","ecosystem":"NPM","category":"SIMPLE","requirement":"Add a subtotal function that delegates to the existing total behavior and cover it with the built-in Node test runner."},
+    {"id":"CTX-016","repository":"checkout-node","ecosystem":"NPM","category":"VALIDATION","requirement":"Reject non-object line items with the same stable error contract as malformed prices and add tests."},
+    {"id":"CTX-017","repository":"checkout-node","ecosystem":"NPM","category":"MULTI_FILE","requirement":"Add a currency-aware checkout summary module while keeping checkout.js dependency-free and add tests."},
+    {"id":"CTX-018","repository":"checkout-node","ecosystem":"NPM","category":"NEGATIVE","requirement":"Document that floating-point rounding is outside the current prototype scope. Do not add a decimal dependency."},
+    {"id":"CTX-019","repository":"checkout-node","ecosystem":"NPM","category":"VALIDATION","requirement":"Reject prices equal to Infinity or NaN with explicit tests while preserving valid zero-price items."},
+    {"id":"CTX-020","repository":"checkout-node","ecosystem":"NPM","category":"MULTI_FILE","requirement":"Add an optional percentage discount module, validate the 0 to 100 range, integrate it with totals, and add tests."}
+  ]
+}

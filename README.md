@@ -74,14 +74,14 @@ make bootstrap
 URLs principales :
 
 - Interface Web & API publique : `http://localhost:8080`
-- Gitea : `http://localhost:3000` (dépôt démo : `http://localhost:3000/aiadmin/customer-api`)
+- Gitea : `http://localhost:3000` (dépôts de démonstration : `customer-api`, `inventory-gradle`, `checkout-node`)
 - Orchestrateur direct (diagnostic & Actuator) : `http://localhost:8088`
 - SonarQube : `http://localhost:9000`
 - Artifactory : `http://localhost:8082` (utilisateur `admin`, mot de passe `password`)
 - Prometheus : `http://localhost:9090`
 - Grafana : `http://localhost:3001`
 
-Le script `make bootstrap` initialise le compte Gitea `aiadmin`, le compte reviewer `reviewer`, le dépôt de démonstration `customer-api`, pousse le contenu de `examples/customer-api/`, et génère automatiquement les jetons `GITEA_TOKEN` et `SONAR_TOKEN` dans le fichier `.env`.
+Le script `make bootstrap` initialise les comptes Gitea `aiadmin` et `reviewer`, pousse les trois dépôts de référence Maven, Gradle et Node depuis `examples/`, et génère automatiquement les jetons `GITEA_TOKEN` et `SONAR_TOKEN` dans le fichier `.env`.
 
 ## Utilisation
 
@@ -292,6 +292,10 @@ make demo
 | `make tokens` | Régénère ou valide les jetons Gitea et SonarQube |
 | `make demo` | Soumet une tâche de démo à l'orchestrateur |
 | `make test` | Exécute les tests de l'orchestrateur et des serveurs MCP |
+| `make test-sandbox-runtime` | Vérifie les contraintes effectives des conteneurs sandbox |
+| `make mcp-shadow-campaign` | Valide le corpus shadow de 20 tâches sans l'exécuter |
+| `make mcp-shadow-campaign CAMPAIGN_ARGS=--execute AI_FACTORY_RUN_CLOUD_CAMPAIGN=true` | Exécute volontairement la campagne cloud séquentielle |
+| `make mcp-shadow-report` | Génère le rapport des métriques shadow courantes |
 | `make package` | Compile et empaquette l'orchestrateur Java (sans tests) |
 | `make config` | Valide et affiche la configuration Compose |
 | `make status` | Affiche l'état des conteneurs |

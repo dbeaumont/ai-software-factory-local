@@ -17,7 +17,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap tokens demo test test-sandbox-runtime mcp-shadow-report package config status restart logs urls down clean
+.PHONY: help init build up all bootstrap tokens demo test test-sandbox-runtime mcp-shadow-campaign mcp-shadow-report package config status restart logs urls down clean
 
 help:
 	$(log-target)
@@ -31,6 +31,7 @@ help:
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify effective Docker sandbox constraints"
+	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
 	@echo -e "  $(CYAN)make mcp-shadow-report$(NC) - generate the MCP shadow campaign report"
 	@echo -e "  $(CYAN)make package$(NC)    - package orchestrator without tests"
 	@echo -e "  $(CYAN)make config$(NC)     - validate and render Docker Compose configuration"
@@ -110,6 +111,10 @@ test-sandbox-runtime:
 	AI_FACTORY_RUN_DOCKER_INTEGRATION_TESTS=true mvn -f apps/mcp/sandbox-execution-server/pom.xml -Dtest=DockerSandboxRuntimeIntegrationTest test
 	@echo -e "$(GREEN)Docker sandbox constraints verified!$(NC)"
 
+mcp-shadow-campaign:
+	$(log-target)
+	./scripts/mcp-context-shadow-campaign.sh $(CAMPAIGN_ARGS)
+
 mcp-shadow-report:
 	$(log-target)
 	ORCHESTRATOR_PORT="$(ORCHESTRATOR_PORT)" ./scripts/mcp-shadow-report.sh
@@ -153,7 +158,9 @@ urls:
 	@echo -e "  - Gitea:        $(GREEN)http://localhost:$(GITEA_HTTP_PORT)$(NC) (user: $(GITEA_REVIEWER_USER), password: $(GITEA_REVIEWER_PASSWORD))"
 	@echo -e "  - Gitea API:    $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/api/v1$(NC)"
 	@echo -e "  - Gitea SSH:    $(GREEN)ssh://git@localhost:$(GITEA_SSH_PORT)$(NC)"
-	@echo -e "  - Demo repo:    $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/$(GITEA_ADMIN_USER)/customer-api$(NC)"
+	@echo -e "  - Maven demo:   $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/$(GITEA_ADMIN_USER)/customer-api$(NC)"
+	@echo -e "  - Gradle demo:  $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/$(GITEA_ADMIN_USER)/inventory-gradle$(NC)"
+	@echo -e "  - Node demo:    $(GREEN)http://localhost:$(GITEA_HTTP_PORT)/$(GITEA_ADMIN_USER)/checkout-node$(NC)"
 	@echo -e "  - Orchestrator: $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)$(NC)"
 	@echo -e "  - Tasks API:    $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks$(NC)"
 	@echo -e "  - Create task:  POST $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks$(NC)"

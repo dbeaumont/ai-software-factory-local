@@ -20,6 +20,24 @@ Pour la campagne de parité sandbox, utiliser séparément `AI_FACTORY_MCP_SANDB
 
 Exécuter au moins 20 tâches couvrant Maven, Gradle et Node, petits et grands dépôts, exigences simples et multi-fichiers, règles dépôt présentes/absentes, et au moins les cas négatifs de référence. Une tâche échouée reste dans l'échantillon et doit être qualifiée.
 
+Le corpus versionné `resources/mcp/baselines/context-shadow-campaign-v1.json` fournit 20 scénarios répartis entre Maven, Gradle et npm, avec exigences simples, validations, changements multi-fichiers, règles dépôt et cas négatifs. Son contrat est `resources/mcp/schemas/context-shadow-campaign-v1.schema.json`.
+
+Le bootstrap Gitea publie les trois fixtures `customer-api`, `inventory-gradle` et `checkout-node`. La campagne est simulée par défaut :
+
+```bash
+make mcp-shadow-campaign
+```
+
+L'exécution réelle est volontairement protégée car elle consomme du modèle cloud. Elle est séquentielle, n'approuve aucune tâche et attend un état terminal avant le scénario suivant :
+
+```bash
+make mcp-shadow-campaign CAMPAIGN_ARGS=--execute AI_FACTORY_RUN_CLOUD_CAMPAIGN=true
+```
+
+Le lanceur vérifie d'abord la disponibilité cloud et MCP. Il conserve uniquement les identifiants, statuts, catégories et tailles de plans dans un JSONL ; il n'enregistre ni contenu de plan, ni prompt, ni secret. Un timeout de supervision arrête la campagne sans prétendre avoir annulé la tâche distante.
+
+Les scénarios Gradle et Node contribuent à la mesure Planner/context dès l'étape `PLANNING`. Leur exécution complète peut rester en échec qualifié tant que `MCP-076` n'a pas fourni un wrapper Gradle publié, Node dans l'image sandbox et les miroirs/egress correspondants. Ils ne peuvent pas servir à valider la parité sandbox avant cette remédiation.
+
 Après la campagne :
 
 ```bash
@@ -59,3 +77,7 @@ Les métriques sont en mémoire et repartent de zéro au redémarrage de l'orche
 Le rapport [`MCP-shadow-20260831-213418.md`](baselines/MCP-shadow-20260831-213418.md) agrège quatre passages Context réussis et aucun échec. La couverture et la validité syntaxique des citations restent à `1,0`. Le cumul atteint 11 160 caractères directs contre 15 856 caractères MCP : le surcoût de provenance et l'inclusion de Markdown ne permettent pas encore d'établir une réduction sur ce petit dépôt.
 
 Le chemin d'inférence local a été retiré le 1er septembre 2026. LiteLLM utilise désormais exclusivement le fournisseur cloud configuré. Les mesures de qualité et de latence antérieures ne sont donc plus comparables directement : la campagne Planner doit être reprise sur la baseline cloud-only. En shadow, le Planner continue de recevoir le contexte direct ; un écart de plan ne doit pas être attribué à MCP avant la promotion en `MCP_ACTIVE`.
+
+## Préparation de la campagne multi-technologies — 2026-09-01
+
+Le corpus de 20 tâches, les fixtures Maven/Gradle/npm, leur bootstrap Gitea et le lanceur à activation explicite sont versionnés. Cette préparation lève le manque d'échantillon, mais `MCP-054` et `MCP-055` restent ouverts jusqu'à l'exécution cloud complète, la qualification des échecs et la revue manuelle de la qualité des plans.

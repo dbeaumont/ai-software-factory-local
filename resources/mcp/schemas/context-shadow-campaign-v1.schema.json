@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/context-shadow-campaign-v1.schema.json",
+  "title": "MCP context shadow campaign v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "tasks"],
+  "properties": {
+    "version": { "const": "1" },
+    "tasks": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "repository", "ecosystem", "category", "requirement"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^CTX-[0-9]{3}$" },
+          "repository": { "type": "string", "enum": ["customer-api", "inventory-gradle", "checkout-node"] },
+          "ecosystem": { "type": "string", "enum": ["MAVEN", "GRADLE", "NPM"] },
+          "category": { "type": "string", "enum": ["SIMPLE", "VALIDATION", "MULTI_FILE", "RULES", "NEGATIVE"] },
+          "requirement": { "type": "string", "minLength": 20, "maxLength": 4000 }
+        }
+      }
+    }
+  }
+}

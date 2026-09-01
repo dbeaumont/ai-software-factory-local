@@ -10,6 +10,7 @@ REVIEWER_USER="$GITEA_REVIEWER_USER"
 REVIEWER_PASS="$GITEA_REVIEWER_PASSWORD"
 REVIEWER_EMAIL="$GITEA_REVIEWER_EMAIL"
 HTTP_PORT="$GITEA_HTTP_PORT"
+REPOSITORIES=(customer-api inventory-gradle checkout-node)
 TOKEN_ONLY=false
 if [ "${1:-}" = "--token-only" ]; then
   TOKEN_ONLY=true
@@ -45,28 +46,32 @@ if [ "$TOKEN_ONLY" = false ]; then
     "${COMPOSE[@]}" exec -T --user git gitea gitea admin user create --username "$REVIEWER_USER" --password "$REVIEWER_PASS" --email "$REVIEWER_EMAIL" --admin --must-change-password=false
   fi
 
-  if ! curl -fsS -u "$USER:$PASS" "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api" >/dev/null 2>&1; then
-    curl -fsS -u "$USER:$PASS" -H 'Content-Type: application/json' \
-      -d '{"name":"customer-api","private":false,"auto_init":false,"default_branch":"main"}' \
-      "http://localhost:$HTTP_PORT/api/v1/user/repos" >/dev/null
-  fi
+  TMP_ROOT=$(mktemp -d)
+  trap 'rm -rf "$TMP_ROOT"' EXIT
+  for repository in "${REPOSITORIES[@]}"; do
+    if ! curl -fsS -u "$USER:$PASS" "http://localhost:$HTTP_PORT/api/v1/repos/$USER/$repository" >/dev/null 2>&1; then
+      curl -fsS -u "$USER:$PASS" -H 'Content-Type: application/json' \
+        -d "{\"name\":\"$repository\",\"private\":false,\"auto_init\":false,\"default_branch\":\"main\"}" \
+        "http://localhost:$HTTP_PORT/api/v1/user/repos" >/dev/null
+    fi
 
-  # The PR author cannot approve their own PR, so grant a distinct reviewer write access.
-  curl -fsS -u "$USER:$PASS" -X PUT -H 'Content-Type: application/json' \
-    -d '{"permission":"write"}' \
-    "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api/collaborators/$REVIEWER_USER" >/dev/null
+    # The PR author cannot approve their own PR, so grant a distinct reviewer write access.
+    curl -fsS -u "$USER:$PASS" -X PUT -H 'Content-Type: application/json' \
+      -d '{"permission":"write"}' \
+      "http://localhost:$HTTP_PORT/api/v1/repos/$USER/$repository/collaborators/$REVIEWER_USER" >/dev/null
 
-  TMP=$(mktemp -d)
-  cp -R examples/customer-api/. "$TMP/"
-  (
-    cd "$TMP"
-    git init -b main >/dev/null
-    git add .
-    git -c user.name='Demo' -c user.email='demo@example.local' commit -m 'Initial demo app' >/dev/null
-    git remote add origin "http://$USER:$PASS@localhost:$HTTP_PORT/$USER/customer-api.git"
-    git push -u origin main --force >/dev/null
-  )
-  rm -rf "$TMP"
+    repository_tmp="$TMP_ROOT/$repository"
+    mkdir -p "$repository_tmp"
+    cp -R "examples/$repository/." "$repository_tmp/"
+    (
+      cd "$repository_tmp"
+      git init -b main >/dev/null
+      git add .
+      git -c user.name='Demo' -c user.email='demo@example.local' commit -m 'Initial demo app' >/dev/null
+      git remote add origin "http://$USER:$PASS@localhost:$HTTP_PORT/$USER/$repository.git"
+      git push -u origin main --force >/dev/null
+    )
+  done
 fi
 
 TOKEN_VALID=false
@@ -95,5 +100,7 @@ if [ "$TOKEN_VALID" = false ]; then
 fi
 
 if [ "$TOKEN_ONLY" = false ]; then
-  echo "Demo repository ready: http://localhost:$HTTP_PORT/$USER/customer-api"
+  for repository in "${REPOSITORIES[@]}"; do
+    echo "Demo repository ready: http://localhost:$HTTP_PORT/$USER/$repository"
+  done
 fi
