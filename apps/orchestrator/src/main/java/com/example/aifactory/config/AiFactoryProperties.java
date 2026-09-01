@@ -14,10 +14,6 @@ public record AiFactoryProperties(
         String sandboxNetwork,
         String mavenMirrorUrl,
         String artifactoryToken,
-        String giteaBaseUrl,
-        String giteaPublicBaseUrl,
-        String giteaToken,
-        String giteaUser,
         String sonarqubeUrl,
         String sonarToken,
         String promptRoot) {

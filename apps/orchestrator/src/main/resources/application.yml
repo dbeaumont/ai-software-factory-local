@@ -108,10 +108,6 @@ ai-factory:
   sandbox-network: ${AI_FACTORY_SANDBOX_NETWORK}
   maven-mirror-url: ${MAVEN_MIRROR_URL:}
   artifactory-token: ${ARTIFACTORY_TOKEN:}
-  gitea-base-url: ${AI_FACTORY_GITEA_BASE_URL}
-  gitea-public-base-url: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL}
-  gitea-token: ${AI_FACTORY_GITEA_TOKEN}
-  gitea-user: ${AI_FACTORY_GITEA_USER}
   sonarqube-url: ${AI_FACTORY_SONARQUBE_URL:http://sonarqube:9000}
   sonar-token: ${AI_FACTORY_SONAR_TOKEN:}
   prompt-root: ${AI_FACTORY_PROMPT_ROOT}

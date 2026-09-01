@@ -369,7 +369,7 @@ Objectif : isoler les secrets SCM et garantir qu'une livraison n'arrive qu'aprè
 - [x] **MCP-120** — Ajouter tests : approbation absente/altérée/expirée, dépôt hors scope, SHA divergent, branche existante, timeout après push, retry après PR créée. _(Tous les cas sont automatisés ; le scénario de timeout simule une PR distante créée avant la perte de réponse et vérifie qu'un seul create a lieu.)_
 - [x] **MCP-121** — Passer `GiteaService` en shadow sur les opérations de lecture, puis activer la commande de livraison MCP sur un dépôt de test. _(Révision `main` résolue via MCP, puis livraison locale déterministe réussie sur `customer-api` : branche `ai-factory/003ec671-mcp121`, commit vérifié et PR n°1 confirmée `draft=true`. Le rejeu retrouve la même PR ; workspace source read-only et staging privé. Rapport : `docs/mcp/MCP-121-campagne-scm.md`.)_
 - [x] **MCP-122** — Basculer l'approbation de `TaskService.approve()` vers l'adaptateur MCP. _(`TaskService` n'appelle plus `GiteaService` : l'adaptateur calcule les sept digests, dérive uniquement un `repository_id`, signe une preuve d'approbation d'une heure au nom de David Beaumont et invoque la commande atomique idempotente. Réponse validée par schéma avec `draft=true`; les trois clients MCP sont initialisés au runtime.)_
-- [ ] **MCP-123** — Retirer le jeton Gitea de l'environnement de l'orchestrateur et supprimer `GiteaService` après stabilisation.
+- [x] **MCP-123** — Retirer le jeton Gitea de l'environnement de l'orchestrateur et supprimer `GiteaService` après stabilisation. _(`GiteaService` et les quatre propriétés Gitea supprimés de l'orchestrateur ; aucune variable de jeton Gitea ne lui est injectée, avec test de composition. Le jeton reste exclusivement lu depuis `.vault` par `scm-delivery-mcp`.)_
 
 **Gate du lot 4**
 
@@ -500,7 +500,7 @@ Objectif : passer d'un réseau Compose de confiance à une plateforme Zero Trust
 | `apps/orchestrator/.../service/TaskService.java` | orchestration via ports/adaptateurs MCP et résultats structurés |
 | `apps/orchestrator/.../service/RepositoryContextService.java` | remplacé progressivement par `repository-context-mcp` |
 | `apps/orchestrator/.../service/SandboxService.java` | remplacé puis supprimé après extraction du runner |
-| `apps/orchestrator/.../service/GiteaService.java` | remplacé puis supprimé après extraction de la livraison |
+| `apps/orchestrator/.../service/GiteaService.java` | supprimé par MCP-123 après extraction de la livraison |
 | `apps/orchestrator/.../config/AiFactoryProperties.java` | configuration MCP structurée et feature flags |
 | `apps/mcp/` | nouveaux serveurs indépendants et Dockerfiles |
 | `resources/mcp/schemas/` | contrats JSON versionnés |

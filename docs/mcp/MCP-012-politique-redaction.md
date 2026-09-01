@@ -152,7 +152,7 @@ Les assertions parcourent logs de test, réponses HTTP/MCP, snapshots, traces ex
 | traces | capture brute non mise en place | politique à imposer lors de MCP-221 |
 | preuves | digests des sorties sandbox | stockage chiffré/RBAC et fingerprint HMAC à implémenter |
 
-La construction actuelle d'une URL Git authentifiée par `GiteaService` est un risque prioritaire : jusqu'à sa suppression par MCP-123, toute erreur de commande doit masquer les credentials de l'URI.
+Le risque historique de construction d'une URL Git authentifiée dans l'orchestrateur a été supprimé par MCP-123 : `GiteaService` n'existe plus et le jeton Gitea est confiné à `scm-delivery-mcp`.
 
 ## 10. Gouvernance et incident
 
@@ -169,4 +169,3 @@ La construction actuelle d'une URL Git authentifiée par `GiteaService` est un r
 - [x] L'ordre redaction/fingerprinting/troncature est fixé.
 - [x] Les exigences de tests et le comportement fail-closed sont définis.
 - [x] Une politique machine-readable versionnée accompagne le document.
-

@@ -31,6 +31,8 @@ class ComposeMcpSecurityTest {
         Map<String, Object> orchestratorEnvironment = (Map<String, Object>) orchestrator.get("environment");
         assertFalse(orchestratorEnvironment.containsKey("ARTIFACTORY_TOKEN"));
         assertFalse(orchestratorEnvironment.containsKey("AI_FACTORY_SONAR_TOKEN"));
+        assertFalse(orchestratorEnvironment.containsKey("AI_FACTORY_GITEA_TOKEN"));
+        assertFalse(orchestratorEnvironment.containsKey("GITEA_TOKEN"));
         assertFalse(orchestratorEnvironment.containsKey("AI_FACTORY_LOCAL_MODEL"));
         assertFalse(((Map<String, Object>) litellm.get("environment")).containsKey("OLLAMA_MODEL"));
 
