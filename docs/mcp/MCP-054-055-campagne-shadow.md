@@ -109,3 +109,5 @@ Ces échecs aval n'invalident pas MCP-054 : le mode shadow continue de servir ex
 La revue qualitative et la recommandation de gate sont consignées dans [`MCP-055-revue-qualite-plans.md`](MCP-055-revue-qualite-plans.md).
 
 La campagne de qualification `20260901-152635`, exécutée après activation du schéma Planner strict, obtient 19 contrats valides sur 20. Le seul échec contractuel restant concerne `CTX-020`, toujours sans champ `status`. Cette amélioration de 75 % à 95 % d'adhérence ne lève pas le `NO-GO` : le détail et la remédiation attendue figurent dans le dossier MCP-055.
+
+La remédiation suivante est désormais prête localement : un contrat Planner invalide déclenche au maximum un second appel, mesuré par `ai_factory_planner_contract_retries`, tandis qu'un contrat valide n'est jamais rejoué. Elle est couverte par la suite orchestrateur (75 tests sans échec). Une nouvelle exécution cloud reste soumise à une autorisation explicite couvrant les 20 tâches et les éventuels seconds appels.

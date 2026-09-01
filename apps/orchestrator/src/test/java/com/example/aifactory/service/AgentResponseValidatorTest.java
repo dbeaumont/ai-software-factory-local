@@ -5,7 +5,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AgentResponseValidatorTest {
     private final AgentResponseValidator validator = new AgentResponseValidator(new ObjectMapper());
@@ -19,6 +21,33 @@ class AgentResponseValidatorTest {
     void blocksNonImplementablePlan() {
         assertThrows(IllegalStateException.class,
                 () -> validator.requireImplementablePlan("{\"status\":\"NEEDS_CLARIFICATION\",\"risk_level\":\"R1\"}"));
+    }
+
+    @Test
+    void distinguishesContractValidityFromThePlannerBusinessDecision() {
+        String valid = """
+                {
+                  "status": "NEEDS_CLARIFICATION",
+                  "summary": "A decision is required",
+                  "risk_level": "R1",
+                  "impacted_files": [],
+                  "domain_impacts": [],
+                  "api_and_data_impacts": [],
+                  "tests": [],
+                  "security": [],
+                  "performance": [],
+                  "rollback_and_compatibility": [],
+                  "assumptions": [],
+                  "open_questions": ["Which behavior is expected?"],
+                  "human_decisions": []
+                }
+                """;
+
+        assertTrue(validator.hasValidPlannerContract(valid));
+        assertFalse(validator.hasValidPlannerContract("{\"risk_level\":\"R1\"}"));
+        assertFalse(validator.hasValidPlannerContract(valid.replace("NEEDS_CLARIFICATION", "UNKNOWN")));
+        assertFalse(validator.hasValidPlannerContract(valid.replace("\"security\": [],", "")));
+        assertFalse(validator.hasValidPlannerContract(valid.replace("\"tests\": []", "\"tests\": {}")));
     }
 
     @Test

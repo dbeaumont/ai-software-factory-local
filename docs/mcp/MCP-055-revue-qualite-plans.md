@@ -66,4 +66,12 @@ La campagne autorisée `20260901-152635` a rejoué les 20 scénarios avec le sch
 - latence MCP Context moyenne de 57,4 ms ;
 - volumes inchangés : 61 588 caractères MCP contre 86 958 directs.
 
-Le taux de contrat Planner invalide passe de 25 % à 5 %, mais l'objectif fail-closed reste zéro. Le schéma transmis au proxy ne dispense donc pas de la validation applicative existante. La recommandation demeure **NO-GO** pour MCP-056 jusqu'à l'ajout d'une reprise bornée des seules réponses Planner invalides et sa qualification sur un nouvel échantillon autorisé.
+Le taux de contrat Planner invalide passe de 25 % à 5 %, mais l'objectif fail-closed reste zéro. Le schéma transmis au proxy ne dispense donc pas de la validation applicative existante.
+
+## Reprise bornée du contrat Planner
+
+L'orchestrateur valide désormais le contrat immédiatement après le premier appel Planner. Si, et seulement si, la réponse est illisible, omet un champ obligatoire ou contient une valeur `status`/`risk_level` hors énumération, il effectue exactement un second appel avec le même prompt et le même schéma strict. Une décision métier valide comme `NEEDS_CLARIFICATION`, `OUT_OF_SCOPE` ou `BLOCKED` n'est jamais rejouée. Si le second résultat reste invalide, la validation fail-closed existante arrête le pipeline.
+
+Le rejeu est journalisé et compté par `ai_factory_planner_contract_retries`. Les tests unitaires prouvent l'absence de rejeu d'un contrat valide et la borne de deux appels au total ; la suite orchestrateur complète passe avec 75 tests sans échec.
+
+La recommandation demeure **NO-GO** pour MCP-056 jusqu'à une nouvelle campagne cloud explicitement autorisée. Cette campagne devra obtenir 20 contrats valides sur 20 et comptabiliser les rejeux ; son autorisation devra couvrir le fait qu'un scénario dont la première réponse est invalide peut envoyer une seconde fois le même contenu Planner à OpenAI.

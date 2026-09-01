@@ -31,6 +31,29 @@ public class AgentResponseValidator {
         }
     }
 
+    public boolean hasValidPlannerContract(String response) {
+        try {
+            JsonNode root = parse(response, "Planner");
+            String status = requiredText(root, "status", "Planner");
+            String risk = requiredText(root, "risk_level", "Planner");
+            return List.of("IMPLEMENTABLE", "NEEDS_CLARIFICATION", "OUT_OF_SCOPE", "BLOCKED").contains(status)
+                    && List.of("R0", "R1", "R2", "R3", "R4").contains(risk)
+                    && hasText(root, "summary")
+                    && hasObjectArray(root, "impacted_files", List.of("path", "layer", "change"), "evidence")
+                    && hasTextArray(root, "domain_impacts")
+                    && hasTextArray(root, "api_and_data_impacts")
+                    && hasObjectArray(root, "tests", List.of("name", "layer", "intent"), null)
+                    && hasTextArray(root, "security")
+                    && hasTextArray(root, "performance")
+                    && hasTextArray(root, "rollback_and_compatibility")
+                    && hasTextArray(root, "assumptions")
+                    && hasTextArray(root, "open_questions")
+                    && hasTextArray(root, "human_decisions");
+        } catch (IllegalStateException exception) {
+            return false;
+        }
+    }
+
     public void requireReviewAllowsApproval(String response) {
         requireReviewAllowsApproval(summarizeReview(response));
     }
@@ -105,6 +128,39 @@ public class AgentResponseValidator {
         if (root == null || !root.path(field).isArray()) {
             throw new IllegalStateException(agent + " response is missing required array '" + field + "'");
         }
+    }
+
+    private static boolean hasText(JsonNode root, String field) {
+        JsonNode value = root.path(field);
+        return value.isTextual() && !value.asText().isBlank();
+    }
+
+    private static boolean hasTextArray(JsonNode root, String field) {
+        JsonNode values = root.path(field);
+        if (!values.isArray()) {
+            return false;
+        }
+        for (JsonNode value : values) {
+            if (!value.isTextual()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasObjectArray(JsonNode root, String field, List<String> textFields,
+                                          String textArrayField) {
+        JsonNode values = root.path(field);
+        if (!values.isArray()) {
+            return false;
+        }
+        for (JsonNode value : values) {
+            if (!value.isObject() || textFields.stream().anyMatch(name -> !hasText(value, name))
+                    || textArrayField != null && !hasTextArray(value, textArrayField)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     static String stripJsonFence(String response) {

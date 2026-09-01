@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -65,6 +66,37 @@ class TaskServiceTest {
         assertEquals(1_600, TaskService.maxTokensFor("patch-repair"));
         assertEquals(1_200, TaskService.maxTokensFor("reviewer"));
         assertEquals(1_200, TaskService.maxTokensFor("unknown"));
+    }
+
+    @Test
+    void retriesAnInvalidPlannerContractOnlyOnce() {
+        AtomicInteger calls = new AtomicInteger();
+        AtomicInteger retries = new AtomicInteger();
+
+        String response = TaskService.withSingleContractRetry(
+                () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
+                value -> value.contains("IMPLEMENTABLE"), retries::incrementAndGet);
+
+        assertEquals("{\"status\":\"IMPLEMENTABLE\"}", response);
+        assertEquals(2, calls.get());
+        assertEquals(1, retries.get());
+    }
+
+    @Test
+    void doesNotRetryAValidPlannerDecision() {
+        AtomicInteger calls = new AtomicInteger();
+
+        String response = TaskService.withSingleContractRetry(
+                () -> {
+                    calls.incrementAndGet();
+                    return "{\"status\":\"NEEDS_CLARIFICATION\"}";
+                }, value -> value.contains("NEEDS_CLARIFICATION"),
+                () -> {
+                    throw new AssertionError("A valid contract must not be retried");
+                });
+
+        assertEquals("{\"status\":\"NEEDS_CLARIFICATION\"}", response);
+        assertEquals(1, calls.get());
     }
 
     @Test

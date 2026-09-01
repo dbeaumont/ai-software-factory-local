@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,6 +40,7 @@ public class TaskService {
     private final Counter submittedTasks;
     private final Counter completedTasks;
     private final Counter failedTasks;
+    private final Counter plannerContractRetries;
 
     public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
                        PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses, SandboxExecutor sandbox, GiteaService gitea,
@@ -53,6 +56,9 @@ public class TaskService {
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted").description("Tasks submitted to the factory").register(metrics);
         this.completedTasks = Counter.builder("ai_factory_tasks_completed").description("Tasks that completed validation").register(metrics);
         this.failedTasks = Counter.builder("ai_factory_tasks_failed").description("Tasks that failed before approval").register(metrics);
+        this.plannerContractRetries = Counter.builder("ai_factory_planner_contract_retries")
+                .description("Planner calls retried once after an invalid response contract")
+                .register(metrics);
     }
 
     public TaskView create(TaskRequest request) {
@@ -260,11 +266,30 @@ public class TaskService {
         state.promptFingerprints.put(promptName, fingerprint);
         log.info("Task {} ({}) invoking {} agent with prompt sha256={}",
                 state.id, state.ticketNumber, promptName, fingerprint.substring(0, 12));
-        String response = llm.chat(prompts.load(promptName), untrustedInput,
-                maxTokensFor(promptName), PlannerResponseFormat.forPrompt(promptName));
+        String systemPrompt = prompts.load(promptName);
+        Map<String, Object> responseFormat = PlannerResponseFormat.forPrompt(promptName);
+        Supplier<String> invocation = () -> llm.chat(systemPrompt, untrustedInput,
+                maxTokensFor(promptName), responseFormat);
+        String response = "planner".equals(promptName)
+                ? withSingleContractRetry(invocation, agentResponses::hasValidPlannerContract, () -> {
+                    plannerContractRetries.increment();
+                    log.warn("Task {} ({}) planner returned an invalid contract; retrying once",
+                            state.id, state.ticketNumber);
+                })
+                : invocation.get();
         log.info("Task {} ({}) {} agent completed; response_chars={}",
                 state.id, state.ticketNumber, promptName, response.length());
         return response;
+    }
+
+    static String withSingleContractRetry(Supplier<String> invocation, Predicate<String> contract,
+                                          Runnable retryObserver) {
+        String response = invocation.get();
+        if (contract.test(response)) {
+            return response;
+        }
+        retryObserver.run();
+        return invocation.get();
     }
 
     static int maxTokensFor(String promptName) {
