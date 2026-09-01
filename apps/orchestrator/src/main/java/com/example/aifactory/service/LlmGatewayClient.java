@@ -150,6 +150,74 @@ public class LlmGatewayClient {
         return Map.copyOf(body);
     }
 
+    static Map<String, Object> toolRequestBody(String model, List<Map<String, Object>> messages,
+                                               List<ToolDefinition> tools, int maxTokens) {
+        if (tools == null || tools.isEmpty()) {
+            throw new IllegalArgumentException("At least one tool definition is required");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", model);
+        body.put("messages", List.copyOf(messages));
+        body.put("tools", tools.stream().map(tool -> Map.of(
+                "type", "function",
+                "function", Map.of(
+                        "name", tool.name(),
+                        "description", tool.description(),
+                        "parameters", tool.inputSchema()))).toList());
+        body.put("tool_choice", "auto");
+        body.put("max_tokens", maxTokens);
+        return Map.copyOf(body);
+    }
+
+    static ToolTurn parseToolTurn(JsonNode response) {
+        JsonNode choice = response == null ? null : response.path("choices").path(0);
+        JsonNode message = choice == null ? null : choice.path("message");
+        String finishReason = choice == null ? "missing" : choice.path("finish_reason").asText("missing");
+        int promptTokens = response == null ? -1 : response.path("usage").path("prompt_tokens").asInt(-1);
+        int completionTokens = response == null ? -1 : response.path("usage").path("completion_tokens").asInt(-1);
+        if (message == null || message.isMissingNode()) {
+            throw new LlmCompletionException("missing_message", false, "Invalid tool response from LLM gateway");
+        }
+        List<ToolCall> calls = new java.util.ArrayList<>();
+        JsonNode toolCalls = message.path("tool_calls");
+        if (toolCalls.isArray()) {
+            for (JsonNode call : toolCalls) {
+                String id = call.path("id").asText("");
+                String type = call.path("type").asText("");
+                String name = call.path("function").path("name").asText("");
+                String arguments = call.path("function").path("arguments").asText("");
+                if (id.isBlank() || !"function".equals(type) || name.isBlank() || arguments.isBlank()) {
+                    throw new LlmCompletionException("invalid_tool_call", false,
+                            "LLM gateway altered or omitted tool call fields");
+                }
+                calls.add(new ToolCall(id, name, arguments));
+            }
+        }
+        String content = message.path("content").isTextual() ? message.path("content").asText() : "";
+        if (calls.isEmpty() && !"stop".equals(finishReason)) {
+            throw new LlmCompletionException(finishReason, false,
+                    "LLM gateway returned neither a final result nor a valid tool call");
+        }
+        return new ToolTurn(content, List.copyOf(calls), finishReason, promptTokens, completionTokens);
+    }
+
+    static Map<String, Object> toolResultMessage(String toolCallId, String result) {
+        if (toolCallId == null || toolCallId.isBlank()) {
+            throw new IllegalArgumentException("toolCallId is required");
+        }
+        return Map.of("role", "tool", "tool_call_id", toolCallId, "content", result);
+    }
+
+    record ToolDefinition(String name, String description, Map<String, Object> inputSchema) {
+    }
+
+    record ToolCall(String id, String name, String arguments) {
+    }
+
+    record ToolTurn(String content, List<ToolCall> toolCalls, String finishReason,
+                    int promptTokens, int completionTokens) {
+    }
+
     public String modelName() {
         return props.cloudModel();
     }

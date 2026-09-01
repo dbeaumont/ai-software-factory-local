@@ -400,7 +400,7 @@ Objectif : rendre les verdicts portables, explicables et auditables.
 
 Objectif : améliorer la qualité du contexte sans augmenter silencieusement l'autonomie.
 
-- [ ] **MCP-170** — Vérifier que LiteLLM et chaque modèle supporté conservent fidèlement noms, schémas, IDs et résultats d'appels d'outils.
+- [x] **MCP-170** — Vérifier que LiteLLM et chaque modèle supporté conservent fidèlement noms, schémas, IDs et résultats d'appels d'outils. _(Contrat OpenAI-compatible qualifié localement pour l'alias supporté unique `factory-code-cloud` : sérialisation exacte du nom et du JSON Schema, conservation de `tool_call.id`, nom/arguments et corrélation du résultat ; tout champ stable absent ou altéré est rejeté. Aucun contenu projet n'a été envoyé au fournisseur.)_
 - [ ] **MCP-171** — Implémenter une boucle d'agent avec maximum de tours, deadline, budget tokens/coût, résultat final obligatoire et arrêt explicite.
 - [ ] **MCP-172** — Appliquer la matrice de permissions côté hôte avant chaque appel ; ne jamais faire confiance au nom de rôle renvoyé par le modèle.
 - [ ] **MCP-173** — Limiter d'abord Planner et Reviewer aux outils de lecture `context.*` et ressources de preuves autorisées.
