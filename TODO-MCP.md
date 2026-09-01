@@ -422,7 +422,7 @@ Objectif : améliorer la qualité du contexte sans augmenter silencieusement l'a
 
 Objectif : passer d'un réseau Compose de confiance à une plateforme Zero Trust exploitable.
 
-- [ ] **MCP-210** — Ajouter TLS en transit ; HTTPS obligatoire hors loopback/développement.
+- [x] **MCP-210** — Ajouter TLS en transit ; HTTPS obligatoire hors loopback/développement. _(Validation au démarrage de toutes les URI MCP : HTTPS obligatoire hors profils `local`/`dev`/`test` et loopback ; une URL HTTP distante empêche le démarrage. Le client WebClient utilise directement les endpoints TLS Cloud Run ; règle et configuration dans `docs/mcp/MCP-210-tls-transport.md`.)_
 - [ ] **MCP-211** — Mettre en place OAuth 2.1/workload identity avec tokens courts et audience spécifique à chaque serveur.
 - [ ] **MCP-212** — Valider issuer, audience, signature, expiration, scopes et identité à chaque requête ; interdire le token passthrough vers les APIs amont.
 - [ ] **MCP-213** — Utiliser un compte de service distinct par orchestrateur et serveur ; aucun fichier de clé persistant.
