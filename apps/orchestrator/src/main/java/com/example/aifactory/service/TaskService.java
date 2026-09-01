@@ -211,8 +211,11 @@ public class TaskService {
                 log.warn("Task {} ({}) patch validation failed; starting repair attempt {}/{}: {}",
                         state.id, state.ticketNumber, repairAttempt + 1, MAX_PATCH_REPAIR_ATTEMPTS, validationFailure.getMessage());
                 Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
+                String repairRepositoryContext = contextService.collectForRole(
+                        workspace, state.id, state.sourceCommit, "patch-repair");
                 String repaired = chat(state, "patch-repair", untrusted("REQUIREMENT", state.request.requirement()) +
-                        untrusted("PLAN", state.plan) + untrusted("CURRENT_FILE_CONTENTS", affectedFileContext(workspace, patch)) +
+                        untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", repairRepositoryContext) +
+                        untrusted("CURRENT_FILE_CONTENTS", affectedFileContext(workspace, patch)) +
                         untrusted("INVALID_PATCH", patch) + untrusted("GIT_APPLY_ERROR", validationFailure.getMessage()) +
                         untrusted("REPAIR_ATTEMPT", Integer.toString(repairAttempt + 1)));
                 writeRunMetadata(workspace, state);
