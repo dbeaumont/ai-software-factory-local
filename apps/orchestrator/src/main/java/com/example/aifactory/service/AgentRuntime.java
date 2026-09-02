@@ -114,6 +114,7 @@ public final class AgentRuntime implements AgentExecutor {
             JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),
                     new MultiAgentContractValidator.ContractContext(invocation.taskId(), invocation.attemptId(),
                             invocation.allowedReferenceIds()));
+            validateHostBindings(invocation, document);
             validatingContract = false;
             metrics.recordDuration(invocation.role(), "success", System.nanoTime() - started);
             return new Result(document, fingerprint, result.turns(), result.tokens(), result.costMicros());
@@ -131,6 +132,19 @@ public final class AgentRuntime implements AgentExecutor {
     static boolean effectfulTool(String name) {
         return name.startsWith("sandbox.") || name.startsWith("assurance.") || name.startsWith("scm.")
                 || name.equals("evidence.store") || name.equals("evidence.create_manifest");
+    }
+
+    private static void validateHostBindings(Invocation invocation, JsonNode document) {
+        requireHostBinding(document, "role", invocation.role());
+        requireHostBinding(document, "source_commit", invocation.sourceCommit());
+    }
+
+    private static void requireHostBinding(JsonNode document, String field, String expected) {
+        JsonNode actual = document.path(field);
+        if (!actual.isMissingNode() && (!actual.isTextual() || !expected.equals(actual.asText()))) {
+            throw new MultiAgentContractValidator.ContractValidationException(
+                    "agent-runtime-host-binding", field + " is not bound to the host invocation");
+        }
     }
 
     private static TaskUsageLedger.Lane usageLane(String role) {

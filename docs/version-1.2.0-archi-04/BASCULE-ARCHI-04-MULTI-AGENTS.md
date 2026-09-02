@@ -415,7 +415,7 @@
 ### Tests de sécurité
 
 - [x] **MAH-271** — Injecter des instructions malveillantes dans ticket, code, plan, résultats et preuves. _(`PromptInjectionBoundaryTest` injecte une fermeture de balise et une instruction hostile dans chacun des cinq canaux, ainsi que les logs et résultats d'outil, et vérifie leur maintien dans une enveloppe non fiable.)_
-- [ ] **MAH-272** — Vérifier qu'un sous-agent ne peut modifier rôle, parent, scope, budget ou outils.
+- [x] **MAH-272** — Vérifier qu'un sous-agent ne peut modifier rôle, parent, scope, budget ou outils. _(`AgentRuntimeTest` lie le rôle déclaré à l'invocation émise par l'hôte et vérifie que les contrats fermés rejettent toute injection de parent, scope, budget ou liste d'outils.)_
 - [ ] **MAH-273** — Vérifier isolement cross-task et cross-worktree.
 - [ ] **MAH-274** — Vérifier refus des outils à effet pour tous les agents et sous-agents.
 - [ ] **MAH-275** — Vérifier absence de secrets dans prompts, résultats, traces, erreurs et artefacts.

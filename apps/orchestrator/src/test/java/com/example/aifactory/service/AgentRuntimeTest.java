@@ -2,6 +2,8 @@ package com.example.aifactory.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
@@ -44,6 +46,27 @@ class AgentRuntimeTest {
         assertThat(result.document().path("role").asText()).isEqualTo("developer");
         assertThat(result.promptFingerprint()).hasSize(64);
         assertThat(result.tokens()).isEqualTo(15);
+    }
+
+    @Test
+    void rejectsAResultThatClaimsAnotherKnownRole() {
+        AgentRuntime runtime = runtimeReturning(event().replace("\"role\":\"developer\"",
+                "\"role\":\"security-agent\""));
+
+        assertThatThrownBy(() -> runtime.execute(invocation(Set.of("context.read_file"))))
+                .isInstanceOf(MultiAgentContractValidator.ContractValidationException.class)
+                .hasMessageContaining("role is not bound to the host invocation");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"parent_role", "scope", "budget", "allowed_tools"})
+    void rejectsAuthorityFieldsAddedByASubAgent(String field) {
+        String injected = event().replace("\"sequence\":0", "\"" + field + "\":{},\"sequence\":0");
+        AgentRuntime runtime = runtimeReturning(injected);
+
+        assertThatThrownBy(() -> runtime.execute(invocation(Set.of("context.read_file"))))
+                .isInstanceOf(MultiAgentContractValidator.ContractValidationException.class)
+                .hasMessageContaining("violates the local schema");
     }
 
     @Test
@@ -107,6 +130,24 @@ class AgentRuntimeTest {
         return new AgentRuntime.Invocation("task-1", "attempt-1", "a".repeat(40), "developer",
                 "developer-v1", "agent-run-event-v1", tools, Set.of("specialist-1", "node-1"),
                 "untrusted input", new AgentToolLoop.Budget(2, Duration.ofSeconds(30), 1000, 1000));
+    }
+
+    private static AgentRuntime runtimeReturning(String result) {
+        PromptService prompts = mock(PromptService.class);
+        LlmGatewayClient llm = mock(LlmGatewayClient.class);
+        AgentContextToolHost host = mock(AgentContextToolHost.class);
+        when(prompts.load("developer-v1")).thenReturn("system");
+        when(prompts.fingerprint("developer-v1")).thenReturn("a".repeat(64));
+        when(host.definitions()).thenReturn(List.of(
+                new LlmGatewayClient.ToolDefinition("context.read_file", "read", Map.of("type", "object"))));
+        when(host.executor(org.mockito.ArgumentMatchers.eq("task-1"),
+                org.mockito.ArgumentMatchers.eq("attempt-1"), org.mockito.ArgumentMatchers.eq("a".repeat(40)),
+                org.mockito.ArgumentMatchers.eq("developer"), any(ExecutionIdentity.class)))
+                .thenReturn(call -> "{}");
+        when(host.authorization()).thenReturn((actor, tool) -> true);
+        when(llm.nextToolTurn(any(), any(), anyInt())).thenReturn(new AgentToolLoop.Turn(
+                AgentToolLoop.Stop.FINAL, result, List.of(), 10, 5, 20));
+        return new AgentRuntime(prompts, llm, host, new MultiAgentContractValidator(new ObjectMapper()));
     }
 
     private static String event() {
