@@ -47,6 +47,10 @@ public final class CrossPerimeterContradictionDetector {
     }
 
     private static Candidate candidate(Request request, String subject, List<NormalizedAssertion> assertions) {
+        Set<Dimension> dimensions = new HashSet<>(assertions.stream().map(NormalizedAssertion::dimension).toList());
+        if (dimensions.size() != 1) {
+            throw new IllegalArgumentException("Assertions for one subject must use one contradiction dimension");
+        }
         List<Source> sources = assertions.stream()
                 .sorted(Comparator.comparing((NormalizedAssertion value) -> value.perimeter().name())
                         .thenComparing(NormalizedAssertion::resultId)
@@ -61,7 +65,7 @@ public final class CrossPerimeterContradictionDetector {
                 + sources.stream().map(source -> source.perimeter() + ":" + source.resultId() + ":"
                         + source.conclusion() + ":" + source.resultDigest()).reduce("", (left, right) -> left + right + '\n');
         return new Candidate("contradiction-" + sha256(identity).substring(0, 24), request.taskId(),
-                request.attemptId(), subject, sources);
+                request.attemptId(), subject, dimensions.iterator().next(), sources);
     }
 
     private static boolean isCrossPerimeterConflict(List<NormalizedAssertion> assertions) {
@@ -77,7 +81,8 @@ public final class CrossPerimeterContradictionDetector {
     }
 
     private static NormalizedAssertion normalize(SpecialistResult result, Assertion assertion) {
-        if (assertion == null || assertion.subject() == null || assertion.conclusion() == null) {
+        if (assertion == null || assertion.subject() == null || assertion.dimension() == null
+                || assertion.conclusion() == null) {
             throw new IllegalArgumentException("Specialist assertion is incomplete");
         }
         String subject = assertion.subject().strip().toLowerCase(Locale.ROOT);
@@ -85,8 +90,8 @@ public final class CrossPerimeterContradictionDetector {
         if (!SUBJECT.matcher(subject).matches() || conclusion.isEmpty() || conclusion.length() > 256) {
             throw new IllegalArgumentException("Specialist assertion is invalid");
         }
-        return new NormalizedAssertion(subject, conclusion, result.resultId(), result.perimeter(), result.role(),
-                result.resultDigest(), result.evidenceUris());
+        return new NormalizedAssertion(subject, assertion.dimension(), conclusion, result.resultId(),
+                result.perimeter(), result.role(), result.resultDigest(), result.evidenceUris());
     }
 
     private static void requireRequest(Request request) {
@@ -140,10 +145,10 @@ public final class CrossPerimeterContradictionDetector {
         }
     }
 
-    public record Assertion(String subject, String conclusion) {}
+    public record Assertion(String subject, Dimension dimension, String conclusion) {}
 
     public record Candidate(String contradictionId, String taskId, String attemptId, String subject,
-                            List<Source> sources) {
+                            Dimension dimension, List<Source> sources) {
         public Candidate {
             sources = List.copyOf(sources);
         }
@@ -158,6 +163,9 @@ public final class CrossPerimeterContradictionDetector {
 
     public enum Perimeter { ARCHITECTURE, CODE, TESTS, SECURITY }
 
-    private record NormalizedAssertion(String subject, String conclusion, String resultId, Perimeter perimeter,
-                                       String role, String resultDigest, List<String> evidenceUris) {}
+    public enum Dimension { FACT, SCOPE, RISK, TEST_COVERAGE, RECOMMENDATION }
+
+    private record NormalizedAssertion(String subject, Dimension dimension, String conclusion, String resultId,
+                                       Perimeter perimeter, String role, String resultDigest,
+                                       List<String> evidenceUris) {}
 }
