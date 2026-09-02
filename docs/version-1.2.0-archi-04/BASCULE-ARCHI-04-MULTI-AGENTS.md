@@ -436,7 +436,7 @@
 ## 17. Lot 13 — Évaluations et qualification
 
 - [x] **MAH-290** — Ajouter une variante `hierarchical-shadow` au collecteur A/B existant. _(`AgentAbEvaluator` accepte désormais une paire de variantes explicite et collecte `HIERARCHICAL_SHADOW` sans casser l'API BASELINE/CANDIDATE existante.)_
-- [ ] **MAH-291** — Comparer pipeline, agentique simple et hiérarchique sur les mêmes commits et tickets.
+- [x] **MAH-291** — Comparer pipeline, agentique simple et hiérarchique sur les mêmes commits et tickets. _(`AgentAbEvaluator.compareAll` exige les trois variantes nommées sur chaque cas et refuse toute divergence de ticket ou de commit source.)_
 - [ ] **MAH-292** — Mesurer précision du routage et pertinence des spécialistes sélectionnés.
 - [ ] **MAH-293** — Mesurer qualité des scopes, collisions évitées et contradictions détectées.
 - [ ] **MAH-294** — Mesurer succès au premier patch, réparations, tests, review et acceptation humaine.

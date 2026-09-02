@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,6 +44,33 @@ class AgentAbEvaluatorTest {
 
         assertEquals("QUALIFIED", report.verdict());
         assertEquals(20, report.pairedCases());
+    }
+
+    @Test
+    void comparesPipelineSimpleAgentAndHierarchyOnTheSameTicketsAndCommits() {
+        List<AgentAbEvaluator.CampaignObservation> observations = new ArrayList<>();
+        Set<AgentAbEvaluator.Variant> variants = Set.of(
+                AgentAbEvaluator.Variant.PIPELINE,
+                AgentAbEvaluator.Variant.AGENTIC_SIMPLE,
+                AgentAbEvaluator.Variant.HIERARCHICAL_SHADOW);
+        for (int i = 1; i <= 20; i++) {
+            String id = "TRI-%03d".formatted(i);
+            for (AgentAbEvaluator.Variant variant : variants) {
+                observations.add(new AgentAbEvaluator.CampaignObservation(
+                        "TICKET-" + id, "%040x".formatted(i), observation(id, variant, false)));
+            }
+        }
+
+        AgentAbEvaluator.ComparisonReport report = evaluator.compareAll(observations, thresholds, variants);
+
+        assertEquals("COMPLETE", report.status());
+        assertEquals(20, report.pairedCases());
+        assertEquals(variants, report.metrics().keySet());
+
+        AgentAbEvaluator.CampaignObservation first = observations.getFirst();
+        observations.set(0, new AgentAbEvaluator.CampaignObservation(
+                first.ticketId(), "f".repeat(40), first.observation()));
+        assertEquals("INCOMPLETE", evaluator.compareAll(observations, thresholds, variants).status());
     }
 
     private static List<AgentAbEvaluator.Observation> campaign(boolean candidateSecurityFailure) {

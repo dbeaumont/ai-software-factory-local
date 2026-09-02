@@ -45,6 +45,29 @@ public final class AgentAbEvaluator {
                 List.copyOf(failures));
     }
 
+    public ComparisonReport compareAll(List<CampaignObservation> observations, Thresholds thresholds,
+                                       Set<Variant> expectedVariants) {
+        if (expectedVariants == null || expectedVariants.size() < 2) {
+            throw new IllegalArgumentException("At least two explicit variants are required");
+        }
+        Map<String, List<CampaignObservation>> byCase = observations.stream()
+                .collect(Collectors.groupingBy(value -> value.observation().caseId()));
+        boolean invalidPairing = byCase.size() < thresholds.minimumCases() || byCase.values().stream().anyMatch(values ->
+                values.size() != expectedVariants.size()
+                || !values.stream().map(value -> value.observation().variant()).collect(Collectors.toSet())
+                        .equals(expectedVariants)
+                || values.stream().map(CampaignObservation::ticketId).distinct().count() != 1
+                || values.stream().map(CampaignObservation::sourceCommit).distinct().count() != 1);
+        if (invalidPairing) {
+            return new ComparisonReport("INCOMPLETE", byCase.size(), Map.of(),
+                    List.of("same_ticket_commit_and_variants_required"));
+        }
+        Map<Variant, Metrics> metrics = expectedVariants.stream().collect(Collectors.toUnmodifiableMap(
+                variant -> variant, variant -> metrics(observations.stream()
+                        .map(CampaignObservation::observation).toList(), variant)));
+        return new ComparisonReport("COMPLETE", byCase.size(), metrics, List.of());
+    }
+
     private static Set<Variant> variants(List<Observation> values) {
         return values.stream().map(Observation::variant).collect(Collectors.toSet());
     }
@@ -65,11 +88,20 @@ public final class AgentAbEvaluator {
         return values.isEmpty() ? 0 : (double) values.stream().filter(predicate).count() / values.size();
     }
 
-    public enum Variant { BASELINE, CANDIDATE, HIERARCHICAL_SHADOW }
+    public enum Variant { BASELINE, CANDIDATE, PIPELINE, AGENTIC_SIMPLE, HIERARCHICAL_SHADOW }
 
     public record Observation(String caseId, Variant variant, boolean firstPatchSuccess, int repairs,
                               boolean testsPassed, boolean humanAccepted, long tokens,
                               long durationMillis, long costMicros, boolean securityFailure) {
+    }
+
+    public record CampaignObservation(String ticketId, String sourceCommit, Observation observation) {
+        public CampaignObservation {
+            if (ticketId == null || ticketId.isBlank() || sourceCommit == null
+                    || !sourceCommit.matches("[0-9a-f]{40}") || observation == null) {
+                throw new IllegalArgumentException("Campaign observation requires ticket, commit and metrics");
+            }
+        }
     }
 
     public record Thresholds(int minimumCases, double maxQualityRegression, double maxRepairIncrease,
@@ -83,5 +115,9 @@ public final class AgentAbEvaluator {
 
     public record Report(String verdict, int pairedCases, Metrics baseline, Metrics candidate,
                          List<String> failures) {
+    }
+
+    public record ComparisonReport(String status, int pairedCases, Map<Variant, Metrics> metrics,
+                                   List<String> failures) {
     }
 }
