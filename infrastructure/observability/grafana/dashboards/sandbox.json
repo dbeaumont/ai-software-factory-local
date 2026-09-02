@@ -1,0 +1,35 @@
+{
+  "title": "AI Factory Sandbox",
+  "uid": "ai-factory-sandbox",
+  "description": "Débit, backlog, saturation et résultats des jobs de sandbox.",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "timeseries", "title": "Sandbox job outcomes",
+      "targets": [
+        {"expr": "rate(ai_factory_sandbox_jobs_completed_total[5m])", "legendFormat": "completed"},
+        {"expr": "rate(ai_factory_sandbox_jobs_failed_total[5m])", "legendFormat": "failed"},
+        {"expr": "sum by (reason) (rate(ai_factory_sandbox_jobs_rejected_total[5m]))", "legendFormat": "rejected {{reason}}"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+    },
+    {
+      "type": "timeseries", "title": "Sandbox running and queued",
+      "targets": [
+        {"expr": "ai_factory_sandbox_jobs_running", "legendFormat": "running"},
+        {"expr": "ai_factory_sandbox_jobs_queued", "legendFormat": "queued"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+    },
+    {
+      "type": "timeseries", "title": "Sandbox queue latency",
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(ai_factory_sandbox_job_queue_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95"}],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+    },
+    {
+      "type": "timeseries", "title": "Temporal sandbox task queue saturation",
+      "targets": [{"expr": "ai_task_queue_saturation_ratio{perimeter=\"sandbox\"}", "legendFormat": "worker ratio"}],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+    }
+  ]
+}

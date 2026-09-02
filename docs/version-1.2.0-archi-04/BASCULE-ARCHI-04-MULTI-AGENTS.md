@@ -385,7 +385,7 @@
 - [x] **MAH-245** — Mesurer taux de succès, retries, réparations, replans, contradictions et escalades. _(Le taux de succès dérive des timers d'agents par outcome ; `ai_workflow_events` compte les cinq événements de fiabilité depuis leurs points de décision, avec tags fermés.)_
 - [x] **MAH-246** — Corréler jobs sandbox, digests, verdicts assurance et livraison SCM. _(`DeliveryCorrelationVerifier` refuse toute rupture job→preuve→assurance→manifeste→PR et ne produit l'identifiant de corrélation déterministe qu'après vérification complète.)_
 - [x] **MAH-247** — Journaliser autorisations, refus, approbations et changements de mode de manière inviolable. _(`HashChainedSecurityAuditJournal` signe par HMAC une chaîne append-only séquencée ; permissions, refus, approbations et fallback de mode y sont raccordés, avec test d'altération.)_
-- [ ] **MAH-248** — Créer dashboards global, Supervisor, agents, Temporal, MCP et sandbox.
+- [x] **MAH-248** — Créer dashboards global, Supervisor, agents, Temporal, MCP et sandbox. _(Six dashboards Grafana provisionnés couvrent santé globale, décisions/topologie, usage agents, moteur durable, appels MCP et jobs sandbox ; leurs JSON et requêtes sont testés.)_
 - [ ] **MAH-249** — Définir alertes sur boucle, budget, coût, backlog, heartbeat, erreur de contrat et preuve altérée.
 - [ ] **MAH-250** — Écrire runbooks pour saturation, agent défaillant, Temporal indisponible, MCP compromis et rollback.
 

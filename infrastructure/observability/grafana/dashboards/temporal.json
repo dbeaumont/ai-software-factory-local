@@ -1,5 +1,6 @@
 {
   "title": "AI Factory Temporal",
+  "uid": "ai-factory-temporal",
   "description": "Local Temporal Server health and workflow execution signals.",
   "schemaVersion": 39,
   "panels": [
