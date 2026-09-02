@@ -498,7 +498,7 @@
 - [x] **MAH-334** — Documenter Task Memory, Evidence MCP, rétention, restauration et audit. _(Sources d'autorité, opérations, cycle de vie, reconstruction et incidents dans `docs/multiagents/TASK-MEMORY-EVIDENCE-OPERATIONS.md`.)_
 - [x] **MAH-335** — Documenter routage, replans, contradictions et décisions humaines. _(Chaîne de décision, plafonds, autorité, escalade et audit dans `docs/multiagents/ROUTAGE-REPLANS-CONTRADICTIONS.md`.)_
 - [x] **MAH-336** — Documenter procédures de canary, kill switch, rollback et reprise après incident. _(Procédure intégrée dans `docs/runbooks/CANARY-KILL-SWITCH-INCIDENT.md` et index de réponse dans `docs/runbooks/README.md`.)_
-- [ ] **MAH-337** — Former Produit, Architecture, Sécurité, Développement et Exploitation à leurs responsabilités.
+- [ ] **MAH-337** — Former Produit, Architecture, Sécurité, Développement et Exploitation à leurs responsabilités. _(Support, exercices et critères de validation prêts dans `docs/multiagents/FORMATION-RESPONSABILITES.md` ; sessions et attestations réelles encore requises.)_
 - [x] **MAH-338** — Archiver les documents devenus obsolètes en conservant leur historique Git. _(Index et statut des archives dans `docs/old/README.md` ; doublon racine retiré au profit de la copie canonique versionnée, contenu toujours accessible par Git.)_
 
 ## 20. Dépendances entre lots
