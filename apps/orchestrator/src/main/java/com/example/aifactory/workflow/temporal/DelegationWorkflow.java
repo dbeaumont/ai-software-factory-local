@@ -11,19 +11,31 @@ public interface DelegationWorkflow {
     Result run(Request request);
 
     record Request(String taskId, String attemptId, String nodeId, String parentNodeId,
-                   String role, String sourceCommit, String objective, Set<String> dependsOn, Budget budget) {
+                   String role, String sourceCommit, String objective, int priority,
+                   Set<String> dependsOn, Budget budget) {
+        private static final int DEFAULT_PRIORITY = 100;
+
         public Request {
+            if (priority < 0) throw new IllegalArgumentException("Delegation priority is invalid");
             dependsOn = dependsOn == null ? Set.of() : Set.copyOf(dependsOn);
         }
 
         public Request(String taskId, String attemptId, String nodeId, String parentNodeId,
+                       String role, String sourceCommit, String objective, Set<String> dependsOn, Budget budget) {
+            this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective,
+                    DEFAULT_PRIORITY, dependsOn, budget);
+        }
+
+        public Request(String taskId, String attemptId, String nodeId, String parentNodeId,
                        String role, String sourceCommit, String objective, Budget budget) {
-            this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective, Set.of(), budget);
+            this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective,
+                    DEFAULT_PRIORITY, Set.of(), budget);
         }
 
         public Request(String taskId, String attemptId, String nodeId, String parentNodeId,
                        String role, String sourceCommit, String objective) {
-            this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective, Set.of(),
+            this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective,
+                    DEFAULT_PRIORITY, Set.of(),
                     new Budget(1_000, 1_000_000, 6));
         }
     }

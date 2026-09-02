@@ -298,7 +298,7 @@
 - [x] **MAH-161** — Vérifier acyclicité, dépendances satisfaites et unicité des identifiants avant exécution. _(Le scheduler valide en bloc lignée, unicité, références et cycles, calcule un ordre topologique stable puis revérifie les prérequis terminés avant chaque Child Workflow.)_
 - [x] **MAH-162** — Refuser les DAG dépassant profondeur, fan-out, coût prévisionnel ou durée maximale. _(Plafonds déterministes appliqués par le scheduler avant lancement : profondeur 2, fan-out 4, coût 70M et chemin critique 2700 s ; timeout explicite dans chaque budget Temporal.)_
 - [x] **MAH-163** — Exécuter en parallèle uniquement les nœuds indépendants et autorisés par les quotas. _(Le scheduler sélectionne des vagues de quatre nœuds au plus à partir d'un instantané des dépendances terminées, démarre tous leurs Child Workflows avant d'attendre les résultats et respecte également la capacité restante avant Continue-As-New.)_
-- [ ] **MAH-164** — Garantir un ordre déterministe pour les nœuds de même priorité lors de la consolidation.
+- [x] **MAH-164** — Garantir un ordre déterministe pour les nœuds de même priorité lors de la consolidation. _(Chaque délégation porte une priorité numérique compatible avec les anciens constructeurs ; les vagues éligibles sont ordonnées par priorité croissante puis par `nodeId`, et les résultats sont consolidés dans cet ordre indépendamment de leur instant de fin.)_
 - [ ] **MAH-165** — Propager échec, timeout, annulation et résultat indéterminé aux dépendants.
 - [ ] **MAH-166** — Permettre au Supervisor un nombre borné de replans avec justification et nouveau digest du DAG.
 - [ ] **MAH-167** — Détecter absence de progression, cycles de replan et délégations répétées.

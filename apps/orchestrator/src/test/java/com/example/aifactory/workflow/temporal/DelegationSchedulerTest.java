@@ -155,6 +155,25 @@ class DelegationSchedulerTest {
                 .hasMessageContaining("parallel batch size");
     }
 
+    @Test
+    void consolidatesEqualPriorityNodesByStableNodeIdRegardlessOfInputOrder() {
+        DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) ->
+                () -> new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
+        DelegationWorkflow.Request zeta = prioritizedNode("zeta", 20);
+        DelegationWorkflow.Request alpha = prioritizedNode("alpha", 20);
+        DelegationWorkflow.Request urgent = prioritizedNode("urgent", 10);
+
+        List<DelegationWorkflow.Request> ordered = scheduler.validateAndOrder(
+                root(), List.of(zeta, alpha, urgent));
+        List<DelegationWorkflow.Request> ready = scheduler.ready(ordered, Set.of(), 4);
+        List<DelegationWorkflow.Result> results = scheduler.executeBatch(root(), ready);
+
+        assertThat(ordered).extracting(DelegationWorkflow.Request::nodeId)
+                .containsExactly("urgent", "alpha", "zeta");
+        assertThat(results).extracting(DelegationWorkflow.Result::nodeId)
+                .containsExactly("urgent", "alpha", "zeta");
+    }
+
     private static SoftwareFactoryWorkflow.Request root() {
         return new SoftwareFactoryWorkflow.Request("task-1", "attempt-1", "a".repeat(40), "change");
     }
@@ -167,5 +186,10 @@ class DelegationSchedulerTest {
                                                    DelegationWorkflow.Budget budget) {
         return new DelegationWorkflow.Request("task-1", "attempt-1", id, parent, "code-agent",
                 "a".repeat(40), id, dependencies, budget);
+    }
+
+    private static DelegationWorkflow.Request prioritizedNode(String id, int priority) {
+        return new DelegationWorkflow.Request("task-1", "attempt-1", id, "supervisor", "code-agent",
+                "a".repeat(40), id, priority, Set.of(), new DelegationWorkflow.Budget(100, 100, 1));
     }
 }

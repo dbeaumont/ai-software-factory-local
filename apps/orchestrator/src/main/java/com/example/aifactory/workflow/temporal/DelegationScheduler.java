@@ -6,6 +6,7 @@ import io.temporal.workflow.Async;
 
 import java.util.Objects;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -14,6 +15,9 @@ import java.util.Set;
 
 /** Deterministic scheduling boundary above generic Temporal child workflows. */
 public final class DelegationScheduler {
+    private static final Comparator<DelegationWorkflow.Request> CONSOLIDATION_ORDER =
+            Comparator.comparingInt(DelegationWorkflow.Request::priority)
+                    .thenComparing(DelegationWorkflow.Request::nodeId);
     static final int MAX_DEPTH = 2;
     static final int MAX_FAN_OUT = 4;
     static final long MAX_TOTAL_COST_MICROS = 70_000_000;
@@ -66,6 +70,7 @@ public final class DelegationScheduler {
         List<DelegationWorkflow.Request> ready = plan.stream()
                 .filter(node -> !completedNodeIds.contains(node.nodeId()))
                 .filter(node -> completedNodeIds.containsAll(dependencies(node, nodes)))
+                .sorted(CONSOLIDATION_ORDER)
                 .limit(limit).toList();
         if (ready.isEmpty() && completedNodeIds.size() < plan.size()) {
             throw invalid("no dependency-satisfied node is ready");
@@ -91,15 +96,14 @@ public final class DelegationScheduler {
         List<DelegationWorkflow.Request> ordered = new ArrayList<>();
         Set<String> completed = new LinkedHashSet<>();
         while (ordered.size() < nodes.size()) {
-            boolean progressed = false;
-            for (DelegationWorkflow.Request node : nodes.values()) {
-                if (!completed.contains(node.nodeId()) && completed.containsAll(dependencies(node, nodes))) {
-                    ordered.add(node);
-                    completed.add(node.nodeId());
-                    progressed = true;
-                }
-            }
-            if (!progressed) throw invalid("cycle detected");
+            List<DelegationWorkflow.Request> ready = nodes.values().stream()
+                    .filter(node -> !completed.contains(node.nodeId()))
+                    .filter(node -> completed.containsAll(dependencies(node, nodes)))
+                    .sorted(CONSOLIDATION_ORDER)
+                    .toList();
+            if (ready.isEmpty()) throw invalid("cycle detected");
+            ordered.addAll(ready);
+            ready.forEach(node -> completed.add(node.nodeId()));
         }
         requireWithinHardLimits(ordered, nodes);
         return List.copyOf(ordered);
