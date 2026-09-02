@@ -15,6 +15,7 @@
     <java.version>25</java.version>
     <spring-ai.version>2.0.1</spring-ai.version>
     <mcp.schemas.directory>../../resources/mcp/schemas</mcp.schemas.directory>
+    <multiagent.schemas.directory>../../resources/multiagents/schemas</multiagent.schemas.directory>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -73,6 +74,10 @@
       <resource>
         <directory>${mcp.schemas.directory}</directory>
         <targetPath>mcp/schemas</targetPath>
+      </resource>
+      <resource>
+        <directory>${multiagent.schemas.directory}</directory>
+        <targetPath>multiagents/schemas</targetPath>
       </resource>
     </resources>
     <plugins>

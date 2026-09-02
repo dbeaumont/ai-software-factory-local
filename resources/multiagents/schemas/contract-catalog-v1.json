@@ -1,0 +1,21 @@
+{
+  "catalog_version": "1",
+  "schema_draft": "https://json-schema.org/draft/2020-12/schema",
+  "contracts": {
+    "delegation-plan-v1": "delegation-plan-v1.schema.json",
+    "specialist-task-v1": "specialist-task-v1.schema.json",
+    "specialist-result-v1": "specialist-result-v1.schema.json",
+    "agent-run-event-v1": "agent-run-event-v1.schema.json",
+    "contradiction-v1": "contradiction-v1.schema.json",
+    "supervisor-decision-v1": "supervisor-decision-v1.schema.json",
+    "human-decision-request-v1": "human-decision-request-v1.schema.json",
+    "architecture-assessment-v1": "architecture-assessment-v1.schema.json",
+    "code-task-v1": "code-task-v1.schema.json",
+    "patch-proposal-v1": "patch-proposal-v1.schema.json",
+    "integration-result-v1": "integration-result-v1.schema.json",
+    "test-strategy-v1": "test-strategy-v1.schema.json",
+    "test-assessment-v1": "test-assessment-v1.schema.json",
+    "security-assessment-v1": "security-assessment-v1.schema.json",
+    "independent-review-v1": "independent-review-v1.schema.json"
+  }
+}

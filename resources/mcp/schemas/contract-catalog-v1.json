@@ -14,6 +14,10 @@
     "policy_decision": "policy-decision-v1.schema.json",
     "evidence_manifest": "evidence-manifest-v1.schema.json"
   },
+  "multiagent": {
+    "catalog": "../../multiagents/schemas/contract-catalog-v1.json",
+    "implementation_status": "HOST_VALIDATED"
+  },
   "tools": [
     {
       "name": "context.list_tree",

@@ -117,7 +117,7 @@
 
 ### Validation et compatibilité
 
-- [ ] **MAH-034** — Ajouter tous les contrats au catalogue MCP et au mécanisme de validation côté hôte.
+- [x] **MAH-034** — Ajouter tous les contrats au catalogue MCP et au mécanisme de validation côté hôte. _(Catalogue `resources/multiagents/schemas/contract-catalog-v1.json` et `MultiAgentContractValidator`.)_
 - [ ] **MAH-035** — Refuser les champs supplémentaires, identifiants absents, rôles inconnus et références hors tâche.
 - [ ] **MAH-036** — Valider que les dépendances forment un DAG sans cycle, nœud orphelin ou référence inconnue.
 - [ ] **MAH-037** — Vérifier que chaque délégation dispose de critères de succès et d'une condition d'arrêt exécutable.

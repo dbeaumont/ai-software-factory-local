@@ -48,15 +48,16 @@ RUN --mount=type=secret,id=artifactory_token \
 # uniquement lors d'un changement de code source (pas de dépendance)
 COPY src ./src
 COPY --from=mcp-schemas . /src/external-schemas
+COPY --from=multiagent-schemas . /src/external-multiagent-schemas
 
 # Build du projet avec le profil prod (tests ignorés — ils sont exécutés en CI séparément) avec le profil prod.
 RUN --mount=type=secret,id=artifactory_token \
     --mount=type=cache,target=/root/.m2 \
   if [ -n "${MAVEN_MIRROR_URL}" ]; then \
     export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token); \
-    mvn package -DskipTests -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas; \
+    mvn package -DskipTests -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas; \
   else \
-    mvn package -DskipTests -B -Dmcp.schemas.directory=/src/external-schemas; \
+    mvn package -DskipTests -B -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas; \
   fi
 
 # ─────────────────────────────────────────────────────────────────────────────
