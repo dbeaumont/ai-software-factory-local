@@ -107,7 +107,7 @@
 
 ### Contrats par périmètre
 
-- [ ] **MAH-027** — Créer `architecture-assessment-v1.schema.json`.
+- [x] **MAH-027** — Créer `architecture-assessment-v1.schema.json`. _(`resources/multiagents/schemas/architecture-assessment-v1.schema.json`.)_
 - [ ] **MAH-028** — Créer `code-task-v1.schema.json` et y borner les fichiers ou modules autorisés.
 - [ ] **MAH-029** — Créer `patch-proposal-v1.schema.json` avec commit source, digest, fichiers touchés et artefact de diff.
 - [ ] **MAH-030** — Créer `integration-result-v1.schema.json` avec ordre d'application et conflits détectés.
