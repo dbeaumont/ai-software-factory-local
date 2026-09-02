@@ -172,7 +172,7 @@
 - [x] **MAH-067** — Mapper les appels LLM, MCP et stockage vers des Activities idempotentes. _(Activities typées pour AgentRuntime, MCP et EvidenceRepository avec liaison et clé d'idempotence obligatoires.)_
 - [x] **MAH-068** — Définir timeouts et Retry Policies distincts pour lecture, LLM, sandbox, assurance et SCM. _(Six profils bornés, erreurs non rejouables explicites et heartbeat sandbox.)_
 - [x] **MAH-069** — Utiliser des identifiants déterministes pour les workflows, délégations et Activities à effet. _(Fabrique canonique bornée pour workflow, Child Workflow, Activity et clé d'idempotence.)_
-- [ ] **MAH-070** — Implémenter le Signal d'approbation humaine lié au manifeste soumis.
+- [x] **MAH-070** — Implémenter le Signal d'approbation humaine lié au manifeste soumis. _(Attente durable et liaison stricte tâche, tentative, identifiant et digest du manifeste.)_
 - [ ] **MAH-071** — Implémenter les Signals d'annulation et de décision humaine complémentaire.
 - [ ] **MAH-072** — Implémenter les Queries de statut, DAG, budgets, preuves et effets en attente.
 - [ ] **MAH-073** — Garantir que le code Workflow ne réalise aucun I/O, appel réseau, horloge système ou aléa direct.
