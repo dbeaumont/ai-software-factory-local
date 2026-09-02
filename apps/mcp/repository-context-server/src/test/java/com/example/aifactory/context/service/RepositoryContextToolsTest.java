@@ -227,6 +227,43 @@ class RepositoryContextToolsTest {
     }
 
     @Test
+    void enforcesTheMinimalHierarchicalContextSurfacePerRole() throws Exception {
+        assertDoesNotThrow(() -> tools.listTree(new ListTreeRequest(
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "", 2, 10)));
+        assertThrows(SecurityException.class, () -> tools.listTree(new ListTreeRequest(
+                "1", "task-1", commit, "impact-analysis", TRACE_ID, "", 2, 10)));
+
+        assertDoesNotThrow(() -> tools.searchCode(new SearchCodeRequest(
+                "1", "task-1", commit, "threat-model", TRACE_ID, "Application", "src", 10)));
+        assertThrows(SecurityException.class, () -> tools.searchCode(new SearchCodeRequest(
+                "1", "task-1", commit, "dependencies-contracts", TRACE_ID, "Application", "src", 10)));
+
+        assertDoesNotThrow(() -> tools.readFile(new ReadFileRequest(
+                "1", "task-1", commit, "patch-repair", TRACE_ID, "src/Application.java", 1, 10, 4096)));
+        assertThrows(SecurityException.class, () -> tools.readFile(new ReadFileRequest(
+                "1", "task-1", commit, "code-agent", TRACE_ID, "src/Application.java", 1, 10, 4096)));
+
+        assertDoesNotThrow(() -> tools.getRepositoryRules(new RepositoryRulesRequest(
+                "1", "task-1", commit, "impact-analysis", TRACE_ID)));
+        assertThrows(SecurityException.class, () -> tools.getRepositoryRules(new RepositoryRulesRequest(
+                "1", "task-1", commit, "test-agent", TRACE_ID)));
+
+        assertDoesNotThrow(() -> tools.getDependencies(new GetDependenciesRequest(
+                "1", "task-1", commit, "supervisor", TRACE_ID, "pom.xml", "MAVEN", 10)));
+        assertThrows(SecurityException.class, () -> tools.getDependencies(new GetDependenciesRequest(
+                "1", "task-1", commit, "impact-analysis", TRACE_ID, "pom.xml", "MAVEN", 10)));
+
+        RequestContext security = new RequestContext("1", "task-1", "attempt-test", commit,
+                "security-agent", TRACE_ID, "00-" + TRACE_ID + "-0123456789abcdef-01",
+                Instant.now().plusSeconds(60).toString());
+        RequestContext findings = new RequestContext("1", "task-1", "attempt-test", commit,
+                "security-findings", TRACE_ID, "00-" + TRACE_ID + "-0123456789abcdef-01",
+                Instant.now().plusSeconds(60).toString());
+        assertDoesNotThrow(() -> tools.symbolWorkspace(security));
+        assertThrows(SecurityException.class, () -> tools.symbolWorkspace(findings));
+    }
+
+    @Test
     void rejectsTraversalAndCommitMismatch() {
         assertThrows(IllegalArgumentException.class, () -> tools.readFile(new ReadFileRequest(
                 "1", "task-1", commit, "planner", TRACE_ID, "../outside.txt", 1, null, 4096)));

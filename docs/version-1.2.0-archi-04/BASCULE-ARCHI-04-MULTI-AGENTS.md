@@ -275,7 +275,7 @@
 ## 10. Lot 6 — Permissions, budgets et limites hiérarchiques
 
 - [x] **MAH-140** — Étendre la matrice deny-by-default aux nouveaux rôles et sous-agents. _(Les 14 identités hiérarchiques sont déclarées explicitement dans la matrice hôte, la politique MCP et l'enveloppe commune ; toute identité absente reste refusée.)_
-- [ ] **MAH-141** — Définir les outils `context.*` minimaux par rôle plutôt qu'un accès global en lecture.
+- [x] **MAH-141** — Définir les outils `context.*` minimaux par rôle plutôt qu'un accès global en lecture. _(Six allowlists distinctes sont appliquées dans Repository Context MCP pour arbre, recherche, fichier, règles, dépendances et symboles ; tests positifs et négatifs par périmètre.)_
 - [ ] **MAH-142** — Définir quels rôles peuvent obtenir `evidence.get_summary` et `evidence.read`.
 - [ ] **MAH-143** — Conserver tous les outils à effet exclusivement au rôle `workflow`.
 - [ ] **MAH-144** — Ajouter limites maximales de profondeur et de fan-out du DAG.

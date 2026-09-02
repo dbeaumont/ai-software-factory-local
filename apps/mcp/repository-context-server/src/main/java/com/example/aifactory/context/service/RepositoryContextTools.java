@@ -44,14 +44,28 @@ public class RepositoryContextTools {
             ".git", "target", "build", "dist", "node_modules", ".gradle", ".idea", ".vscode", "vendor");
     private static final Set<String> RULE_NAMES = Set.of(
             "AGENTS.md", "CONTRIBUTING.md", "CONTRIBUTING", "README.md", "README", "CODEOWNERS");
-    private static final Set<String> CONTEXT_READERS = Set.of("workflow", "planner", "developer");
-    private static final Set<String> CODE_SEARCHERS = Set.of("workflow", "planner", "developer", "tester", "reviewer");
+    private static final Set<String> TREE_READERS = Set.of(
+            "workflow", "supervisor", "architecture-agent", "dependencies-contracts", "code-agent",
+            "developer", "planner");
+    private static final Set<String> RULE_READERS = Set.of(
+            "workflow", "supervisor", "architecture-agent", "impact-analysis", "code-agent",
+            "developer", "planner");
+    private static final Set<String> CODE_SEARCHERS = Set.of(
+            "workflow", "supervisor", "architecture-agent", "impact-analysis", "code-agent", "developer",
+            "test-agent", "test-design", "security-agent", "threat-model", "independent-reviewer",
+            "planner", "tester", "reviewer");
     private static final Set<String> FILE_READERS = Set.of(
-            "workflow", "planner", "developer", "patch-repair", "tester", "reviewer");
+            "workflow", "architecture-agent", "impact-analysis", "dependencies-contracts", "developer",
+            "patch-repair", "test-agent", "test-design", "security-agent", "threat-model",
+            "independent-reviewer", "planner", "tester", "reviewer");
     private static final Set<String> DEPENDENCY_READERS = Set.of(
-            "workflow", "planner", "developer", "tester", "reviewer");
+            "workflow", "supervisor", "architecture-agent", "dependencies-contracts", "developer",
+            "test-agent", "test-design", "security-agent", "threat-model", "independent-reviewer",
+            "planner", "tester", "reviewer");
     private static final Set<String> SYMBOL_READERS = Set.of(
-            "workflow", "planner", "developer", "patch-repair", "tester", "reviewer");
+            "workflow", "architecture-agent", "impact-analysis", "developer", "patch-repair", "test-agent",
+            "test-design", "security-agent", "threat-model", "independent-reviewer",
+            "planner", "tester", "reviewer");
     private static final Set<String> TEXT_EXTENSIONS = Set.of(
             ".java", ".kt", ".xml", ".yml", ".yaml", ".json", ".ts", ".js", ".css", ".html",
             ".properties", ".gradle", ".md", ".txt", ".toml", ".sh", ".sql", ".py", ".go");
@@ -98,7 +112,7 @@ public class RepositoryContextTools {
     }
 
     public ListTreeResult listTree(ListTreeRequest request) throws Exception {
-        authorize(request.actor(), CONTEXT_READERS, "context.list_tree");
+        authorize(request.actor(), TREE_READERS, "context.list_tree");
         Path workspace = workspace(request.context());
         pruneTreeCursors();
         if (request.cursor() != null && !request.cursor().isBlank()) {
@@ -212,7 +226,7 @@ public class RepositoryContextTools {
     }
 
     public RepositoryRulesResult getRepositoryRules(RepositoryRulesRequest request) throws Exception {
-        authorize(request.actor(), CONTEXT_READERS, "context.get_repository_rules");
+        authorize(request.actor(), RULE_READERS, "context.get_repository_rules");
         Path workspace = workspace(request.context());
         List<ReadFileResult> documents = new ArrayList<>();
         List<Path> paths = collectVisiblePaths(workspace, workspace, 8, 20,
