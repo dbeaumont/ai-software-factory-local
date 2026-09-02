@@ -95,6 +95,10 @@
 .delegation-badges { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
 .delegation-dependencies,.delegation-stop-reason { display: block; margin-top: 6px; color: var(--muted); font-size: 9px; line-height: 1.35; }
 .delegation-stop-reason { color: var(--red); }
+.delegation-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 5px; margin: 8px 0 0; }
+.delegation-metrics dt { color: var(--muted); font-size: 8px; }
+.delegation-metrics dd { overflow: hidden; margin: 1px 0 0; color: #344563; font-size: 9px; font-weight: 700; text-overflow: ellipsis; }
+.delegation-tools { display: block; overflow-wrap: anywhere; margin-top: 6px; color: #44546f; font-size: 9px; line-height: 1.35; }
 .delegation-children { display: grid; gap: 7px; margin: 9px 0 0 8px; padding-left: 10px; border-left: 1px solid #b6c2cf; }
 .delegation-node.status-completed,.delegation-node.status-succeeded { border-left-color: #22a06b; }
 .delegation-node.status-running { border-left-color: var(--blue); background: var(--blue-soft); }

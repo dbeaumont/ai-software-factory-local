@@ -109,6 +109,14 @@ public class TaskState {
 
     public synchronized void recordDelegation(String delegationId, String parentDelegationId, String role,
                                               List<String> dependsOn, String status, String stopReason) {
+        recordDelegation(delegationId, parentDelegationId, role, dependsOn, status, stopReason,
+                0, 0, 0, 0, List.of());
+    }
+
+    public synchronized void recordDelegation(String delegationId, String parentDelegationId, String role,
+                                              List<String> dependsOn, String status, String stopReason,
+                                              long durationMillis, int turns, long tokens, long costMicros,
+                                              List<String> toolsUsed) {
         if (delegationId == null || !delegationId.matches("[A-Za-z0-9_-]{1,128}")
                 || parentDelegationId != null && !parentDelegationId.matches("[A-Za-z0-9_-]{1,128}")
                 || role == null || !role.matches("[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
@@ -116,11 +124,16 @@ public class TaskState {
                 != dependsOn.size() || dependsOn.stream().anyMatch(value -> value == null
                 || !value.matches("[A-Za-z0-9_-]{1,128}")) || dependsOn.contains(delegationId)
                 || status == null || status.isBlank() || status.length() > 64
-                || stopReason != null && (stopReason.isBlank() || stopReason.length() > 1_000)) {
+                || stopReason != null && (stopReason.isBlank() || stopReason.length() > 1_000)
+                || durationMillis < 0 || turns < 0 || tokens < 0 || costMicros < 0
+                || toolsUsed == null || toolsUsed.size() > 32
+                || toolsUsed.stream().distinct().count() != toolsUsed.size()
+                || toolsUsed.stream().anyMatch(tool -> tool == null || tool.isBlank() || tool.length() > 128)) {
             throw new IllegalArgumentException("Task delegation view is invalid");
         }
         TaskView.DelegationView view = new TaskView.DelegationView(delegationId, parentDelegationId, role,
-                dependsOn.stream().sorted().toList(), status, stopReason);
+                dependsOn.stream().sorted().toList(), status, stopReason, durationMillis, turns, tokens,
+                costMicros, toolsUsed.stream().sorted().toList());
         delegations.put(delegationId, view);
         updatedAt = Instant.now();
     }

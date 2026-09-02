@@ -43,8 +43,23 @@ public record TaskView(
                                long usedTokens, long usedCostMicros, int usedTurns) {}
 
     public record DelegationView(String delegationId, String parentDelegationId, String role,
-                                 List<String> dependsOn, String status, String stopReason) {
-        public DelegationView { dependsOn = List.copyOf(dependsOn); }
+                                 List<String> dependsOn, String status, String stopReason,
+                                 Long durationMillis, Integer turns, Long tokens, Long costMicros,
+                                 List<String> toolsUsed) {
+        public DelegationView {
+            dependsOn = dependsOn == null ? List.of() : List.copyOf(dependsOn);
+            durationMillis = durationMillis == null ? 0L : durationMillis;
+            turns = turns == null ? 0 : turns;
+            tokens = tokens == null ? 0L : tokens;
+            costMicros = costMicros == null ? 0L : costMicros;
+            toolsUsed = toolsUsed == null ? List.of() : List.copyOf(toolsUsed);
+        }
+
+        public DelegationView(String delegationId, String parentDelegationId, String role,
+                              List<String> dependsOn, String status, String stopReason) {
+            this(delegationId, parentDelegationId, role, dependsOn, status, stopReason,
+                    0L, 0, 0L, 0L, List.of());
+        }
     }
 
     public record ArtifactView(String artifactId, String type, String status, String classification,

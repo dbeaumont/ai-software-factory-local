@@ -54,6 +54,34 @@ class TaskExecutionViewTest {
     }
 
     @Test
+    void exposesDelegationDurationUsageCostAndTools() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.recordDelegation("security-1", "supervisor", "security-agent", java.util.List.of(),
+                "SUCCESS", "SUCCESS_CRITERIA_MET", 12_345, 3, 2_048, 45_000,
+                java.util.List.of("assurance.evaluate_security_gate", "sandbox.run_security"));
+
+        assertThat(state.view().delegations()).containsExactly(new TaskView.DelegationView(
+                "security-1", "supervisor", "security-agent", java.util.List.of(), "SUCCESS",
+                "SUCCESS_CRITERIA_MET", 12_345L, 3, 2_048L, 45_000L,
+                java.util.List.of("assurance.evaluate_security_gate", "sandbox.run_security")));
+    }
+
+    @Test
+    void readsDelegationsProducedBeforeUsageFieldsWereAdded() throws Exception {
+        TaskView.DelegationView legacy = new tools.jackson.databind.ObjectMapper().readValue("""
+                {"delegationId":"code-1","parentDelegationId":"supervisor","role":"code-agent",
+                 "dependsOn":[],"status":"SUCCESS","stopReason":"SUCCESS_CRITERIA_MET"}
+                """, TaskView.DelegationView.class);
+
+        assertThat(legacy.durationMillis()).isZero();
+        assertThat(legacy.turns()).isZero();
+        assertThat(legacy.tokens()).isZero();
+        assertThat(legacy.costMicros()).isZero();
+        assertThat(legacy.toolsUsed()).isEmpty();
+    }
+
+    @Test
     void exposesOnlyArtifactMetadataAndRedactsUnauthorizedUris() {
         TaskState state = new TaskState("task-1", "AF-0001",
                 new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));

@@ -34,4 +34,14 @@ class MultiAgentUiContractTest {
         assertThat(css).contains(".perimeter-architecture", ".perimeter-code", ".perimeter-tests",
                 ".perimeter-security", ".perimeter-review");
     }
+
+    @Test
+    void displaysDelegationDurationTurnsTokensCostAndTools() throws Exception {
+        String javascript = Files.readString(WEB.resolve("app.js"));
+        String css = Files.readString(WEB.resolve("pipeline.css"));
+
+        assertThat(javascript).contains("node.durationMillis", "node.turns", "node.tokens", "node.costMicros",
+                "node.toolsUsed", "function formatDuration(durationMillis)");
+        assertThat(css).contains(".delegation-metrics", ".delegation-tools");
+    }
 }

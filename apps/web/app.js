@@ -454,6 +454,27 @@ function renderDelegationDag(task) {
       reason.textContent = node.stopReason;
       branch.append(reason);
     }
+    const metrics = document.createElement('dl');
+    metrics.className = 'delegation-metrics';
+    [
+      ['Durée', formatDuration(node.durationMillis)],
+      ['Tours', Number(node.turns || 0).toLocaleString('fr-FR')],
+      ['Tokens', Number(node.tokens || 0).toLocaleString('fr-FR')],
+      ['Coût', `${(Number(node.costMicros || 0) / 1_000_000).toFixed(4)}`]
+    ].forEach(([label, value]) => {
+      const term = document.createElement('dt');
+      term.textContent = label;
+      const detail = document.createElement('dd');
+      detail.textContent = value;
+      metrics.append(term, detail);
+    });
+    branch.append(metrics);
+    if (Array.isArray(node.toolsUsed) && node.toolsUsed.length > 0) {
+      const tools = document.createElement('small');
+      tools.className = 'delegation-tools';
+      tools.textContent = `Outils : ${node.toolsUsed.join(', ')}`;
+      branch.append(tools);
+    }
     visited.add(node.delegationId);
     const descendants = (children.get(node.delegationId) || []).filter((child) => !visited.has(child.delegationId));
     if (descendants.length > 0) {
@@ -469,6 +490,13 @@ function renderDelegationDag(task) {
   delegationTree.append(...roots.map(renderBranch));
   delegationTree.append(...delegations.filter((node) => !visited.has(node.delegationId)).map(renderBranch));
   delegationCount.textContent = `${delegations.length} délégation${delegations.length > 1 ? 's' : ''}`;
+}
+
+function formatDuration(durationMillis) {
+  const millis = Number(durationMillis || 0);
+  if (millis < 1_000) return `${millis} ms`;
+  if (millis < 60_000) return `${(millis / 1_000).toFixed(1)} s`;
+  return `${Math.floor(millis / 60_000)} min ${Math.floor((millis % 60_000) / 1_000)} s`;
 }
 
 function delegationPerimeter(role) {
