@@ -1,0 +1,28 @@
+schema_version: "1"
+manifest_id: impact-analysis-v1
+name: Impact Analysis
+role: impact-analysis
+version: "1.0.0"
+owner: architecture
+parent: architecture-agent
+kind: sub-agent
+autonomy: A1
+effectful: false
+prompt: prompts/impact-analysis.md
+input_contracts:
+  - specialist-task-v1
+output_contracts:
+  - specialist-result-v1
+may_delegate_to: []
+allowed_tools:
+  - context.search_code
+  - context.read_file
+  - context.get_repository_rules
+  - context.get_symbols
+default_budget:
+  max_turns: 4
+  max_tokens: 6000
+  max_cost_micros: 6000000
+  timeout_seconds: 360
+  max_tool_calls: 16
+human_gate: none

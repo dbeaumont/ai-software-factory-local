@@ -1,0 +1,33 @@
+schema_version: "1"
+manifest_id: architecture-agent-v1
+name: Architecture Agent
+role: architecture-agent
+version: "1.0.0"
+owner: architecture
+parent: supervisor
+kind: agent
+autonomy: A2
+effectful: false
+prompt: prompts/architecture-agent.md
+input_contracts:
+  - specialist-task-v1
+  - specialist-result-v1
+output_contracts:
+  - architecture-assessment-v1
+may_delegate_to:
+  - impact-analysis
+  - dependencies-contracts
+allowed_tools:
+  - context.list_tree
+  - context.search_code
+  - context.read_file
+  - context.get_repository_rules
+  - context.get_dependencies
+  - context.get_symbols
+default_budget:
+  max_turns: 6
+  max_tokens: 10000
+  max_cost_micros: 10000000
+  timeout_seconds: 600
+  max_tool_calls: 24
+human_gate: risk-dependent

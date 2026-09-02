@@ -234,7 +234,7 @@
 
 ### Architecture
 
-- [ ] **MAH-115** — Créer `architecture-agent`, `impact-analysis` et `dependencies-contracts`.
+- [x] **MAH-115** — Créer `architecture-agent`, `impact-analysis` et `dependencies-contracts`. _(Trois manifestes et prompts versionnés, propriétaires et contrats vérifiés contre le catalogue.)_
 - [ ] **MAH-116** — Limiter leurs outils aux lectures `context.*` nécessaires.
 - [ ] **MAH-117** — Produire scopes de code, contraintes, impacts API/données et décisions humaines.
 - [ ] **MAH-118** — Interdire à ce périmètre de générer ou d'appliquer un patch.

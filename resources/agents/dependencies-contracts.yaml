@@ -1,0 +1,27 @@
+schema_version: "1"
+manifest_id: dependencies-contracts-v1
+name: Dependencies and Contracts
+role: dependencies-contracts
+version: "1.0.0"
+owner: architecture
+parent: architecture-agent
+kind: sub-agent
+autonomy: A1
+effectful: false
+prompt: prompts/dependencies-contracts.md
+input_contracts:
+  - specialist-task-v1
+output_contracts:
+  - specialist-result-v1
+may_delegate_to: []
+allowed_tools:
+  - context.list_tree
+  - context.read_file
+  - context.get_dependencies
+default_budget:
+  max_turns: 4
+  max_tokens: 6000
+  max_cost_micros: 6000000
+  timeout_seconds: 360
+  max_tool_calls: 16
+human_gate: none
