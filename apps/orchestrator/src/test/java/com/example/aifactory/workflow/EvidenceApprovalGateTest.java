@@ -23,6 +23,13 @@ class EvidenceApprovalGateTest {
             @Override
             public tools.jackson.databind.JsonNode call(String serverName, String toolName,
                                                          Map<String, Object> arguments) {
+                if ("evidence.get_summary".equals(toolName)) {
+                    String uri = arguments.get("uri").toString();
+                    String[] parts = uri.split("/");
+                    return new ObjectMapper().valueToTree(Map.of(
+                            "uri", uri, "type", parts[parts.length - 2], "digest", parts[parts.length - 1],
+                            "status", "COMPLETE", "classification", "INTERNAL", "size_bytes", 5));
+                }
                 assertThat(toolName).isEqualTo("evidence.create_manifest");
                 assertThat(arguments).containsEntry("actor", "workflow")
                         .containsEntry("patch_digest", "c".repeat(64));

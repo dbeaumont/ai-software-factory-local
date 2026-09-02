@@ -210,7 +210,7 @@
 - [x] **MAH-099** — Réserver `evidence.read` au Reviewer, au workflow et aux usages humains audités. _(Autorisation doublée client/serveur, motif obligatoire, audit ALLOWED/DENIED et revérification locale du contenu.)_
 - [x] **MAH-100** — Fournir aux autres agents des résumés ou extraits bornés, jamais les preuves brutes par défaut. _(Résumé MCP limité aux métadonnées, rôles allowlistés et rejet de tout champ de contenu brut.)_
 - [x] **MAH-101** — Vérifier URI, digest, tâche, tentative, classification et statut à chaque lecture. _(Attempt obligatoire de bout en bout, digest recalculé et métadonnées revérifiées côté serveur et adaptateur.)_
-- [ ] **MAH-102** — Bloquer consolidation et livraison si une preuve requise est absente, partielle ou altérée.
+- [x] **MAH-102** — Bloquer consolidation et livraison si une preuve requise est absente, partielle ou altérée. _(Gate fail-closed sur ensemble exact, statut, portée et revérification MCP avant création du manifeste.)_
 
 ### Projection et API
 
