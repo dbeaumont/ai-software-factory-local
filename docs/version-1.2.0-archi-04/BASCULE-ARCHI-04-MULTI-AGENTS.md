@@ -270,7 +270,7 @@
 
 ### Gate du lot 5
 
-- [ ] Chaque rôle possède un propriétaire, un prompt, un contrat, des outils, des budgets et des tests dédiés.
+- [x] Chaque rôle possède un propriétaire, un prompt, un contrat, des outils, des budgets et des tests dédiés. _(Preuves : `docs/multiagents/GATE-LOT-5-HIERARCHIE-AGENTS.md` ; 217 tests orchestrateur réussis.)_
 
 ## 10. Lot 6 — Permissions, budgets et limites hiérarchiques
 
