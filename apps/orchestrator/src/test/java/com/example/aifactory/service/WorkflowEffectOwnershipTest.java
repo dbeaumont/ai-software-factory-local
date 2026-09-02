@@ -25,8 +25,10 @@ class WorkflowEffectOwnershipTest {
     @Test
     void patchValidationAndApplicationRemainBehindTheCoordinatorOwnedIntegrator() throws Exception {
         assertOwners(Map.of(
-                "patchIntegrator.validate(", List.of("service/DeterministicWorkflowCoordinator.java"),
-                "patchIntegrator.apply(", List.of("service/DeterministicWorkflowCoordinator.java"),
+                "patchIntegrator.validate(", List.of("service/DeterministicWorkflowCoordinator.java",
+                        "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
+                "patchIntegrator.apply(", List.of("service/DeterministicWorkflowCoordinator.java",
+                        "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
                 "sandbox.checkPatch(", List.of("service/PatchIntegrator.java"),
                 "sandbox.applyPatch(", List.of("service/PatchIntegrator.java")));
     }

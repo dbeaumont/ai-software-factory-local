@@ -1,0 +1,124 @@
+package com.example.aifactory.workflow.temporal;
+
+import com.example.aifactory.service.PatchIntegrationPlanner;
+import com.example.aifactory.service.PatchIntegrator;
+import com.example.aifactory.service.SandboxExecutor;
+import com.example.aifactory.workflow.EvidenceRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+class PatchIntegrationActivitiesImplTest {
+    @TempDir Path workspace;
+
+    @Test
+    void readsOrderedEvidenceAndAppliesOneConsolidatedPatchThroughTheSandbox() throws Exception {
+        String first = patch("a.txt");
+        String second = patch("b.txt");
+        String firstDigest = PatchIntegrator.digestFor(first);
+        String secondDigest = PatchIntegrator.digestFor(second);
+        PatchIntegrationActivities.PatchArtifact a = artifact("node-a", "proposal-a", firstDigest);
+        PatchIntegrationActivities.PatchArtifact b = artifact("node-b", "proposal-b", secondDigest);
+        EvidenceRepository evidence = new FakeEvidence(Map.of(a.uri(), raw(a, first), b.uri(), raw(b, second)));
+        FakeSandbox sandbox = new FakeSandbox();
+        PatchIntegrationActivitiesImpl activities = new PatchIntegrationActivitiesImpl(
+                evidence, new PatchIntegrator(sandbox));
+
+        PatchIntegrationActivities.Result result = activities.apply(new PatchIntegrationActivities.Request(
+                DurableExecutionActivities.Metadata.deterministic("task-1", "attempt-1", "a".repeat(40),
+                        "integration", "apply-patches", 1), workspace.toString(), plan(a, b),
+                PatchIntegrationWorkflow.PATCH_CHECK_PROFILE, PatchIntegrationWorkflow.PATCH_APPLY_PROFILE,
+                List.of(a, b)));
+
+        assertThat(result.status()).isEqualTo("APPLIED");
+        assertThat(result.integratedPatchDigest()).isEqualTo(PatchIntegrator.digestFor(first + second));
+        assertThat(Files.readString(workspace.resolve("changes.patch"))).isEqualTo(first + second);
+        assertThat(sandbox.validations).isEqualTo(1);
+        assertThat(sandbox.applications).isEqualTo(1);
+    }
+
+    private static String plan(PatchIntegrationActivities.PatchArtifact... artifacts) {
+        return PatchIntegrationPlanner.digestIdentities(java.util.Arrays.stream(artifacts).map(artifact ->
+                new PatchIntegrationPlanner.PatchIdentity(
+                        artifact.nodeId(), artifact.proposalId(), artifact.digest())).toList());
+    }
+
+    private static String patch(String path) {
+        return "diff --git a/" + path + " b/" + path + "\n--- a/" + path + "\n+++ b/" + path
+                + "\n@@ -1 +1 @@\n-old\n+new\n";
+    }
+
+    private static PatchIntegrationActivities.PatchArtifact artifact(
+            String nodeId, String proposalId, String digest) {
+        return new PatchIntegrationActivities.PatchArtifact(nodeId, proposalId,
+                "evidence://task-1/attempt-1/code-patch/" + digest, digest);
+    }
+
+    private static EvidenceRepository.RawEvidence raw(
+            PatchIntegrationActivities.PatchArtifact artifact, String content) {
+        return new EvidenceRepository.RawEvidence(artifact.uri(), "code-patch", artifact.digest(),
+                "COMPLETE", "INTERNAL", content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static final class FakeSandbox implements SandboxExecutor {
+        int validations;
+        int applications;
+
+        @Override public String applyPatch(Path workspace, String taskId, String sourceCommit) {
+            applications++;
+            return "applied";
+        }
+
+        @Override public String checkPatch(Path workspace, String taskId, String sourceCommit) {
+            validations++;
+            return "valid";
+        }
+
+        @Override public String test(Path workspace, String taskId, String sourceCommit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public String quality(Path workspace, String taskId, String sourceCommit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public String security(Path workspace, String taskId, String sourceCommit) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class FakeEvidence implements EvidenceRepository {
+        private final Map<String, RawEvidence> artifacts;
+
+        private FakeEvidence(Map<String, RawEvidence> artifacts) {
+            this.artifacts = new LinkedHashMap<>(artifacts);
+        }
+
+        @Override public RawEvidence read(ReadRequest request) {
+            assertThat(request.actor()).isEqualTo("workflow");
+            assertThat(request.purpose()).startsWith("apply-patch-integration:");
+            RawEvidence artifact = artifacts.get(request.uri());
+            if (artifact == null) throw new IllegalArgumentException("unknown evidence");
+            return artifact;
+        }
+
+        @Override public StoredEvidence store(StoreRequest request) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public StoredManifest createManifest(ManifestRequest request) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override public EvidenceSummary getSummary(String taskId, String attemptId, String uri, String actor) {
+            throw new UnsupportedOperationException();
+        }
+    }
+}

@@ -34,7 +34,7 @@ public final class PatchIntegrator {
         return sandbox.applyPatch(workspace, taskId, sourceCommit);
     }
 
-    static String normalize(String proposal) {
+    public static String normalize(String proposal) {
         return UnifiedDiffNormalizer.normalize(stripFence(proposal));
     }
 
@@ -51,7 +51,7 @@ public final class PatchIntegrator {
         return out.strip();
     }
 
-    static String digestFor(String value) {
+    public static String digestFor(String value) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(value.getBytes(StandardCharsets.UTF_8)));

@@ -63,14 +63,22 @@ public final class PatchIntegrationPlanner {
                 throw invalid("conflicting patches require repair or serialization: " + report.conflicts());
             }
         }
-        return new IntegrationPlan(List.copyOf(ordered), digest(ordered), "VALIDATED_DAG_TOPOLOGICAL_ORDER");
+        List<PatchIdentity> identities = ordered.stream().map(candidate -> new PatchIdentity(
+                candidate.nodeId(), candidate.proposalId(), candidate.patch().digest())).toList();
+        return new IntegrationPlan(List.copyOf(ordered), digestIdentities(identities),
+                "VALIDATED_DAG_TOPOLOGICAL_ORDER");
     }
 
-    private static String digest(List<PatchCandidate> ordered) {
+    public static String digestIdentities(List<PatchIdentity> ordered) {
+        if (ordered == null || ordered.isEmpty()) throw invalid("patch identities are required");
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            for (PatchCandidate candidate : ordered) {
-                for (String field : List.of(candidate.nodeId(), candidate.proposalId(), candidate.patch().digest())) {
+            for (PatchIdentity identity : ordered) {
+                if (identity == null || identity.nodeId() == null || identity.proposalId() == null
+                        || identity.patchDigest() == null || !identity.patchDigest().matches("[0-9a-f]{64}")) {
+                    throw invalid("patch identity is invalid");
+                }
+                for (String field : List.of(identity.nodeId(), identity.proposalId(), identity.patchDigest())) {
                     byte[] bytes = field.getBytes(StandardCharsets.UTF_8);
                     digest.update(java.nio.ByteBuffer.allocate(Integer.BYTES).putInt(bytes.length).array());
                     digest.update(bytes);
@@ -88,6 +96,8 @@ public final class PatchIntegrationPlanner {
 
     public record PatchCandidate(String nodeId, String proposalId,
                                  PatchProposalValidator.ValidatedPatch patch) {}
+
+    public record PatchIdentity(String nodeId, String proposalId, String patchDigest) {}
 
     public record IntegrationPlan(List<PatchCandidate> orderedPatches, String digest, String reason) {
         public IntegrationPlan {
