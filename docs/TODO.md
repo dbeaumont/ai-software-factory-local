@@ -17,3 +17,11 @@
 - [ ] Persistance des tâches et journaux d'audit dans une base de données de contrôle dédiée
 - [ ] Suppression de l'accès direct à la socket docker
 - [ ] Passer en Java 25 et SpringBoot 4.x
+- [ ] Support de SpecKit pour la définition formelle des spécifications
+- [ ] Support de OpenTelemetry pour la supervision
+- [ ] Mise en place d'écrans de supervision : 
+         - fonctionnelle : supervision des processus (ce qui a marché, interruptions et raisons)
+         - technique : activité par agent (like top -o cpu)
+         - finops : consommation par agent
+
+
