@@ -439,7 +439,7 @@
 - [x] **MAH-291** — Comparer pipeline, agentique simple et hiérarchique sur les mêmes commits et tickets. _(`AgentAbEvaluator.compareAll` exige les trois variantes nommées sur chaque cas et refuse toute divergence de ticket ou de commit source.)_
 - [x] **MAH-292** — Mesurer précision du routage et pertinence des spécialistes sélectionnés. _(`RoutingEvaluation` calcule exactitude du chemin, précision et rappel des spécialistes à partir des décisions observées et des attentes de la suite de référence.)_
 - [x] **MAH-293** — Mesurer qualité des scopes, collisions évitées et contradictions détectées. _(`CoordinationEvaluation` agrège taux de scopes valides, collisions potentielles bloquées et rappel des contradictions, tout en rejetant les compteurs incohérents.)_
-- [ ] **MAH-294** — Mesurer succès au premier patch, réparations, tests, review et acceptation humaine.
+- [x] **MAH-294** — Mesurer succès au premier patch, réparations, tests, review et acceptation humaine. _(`DeliveryOutcomeEvaluation` expose le funnel complet avec taux par étape et moyenne des réparations, sans confondre review indépendante et acceptation humaine.)_
 - [ ] **MAH-295** — Mesurer tokens, coût complet, durée, compute sandbox et temps humain.
 - [ ] **MAH-296** — Mesurer sécurité : outils refusés, injections, dépassements, preuves invalides et effets tentés.
 - [ ] **MAH-297** — Inclure un nombre représentatif de tâches simples, multi-domaines et adversariales.
