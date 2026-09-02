@@ -496,7 +496,7 @@
 - [x] **MAH-332** — Documenter comment ajouter, modifier, évaluer, promouvoir et retirer un agent. _(Cycle complet, artefacts gouvernés, gates et retrait sûr dans `docs/agents/CYCLE-DE-VIE-AGENT.md`.)_
 - [x] **MAH-333** — Documenter le versionnement des workflows Temporal et les déploiements sûrs. _(Worker Versioning, pinning, patching, ramping, rollback et drainage dans `docs/multiagents/POLITIQUE-VERSIONNEMENT-WORKFLOWS-TEMPORAL.md` ; tests Workflow et déterminisme au vert.)_
 - [x] **MAH-334** — Documenter Task Memory, Evidence MCP, rétention, restauration et audit. _(Sources d'autorité, opérations, cycle de vie, reconstruction et incidents dans `docs/multiagents/TASK-MEMORY-EVIDENCE-OPERATIONS.md`.)_
-- [ ] **MAH-335** — Documenter routage, replans, contradictions et décisions humaines.
+- [x] **MAH-335** — Documenter routage, replans, contradictions et décisions humaines. _(Chaîne de décision, plafonds, autorité, escalade et audit dans `docs/multiagents/ROUTAGE-REPLANS-CONTRADICTIONS.md`.)_
 - [ ] **MAH-336** — Documenter procédures de canary, kill switch, rollback et reprise après incident.
 - [ ] **MAH-337** — Former Produit, Architecture, Sécurité, Développement et Exploitation à leurs responsabilités.
 - [ ] **MAH-338** — Archiver les documents devenus obsolètes en conservant leur historique Git.
