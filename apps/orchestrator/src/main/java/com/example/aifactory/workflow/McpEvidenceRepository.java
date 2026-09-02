@@ -101,7 +101,21 @@ public final class McpEvidenceRepository implements EvidenceRepository {
 
     @Override
     public EvidenceSummary getSummary(String taskId, String uri, String actor) {
-        throw new UnsupportedOperationException("summary migration is pending");
+        if (!server.enabled()) throw new IllegalStateException("evidence MCP server is disabled");
+        JsonNode response = mcp.call(server.expectedName(), "evidence.get_summary", Map.of(
+                "schema_version", "1", "task_id", taskId, "uri", uri, "actor", actor));
+        if (response.has("content_base64") || response.has("content")) {
+            throw new SecurityException("evidence summary must never expose raw content");
+        }
+        EvidenceSummary summary = new EvidenceSummary(requiredText(response, "uri"),
+                requiredText(response, "type"), requiredText(response, "digest"),
+                requiredText(response, "status"), requiredText(response, "classification"),
+                response.path("size_bytes").asLong(-1));
+        if (!uri.equals(summary.uri()) || !summary.uri().startsWith("evidence://" + taskId + '/')
+                || !summary.digest().matches("[0-9a-f]{64}") || summary.sizeBytes() < 0) {
+            throw new SecurityException("evidence summary failed task, URI, digest or size binding");
+        }
+        return summary;
     }
 
     @Override

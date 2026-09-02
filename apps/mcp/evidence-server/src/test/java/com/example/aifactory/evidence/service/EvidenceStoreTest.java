@@ -85,6 +85,7 @@ class EvidenceStoreTest {
 
         EvidenceTools.EvidenceSummary summary = tools.getSummary("1", "task-1", stored.uri(), "planner");
         assertEquals(content.length, summary.sizeBytes());
+        assertEquals(content.length, tools.getSummary("1", "task-1", stored.uri(), "architecture-agent").sizeBytes());
         assertThrows(SecurityException.class, () -> tools.read("1", "task-1", stored.uri(), "planner", "human-review"));
         EvidenceTools.RawEvidence raw = tools.read("1", "task-1", stored.uri(), "reviewer", "human-review");
         assertArrayEquals(content, Base64.getDecoder().decode(raw.contentBase64()));

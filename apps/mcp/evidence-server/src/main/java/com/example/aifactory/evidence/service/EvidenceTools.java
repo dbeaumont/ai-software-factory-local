@@ -53,7 +53,7 @@ public class EvidenceTools {
     public EvidenceSummary getSummary(@ToolParam(description = "Contract version") String schema_version,
                                       @ToolParam(description = "Task identifier") String task_id,
                                       @ToolParam(description = "Evidence URI") String uri,
-                                      @ToolParam(description = "workflow, planner or reviewer") String actor) throws Exception {
+                                      @ToolParam(description = "Allowlisted workflow or agent role") String actor) throws Exception {
         if (!"1".equals(schema_version)) throw new IllegalArgumentException("unsupported schema version");
         EvidenceStore.ReadEvidence value = store.read(task_id, uri, actor, "summary", false);
         return new EvidenceSummary(value.uri(), value.type(), value.digest(), value.status(), value.classification(), value.sizeBytes());

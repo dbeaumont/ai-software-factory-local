@@ -5,6 +5,9 @@ import java.util.Map;
 
 @Service
 public class EvidencePolicy {
+    private static final java.util.Set<String> SUMMARY_ACTORS = java.util.Set.of(
+            "workflow", "planner", "reviewer", "supervisor", "architecture-agent", "code-agent",
+            "test-design", "test-evidence", "security-agent", "independent-reviewer");
     private static final Map<String, Rule> RULES = Map.ofEntries(
             Map.entry("plan", new Rule("INTERNAL", 90)), Map.entry("patch", new Rule("INTERNAL", 90)),
             Map.entry("evaluation", new Rule("INTERNAL", 180)), Map.entry("integration", new Rule("INTERNAL", 90)),
@@ -27,7 +30,7 @@ public class EvidencePolicy {
 
     public Rule requireSummary(String type, String actor) {
         Rule rule = require(type);
-        if (!("workflow".equals(actor) || "planner".equals(actor) || "reviewer".equals(actor))) {
+        if (!SUMMARY_ACTORS.contains(actor)) {
             throw new SecurityException("actor cannot inspect evidence summary");
         }
         return rule;

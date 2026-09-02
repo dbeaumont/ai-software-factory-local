@@ -74,6 +74,30 @@ class McpEvidenceRepositoryTest {
                 "task-1", uri, "developer", "human-review"))).isInstanceOf(SecurityException.class);
     }
 
+    @Test
+    void agentSummaryContainsOnlyBoundedMetadata() {
+        String digest = "a".repeat(64);
+        String uri = "evidence://task-1/attempt-1/tests/" + digest;
+        McpToolInvoker mcp = new McpToolInvoker() {
+            @Override
+            public tools.jackson.databind.JsonNode call(String server, String tool, Map<String, Object> arguments) {
+                assertThat(tool).isEqualTo("evidence.get_summary");
+                assertThat(arguments).containsEntry("actor", "architecture-agent");
+                return new ObjectMapper().valueToTree(Map.of(
+                        "uri", uri, "type", "tests", "digest", digest, "status", "COMPLETE",
+                        "classification", "INTERNAL", "size_bytes", 123));
+            }
+
+            @Override public Availability availability(String serverName) { return new Availability(true, null); }
+        };
+
+        EvidenceRepository.EvidenceSummary summary = new McpEvidenceRepository(mcp, properties())
+                .getSummary("task-1", uri, "architecture-agent");
+
+        assertThat(summary.sizeBytes()).isEqualTo(123);
+        assertThat(summary.digest()).isEqualTo(digest);
+    }
+
     private static McpClientProperties properties() {
         McpClientProperties.RetryPolicy retry = new McpClientProperties.RetryPolicy(
                 2, Duration.ofMillis(100), Duration.ofSeconds(1), 2, 0);
