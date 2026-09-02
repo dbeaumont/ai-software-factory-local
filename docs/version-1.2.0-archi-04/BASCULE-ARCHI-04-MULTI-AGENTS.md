@@ -304,7 +304,7 @@
 - [x] **MAH-167** — Détecter absence de progression, cycles de replan et délégations répétées. _(`DelegationReplanPolicy` refuse les digests déjà rencontrés, les remplacements sémantiquement identiques malgré un renommage et la réintroduction par identifiant ou signature d'un travail déclaré terminé ; l'intégrité de l'historique de replans est également vérifiée.)_
 - [x] **MAH-168** — Implémenter le chemin court pour changement simple, mono-module et faible risque. _(`ShortCodePathPlanner` applique la politique versionnée et ne produit que le blueprint borné Supervisor minimal, un Developer et Reviewer indépendant pour les cas R0/R1 mono-module/mono-domaine ; patch, tests, qualité, sécurité et manifeste restent des contrôles déterministes obligatoires.)_
 - [x] **MAH-169** — Implémenter le chemin complet pour changement multi-domaines ou à forte incertitude. _(`HierarchicalPathPlanner` applique les déclencheurs versionnés modules/domaines/scopes/impacts/décision ouverte et produit le DAG Supervisor → Architecture → Code → Tests/Sécurité → Reviewer indépendant, avec ce dernier conservé sous l'autorité du workflow et une gate `BEFORE_EXTERNAL_EFFECT` en R2.)_
-- [ ] **MAH-170** — Enregistrer la raison de routage et permettre son évaluation a posteriori.
+- [x] **MAH-170** — Enregistrer la raison de routage et permettre son évaluation a posteriori. _(`WorkflowRoutingService` applique la précédence hôte et produit une décision à identifiant déterministe contenant politique/version, modes, faits normalisés, règle, raisons, chemin, agents et gate ; `RoutingDecisionJournal` l'enregistre en append-only, par tâche et avec agrégation par chemin.)_
 
 ### Gate du lot 7
 

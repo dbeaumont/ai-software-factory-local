@@ -75,6 +75,14 @@ public final class ShortCodePathPlanner {
                 CONTROLS, 1, "NONE"));
     }
 
+    public String policyId() {
+        return policyId;
+    }
+
+    public String policyVersion() {
+        return version;
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, Object> load() {
         try (InputStream input = ShortCodePathPlanner.class.getClassLoader().getResourceAsStream(RESOURCE)) {
