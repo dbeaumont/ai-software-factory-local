@@ -29,6 +29,10 @@ class TemporalComposeTest {
         assertThat(temporal.get("image").toString()).startsWith("temporalio/auto-setup:").doesNotEndWith("latest");
         assertThat(temporal).doesNotContainKey("ports");
         assertThat(temporal.get("networks")).isEqualTo(List.of("workflow-internal"));
+        assertThat((Map<String, Object>) temporal.get("environment"))
+                .containsKeys("DEFAULT_NAMESPACE", "DEFAULT_NAMESPACE_RETENTION");
+        assertThat((List<String>) services.get("orchestrator").get("networks"))
+                .contains("workflow-internal");
         assertThat((Map<String, Object>) root.get("volumes")).containsKey("temporal-db-data");
         assertThat((Map<String, Object>) ((Map<String, Object>) root.get("networks")).get("workflow-internal"))
                 .containsEntry("internal", true);

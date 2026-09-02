@@ -40,6 +40,25 @@ management:
         enabled: true
 
 ai-factory:
+  temporal:
+    enabled: ${AI_FACTORY_TEMPORAL_ENABLED:false}
+    target: ${AI_FACTORY_TEMPORAL_TARGET:temporal:7233}
+    namespace: ${AI_FACTORY_TEMPORAL_NAMESPACE:ai-factory-local}
+    namespace-retention: ${AI_FACTORY_TEMPORAL_NAMESPACE_RETENTION:P7D}
+    task-queues:
+      workflow: ${AI_FACTORY_TEMPORAL_WORKFLOW_TASK_QUEUE:ai-factory-workflows}
+      context: ${AI_FACTORY_TEMPORAL_CONTEXT_TASK_QUEUE:ai-factory-context}
+      llm: ${AI_FACTORY_TEMPORAL_LLM_TASK_QUEUE:ai-factory-llm}
+      sandbox: ${AI_FACTORY_TEMPORAL_SANDBOX_TASK_QUEUE:ai-factory-sandbox}
+      assurance: ${AI_FACTORY_TEMPORAL_ASSURANCE_TASK_QUEUE:ai-factory-assurance}
+      evidence: ${AI_FACTORY_TEMPORAL_EVIDENCE_TASK_QUEUE:ai-factory-evidence}
+      scm: ${AI_FACTORY_TEMPORAL_SCM_TASK_QUEUE:ai-factory-scm}
+    security:
+      tls-enabled: ${AI_FACTORY_TEMPORAL_TLS_ENABLED:false}
+      client-certificate-path: ${AI_FACTORY_TEMPORAL_CLIENT_CERTIFICATE_PATH:}
+      private-key-path: ${AI_FACTORY_TEMPORAL_PRIVATE_KEY_PATH:}
+      server-name: ${AI_FACTORY_TEMPORAL_SERVER_NAME:}
+      api-key-file: ${AI_FACTORY_TEMPORAL_API_KEY_FILE:}
   agent-tools:
     enabled-roles: ${AI_FACTORY_AGENT_TOOL_ROLES:}
     qualification-verdict: ${AI_FACTORY_AGENT_TOOL_QUALIFICATION:INCOMPLETE}
