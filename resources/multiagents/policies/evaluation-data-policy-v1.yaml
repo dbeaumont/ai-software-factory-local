@@ -1,0 +1,33 @@
+version: "1"
+policyId: multiagent-evaluation-data-v1
+defaultVerdictOnMissingRequiredMetric: INCOMPLETE
+
+requiredMetrics:
+  quality: [first_patch_success, tests_passed, human_accepted]
+  efficiency: [repairs, tokens, duration_millis]
+  security: [security_failures]
+  financial: [cost_micros, cost_status, currency, pricing_source, pricing_version]
+
+costTelemetry:
+  allowedStatuses: [AVAILABLE, PARTIAL, UNAVAILABLE]
+  qualifyingStatus: AVAILABLE
+  requiredCoverageRatio: 1.0
+  requireSameCurrencyAcrossVariants: true
+  requirePricingSource: true
+  requirePricingVersion: true
+  requireRequestedAndResolvedModel: true
+  zeroWithoutExplicitAvailability: UNAVAILABLE
+  partialOrUnavailableVerdict: INCOMPLETE
+  acceptedSources:
+    - gateway-certified-response-cost
+    - gateway-spend-log-joined-by-call-id
+    - versioned-token-pricing-calculation
+
+comparison:
+  pairedCasesRequired: true
+  requireSameDataCompletenessAcrossVariants: true
+  missingValueAggregation: FORBIDDEN
+  historicalCampaignOverrides:
+    MCP-agent-ab-20260902-01:
+      costStatus: UNAVAILABLE
+      reason: Positive token usage with no provider cost telemetry.
