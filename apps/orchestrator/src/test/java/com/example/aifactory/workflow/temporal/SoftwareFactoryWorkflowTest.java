@@ -158,6 +158,40 @@ class SoftwareFactoryWorkflowTest {
     }
 
     @Test
+    void keepsWaitingUntilHumanDecisionMatchesObjectDigestAndApproverRole() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = stub(environment, "task-41");
+            String objectDigest = "d".repeat(64);
+            var request = new SoftwareFactoryWorkflow.HumanDecisionRequest(
+                    "architecture-choice", "Select architecture", java.util.Set.of("A", "B"),
+                    java.util.List.of("evidence://task-41/architecture"), objectDigest,
+                    java.util.Set.of("ARCHITECTURE"));
+            io.temporal.client.WorkflowClient.start(workflow::run, new SoftwareFactoryWorkflow.Request(
+                    "task-41", "attempt-1", "a".repeat(40), "change", java.util.List.of(), null,
+                    java.util.List.of(request)));
+            awaitStatus(workflow, "WAITING_HUMAN_DECISION");
+
+            workflow.decide(new SoftwareFactoryWorkflow.HumanDecisionSignal(
+                    "task-41", "attempt-1", "architecture-choice", "A", "e".repeat(64),
+                    "reviewer", "SECURITY", "2026-09-02T11:00:00Z"));
+            assertThat(workflow.status()).isEqualTo("WAITING_HUMAN_DECISION");
+
+            workflow.decide(new SoftwareFactoryWorkflow.HumanDecisionSignal(
+                    "task-41", "attempt-1", "architecture-choice", "B", objectDigest,
+                    "architect", "ARCHITECTURE", "2026-09-02T11:01:00Z"));
+            SoftwareFactoryWorkflow.Result result = WorkflowStub.fromTyped(workflow)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
+            assertThat(result.status()).isEqualTo("DECISIONS_COMPLETED");
+            assertThat(result.humanDecisions()).containsEntry("architecture-choice", "B");
+        }
+    }
+
+    @Test
     void boundsEachRunAndCarriesStateAcrossContinueAsNew() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");

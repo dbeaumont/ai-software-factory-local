@@ -156,15 +156,27 @@ public interface SoftwareFactoryWorkflow {
                           String decision, String approver, String decidedAt) {}
 
     record HumanDecisionRequest(String decisionId, String question, Set<String> allowedDecisions,
-                                List<String> evidenceUris) {
+                                List<String> evidenceUris, String objectDigest,
+                                Set<String> requiredApproverRoles) {
         public HumanDecisionRequest {
             allowedDecisions = Set.copyOf(allowedDecisions);
             evidenceUris = List.copyOf(evidenceUris);
+            requiredApproverRoles = requiredApproverRoles == null ? Set.of() : Set.copyOf(requiredApproverRoles);
+        }
+
+        public HumanDecisionRequest(String decisionId, String question, Set<String> allowedDecisions,
+                                    List<String> evidenceUris) {
+            this(decisionId, question, allowedDecisions, evidenceUris, null, Set.of());
         }
     }
 
     record HumanDecisionSignal(String taskId, String attemptId, String decisionId, String decision,
-                               String actor, String decidedAt) {}
+                               String objectDigest, String actor, String actorRole, String decidedAt) {
+        public HumanDecisionSignal(String taskId, String attemptId, String decisionId, String decision,
+                                   String actor, String decidedAt) {
+            this(taskId, attemptId, decisionId, decision, null, actor, null, decidedAt);
+        }
+    }
 
     record CancellationSignal(String taskId, String attemptId, String reason, String actor, String decidedAt) {}
 

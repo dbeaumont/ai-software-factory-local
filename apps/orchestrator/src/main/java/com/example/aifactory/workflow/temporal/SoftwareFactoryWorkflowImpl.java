@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.ContinueAsNewOptions;
@@ -240,6 +241,9 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         return signal != null && request.taskId().equals(signal.taskId())
                 && request.attemptId().equals(signal.attemptId())
                 && expected.allowedDecisions().contains(signal.decision())
+                && (expected.objectDigest() == null || expected.objectDigest().equals(signal.objectDigest()))
+                && (expected.requiredApproverRoles().isEmpty()
+                || expected.requiredApproverRoles().contains(signal.actorRole()))
                 && signal.actor() != null && !signal.actor().isBlank()
                 && signal.decidedAt() != null && !signal.decidedAt().isBlank();
     }
@@ -248,7 +252,10 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         if (decision == null || decision.decisionId() == null
                 || !decision.decisionId().matches("[A-Za-z0-9_-]{1,128}")
                 || decision.question() == null || decision.question().isBlank()
-                || decision.allowedDecisions().isEmpty()) {
+                || decision.allowedDecisions().isEmpty()
+                || decision.objectDigest() != null && !decision.objectDigest().matches("[0-9a-f]{64}")
+                || decision.requiredApproverRoles().stream().anyMatch(role -> !Set.of(
+                "PRODUCT", "ARCHITECTURE", "SECURITY", "DATA", "PLATFORM", "OPERATIONS").contains(role))) {
             throw new IllegalArgumentException("Human decision request is invalid");
         }
     }
