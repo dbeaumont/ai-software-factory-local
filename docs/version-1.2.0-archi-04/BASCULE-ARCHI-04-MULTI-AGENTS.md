@@ -281,7 +281,7 @@
 - [x] **MAH-144** — Ajouter limites maximales de profondeur et de fan-out du DAG. _(Plafonds hôte profondeur 2 et fan-out 4, configurables uniquement à la baisse ; chaque plan applique le minimum entre politique et requête, avec tests de non-contournement.)_
 - [x] **MAH-145** — Ajouter budgets par agent, délégation, périmètre et tâche complète. _(Politique hôte versionnée pour les 14 rôles, plafond unitaire de délégation, agrégats Architecture/Code/Tests/Sécurité et plafond global ; validation branchée sur AgentRuntime et DelegationValidator.)_
 - [x] **MAH-146** — Ajouter quotas cumulés de tokens d'entrée, sortie, coût, tours et appels MCP. _(Ledger atomique par tâche, cumulant toutes les tentatives ; chaque tour LLM et appel MCP réserve sa consommation réelle, avec refus sans écriture partielle pour chacun des cinq quotas.)_
-- [ ] **MAH-147** — Ajouter concurrence globale, par tâche, par rôle et par serveur MCP.
+- [x] **MAH-147** — Ajouter concurrence globale, par tâche, par rôle et par serveur MCP. _(Quatre sémaphores équitables acquis dans un ordre fixe sous une même deadline ; plafonds configurables 32/4/8/16, conservation des permis jusqu'à l'arrêt réel et tests isolant chaque dimension.)_
 - [ ] **MAH-148** — Interdire à une délégation enfant d'augmenter le budget reçu de son parent.
 - [ ] **MAH-149** — Réserver une part du budget au Reviewer et aux gates finaux.
 - [ ] **MAH-150** — Définir une condition d'arrêt stable pour budget épuisé, deadline ou absence de progression.

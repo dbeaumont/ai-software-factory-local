@@ -41,8 +41,10 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
     private final MeterRegistry metrics;
     private final ObjectMapper objectMapper;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    private final Semaphore globalLimit;
     private final ConcurrentMap<String, Semaphore> serverLimits = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Semaphore> taskLimits = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Semaphore> roleLimits = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Circuit> circuits = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, AtomicInteger> inflight = new ConcurrentHashMap<>();
 
@@ -55,6 +57,7 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
         this.properties = properties;
         this.metrics = metrics;
         this.objectMapper = objectMapper;
+        this.globalLimit = new Semaphore(properties.maxInflightGlobal(), true);
         properties.servers().values().forEach(server -> {
             serverLimits.put(server.expectedName(), new Semaphore(properties.maxInflightPerServer(), true));
             circuits.put(server.expectedName(), new Circuit());
@@ -103,31 +106,49 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
 
     private JsonNode timedCall(String serverName, String toolName, Map<String, Object> arguments) {
         Duration timeout = timeout(serverName, arguments);
+        long acquireDeadline = System.nanoTime() + timeout.toNanos();
         Semaphore server = serverLimits.computeIfAbsent(
                 serverName, ignored -> new Semaphore(properties.maxInflightPerServer(), true));
-        String taskKey = serverName + ':' + safe(arguments.get("task_id"));
+        String taskKey = safe(arguments.get("task_id"));
         Semaphore task = taskLimits.computeIfAbsent(
                 taskKey, ignored -> new Semaphore(properties.maxInflightPerTask(), true));
+        String roleKey = safe(arguments.get("actor"));
+        Semaphore role = roleLimits.computeIfAbsent(
+                roleKey, ignored -> new Semaphore(properties.maxInflightPerRole(), true));
+        boolean globalAcquired = false;
         boolean serverAcquired = false;
         boolean taskAcquired = false;
+        boolean roleAcquired = false;
         try {
-            serverAcquired = server.tryAcquire(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            taskAcquired = serverAcquired && task.tryAcquire(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            if (!taskAcquired) {
+            globalAcquired = acquire(globalLimit, acquireDeadline);
+            serverAcquired = globalAcquired && acquire(server, acquireDeadline);
+            taskAcquired = serverAcquired && acquire(task, acquireDeadline);
+            roleAcquired = taskAcquired && acquire(role, acquireDeadline);
+            if (!roleAcquired) {
                 throw new McpInvocationException("LIMIT_EXCEEDED", false, "MCP concurrency limit exceeded");
             }
             inflight.computeIfAbsent(serverName, ignored -> new AtomicInteger()).incrementAndGet();
-            Future<JsonNode> future = executor.submit(() -> {
-                try {
-                    return delegate.call(serverName, toolName, arguments);
-                } finally {
-                    task.release();
-                    server.release();
-                    inflight.get(serverName).decrementAndGet();
-                }
-            });
+            Future<JsonNode> future;
+            try {
+                future = executor.submit(() -> {
+                    try {
+                        return delegate.call(serverName, toolName, arguments);
+                    } finally {
+                        role.release();
+                        task.release();
+                        server.release();
+                        globalLimit.release();
+                        inflight.get(serverName).decrementAndGet();
+                    }
+                });
+            } catch (RuntimeException rejected) {
+                inflight.get(serverName).decrementAndGet();
+                throw rejected;
+            }
+            roleAcquired = false;
             taskAcquired = false;
             serverAcquired = false;
+            globalAcquired = false;
             try {
                 return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             } catch (TimeoutException exception) {
@@ -144,17 +165,16 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
             Thread.currentThread().interrupt();
             throw new McpInvocationException("INTERRUPTED", false, "MCP call was interrupted", exception);
         } finally {
-            if (taskAcquired) {
-                task.release();
-                AtomicInteger current = inflight.get(serverName);
-                if (current != null && current.get() > 0) {
-                    current.decrementAndGet();
-                }
-            }
-            if (serverAcquired) {
-                server.release();
-            }
+            if (roleAcquired) role.release();
+            if (taskAcquired) task.release();
+            if (serverAcquired) server.release();
+            if (globalAcquired) globalLimit.release();
         }
+    }
+
+    private static boolean acquire(Semaphore semaphore, long deadlineNanos) throws InterruptedException {
+        long remaining = deadlineNanos - System.nanoTime();
+        return remaining > 0 && semaphore.tryAcquire(remaining, TimeUnit.NANOSECONDS);
     }
 
     private Duration timeout(String serverName, Map<String, Object> arguments) {

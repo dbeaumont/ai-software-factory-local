@@ -17,8 +17,10 @@ transport:
   maxRequestBodyBytes: 1048576
   maxResponseBodyBytes: 65536
   requestTimeout: PT20S
+  maxInflightGlobal: 32
   maxInflightPerServer: 16
   maxInflightPerTask: 4
+  maxInflightPerRole: 8
   maxWarnings: 32
   maxEvidenceReferences: 64
 

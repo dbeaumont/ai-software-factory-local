@@ -24,8 +24,10 @@ class McpClientPropertiesTest {
             assertThat(properties.enabled()).isTrue();
             assertThat(properties.requestTimeout()).isEqualTo(Duration.ofSeconds(20));
             assertThat(properties.maxResponseBytes()).isEqualTo(65_536);
+            assertThat(properties.maxInflightGlobal()).isEqualTo(32);
             assertThat(properties.maxInflightPerServer()).isEqualTo(16);
             assertThat(properties.maxInflightPerTask()).isEqualTo(4);
+            assertThat(properties.maxInflightPerRole()).isEqualTo(8);
             assertThat(properties.acceptedProtocolVersions())
                     .containsExactlyInAnyOrder("2025-11-25", "2025-06-18");
             assertThat(properties.retry().readOnly().maxAttempts()).isEqualTo(3);
@@ -62,13 +64,27 @@ class McpClientPropertiesTest {
                 .run(context -> assertThat(context).hasFailed());
     }
 
+    @Test
+    void rejectsServerOrRoleConcurrencyAboveTheGlobalLimit() {
+        contextRunner.withPropertyValues(
+                        "ai-factory.mcp.client.max-inflight-global=4",
+                        "ai-factory.mcp.client.max-inflight-per-server=5")
+                .run(context -> assertThat(context).hasFailed());
+        contextRunner.withPropertyValues(
+                        "ai-factory.mcp.client.max-inflight-global=4",
+                        "ai-factory.mcp.client.max-inflight-per-role=5")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
     private static String[] validProperties() {
         return new String[]{
                 "ai-factory.mcp.client.enabled=true",
                 "ai-factory.mcp.client.request-timeout=20s",
                 "ai-factory.mcp.client.max-response-bytes=65536",
+                "ai-factory.mcp.client.max-inflight-global=32",
                 "ai-factory.mcp.client.max-inflight-per-server=16",
                 "ai-factory.mcp.client.max-inflight-per-task=4",
+                "ai-factory.mcp.client.max-inflight-per-role=8",
                 "ai-factory.mcp.client.accepted-protocol-versions=2025-11-25,2025-06-18",
                 "ai-factory.mcp.client.retry.read-only.max-attempts=3",
                 "ai-factory.mcp.client.retry.read-only.initial-backoff=200ms",
