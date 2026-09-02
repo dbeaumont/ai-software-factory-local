@@ -4,7 +4,7 @@
   "title": "PatchRepairProposal v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "repair_proposal_id", "repair_task_id", "task_id", "attempt_id", "node_id", "code_task_id", "source_commit", "worktree_id", "repair_attempt", "replaces_proposal_id", "scope_digest", "patch_digest", "files_touched", "diff_artifact", "summary", "created_at"],
+  "required": ["schema_version", "repair_proposal_id", "repair_task_id", "task_id", "attempt_id", "node_id", "code_task_id", "source_commit", "worktree_id", "repair_attempt", "replaces_proposal_id", "failure_kind", "failure_digest", "target_paths", "conflicting_proposal_ids", "scope_digest", "patch_digest", "files_touched", "diff_artifact", "summary", "created_at"],
   "properties": {
     "schema_version": {"const": "1"},
     "repair_proposal_id": {"$ref": "#/$defs/id"},
@@ -17,6 +17,10 @@
     "worktree_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"},
     "repair_attempt": {"type": "integer", "minimum": 1, "maximum": 3},
     "replaces_proposal_id": {"$ref": "#/$defs/id"},
+    "failure_kind": {"enum": ["PATCH_INVALID", "PATCH_CONFLICT"]},
+    "failure_digest": {"$ref": "#/$defs/digest"},
+    "target_paths": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+    "conflicting_proposal_ids": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
     "scope_digest": {"$ref": "#/$defs/digest"},
     "patch_digest": {"$ref": "#/$defs/digest"},
     "files_touched": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/fileChange"}},
@@ -24,6 +28,10 @@
     "summary": {"type": "string", "minLength": 1, "maxLength": 4000},
     "created_at": {"type": "string", "format": "date-time"}
   },
+  "allOf": [
+    {"if": {"properties": {"failure_kind": {"const": "PATCH_INVALID"}}, "required": ["failure_kind"]}, "then": {"properties": {"conflicting_proposal_ids": {"maxItems": 0}}}},
+    {"if": {"properties": {"failure_kind": {"const": "PATCH_CONFLICT"}}, "required": ["failure_kind"]}, "then": {"properties": {"conflicting_proposal_ids": {"minItems": 2, "maxItems": 2}}}}
+  ],
   "$defs": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
     "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},

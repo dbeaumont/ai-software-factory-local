@@ -16,8 +16,8 @@ public final class PatchScopeValidator {
     }
 
     public void validateRepair(JsonNode repairTask, JsonNode proposal) {
-        validate(proposal, strings(repairTask.path("allowed_paths")), List.of(),
-                repairTask.path("allowed_paths").size(), 1_048_576);
+        validate(proposal, strings(repairTask.path("target_paths")), List.of(),
+                repairTask.path("target_paths").size(), 1_048_576);
     }
 
     private static void validate(JsonNode proposal, List<String> allowed, List<String> forbidden,

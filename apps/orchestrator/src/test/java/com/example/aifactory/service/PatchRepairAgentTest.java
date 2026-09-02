@@ -33,7 +33,8 @@ class PatchRepairAgentTest {
         assertThat(invocation.promptName()).isEqualTo("patch-repair-hierarchical");
         assertThat(invocation.outputContract()).isEqualTo("patch-repair-proposal-v1");
         assertThat(invocation.untrustedInput()).contains(
-                "\"worktree_id\":\"worktree-code-1\"", "\"repair_attempt\":1");
+                "\"worktree_id\":\"worktree-code-1\"", "\"repair_attempt\":1",
+                "\"failure_kind\":\"PATCH_INVALID\"", "\"target_paths\":[\"src/App.java\"]");
     }
 
     @Test
@@ -67,9 +68,47 @@ class PatchRepairAgentTest {
                 .isInstanceOf(SecurityException.class).hasMessageContaining("before sandbox");
     }
 
+    @Test
+    void rejectsAnyRepairCauseOtherThanATargetedInvalidPatchOrConflict() throws Exception {
+        JsonNode documents = mapper.readTree(Files.readString(FIXTURES)).path("documents");
+        var unsupported = documents.path("patch-repair-task-v1").deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) unsupported).put("failure_kind", "TEST_FAILURE");
+
+        PatchRepairAgent repair = new PatchRepairAgent(
+                new RecordingExecutor(documents.path("patch-repair-proposal-v1")),
+                new AgentCatalog(), contracts, new PatchScopeValidator());
+
+        assertThatThrownBy(() -> repair.execute(request(unsupported.toString())))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("violates");
+    }
+
+    @Test
+    void acceptsOnlyAConflictBoundToBothKnownProposals() throws Exception {
+        JsonNode documents = mapper.readTree(Files.readString(FIXTURES)).path("documents");
+        var conflictTask = documents.path("patch-repair-task-v1").deepCopy();
+        var conflictProposal = documents.path("patch-repair-proposal-v1").deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) conflictTask).put("failure_kind", "PATCH_CONFLICT");
+        ((tools.jackson.databind.node.ArrayNode) conflictTask.path("conflicting_proposal_ids"))
+                .add("proposal-1").add("proposal-2");
+        ((tools.jackson.databind.node.ObjectNode) conflictProposal).put("failure_kind", "PATCH_CONFLICT");
+        ((tools.jackson.databind.node.ArrayNode) conflictProposal.path("conflicting_proposal_ids"))
+                .add("proposal-1").add("proposal-2");
+        PatchRepairAgent repair = new PatchRepairAgent(
+                new RecordingExecutor(conflictProposal), new AgentCatalog(), contracts, new PatchScopeValidator());
+
+        repair.execute(request(conflictTask.toString(), Set.of(
+                "plan-1", "repair-node-1", "code-1", "proposal-1", "proposal-2")));
+
+        assertThatThrownBy(() -> repair.execute(request(conflictTask.toString())))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("targeted invalid patch or conflict");
+    }
+
     private static PatchRepairAgent.Request request(String task) {
-        return new PatchRepairAgent.Request("task-1", "attempt-1", "a".repeat(40), task,
-                Set.of("plan-1", "repair-node-1", "code-1", "proposal-1"),
+        return request(task, Set.of("plan-1", "repair-node-1", "code-1", "proposal-1"));
+    }
+
+    private static PatchRepairAgent.Request request(String task, Set<String> references) {
+        return new PatchRepairAgent.Request("task-1", "attempt-1", "a".repeat(40), task, references,
                 new AgentToolLoop.Budget(2, Duration.ofMinutes(2), 2_000, 1_000_000));
     }
 
