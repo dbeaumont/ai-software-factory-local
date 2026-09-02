@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/specialist-result-v1.schema.json",
+  "title": "SpecialistResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "result_id", "specialist_task_id", "task_id", "attempt_id", "delegation_plan_id", "node_id", "role", "source_commit", "input_digest", "status", "summary", "findings", "evidence", "discovered_impacts", "risk_assessment", "usage", "stop_reason", "started_at", "completed_at"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "result_id": {"$ref": "#/$defs/id"},
+    "specialist_task_id": {"$ref": "#/$defs/id"},
+    "task_id": {"$ref": "#/$defs/id"},
+    "attempt_id": {"$ref": "#/$defs/id"},
+    "delegation_plan_id": {"$ref": "#/$defs/id"},
+    "node_id": {"$ref": "#/$defs/id"},
+    "role": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "maxLength": 64},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "input_digest": {"$ref": "#/$defs/digest"},
+    "status": {"enum": ["SUCCESS", "PARTIAL", "BLOCKED", "FAILED"]},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 8000},
+    "findings": {"type": "array", "maxItems": 128, "items": {"$ref": "#/$defs/finding"}},
+    "evidence": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/evidence"}},
+    "discovered_impacts": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "maxLength": 64}
+    },
+    "risk_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposed_class", "reasons"],
+      "properties": {
+        "proposed_class": {"enum": ["R0", "R1", "R2", "R3", "R4"]},
+        "reasons": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 512}}
+      }
+    },
+    "usage": {"$ref": "#/$defs/usage"},
+    "stop_reason": {"enum": ["SUCCESS_CRITERIA_MET", "BUDGET_EXHAUSTED", "DEADLINE_REACHED", "BLOCKED", "CANCELLED", "CONTRACT_ERROR", "TOOL_ERROR"]},
+    "error_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"enum": ["FAILED", "BLOCKED"]}}},
+      "then": {"required": ["error_code"]}
+    }
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "path": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"},
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["finding_id", "category", "severity", "message", "paths"],
+      "properties": {
+        "finding_id": {"$ref": "#/$defs/id"},
+        "category": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+        "severity": {"enum": ["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"]},
+        "message": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "paths": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "uri", "digest", "status"],
+      "properties": {
+        "type": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+        "uri": {"type": "string", "pattern": "^evidence://", "maxLength": 1024},
+        "digest": {"$ref": "#/$defs/digest"},
+        "status": {"enum": ["COMPLETE", "PARTIAL"]}
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["turns", "input_tokens", "output_tokens", "cost_micros", "cost_status", "tool_calls", "duration_millis"],
+      "properties": {
+        "turns": {"type": "integer", "minimum": 0, "maximum": 16},
+        "input_tokens": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "output_tokens": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "cost_micros": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0, "maximum": 100000000}]},
+        "cost_status": {"enum": ["AVAILABLE", "PARTIAL", "UNAVAILABLE"]},
+        "tool_calls": {"type": "integer", "minimum": 0, "maximum": 64},
+        "duration_millis": {"type": "integer", "minimum": 0, "maximum": 3600000}
+      }
+    }
+  }
+}
