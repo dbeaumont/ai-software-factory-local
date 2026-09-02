@@ -1,0 +1,27 @@
+schema_version: "1"
+manifest_id: patch-repair-v1
+name: Patch Repair
+role: patch-repair
+version: "1.0.0"
+owner: engineering
+parent: code-agent
+kind: sub-agent
+autonomy: A1
+effectful: false
+prompt: prompts/patch-repair-hierarchical.md
+input_contracts:
+  - patch-repair-task-v1
+output_contracts:
+  - patch-repair-proposal-v1
+may_delegate_to: []
+allowed_tools:
+  - context.read_file
+  - context.get_symbols
+default_budget:
+  max_turns: 3
+  max_tokens: 6000
+  max_cost_micros: 6000000
+  timeout_seconds: 360
+  max_tool_calls: 12
+human_gate: none
+compatibility_prompt: prompts/patch-repair.md

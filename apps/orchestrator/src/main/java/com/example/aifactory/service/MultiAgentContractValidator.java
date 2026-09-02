@@ -32,6 +32,8 @@ public final class MultiAgentContractValidator {
             Map.entry("integration-proposal-v1", Set.of("delegation_plan_id", "node_id", "architecture_assessment_id")),
             Map.entry("code-task-v1", Set.of("delegation_plan_id", "node_id", "architecture_assessment_id")),
             Map.entry("patch-proposal-v1", Set.of("code_task_id", "node_id")),
+            Map.entry("patch-repair-task-v1", Set.of("delegation_plan_id", "node_id", "code_task_id", "original_proposal_id")),
+            Map.entry("patch-repair-proposal-v1", Set.of("repair_task_id", "node_id", "code_task_id", "replaces_proposal_id")),
             Map.entry("test-assessment-v1", Set.of("strategy_id")));
     private final ObjectMapper objectMapper;
     private final Map<String, Schema> schemas;

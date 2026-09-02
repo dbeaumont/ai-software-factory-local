@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/patch-repair-task-v1.schema.json",
+  "title": "PatchRepairTask v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "repair_task_id", "task_id", "attempt_id", "delegation_plan_id", "node_id", "code_task_id", "source_commit", "worktree_id", "repair_attempt", "original_proposal_id", "original_patch_digest", "failure_digest", "scope_digest", "allowed_paths", "budget", "issued_at", "deadline"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "repair_task_id": {"$ref": "#/$defs/id"},
+    "task_id": {"$ref": "#/$defs/id"},
+    "attempt_id": {"$ref": "#/$defs/id"},
+    "delegation_plan_id": {"$ref": "#/$defs/id"},
+    "node_id": {"$ref": "#/$defs/id"},
+    "code_task_id": {"$ref": "#/$defs/id"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "worktree_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"},
+    "repair_attempt": {"type": "integer", "minimum": 1, "maximum": 3},
+    "original_proposal_id": {"$ref": "#/$defs/id"},
+    "original_patch_digest": {"$ref": "#/$defs/digest"},
+    "failure_digest": {"$ref": "#/$defs/digest"},
+    "scope_digest": {"$ref": "#/$defs/digest"},
+    "allowed_paths": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+    "budget": {"$ref": "#/$defs/budget"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "deadline": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "path": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"},
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["max_turns", "max_tokens", "max_cost_micros", "timeout_seconds"],
+      "properties": {"max_turns": {"type": "integer", "minimum": 1, "maximum": 8}, "max_tokens": {"type": "integer", "minimum": 1, "maximum": 50000}, "max_cost_micros": {"type": "integer", "minimum": 0, "maximum": 50000000}, "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800}}
+    }
+  }
+}
