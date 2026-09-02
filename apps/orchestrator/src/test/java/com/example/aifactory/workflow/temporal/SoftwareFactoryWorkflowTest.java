@@ -149,6 +149,36 @@ class SoftwareFactoryWorkflowTest {
         }
     }
 
+    @Test
+    void boundsEachRunAndCarriesStateAcrossContinueAsNew() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = stub(environment, "task-6");
+            java.util.List<DelegationWorkflow.Request> delegations = java.util.stream.IntStream.rangeClosed(1, 3)
+                    .mapToObj(index -> new DelegationWorkflow.Request(
+                            "task-6", "attempt-1", "node-" + index, "supervisor", "code-agent",
+                            "a".repeat(40), "delegation " + index))
+                    .toList();
+            SoftwareFactoryWorkflow.ExecutionPolicy policy = new SoftwareFactoryWorkflow.ExecutionPolicy(
+                    Long.MAX_VALUE, Long.MAX_VALUE, 1);
+
+            SoftwareFactoryWorkflow.Result result = workflow.run(new SoftwareFactoryWorkflow.Request(
+                    "task-6", "attempt-1", "a".repeat(40), "change", delegations, null,
+                    java.util.List.of(), policy));
+
+            assertThat(result.status()).isEqualTo("DELEGATIONS_COMPLETED");
+            assertThat(result.delegations()).extracting(DelegationWorkflow.Result::nodeId)
+                    .containsExactly("node-1", "node-2", "node-3");
+            assertThat(result.chronology()).containsExactly(
+                    "WORKFLOW_STARTED", "DELEGATION_COMPLETED:node-1", "CONTINUED_AS_NEW:1",
+                    "DELEGATION_COMPLETED:node-2", "CONTINUED_AS_NEW:2",
+                    "DELEGATION_COMPLETED:node-3");
+        }
+    }
+
     private static SoftwareFactoryWorkflow stub(TestWorkflowEnvironment environment, String taskId) {
         return environment.getWorkflowClient().newWorkflowStub(SoftwareFactoryWorkflow.class,
                 WorkflowOptions.newBuilder().setWorkflowId(TemporalIds.workflow(taskId, "attempt-1"))

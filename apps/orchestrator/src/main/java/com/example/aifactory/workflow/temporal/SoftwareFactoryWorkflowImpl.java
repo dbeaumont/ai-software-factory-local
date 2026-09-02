@@ -6,7 +6,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.temporal.workflow.ChildWorkflowOptions;
+import io.temporal.workflow.ContinueAsNewOptions;
 import io.temporal.workflow.Workflow;
+import io.temporal.workflow.WorkflowVersioningBehavior;
+import io.temporal.common.InitialVersioningBehavior;
+import io.temporal.common.VersioningBehavior;
 
 /** Root durable workflow; subsequent migration steps add child workflows and activities. */
 public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflow {
@@ -18,20 +22,32 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     private String phase = "CREATED";
 
     @Override
+    @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
     public Result run(Request request) {
         requireValid(request);
         this.request = request;
+        restoreContinuationState(request.continuationState());
         phase = "RUNNING";
-        List<String> chronology = new ArrayList<>();
-        chronology.add("WORKFLOW_STARTED");
-        List<DelegationWorkflow.Result> results = new ArrayList<>();
-        for (DelegationWorkflow.Request delegation : request.delegations()) {
+        List<String> chronology = new ArrayList<>(request.continuationState().chronology());
+        if (chronology.isEmpty()) chronology.add("WORKFLOW_STARTED");
+        List<DelegationWorkflow.Result> results = new ArrayList<>(request.continuationState().delegations());
+        int processedThisRun = 0;
+        for (int index = request.continuationState().nextDelegationIndex();
+             index < request.delegations().size(); index++) {
+            DelegationWorkflow.Request delegation = request.delegations().get(index);
             DelegationWorkflow child = Workflow.newChildWorkflowStub(DelegationWorkflow.class,
                     ChildWorkflowOptions.newBuilder().setWorkflowId(delegationId(request, delegation)).build());
             DelegationWorkflow.Result result = child.run(delegation);
             results.add(result);
             completedDelegations.put(result.nodeId(), result);
             chronology.add("DELEGATION_COMPLETED:" + result.nodeId());
+            processedThisRun++;
+            int nextIndex = index + 1;
+            if (nextIndex < request.delegations().size()
+                    && shouldContinueAsNew(request.executionPolicy(), processedThisRun)) {
+                continueAsNew(request, nextIndex, results, chronology);
+                return null;
+            }
         }
         Map<String, String> decisions = new LinkedHashMap<>();
         for (HumanDecisionRequest decision : request.humanDecisionRequests()) {
@@ -123,7 +139,12 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
                 || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
-                || request.requirement() == null || request.requirement().isBlank()) {
+                || request.requirement() == null || request.requirement().isBlank()
+                || request.continuationState().nextDelegationIndex() < 0
+                || request.continuationState().nextDelegationIndex() > request.delegations().size()
+                || request.continuationState().generation() < 0
+                || request.continuationState().delegations().size()
+                != request.continuationState().nextDelegationIndex()) {
             throw new IllegalArgumentException("Software factory workflow request is invalid");
         }
     }
@@ -184,5 +205,35 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
 
     private static String delegationId(Request root, DelegationWorkflow.Request child) {
         return TemporalIds.delegation(root.taskId(), root.attemptId(), child.nodeId());
+    }
+
+    private void restoreContinuationState(ContinuationState state) {
+        receivedApproval = state.receivedApproval();
+        receivedCancellation = state.receivedCancellation();
+        receivedDecisions.clear();
+        receivedDecisions.putAll(state.receivedDecisions());
+        completedDelegations.clear();
+        state.delegations().forEach(result -> completedDelegations.put(result.nodeId(), result));
+    }
+
+    private static boolean shouldContinueAsNew(ExecutionPolicy policy, int processedThisRun) {
+        return processedThisRun >= policy.maxDelegationsPerRun()
+                || Workflow.getInfo().getHistoryLength() >= policy.maxHistoryEvents()
+                || Workflow.getInfo().getHistorySize() >= policy.maxHistoryBytes()
+                || Workflow.getInfo().isContinueAsNewSuggested();
+    }
+
+    private void continueAsNew(Request request, int nextIndex, List<DelegationWorkflow.Result> results,
+                               List<String> chronology) {
+        int nextGeneration = request.continuationState().generation() + 1;
+        chronology.add("CONTINUED_AS_NEW:" + nextGeneration);
+        phase = "CONTINUING_AS_NEW";
+        ContinuationState state = new ContinuationState(nextIndex, nextGeneration, results, chronology,
+                receivedDecisions, receivedApproval, receivedCancellation);
+        ContinueAsNewOptions.Builder options = ContinueAsNewOptions.newBuilder();
+        if (Workflow.getInfo().isTargetWorkerDeploymentVersionChanged()) {
+            options.setInitialVersioningBehavior(InitialVersioningBehavior.AUTO_UPGRADE);
+        }
+        Workflow.continueAsNew(options.build(), request.continuedWith(state));
     }
 }

@@ -40,24 +40,78 @@ public interface SoftwareFactoryWorkflow {
 
     record Request(String taskId, String attemptId, String sourceCommit, String requirement,
                    List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
-                   List<HumanDecisionRequest> humanDecisionRequests) {
+                   List<HumanDecisionRequest> humanDecisionRequests, ExecutionPolicy executionPolicy,
+                   ContinuationState continuationState) {
         public Request {
             delegations = delegations == null ? List.of() : List.copyOf(delegations);
             humanDecisionRequests = humanDecisionRequests == null ? List.of() : List.copyOf(humanDecisionRequests);
+            executionPolicy = executionPolicy == null ? ExecutionPolicy.defaults() : executionPolicy;
+            continuationState = continuationState == null ? ContinuationState.initial() : continuationState;
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement) {
-            this(taskId, attemptId, sourceCommit, requirement, List.of(), null, List.of());
+            this(taskId, attemptId, sourceCommit, requirement, List.of(), null, List.of(), null, null);
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement,
                        List<DelegationWorkflow.Request> delegations) {
-            this(taskId, attemptId, sourceCommit, requirement, delegations, null, List.of());
+            this(taskId, attemptId, sourceCommit, requirement, delegations, null, List.of(), null, null);
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement,
                        List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest) {
-            this(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest, List.of());
+            this(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest, List.of(), null, null);
+        }
+
+        public Request(String taskId, String attemptId, String sourceCommit, String requirement,
+                       List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
+                       List<HumanDecisionRequest> humanDecisionRequests) {
+            this(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest,
+                    humanDecisionRequests, null, null);
+        }
+
+        public Request(String taskId, String attemptId, String sourceCommit, String requirement,
+                       List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
+                       List<HumanDecisionRequest> humanDecisionRequests, ExecutionPolicy executionPolicy) {
+            this(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest,
+                    humanDecisionRequests, executionPolicy, null);
+        }
+
+        Request continuedWith(ContinuationState state) {
+            return new Request(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest,
+                    humanDecisionRequests, executionPolicy, state);
+        }
+    }
+
+    record ExecutionPolicy(long maxHistoryEvents, long maxHistoryBytes, int maxDelegationsPerRun) {
+        private static final long DEFAULT_MAX_HISTORY_EVENTS = 10_000;
+        private static final long DEFAULT_MAX_HISTORY_BYTES = 10_000_000;
+        private static final int DEFAULT_MAX_DELEGATIONS_PER_RUN = 100;
+
+        public ExecutionPolicy {
+            if (maxHistoryEvents < 1 || maxHistoryBytes < 1 || maxDelegationsPerRun < 1) {
+                throw new IllegalArgumentException("Workflow execution policy is invalid");
+            }
+        }
+
+        static ExecutionPolicy defaults() {
+            return new ExecutionPolicy(DEFAULT_MAX_HISTORY_EVENTS, DEFAULT_MAX_HISTORY_BYTES,
+                    DEFAULT_MAX_DELEGATIONS_PER_RUN);
+        }
+    }
+
+    record ContinuationState(int nextDelegationIndex, int generation,
+                             List<DelegationWorkflow.Result> delegations, List<String> chronology,
+                             Map<String, HumanDecisionSignal> receivedDecisions,
+                             ApprovalSignal receivedApproval, CancellationSignal receivedCancellation) {
+        public ContinuationState {
+            delegations = delegations == null ? List.of() : List.copyOf(delegations);
+            chronology = chronology == null ? List.of() : List.copyOf(chronology);
+            receivedDecisions = receivedDecisions == null ? Map.of() : Map.copyOf(receivedDecisions);
+        }
+
+        static ContinuationState initial() {
+            return new ContinuationState(0, 0, List.of(), List.of(), Map.of(), null, null);
         }
     }
 

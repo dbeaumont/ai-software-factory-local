@@ -1,8 +1,12 @@
 package com.example.aifactory.workflow.temporal;
 
+import io.temporal.common.VersioningBehavior;
+import io.temporal.workflow.WorkflowVersioningBehavior;
+
 /** Generic child workflow shared by typed specialist roles. */
 public final class DelegationWorkflowImpl implements DelegationWorkflow {
     @Override
+    @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
     public Result run(Request request) {
         if (request == null || request.taskId() == null || request.attemptId() == null
                 || request.nodeId() == null || !request.nodeId().matches("[A-Za-z0-9_-]{1,128}")
