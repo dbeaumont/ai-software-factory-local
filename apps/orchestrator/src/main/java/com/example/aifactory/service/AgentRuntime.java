@@ -104,17 +104,25 @@ public final class AgentRuntime implements AgentExecutor {
                                     delta.turns(), 0));
                 });
         long started = System.nanoTime();
+        boolean validatingContract = false;
         try {
             AgentToolLoop.Result result = tracer.trace(ExecutionTracer.SpanKind.ACTIVITY,
                     invocation.executionIdentity(), invocation.role() + ".agent", () -> loop.run(new AgentToolLoop.Actor(
                                     invocation.taskId(), invocation.role(), invocation.executionMode()),
                             prompt, invocation.untrustedInput(), invocation.budget()));
+            validatingContract = true;
             JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),
                     new MultiAgentContractValidator.ContractContext(invocation.taskId(), invocation.attemptId(),
                             invocation.allowedReferenceIds()));
+            validatingContract = false;
             metrics.recordDuration(invocation.role(), "success", System.nanoTime() - started);
             return new Result(document, fingerprint, result.turns(), result.tokens(), result.costMicros());
+        } catch (AgentToolLoop.AgentLoopException failure) {
+            metrics.recordFailure(invocation.role(), failure);
+            metrics.recordDuration(invocation.role(), "error", System.nanoTime() - started);
+            throw failure;
         } catch (RuntimeException failure) {
+            if (validatingContract) metrics.recordContractFailure(invocation.role());
             metrics.recordDuration(invocation.role(), "error", System.nanoTime() - started);
             throw failure;
         }

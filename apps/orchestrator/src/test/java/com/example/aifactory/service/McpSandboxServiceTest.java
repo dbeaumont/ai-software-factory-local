@@ -112,12 +112,15 @@ class McpSandboxServiceTest {
     void failsClosedOnAStaleRunningHeartbeat() {
         FakeInvoker invoker = new FakeInvoker("PASSED", 0, "unused");
         invoker.heartbeatAt = Instant.EPOCH;
-        McpSandboxService service = service(invoker, true, McpFactoryProperties.SandboxMode.MCP_ACTIVE);
+        SimpleMeterRegistry metrics = new SimpleMeterRegistry();
+        McpSandboxService service = new McpSandboxService(invoker,
+                properties(true, McpFactoryProperties.SandboxMode.MCP_ACTIVE), metrics);
 
         IllegalStateException error = assertThrows(IllegalStateException.class,
                 () -> service.test(workspace, "task-1", "a".repeat(40)));
 
         assertTrue(error.getMessage().contains("heartbeat is stale"));
+        assertEquals(1, metrics.get("ai_factory_sandbox_heartbeat_invalid").counter().count());
     }
 
     @Test

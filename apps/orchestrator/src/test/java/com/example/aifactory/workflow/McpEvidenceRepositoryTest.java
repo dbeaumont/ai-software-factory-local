@@ -3,6 +3,7 @@ package com.example.aifactory.workflow;
 import com.example.aifactory.config.McpClientProperties;
 import com.example.aifactory.service.McpToolInvoker;
 import org.junit.jupiter.api.Test;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -96,6 +97,32 @@ class McpEvidenceRepositoryTest {
 
         assertThat(summary.sizeBytes()).isEqualTo(123);
         assertThat(summary.digest()).isEqualTo(digest);
+    }
+
+    @Test
+    void countsAlteredEvidenceBindings() {
+        SimpleMeterRegistry metrics = new SimpleMeterRegistry();
+        McpToolInvoker mcp = new McpToolInvoker() {
+            @Override
+            public tools.jackson.databind.JsonNode call(String server, String tool, Map<String, Object> arguments) {
+                return new ObjectMapper().valueToTree(Map.ofEntries(
+                        Map.entry("uri", "evidence://task-1/attempt-1/patch/" + "0".repeat(64)),
+                        Map.entry("digest", "0".repeat(64)), Map.entry("status", "COMPLETE"),
+                        Map.entry("media_type", "text/plain"), Map.entry("size_bytes", 5),
+                        Map.entry("classification", "INTERNAL"),
+                        Map.entry("retain_until", "2027-09-02T00:00:00Z"),
+                        Map.entry("stored_at", "2026-09-02T00:00:00Z")));
+            }
+
+            @Override public Availability availability(String serverName) { return new Availability(true, null); }
+        };
+        McpEvidenceRepository repository = new McpEvidenceRepository(mcp, properties(), metrics);
+        byte[] content = "proof".getBytes(StandardCharsets.UTF_8);
+
+        assertThatThrownBy(() -> repository.store(new EvidenceRepository.StoreRequest(
+                "task-1", "attempt-1", "patch", "text/plain", content, "a".repeat(64), "workflow")))
+                .isInstanceOf(SecurityException.class);
+        assertThat(metrics.get("ai_evidence_altered").counter().count()).isEqualTo(1);
     }
 
     private static McpClientProperties properties() {

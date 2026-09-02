@@ -563,6 +563,7 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml"]
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts:/etc/prometheus/rules:ro
     ports:
       - "${PROMETHEUS_PORT}:9090"
     networks: [factory, mcp-internal, workflow-internal]

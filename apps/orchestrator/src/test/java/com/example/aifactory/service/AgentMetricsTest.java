@@ -55,4 +55,20 @@ class AgentMetricsTest {
                 .counter().count()).isEqualTo(1);
         assertThat(registry.find("ai_agent_tokens").tag("role", "task-controlled-role").counter()).isNull();
     }
+
+    @Test
+    void recordsBoundedLoopAndContractFailures() {
+        metrics.recordFailure("developer", new AgentToolLoop.AgentLoopException(
+                "repeated_call", "loop", AgentToolLoop.StopCondition.NO_PROGRESS));
+        metrics.recordFailure("developer", new AgentToolLoop.AgentLoopException(
+                "task-controlled-reason", "failure", AgentToolLoop.StopCondition.BLOCKED));
+        metrics.recordContractFailure("developer");
+
+        assertThat(registry.get("ai_agent_failures").tag("role", "developer")
+                .tag("stop_condition", "NO_PROGRESS").tag("reason", "repeated_call").counter().count())
+                .isEqualTo(1);
+        assertThat(registry.get("ai_agent_failures").tag("reason", "other").counter().count()).isEqualTo(1);
+        assertThat(registry.get("ai_agent_failures").tag("stop_condition", "CONTRACT_ERROR")
+                .tag("reason", "contract_validation").counter().count()).isEqualTo(1);
+    }
 }

@@ -18,6 +18,10 @@ import java.util.concurrent.TimeUnit;
 /** Low-cardinality operational metrics for agent work and validated delegation topology. */
 @Component
 public final class AgentMetrics {
+    private static final Set<String> ALLOWED_FAILURE_REASONS = Set.of(
+            "context_limit", "cost_budget", "deadline", "fan_out", "invalid_arguments", "invalid_final",
+            "invalid_stop", "kill_switch", "max_turns", "repeated_call", "task_quota", "token_budget",
+            "tool_denied", "contract_validation");
     private final MeterRegistry registry;
     private final Set<String> allowedRoles;
 
@@ -47,6 +51,22 @@ public final class AgentMetrics {
         role = safeRole(role);
         Timer.builder("ai_agent_duration").tag("role", role).tag("outcome", outcome)
                 .register(registry).record(durationNanos, TimeUnit.NANOSECONDS);
+    }
+
+    public void recordFailure(String role, AgentToolLoop.AgentLoopException failure) {
+        Counter.builder("ai_agent_failures")
+                .tag("role", safeRole(role))
+                .tag("stop_condition", failure.stopCondition().name())
+                .tag("reason", safeFailureReason(failure.reason()))
+                .register(registry).increment();
+    }
+
+    public void recordContractFailure(String role) {
+        Counter.builder("ai_agent_failures")
+                .tag("role", safeRole(role))
+                .tag("stop_condition", AgentToolLoop.StopCondition.CONTRACT_ERROR.name())
+                .tag("reason", "contract_validation")
+                .register(registry).increment();
     }
 
     public void recordPlan(Map<String, JsonNode> nodes) {
@@ -85,5 +105,9 @@ public final class AgentMetrics {
 
     private String safeRole(String role) {
         return allowedRoles.contains(role) ? role : "unknown";
+    }
+
+    private static String safeFailureReason(String reason) {
+        return ALLOWED_FAILURE_REASONS.contains(reason) ? reason : "other";
     }
 }

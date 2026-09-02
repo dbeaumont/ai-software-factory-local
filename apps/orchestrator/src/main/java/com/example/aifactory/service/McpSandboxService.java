@@ -27,6 +27,7 @@ public class McpSandboxService implements SandboxExecutor {
     private final McpFactoryProperties properties;
     private final Counter calls;
     private final Counter errors;
+    private final Counter invalidHeartbeats;
     private final Timer duration;
 
     public McpSandboxService(McpToolInvoker invoker, McpFactoryProperties properties, MeterRegistry metrics) {
@@ -34,6 +35,7 @@ public class McpSandboxService implements SandboxExecutor {
         this.properties = properties;
         this.calls = Counter.builder("ai_factory_mcp_sandbox_calls").register(metrics);
         this.errors = Counter.builder("ai_factory_mcp_sandbox_errors").register(metrics);
+        this.invalidHeartbeats = Counter.builder("ai_factory_sandbox_heartbeat_invalid").register(metrics);
         this.duration = Timer.builder("ai_factory_mcp_sandbox_duration").register(metrics);
     }
 
@@ -175,18 +177,27 @@ public class McpSandboxService implements SandboxExecutor {
         }
     }
 
-    private static void validateHeartbeat(JsonNode execution, Duration maximumAge) {
-        String value = requiredText(execution, "heartbeat_at");
+    private void validateHeartbeat(JsonNode execution, Duration maximumAge) {
+        String value;
+        try {
+            value = requiredText(execution, "heartbeat_at");
+        } catch (RuntimeException exception) {
+            invalidHeartbeats.increment();
+            throw exception;
+        }
         try {
             Instant heartbeat = Instant.parse(value);
             Instant now = Instant.now();
             if (heartbeat.isAfter(now.plus(Duration.ofMinutes(1)))) {
+                invalidHeartbeats.increment();
                 throw new IllegalStateException("Malformed sandbox MCP response: heartbeat_at is in the future");
             }
             if (heartbeat.isBefore(now.minus(maximumAge))) {
+                invalidHeartbeats.increment();
                 throw new IllegalStateException("Sandbox execution heartbeat is stale");
             }
         } catch (DateTimeParseException exception) {
+            invalidHeartbeats.increment();
             throw new IllegalStateException("Malformed sandbox MCP response: invalid heartbeat_at", exception);
         }
     }

@@ -3,6 +3,10 @@ package com.example.aifactory.workflow;
 import com.example.aifactory.config.McpClientProperties;
 import com.example.aifactory.service.McpToolInvoker;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
@@ -18,10 +22,17 @@ import java.util.HexFormat;
 public final class McpEvidenceRepository implements EvidenceRepository {
     private final McpToolInvoker mcp;
     private final McpClientProperties.Server server;
+    private final Counter alteredEvidence;
 
     public McpEvidenceRepository(McpToolInvoker mcp, McpClientProperties properties) {
+        this(mcp, properties, new SimpleMeterRegistry());
+    }
+
+    @Autowired
+    public McpEvidenceRepository(McpToolInvoker mcp, McpClientProperties properties, MeterRegistry metrics) {
         this.mcp = mcp;
         this.server = properties.servers().get("evidence");
+        this.alteredEvidence = Counter.builder("ai_evidence_altered").register(metrics);
         if (server == null) throw new IllegalStateException("evidence MCP server is not configured");
     }
 
@@ -50,7 +61,7 @@ public final class McpEvidenceRepository implements EvidenceRepository {
                 + request.type() + '/' + request.digest();
         if (!expectedUri.equals(stored.uri()) || !request.digest().equals(stored.digest())
                 || !"COMPLETE".equals(stored.status()) || stored.sizeBytes() != request.content().length) {
-            throw new SecurityException("evidence MCP returned metadata outside the submitted artifact binding");
+            throw altered("evidence MCP returned metadata outside the submitted artifact binding");
         }
         return stored;
     }
@@ -95,7 +106,7 @@ public final class McpEvidenceRepository implements EvidenceRepository {
         if (!expectedUri.equals(manifest.uri()) || !"COMPLETE".equals(manifest.status())
                 || !manifest.manifestId().matches("[0-9a-f]{64}")
                 || !manifest.digest().matches("[0-9a-f]{64}")) {
-            throw new SecurityException("evidence MCP returned an invalid manifest binding");
+            throw altered("evidence MCP returned an invalid manifest binding");
         }
         return manifest;
     }
@@ -107,7 +118,7 @@ public final class McpEvidenceRepository implements EvidenceRepository {
                 "schema_version", "1", "task_id", taskId, "attempt_id", attemptId,
                 "uri", uri, "actor", actor));
         if (response.has("content_base64") || response.has("content")) {
-            throw new SecurityException("evidence summary must never expose raw content");
+            throw altered("evidence summary must never expose raw content");
         }
         EvidenceSummary summary = new EvidenceSummary(requiredText(response, "uri"),
                 requiredText(response, "type"), requiredText(response, "digest"),
@@ -117,7 +128,7 @@ public final class McpEvidenceRepository implements EvidenceRepository {
                 || !summary.digest().matches("[0-9a-f]{64}") || summary.sizeBytes() < 0
                 || !Set.of("INTERNAL", "CONFIDENTIAL", "RESTRICTED").contains(summary.classification())
                 || !"COMPLETE".equals(summary.status())) {
-            throw new SecurityException("evidence summary failed task, URI, digest or size binding");
+            throw altered("evidence summary failed task, URI, digest or size binding");
         }
         return summary;
     }
@@ -137,6 +148,7 @@ public final class McpEvidenceRepository implements EvidenceRepository {
         try {
             content = Base64.getDecoder().decode(requiredText(response, "content_base64"));
         } catch (IllegalArgumentException invalidBase64) {
+            alteredEvidence.increment();
             throw new SecurityException("evidence MCP returned invalid content encoding", invalidBase64);
         }
         String digest = requiredText(response, "digest");
@@ -144,10 +156,11 @@ public final class McpEvidenceRepository implements EvidenceRepository {
         RawEvidence evidence = new RawEvidence(requiredText(response, "uri"), requiredText(response, "type"),
                 digest, requiredText(response, "status"), requiredText(response, "classification"), content);
         if (!request.uri().equals(evidence.uri()) || !boundUri(evidence.uri(), request.taskId(), request.attemptId())
+                || !digest.matches("[0-9a-f]{64}")
                 || !MessageDigest.isEqual(HexFormat.of().parseHex(digest), HexFormat.of().parseHex(actualDigest))
                 || !"COMPLETE".equals(evidence.status())
                 || !Set.of("INTERNAL", "CONFIDENTIAL", "RESTRICTED").contains(evidence.classification())) {
-            throw new SecurityException("raw evidence response failed task, URI, digest or status binding");
+            throw altered("raw evidence response failed task, URI, digest or status binding");
         }
         return evidence;
     }
@@ -164,6 +177,11 @@ public final class McpEvidenceRepository implements EvidenceRepository {
         } catch (Exception exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
+    }
+
+    private SecurityException altered(String message) {
+        alteredEvidence.increment();
+        return new SecurityException(message);
     }
 
     private static boolean boundUri(String uri, String taskId, String attemptId) {
