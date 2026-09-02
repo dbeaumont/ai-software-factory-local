@@ -347,7 +347,7 @@
 
 ### Gate du lot 9
 
-- [ ] Toute divergence est résolue par une règle traçable ou présentée explicitement à un humain.
+- [x] Toute divergence est résolue par une règle traçable ou présentée explicitement à un humain. _(Preuves et verdict : `docs/multiagents/GATE-LOT-9-CONSOLIDATION-DECISIONS.md`.)_
 
 ## 14. Lot 10 — API, interface et expérience opérateur
 
