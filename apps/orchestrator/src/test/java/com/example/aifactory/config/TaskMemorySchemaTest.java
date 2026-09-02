@@ -42,4 +42,25 @@ class TaskMemorySchemaTest {
                 .contains("UNIQUE (task_id, attempt_id, operation_id)")
                 .doesNotContain("content_base64", "raw_content", "artifact_bytes");
     }
+
+    @Test
+    void everyRecordCarriesAttemptAndCommitAndCompositeForeignKeysEnforceLineage() throws Exception {
+        String model = Files.readString(DATABASE.resolve("V001__task_memory_core.sql"))
+                + Files.readString(DATABASE.resolve("V002__task_memory_evidence_and_usage.sql"));
+        for (String table : List.of("tasks", "workflow_runs", "delegations", "agent_runs", "decisions",
+                "approvals", "artifacts", "evidence_refs", "contradictions", "budget_usage",
+                "tool_invocations")) {
+            String definition = model.substring(model.indexOf("CREATE TABLE " + table + " ("));
+            definition = definition.substring(0, definition.indexOf("\n);"));
+            assertThat(definition).as(table).contains("attempt_id", "source_commit");
+        }
+        String lineage = Files.readString(DATABASE.resolve("V003__enforce_attempt_and_commit_lineage.sql"));
+        assertThat(lineage).contains("workflow_runs_attempt_uq")
+                .contains("delegations_workflow_lineage_fk")
+                .contains("agent_runs_delegation_lineage_fk")
+                .contains("evidence_refs_artifact_lineage_fk")
+                .contains("tool_invocations_agent_lineage_fk");
+        assertThat(lineage.split("FOREIGN KEY \\(.*task_id, attempt_id, source_commit\\)", -1).length - 1)
+                .isGreaterThanOrEqualTo(10);
+    }
 }
