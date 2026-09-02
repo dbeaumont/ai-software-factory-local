@@ -106,4 +106,18 @@ class TaskMemorySchemaTest {
                 .contains("open_contradiction_count")
                 .doesNotContain("content_base64", "raw_content", "prompt", "patch_content", "logs");
     }
+
+    @Test
+    void legacyImportPreservesOnlyTerminalMetadataAndReferencesTheArchivedEvidence() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V007__legacy_task_imports.sql"));
+
+        assertThat(sql).contains("CREATE TABLE legacy_task_imports")
+                .contains("REFERENCES tasks(task_id)")
+                .contains("legacy_status IN ('PR_CREATED', 'FAILED')")
+                .contains("CREATE FUNCTION import_legacy_task")
+                .contains("only terminal legacy tasks can be imported")
+                .contains("divergent legacy task metadata")
+                .contains("divergent legacy task re-import")
+                .doesNotContain("snapshot_content", "content_base64", "raw_content");
+    }
 }
