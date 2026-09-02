@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -97,6 +98,30 @@ class McpEvidenceRepositoryTest {
 
         assertThat(summary.sizeBytes()).isEqualTo(123);
         assertThat(summary.digest()).isEqualTo(digest);
+    }
+
+    @Test
+    void rejectsCrossTaskEvidenceBeforeCallingMcp() {
+        AtomicInteger calls = new AtomicInteger();
+        McpToolInvoker mcp = new McpToolInvoker() {
+            @Override
+            public tools.jackson.databind.JsonNode call(String server, String tool, Map<String, Object> arguments) {
+                calls.incrementAndGet();
+                throw new AssertionError("cross-task URI reached MCP");
+            }
+
+            @Override public Availability availability(String serverName) { return new Availability(true, null); }
+        };
+        McpEvidenceRepository repository = new McpEvidenceRepository(mcp, properties());
+        String foreign = "evidence://task-2/attempt-1/review/" + "a".repeat(64);
+
+        assertThatThrownBy(() -> repository.getSummary(
+                "task-1", "attempt-1", foreign, "security-agent"))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("outside the current task");
+        assertThatThrownBy(() -> repository.read(new EvidenceRepository.ReadRequest(
+                "task-1", "attempt-1", foreign, "independent-reviewer", "human-review")))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("outside the current task");
+        assertThat(calls).hasValue(0);
     }
 
     @Test

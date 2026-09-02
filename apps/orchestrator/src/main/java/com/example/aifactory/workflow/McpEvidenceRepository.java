@@ -114,6 +114,7 @@ public final class McpEvidenceRepository implements EvidenceRepository {
     @Override
     public EvidenceSummary getSummary(String taskId, String attemptId, String uri, String actor) {
         if (!server.enabled()) throw new IllegalStateException("evidence MCP server is disabled");
+        requireBoundUri(uri, taskId, attemptId);
         JsonNode response = mcp.call(server.expectedName(), "evidence.get_summary", Map.of(
                 "schema_version", "1", "task_id", taskId, "attempt_id", attemptId,
                 "uri", uri, "actor", actor));
@@ -141,6 +142,7 @@ public final class McpEvidenceRepository implements EvidenceRepository {
                 || request.purpose() == null || request.purpose().isBlank()) {
             throw new SecurityException("raw evidence read is not authorized");
         }
+        requireBoundUri(request.uri(), request.taskId(), request.attemptId());
         JsonNode response = mcp.call(server.expectedName(), "evidence.read", Map.of(
                 "schema_version", "1", "task_id", request.taskId(), "attempt_id", request.attemptId(),
                 "uri", request.uri(), "actor", request.actor(), "purpose", request.purpose()));
@@ -186,5 +188,11 @@ public final class McpEvidenceRepository implements EvidenceRepository {
 
     private static boolean boundUri(String uri, String taskId, String attemptId) {
         return uri != null && uri.startsWith("evidence://" + taskId + '/' + attemptId + '/');
+    }
+
+    private static void requireBoundUri(String uri, String taskId, String attemptId) {
+        if (!boundUri(uri, taskId, attemptId)) {
+            throw new SecurityException("evidence URI is outside the current task and attempt");
+        }
     }
 }
