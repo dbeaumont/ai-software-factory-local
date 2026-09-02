@@ -6,6 +6,7 @@ import io.temporal.workflow.Workflow;
 import io.temporal.workflow.WorkflowVersioningBehavior;
 
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -16,12 +17,25 @@ public final class PatchIntegrationWorkflowImpl implements PatchIntegrationWorkf
 
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
-    public PatchIntegrationActivities.Result run(Request request) {
+    public Result run(Request request) {
         requireValid(request);
         DurableExecutionActivities.Metadata metadata = DurableExecutionActivities.Metadata.deterministic(
                 request.taskId(), request.attemptId(), request.sourceCommit(), "integration", "apply-patches", 1);
-        return activities.apply(new PatchIntegrationActivities.Request(metadata, request.workspace(),
+        PatchIntegrationActivities.ApplicationResult applied = activities.apply(
+                new PatchIntegrationActivities.Request(metadata, request.workspace(),
                 request.planDigest(), PATCH_CHECK_PROFILE, PATCH_APPLY_PROFILE, request.patches()));
+        List<PatchIntegrationActivities.VerificationResult> verifications = new ArrayList<>();
+        PatchIntegrationActivities.VerificationKind[] kinds = PatchIntegrationActivities.VerificationKind.values();
+        for (int index = 0; index < kinds.length; index++) {
+            PatchIntegrationActivities.VerificationKind kind = kinds[index];
+            DurableExecutionActivities.Metadata verificationMetadata = DurableExecutionActivities.Metadata.deterministic(
+                    request.taskId(), request.attemptId(), request.sourceCommit(), "integration",
+                    "verify-" + kind.name().toLowerCase(java.util.Locale.ROOT), index + 2);
+            verifications.add(activities.verify(new PatchIntegrationActivities.VerificationRequest(
+                    verificationMetadata, request.workspace(), applied.integratedPatchDigest(), kind)));
+        }
+        return new Result(applied.planDigest(), applied.integratedPatchDigest(), applied.validationProfile(),
+                applied.applicationProfile(), applied.diffCheckOutputDigest(), verifications, "VERIFIED");
     }
 
     private static void requireValid(Request request) {

@@ -7,6 +7,7 @@ import io.temporal.worker.Worker;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,11 +18,19 @@ class PatchIntegrationWorkflowTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("patch-integration-test");
             AtomicReference<PatchIntegrationActivities.Request> captured = new AtomicReference<>();
+            List<PatchIntegrationActivities.VerificationRequest> verificationCalls = new ArrayList<>();
             worker.registerWorkflowImplementationTypes(PatchIntegrationWorkflowImpl.class);
-            worker.registerActivitiesImplementations((PatchIntegrationActivities) request -> {
-                captured.set(request);
-                return new PatchIntegrationActivities.Result(request.planDigest(), "d".repeat(64),
-                        request.validationProfile(), request.applicationProfile(), "e".repeat(64), "APPLIED");
+            worker.registerActivitiesImplementations(new PatchIntegrationActivities() {
+                @Override public ApplicationResult apply(PatchIntegrationActivities.Request request) {
+                    captured.set(request);
+                    return new ApplicationResult(request.planDigest(), "d".repeat(64),
+                            request.validationProfile(), request.applicationProfile(), "e".repeat(64), "APPLIED");
+                }
+
+                @Override public VerificationResult verify(VerificationRequest request) {
+                    verificationCalls.add(request);
+                    return new VerificationResult(request.kind(), "f".repeat(64), "PASSED");
+                }
             });
             environment.start();
 
@@ -33,10 +42,18 @@ class PatchIntegrationWorkflowTest {
                             .setWorkflowId("patch-integration-task-1-attempt-1")
                             .setTaskQueue("patch-integration-test").build());
 
-            PatchIntegrationActivities.Result result = workflow.run(new PatchIntegrationWorkflow.Request(
+            PatchIntegrationWorkflow.Result result = workflow.run(new PatchIntegrationWorkflow.Request(
                     "task-1", "attempt-1", "a".repeat(40), "/tmp/integration", planDigest, List.of(artifact)));
 
-            assertThat(result.status()).isEqualTo("APPLIED");
+            assertThat(result.status()).isEqualTo("VERIFIED");
+            assertThat(result.verifications()).extracting(PatchIntegrationActivities.VerificationResult::kind)
+                    .containsExactly(PatchIntegrationActivities.VerificationKind.TESTS,
+                            PatchIntegrationActivities.VerificationKind.QUALITY,
+                            PatchIntegrationActivities.VerificationKind.SECURITY);
+            assertThat(verificationCalls).extracting(PatchIntegrationActivities.VerificationRequest::kind)
+                    .containsExactly(PatchIntegrationActivities.VerificationKind.TESTS,
+                            PatchIntegrationActivities.VerificationKind.QUALITY,
+                            PatchIntegrationActivities.VerificationKind.SECURITY);
             assertThat(captured.get().validationProfile()).isEqualTo("patch-check-v1");
             assertThat(captured.get().applicationProfile()).isEqualTo("patch-apply-v1");
             assertThat(captured.get().metadata().idempotencyKey())

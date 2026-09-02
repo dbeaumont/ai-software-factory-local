@@ -15,9 +15,12 @@ class WorkflowEffectOwnershipTest {
     @Test
     void onlyTheCoordinatorDecidesToRunTestsScansAssuranceAndScmDelivery() throws Exception {
         assertOwners(Map.of(
-                "sandbox.test(", List.of("service/DeterministicWorkflowCoordinator.java"),
-                "sandbox.quality(", List.of("service/DeterministicWorkflowCoordinator.java"),
-                "sandbox.security(", List.of("service/DeterministicWorkflowCoordinator.java"),
+                "sandbox.test(", List.of("service/DeterministicWorkflowCoordinator.java",
+                        "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
+                "sandbox.quality(", List.of("service/DeterministicWorkflowCoordinator.java",
+                        "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
+                "sandbox.security(", List.of("service/DeterministicWorkflowCoordinator.java",
+                        "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
                 "assurance.requireQualityGate(", List.of("service/DeterministicWorkflowCoordinator.java"),
                 "scmDelivery.createDraftPullRequest(", List.of("service/DeterministicWorkflowCoordinator.java")));
     }

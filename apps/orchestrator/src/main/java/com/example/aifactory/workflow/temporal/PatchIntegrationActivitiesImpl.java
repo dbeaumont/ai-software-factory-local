@@ -2,6 +2,7 @@ package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.service.PatchIntegrationPlanner;
 import com.example.aifactory.service.PatchIntegrator;
+import com.example.aifactory.service.SandboxExecutor;
 import com.example.aifactory.workflow.EvidenceRepository;
 import org.springframework.stereotype.Component;
 
@@ -17,14 +18,17 @@ import java.util.List;
 public final class PatchIntegrationActivitiesImpl implements PatchIntegrationActivities {
     private final EvidenceRepository evidence;
     private final PatchIntegrator patchIntegrator;
+    private final SandboxExecutor sandbox;
 
-    public PatchIntegrationActivitiesImpl(EvidenceRepository evidence, PatchIntegrator patchIntegrator) {
+    public PatchIntegrationActivitiesImpl(EvidenceRepository evidence, PatchIntegrator patchIntegrator,
+                                          SandboxExecutor sandbox) {
         this.evidence = evidence;
         this.patchIntegrator = patchIntegrator;
+        this.sandbox = sandbox;
     }
 
     @Override
-    public Result apply(Request request) {
+    public ApplicationResult apply(Request request) {
         requireValid(request);
         DurableExecutionActivities.Metadata metadata = request.metadata();
         Path workspace = Path.of(request.workspace()).toAbsolutePath().normalize();
@@ -51,12 +55,41 @@ public final class PatchIntegrationActivitiesImpl implements PatchIntegrationAct
                     metadata.sourceCommit(), consolidated.toString());
             String sandboxOutput = patchIntegrator.apply(
                     workspace, metadata.taskId(), metadata.sourceCommit(), integrated);
-            return new Result(request.planDigest(), integrated.digest(), request.validationProfile(),
+            return new ApplicationResult(request.planDigest(), integrated.digest(), request.validationProfile(),
                     request.applicationProfile(), PatchIntegrator.digestFor(sandboxOutput), "APPLIED");
         } catch (RuntimeException exception) {
             throw exception;
         } catch (Exception exception) {
             throw new IllegalStateException("Patch integration sandbox execution failed", exception);
+        }
+    }
+
+    @Override
+    public VerificationResult verify(VerificationRequest request) {
+        if (request == null || request.metadata() == null || request.workspace() == null
+                || request.workspace().isBlank() || request.integratedPatchDigest() == null
+                || !request.integratedPatchDigest().matches("[0-9a-f]{64}") || request.kind() == null) {
+            throw new IllegalArgumentException("Patch integration verification request is invalid");
+        }
+        Path workspace = Path.of(request.workspace()).toAbsolutePath().normalize();
+        Path consolidatedPatch = workspace.resolve("changes.patch");
+        try {
+            if (!Files.isDirectory(workspace) || !Files.isRegularFile(consolidatedPatch)
+                    || !request.integratedPatchDigest().equals(
+                    PatchIntegrator.digestFor(Files.readString(consolidatedPatch, StandardCharsets.UTF_8)))) {
+                throw new SecurityException("Consolidated patch changed before verification");
+            }
+            DurableExecutionActivities.Metadata metadata = request.metadata();
+            String output = switch (request.kind()) {
+                case TESTS -> sandbox.test(workspace, metadata.taskId(), metadata.sourceCommit());
+                case QUALITY -> sandbox.quality(workspace, metadata.taskId(), metadata.sourceCommit());
+                case SECURITY -> sandbox.security(workspace, metadata.taskId(), metadata.sourceCommit());
+            };
+            return new VerificationResult(request.kind(), PatchIntegrator.digestFor(output), "PASSED");
+        } catch (RuntimeException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Consolidated patch verification failed", exception);
         }
     }
 

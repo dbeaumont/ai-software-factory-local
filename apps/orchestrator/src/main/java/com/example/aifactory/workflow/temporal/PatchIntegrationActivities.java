@@ -9,7 +9,10 @@ import java.util.List;
 @ActivityInterface
 public interface PatchIntegrationActivities {
     @ActivityMethod(name = "ApplyPatchIntegration")
-    Result apply(Request request);
+    ApplicationResult apply(Request request);
+
+    @ActivityMethod(name = "VerifyPatchIntegration")
+    VerificationResult verify(VerificationRequest request);
 
     record PatchArtifact(String nodeId, String proposalId, String uri, String digest) {}
 
@@ -20,6 +23,13 @@ public interface PatchIntegrationActivities {
         }
     }
 
-    record Result(String planDigest, String integratedPatchDigest, String validationProfile,
-                  String applicationProfile, String sandboxOutputDigest, String status) {}
+    record ApplicationResult(String planDigest, String integratedPatchDigest, String validationProfile,
+                             String applicationProfile, String diffCheckOutputDigest, String status) {}
+
+    record VerificationRequest(DurableExecutionActivities.Metadata metadata, String workspace,
+                               String integratedPatchDigest, VerificationKind kind) {}
+
+    record VerificationResult(VerificationKind kind, String outputDigest, String status) {}
+
+    enum VerificationKind { TESTS, QUALITY, SECURITY }
 }

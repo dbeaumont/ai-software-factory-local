@@ -29,9 +29,9 @@ class PatchIntegrationActivitiesImplTest {
         EvidenceRepository evidence = new FakeEvidence(Map.of(a.uri(), raw(a, first), b.uri(), raw(b, second)));
         FakeSandbox sandbox = new FakeSandbox();
         PatchIntegrationActivitiesImpl activities = new PatchIntegrationActivitiesImpl(
-                evidence, new PatchIntegrator(sandbox));
+                evidence, new PatchIntegrator(sandbox), sandbox);
 
-        PatchIntegrationActivities.Result result = activities.apply(new PatchIntegrationActivities.Request(
+        PatchIntegrationActivities.ApplicationResult result = activities.apply(new PatchIntegrationActivities.Request(
                 DurableExecutionActivities.Metadata.deterministic("task-1", "attempt-1", "a".repeat(40),
                         "integration", "apply-patches", 1), workspace.toString(), plan(a, b),
                 PatchIntegrationWorkflow.PATCH_CHECK_PROFILE, PatchIntegrationWorkflow.PATCH_APPLY_PROFILE,
@@ -42,6 +42,20 @@ class PatchIntegrationActivitiesImplTest {
         assertThat(Files.readString(workspace.resolve("changes.patch"))).isEqualTo(first + second);
         assertThat(sandbox.validations).isEqualTo(1);
         assertThat(sandbox.applications).isEqualTo(1);
+
+        for (PatchIntegrationActivities.VerificationKind kind
+                : PatchIntegrationActivities.VerificationKind.values()) {
+            PatchIntegrationActivities.VerificationResult verification = activities.verify(
+                    new PatchIntegrationActivities.VerificationRequest(
+                            DurableExecutionActivities.Metadata.deterministic(
+                                    "task-1", "attempt-1", "a".repeat(40), "integration",
+                                    "verify-" + kind.name().toLowerCase(), kind.ordinal() + 2),
+                            workspace.toString(), result.integratedPatchDigest(), kind));
+            assertThat(verification.status()).isEqualTo("PASSED");
+        }
+        assertThat(sandbox.tests).isEqualTo(1);
+        assertThat(sandbox.qualityScans).isEqualTo(1);
+        assertThat(sandbox.securityScans).isEqualTo(1);
     }
 
     private static String plan(PatchIntegrationActivities.PatchArtifact... artifacts) {
@@ -70,6 +84,9 @@ class PatchIntegrationActivitiesImplTest {
     private static final class FakeSandbox implements SandboxExecutor {
         int validations;
         int applications;
+        int tests;
+        int qualityScans;
+        int securityScans;
 
         @Override public String applyPatch(Path workspace, String taskId, String sourceCommit) {
             applications++;
@@ -82,15 +99,18 @@ class PatchIntegrationActivitiesImplTest {
         }
 
         @Override public String test(Path workspace, String taskId, String sourceCommit) {
-            throw new UnsupportedOperationException();
+            tests++;
+            return "tests passed";
         }
 
         @Override public String quality(Path workspace, String taskId, String sourceCommit) {
-            throw new UnsupportedOperationException();
+            qualityScans++;
+            return "quality passed";
         }
 
         @Override public String security(Path workspace, String taskId, String sourceCommit) {
-            throw new UnsupportedOperationException();
+            securityScans++;
+            return "security passed";
         }
     }
 
