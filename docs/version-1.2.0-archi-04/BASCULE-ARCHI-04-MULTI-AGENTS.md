@@ -220,7 +220,7 @@
 
 ### Gate du lot 4
 
-- [ ] Toutes les décisions peuvent être reproduites depuis l'état durable, les contrats et les preuves vérifiées.
+- [x] Toutes les décisions peuvent être reproduites depuis l'état durable, les contrats et les preuves vérifiées. _(Qualification documentée dans `docs/multiagents/GATE-LOT-4-MEMOIRE-PREUVES.md`, suites orchestrateur et Evidence MCP au vert.)_
 
 ## 9. Lot 5 — Catalogue hiérarchique d'agents
 
