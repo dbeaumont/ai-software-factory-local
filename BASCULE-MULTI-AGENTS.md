@@ -73,7 +73,7 @@
 - [x] **MAH-004** — Définir la frontière entre état Temporal, projection métier PostgreSQL et artefacts Evidence MCP. _(ADR : `docs/adr/ADR-MAH-004-state-and-evidence-ownership.md`.)_
 - [x] **MAH-005** — Définir les modes `PIPELINE`, `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY` et `HIERARCHICAL_ACTIVE`. _(ADR : `docs/adr/ADR-MAH-005-execution-modes.md`.)_
 - [x] **MAH-006** — Définir le catalogue officiel des agents, sous-agents, propriétaires et niveaux d'autonomie. _(Catalogue : `resources/agents/catalog-v1.yaml` ; documentation : `docs/agents/CATALOGUE-AGENTS-V1.md`.)_
-- [ ] **MAH-007** — Décider si Planner devient `SupervisorAgent`, `ArchitectureAgent`, ou reste un rôle de compatibilité.
+- [x] **MAH-007** — Décider si Planner devient `SupervisorAgent`, `ArchitectureAgent`, ou reste un rôle de compatibilité. _(Décision : Planner reste réservé au mode `PIPELINE` ; ADR `docs/adr/ADR-MAH-007-planner-role-transition.md`.)_
 - [ ] **MAH-008** — Définir la règle de routage entre chemin court mono-agent et chemin hiérarchique multi-agent.
 - [ ] **MAH-009** — Définir les classes de risque autorisées par mode et les cas imposant une décision humaine préalable.
 - [ ] **MAH-010** — Faire valider architecture, permissions, données et modèle de menace par les responsables produit et sécurité.
