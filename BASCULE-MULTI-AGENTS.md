@@ -175,7 +175,7 @@
 - [x] **MAH-070** — Implémenter le Signal d'approbation humaine lié au manifeste soumis. _(Attente durable et liaison stricte tâche, tentative, identifiant et digest du manifeste.)_
 - [x] **MAH-071** — Implémenter les Signals d'annulation et de décision humaine complémentaire. _(Décisions bornées et annulation liées à la tâche/tentative, persistées dans la chronologie.)_
 - [x] **MAH-072** — Implémenter les Queries de statut, DAG, budgets, preuves et effets en attente. _(Cinq Queries Temporal typées et consultables pendant les attentes durables.)_
-- [ ] **MAH-073** — Garantir que le code Workflow ne réalise aucun I/O, appel réseau, horloge système ou aléa direct.
+- [x] **MAH-073** — Garantir que le code Workflow ne réalise aucun I/O, appel réseau, horloge système ou aléa direct. _(Test d'architecture bloquant les accès directs aux effets et sources usuelles de non-déterminisme.)_
 - [ ] **MAH-074** — Définir la politique de versionnement des workflows lors des déploiements applicatifs.
 - [ ] **MAH-075** — Borner l'historique et prévoir `Continue-As-New` pour les tâches ou boucles longues.
 
