@@ -1,0 +1,13 @@
+version: "1"
+policyId: contradiction-resolution-v1
+defaultDecision: OPEN
+sameAuthorityConflict: ESCALATE
+
+# Automatic resolution is forbidden unless the classification and controlling
+# authority pair is explicitly present below.
+autoResolution:
+  FACTUAL: [DETERMINISTIC_GATE, POLICY, VERIFIED_EVIDENCE]
+  INCOMPATIBLE_SCOPE: [DETERMINISTIC_GATE, POLICY]
+  RISK: [DETERMINISTIC_GATE, POLICY]
+  MISSING_TEST: []
+  DIVERGENT_RECOMMENDATION: []
