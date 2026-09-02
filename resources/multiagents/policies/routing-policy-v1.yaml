@@ -1,0 +1,86 @@
+version: "1"
+policyId: hierarchical-routing-v1
+defaultDecision: HUMAN_TRIAGE
+
+modeCeilings:
+  PIPELINE:
+    allowedPaths: [PIPELINE_BASELINE]
+  HIERARCHICAL_SHADOW:
+    allowedPaths: [PIPELINE_BASELINE, SHORT_CODE_PATH, HIERARCHICAL_PATH]
+    authoritativePath: PIPELINE_BASELINE
+  HIERARCHICAL_CANARY:
+    allowedPaths: [PIPELINE_BASELINE, SHORT_CODE_PATH, HIERARCHICAL_PATH, HUMAN_TRIAGE]
+    requiresQualification: QUALIFIED
+    requiresRepositoryAllowlist: true
+    requiresStableCanaryBucket: true
+  HIERARCHICAL_ACTIVE:
+    allowedPaths: [SHORT_CODE_PATH, HIERARCHICAL_PATH, HUMAN_TRIAGE]
+    requiresQualification: QUALIFIED
+
+shortCodePath:
+  allowedRisks: [R0, R1]
+  maxModules: 1
+  maxDomains: 1
+  maxEstimatedFiles: 8
+  forbiddenImpacts:
+    - authentication
+    - authorization
+    - secrets
+    - iam
+    - network
+    - data-migration
+    - schema-change
+    - public-contract
+    - dependency-change
+    - build
+    - infrastructure
+    - ci-cd
+
+hierarchicalPath:
+  allowedRisks: [R0, R1, R2]
+  selectWhenAny:
+    minModules: 2
+    minDomains: 2
+    independentCodeScopes: 2
+    impacts:
+      - authentication
+      - authorization
+      - secrets
+      - iam
+      - network
+      - data-migration
+      - schema-change
+      - public-contract
+      - dependency-change
+      - build
+      - infrastructure
+      - ci-cd
+    materialDecisionOpen: true
+
+humanTriage:
+  risks: [R3, R4]
+  selectOnMissingRequiredInput: true
+  selectOnContradictoryInput: true
+  selectOnBudgetUnavailable: true
+
+precedence:
+  - mode-ceiling
+  - qualification
+  - human-triage
+  - canary-eligibility
+  - hierarchical-path
+  - short-code-path
+  - default-decision
+
+audit:
+  requiredFields:
+    - policy_id
+    - policy_version
+    - task_id
+    - source_commit
+    - requested_mode
+    - effective_mode
+    - normalized_inputs
+    - matched_rule
+    - selected_path
+    - reasons
