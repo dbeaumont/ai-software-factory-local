@@ -63,7 +63,7 @@ build:
 		--build-arg TRIVY_PRELOAD_DB="$(TRIVY_PRELOAD_DB)" \
 		-t ai-factory-sandbox:local ./infrastructure/sandbox
 	./scripts/pin-sandbox-image.sh .env ai-factory-sandbox:local
-	$(COMPOSE) build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp scm-delivery-mcp orchestrator factory-web
+	$(COMPOSE) build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp scm-delivery-mcp assurance-mcp evidence-mcp orchestrator factory-web
 	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build
@@ -109,6 +109,8 @@ test:
 	mvn -f apps/mcp/repository-context-server/pom.xml test
 	mvn -f apps/mcp/sandbox-execution-server/pom.xml test
 	mvn -f apps/mcp/scm-delivery-server/pom.xml test
+	mvn -f apps/mcp/assurance-server/pom.xml test
+	mvn -f apps/mcp/evidence-server/pom.xml test
 
 test-sandbox-runtime:
 	$(log-target)
