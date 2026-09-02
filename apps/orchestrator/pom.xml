@@ -14,6 +14,7 @@
   <properties>
     <java.version>25</java.version>
     <spring-ai.version>2.0.1</spring-ai.version>
+    <temporal.version>1.38.0</temporal.version>
     <mcp.schemas.directory>../../resources/mcp/schemas</mcp.schemas.directory>
     <multiagent.schemas.directory>../../resources/multiagents/schemas</multiagent.schemas.directory>
     <agents.directory>../../resources/agents</agents.directory>
@@ -49,6 +50,11 @@
     <dependency>
       <groupId>org.springframework.ai</groupId>
       <artifactId>spring-ai-starter-mcp-client-webflux</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.temporal</groupId>
+      <artifactId>temporal-sdk</artifactId>
+      <version>${temporal.version}</version>
     </dependency>
     <dependency>
       <groupId>com.networknt</groupId>

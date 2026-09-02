@@ -161,7 +161,7 @@
 
 - [x] **MAH-060** — Ajouter Temporal Server et sa persistance à l'environnement Docker Compose local. _(Serveur 1.31.2 et PostgreSQL dédié persistant sur réseau interne.)_
 - [x] **MAH-061** — Ajouter Temporal UI sur un port de diagnostic non exposé comme point d'entrée métier. _(UI 2.53.0 liée à `127.0.0.1:8233`, absente du reverse proxy produit.)_
-- [ ] **MAH-062** — Ajouter le Temporal Java SDK et épingler sa version dans le build de l'orchestrateur.
+- [x] **MAH-062** — Ajouter le Temporal Java SDK et épingler sa version dans le build de l'orchestrateur. _(Dépendance `temporal-sdk` épinglée à la version 1.38.0 compatible Spring Boot 4/Jackson 3.)_
 - [ ] **MAH-063** — Configurer namespace, certificats ou authentification, task queues et règles de rétention.
 - [ ] **MAH-064** — Ajouter readiness, métriques, dashboards et limites de ressources des services Temporal.
 
