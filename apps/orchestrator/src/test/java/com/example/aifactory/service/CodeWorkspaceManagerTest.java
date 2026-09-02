@@ -33,6 +33,8 @@ class CodeWorkspaceManagerTest {
         assertThat(second.path()).startsWith(isolationRoot);
         assertThat(Files.readString(second.path().resolve("app.txt"))).isEqualTo("baseline\n");
         assertThat(Files.readString(repository.resolve("app.txt"))).isEqualTo("baseline\n");
+        assertThat(manager.verify(first).sourceCommit()).isEqualTo(commit);
+        assertThat(manager.verify(second).sourceCommit()).isEqualTo(commit);
         assertThat(runner.run(List.of("git", "rev-parse", "--abbrev-ref", "HEAD"),
                 first.path(), Duration.ofSeconds(5)).strip()).isEqualTo("HEAD");
     }
@@ -51,6 +53,27 @@ class CodeWorkspaceManagerTest {
         manager.create(repository, isolationRoot, request);
         assertThatThrownBy(() -> manager.create(repository, isolationRoot, request))
                 .hasMessageContaining("already exists");
+    }
+
+    @Test
+    void rejectsAnAllocationWhoseHeadDriftsFromTheVerifiedSourceCommit() throws Exception {
+        Path repository = repository();
+        String pinnedCommit = runner.run(List.of("git", "rev-parse", "HEAD"),
+                repository, Duration.ofSeconds(5)).strip();
+        Files.writeString(repository.resolve("app.txt"), "second revision\n");
+        runner.run(List.of("git", "commit", "-am", "second"), repository, Duration.ofSeconds(5));
+        String otherCommit = runner.run(List.of("git", "rev-parse", "HEAD"),
+                repository, Duration.ofSeconds(5)).strip();
+        CodeWorkspaceManager manager = new CodeWorkspaceManager(runner);
+        CodeWorkspaceManager.Allocation allocation = manager.create(
+                repository, temporaryDirectory.resolve("isolated-code"),
+                new CodeWorkspaceManager.Request("task-1", "attempt-1", "developer-a", pinnedCommit));
+        runner.run(List.of("git", "checkout", "--detach", otherCommit),
+                allocation.path(), Duration.ofSeconds(5));
+
+        assertThatThrownBy(() -> manager.verify(allocation))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("source commit drifted");
     }
 
     private Path repository() throws Exception {

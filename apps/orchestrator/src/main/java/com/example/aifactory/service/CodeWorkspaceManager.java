@@ -39,8 +39,31 @@ public final class CodeWorkspaceManager {
         }
         runner.run(List.of("git", "worktree", "add", "--detach", destination.toString(), request.sourceCommit()),
                 source, GIT_TIMEOUT);
-        return new Allocation(worktreeId, request.taskId(), request.attemptId(), request.nodeId(),
+        Allocation allocation = new Allocation(worktreeId, request.taskId(), request.attemptId(), request.nodeId(),
                 request.sourceCommit(), destination);
+        verify(allocation);
+        return allocation;
+    }
+
+    public Allocation verify(Allocation allocation) throws Exception {
+        if (allocation == null) throw new IllegalArgumentException("Code worktree allocation is required");
+        Request identity = new Request(allocation.taskId(), allocation.attemptId(),
+                allocation.nodeId(), allocation.sourceCommit());
+        requireValid(identity);
+        if (!worktreeId(identity).equals(allocation.worktreeId())) {
+            throw new SecurityException("Code worktree identity does not match its delegation binding");
+        }
+        Path path = allocation.path().toRealPath();
+        String topLevel = runner.run(List.of("git", "rev-parse", "--show-toplevel"),
+                path, GIT_TIMEOUT).strip();
+        if (!path.equals(Path.of(topLevel).toRealPath())) {
+            throw new SecurityException("Code worktree path is not its Git top-level directory");
+        }
+        String actualCommit = runner.run(List.of("git", "rev-parse", "HEAD"), path, GIT_TIMEOUT).strip();
+        if (!allocation.sourceCommit().equals(actualCommit)) {
+            throw new SecurityException("Code worktree source commit drifted from its verified binding");
+        }
+        return allocation;
     }
 
     static String worktreeId(Request request) {
@@ -66,5 +89,9 @@ public final class CodeWorkspaceManager {
     public record Request(String taskId, String attemptId, String nodeId, String sourceCommit) {}
 
     public record Allocation(String worktreeId, String taskId, String attemptId, String nodeId,
-                             String sourceCommit, Path path) {}
+                             String sourceCommit, Path path) {
+        public Allocation {
+            path = path == null ? null : path.toAbsolutePath().normalize();
+        }
+    }
 }
