@@ -319,7 +319,7 @@
 - [x] **MAH-184** — Faire retourner un artefact de patch et son digest, jamais une mutation du workspace d'intégration. _(`CodePatchArtifactPublisher` vérifie l'allocation, normalise et digeste le diff, le stocke via Evidence sous identité `workflow`, puis ne retourne que URI/digest/métadonnées liées au worktree ; aucun contenu ni chemin d'intégration n'est exposé.)_
 - [x] **MAH-185** — Valider le format, les chemins, la taille et le scope de chaque patch proposé. _(`PatchProposalValidator` normalise le diff, recalcule digest et taille UTF-8, extrait fichiers et opérations, exige leur égalité avec `files_touched` et réapplique limites et scope hôte ; seul son `ValidatedPatch` peut être publié.)_
 - [x] **MAH-186** — Détecter fichiers communs, hunks incompatibles, renommages et suppressions contradictoires. _(`PatchConflictDetector` compare chaque paire d'artefacts validés et produit un rapport stable distinguant `COMMON_FILE`, `INCOMPATIBLE_HUNK`, `RENAME_COLLISION` et `DELETE_COLLISION` avant intégration.)_
-- [ ] **MAH-187** — Définir un ordre d'intégration déterministe dérivé du DAG.
+- [x] **MAH-187** — Définir un ordre d'intégration déterministe dérivé du DAG. _(`PatchIntegrationPlanner` ignore l'ordre d'arrivée, rattache chaque artefact à un nœud Code, reprend l'ordre topologique priorité/`nodeId` du DAG validé, refuse les conflits puis produit un digest stable du plan d'application.)_
 - [ ] **MAH-188** — Appliquer les patches uniquement via le workflow et le profil sandbox prévu.
 - [ ] **MAH-189** — Relancer `git diff --check`, tests et scans sur le patch consolidé, pas uniquement sur les patches unitaires.
 - [ ] **MAH-190** — Autoriser Patch Repair uniquement sur le conflit ou patch invalide ciblé.
