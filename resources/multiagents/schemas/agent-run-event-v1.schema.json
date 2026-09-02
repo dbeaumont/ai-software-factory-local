@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/agent-run-event-v1.schema.json",
+  "title": "AgentRunEvent v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "task_id", "attempt_id", "specialist_task_id", "node_id", "role", "sequence", "event_type", "previous_state", "state", "usage_delta", "reason", "occurred_at"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "event_id": {"$ref": "#/$defs/id"},
+    "task_id": {"$ref": "#/$defs/id"},
+    "attempt_id": {"$ref": "#/$defs/id"},
+    "specialist_task_id": {"$ref": "#/$defs/id"},
+    "node_id": {"$ref": "#/$defs/id"},
+    "role": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "maxLength": 64},
+    "sequence": {"type": "integer", "minimum": 0, "maximum": 10000},
+    "event_type": {"enum": ["PLANNED", "QUEUED", "STARTED", "TOOL_REQUESTED", "TOOL_COMPLETED", "RESULT_RECEIVED", "RESULT_VALIDATED", "SUCCEEDED", "FAILED", "BLOCKED", "CANCELLED", "TIMED_OUT", "BUDGET_EXHAUSTED"]},
+    "previous_state": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/state"}]},
+    "state": {"$ref": "#/$defs/state"},
+    "usage_delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["turns", "input_tokens", "output_tokens", "cost_micros", "tool_calls", "duration_millis"],
+      "properties": {
+        "turns": {"type": "integer", "minimum": 0, "maximum": 16},
+        "input_tokens": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "output_tokens": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "cost_micros": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0, "maximum": 100000000}]},
+        "tool_calls": {"type": "integer", "minimum": 0, "maximum": 64},
+        "duration_millis": {"type": "integer", "minimum": 0, "maximum": 3600000}
+      }
+    },
+    "reason": {"type": "string", "minLength": 1, "maxLength": 1000},
+    "stop_reason": {"enum": ["SUCCESS_CRITERIA_MET", "BUDGET_EXHAUSTED", "DEADLINE_REACHED", "BLOCKED", "CANCELLED", "CONTRACT_ERROR", "TOOL_ERROR", "POLICY_DENIED"]},
+    "result_id": {"$ref": "#/$defs/id"},
+    "evidence_uri": {"type": "string", "pattern": "^evidence://", "maxLength": 1024},
+    "occurred_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"enum": ["SUCCEEDED", "FAILED", "BLOCKED", "CANCELLED", "TIMED_OUT"]}}},
+      "then": {"required": ["stop_reason"]}
+    }
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "state": {"type": "string", "enum": ["PLANNED", "QUEUED", "RUNNING", "WAITING_TOOL", "VALIDATING", "SUCCEEDED", "FAILED", "BLOCKED", "CANCELLED", "TIMED_OUT"]}
+  }
+}
