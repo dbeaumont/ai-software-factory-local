@@ -214,7 +214,7 @@
 
 ### Projection et API
 
-- [ ] **MAH-103** — Construire une projection PostgreSQL pour les lectures UI sans dupliquer les contenus sensibles.
+- [x] **MAH-103** — Construire une projection PostgreSQL pour les lectures UI sans dupliquer les contenus sensibles. _(Trois vues de lecture restreintes aux statuts, DAG, budgets, compteurs et métadonnées de preuve.)_
 - [ ] **MAH-104** — Reconstituer la projection depuis l'historique Temporal et Evidence MCP après perte contrôlée.
 - [ ] **MAH-105** — Migrer les tâches en mémoire vers le nouveau modèle sans casser les tâches déjà terminées.
 

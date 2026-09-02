@@ -93,4 +93,17 @@ class TaskMemorySchemaTest {
         assertThat(sql.split("WHERE .*version = expected_version AND status = previous_status", -1).length - 1)
                 .isEqualTo(4);
     }
+
+    @Test
+    void uiProjectionContainsOnlyRebuildableMetadata() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V006__ui_projection.sql"));
+
+        assertThat(sql).contains("CREATE VIEW task_ui_projection")
+                .contains("CREATE VIEW delegation_ui_projection")
+                .contains("CREATE VIEW evidence_ui_projection")
+                .contains("GRANT SELECT")
+                .contains("verified_evidence_count")
+                .contains("open_contradiction_count")
+                .doesNotContain("content_base64", "raw_content", "prompt", "patch_content", "logs");
+    }
 }
