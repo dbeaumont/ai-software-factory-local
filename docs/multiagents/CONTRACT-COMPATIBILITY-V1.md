@@ -15,3 +15,8 @@ down-migration destructive n'est autorisée.
 
 Le retrait N-1 exige zéro usage pendant 14 jours, tests golden/négatifs des deux versions, rejeu des documents
 persistés, répétition du rollback et approbation Architecture/Exploitation.
+
+L'API REST historique du pipeline est figée par le manifeste
+[`rest-api-pipeline-v1.1.json`](../../resources/multiagents/contracts/rest-api-pipeline-v1.1.json).
+Les routes, statuts HTTP, champs de requête, champs de réponse et valeurs d'état qui y figurent ne peuvent être
+retirés ou modifiés dans la version 1.2 ; `PipelineRestContractTest` applique cette règle à chaque build.

@@ -1,0 +1,23 @@
+{
+  "contractId": "rest-api-pipeline-v1.1",
+  "compatibility": "ADDITIVE_ONLY",
+  "routes": [
+    {"controller": "TaskController", "handler": "create", "method": "POST", "path": "/api/tasks", "responseStatus": 202},
+    {"controller": "TaskController", "handler": "list", "method": "GET", "path": "/api/tasks", "responseStatus": 200},
+    {"controller": "TaskController", "handler": "get", "method": "GET", "path": "/api/tasks/{id}", "responseStatus": 200},
+    {"controller": "TaskController", "handler": "approve", "method": "POST", "path": "/api/tasks/{id}/approve", "responseStatus": 202},
+    {"controller": "FactoryController", "handler": "capabilities", "method": "GET", "path": "/api/capabilities", "responseStatus": 200}
+  ],
+  "taskRequestFields": ["repositoryUrl", "baseBranch", "requirement", "llmMode"],
+  "taskViewFields": [
+    "id", "ticketNumber", "status", "repositoryUrl", "baseBranch", "requirement", "llmMode",
+    "workspace", "sourceCommit", "model", "promptFingerprints", "plan", "patch", "testSummary",
+    "qualitySummary", "securitySummary", "assuranceResults", "evaluationMetrics", "review", "pendingEffect",
+    "pullRequestUrl", "error", "steps", "createdAt", "updatedAt"
+  ],
+  "taskStatusValues": [
+    "QUEUED", "CLONING", "PLANNING", "GENERATING_PATCH", "APPLYING_PATCH", "TESTING",
+    "QUALITY_SCANNING", "SECURITY_SCANNING", "REVIEWING", "WAITING_APPROVAL", "APPROVED",
+    "PR_CREATED", "FAILED"
+  ]
+}
