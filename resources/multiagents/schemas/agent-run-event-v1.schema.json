@@ -31,7 +31,7 @@
       }
     },
     "reason": {"type": "string", "minLength": 1, "maxLength": 1000},
-    "stop_reason": {"enum": ["SUCCESS_CRITERIA_MET", "BUDGET_EXHAUSTED", "DEADLINE_REACHED", "BLOCKED", "CANCELLED", "CONTRACT_ERROR", "TOOL_ERROR", "POLICY_DENIED"]},
+    "stop_reason": {"enum": ["SUCCESS_CRITERIA_MET", "BUDGET_EXHAUSTED", "DEADLINE_REACHED", "NO_PROGRESS", "BLOCKED", "CANCELLED", "CONTRACT_ERROR", "TOOL_ERROR", "POLICY_DENIED"]},
     "result_id": {"$ref": "#/$defs/id"},
     "evidence_uri": {"type": "string", "pattern": "^evidence://", "maxLength": 1024},
     "occurred_at": {"type": "string", "format": "date-time"}

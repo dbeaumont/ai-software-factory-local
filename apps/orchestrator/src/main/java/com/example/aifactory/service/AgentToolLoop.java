@@ -84,15 +84,20 @@ public final class AgentToolLoop {
 
             if (turn.stop() == Stop.FINAL) {
                 if (!turn.toolCalls().isEmpty() || turn.finalResult() == null || turn.finalResult().isBlank()) {
-                    throw new AgentLoopException("invalid_final", "A final turn must contain one non-empty result and no tool call");
+                    throw new AgentLoopException("invalid_final",
+                            "A final turn must contain one non-empty result and no tool call",
+                            StopCondition.CONTRACT_ERROR);
                 }
-                return new Result(turn.finalResult(), turnNumber, tokens, costMicros);
+                return new Result(turn.finalResult(), turnNumber, tokens, costMicros,
+                        StopCondition.SUCCESS_CRITERIA_MET);
             }
             if (turn.stop() != Stop.TOOL_CALLS || turn.toolCalls().isEmpty() || turn.finalResult() != null) {
-                throw new AgentLoopException("invalid_stop", "The model must explicitly stop with FINAL or TOOL_CALLS");
+                throw new AgentLoopException("invalid_stop", "The model must explicitly stop with FINAL or TOOL_CALLS",
+                        StopCondition.CONTRACT_ERROR);
             }
             if (turn.toolCalls().size() > safety.maxCallsPerTurn()) {
-                throw new AgentLoopException("fan_out", "Agent requested too many tools in one turn");
+                throw new AgentLoopException("fan_out", "Agent requested too many tools in one turn",
+                        StopCondition.BUDGET_EXHAUSTED);
             }
 
             messages.add(new Message("assistant", "", turn.toolCalls()));
@@ -100,11 +105,13 @@ public final class AgentToolLoop {
                 requireWithinDeadline(deadline);
                 String fingerprint = call.name() + "\n" + call.arguments();
                 if (repeatedCalls.merge(fingerprint, 1, Integer::sum) > safety.maxIdenticalCalls()) {
-                    throw new AgentLoopException("repeated_call", "Agent repeated an identical tool call too often");
+                    throw new AgentLoopException("repeated_call", "Agent repeated an identical tool call too often",
+                            StopCondition.NO_PROGRESS);
                 }
                 if (!authorization.isAllowed(actor, call.name())) {
                     throw new AgentLoopException("tool_denied",
-                            "Host policy denied tool " + call.name() + " for role " + actor.role());
+                            "Host policy denied tool " + call.name() + " for role " + actor.role(),
+                            StopCondition.POLICY_DENIED);
                 }
                 usage.consume(new UsageDelta(0, 0, 0, 0, 1));
                 String output = tools.execute(call);
@@ -112,7 +119,8 @@ public final class AgentToolLoop {
                 requireContextWithinLimit(messages);
             }
         }
-        throw new AgentLoopException("max_turns", "Agent exceeded its maximum number of turns");
+        throw new AgentLoopException("max_turns", "Agent exceeded its maximum number of turns",
+                StopCondition.BUDGET_EXHAUSTED);
     }
 
     static String untrustedToolData(ToolCall call, String output) {
@@ -127,22 +135,26 @@ public final class AgentToolLoop {
     private void requireContextWithinLimit(List<Message> messages) {
         long chars = messages.stream().mapToLong(message -> message.content() == null ? 0 : message.content().length()).sum();
         if (chars > safety.maxContextChars()) {
-            throw new AgentLoopException("context_limit", "Agent context exceeded its host limit");
+            throw new AgentLoopException("context_limit", "Agent context exceeded its host limit",
+                    StopCondition.BUDGET_EXHAUSTED);
         }
     }
 
     private void requireWithinDeadline(long deadline) {
         if (nanoTime.getAsLong() > deadline) {
-            throw new AgentLoopException("deadline", "Agent exceeded its deadline");
+            throw new AgentLoopException("deadline", "Agent exceeded its deadline",
+                    StopCondition.DEADLINE_REACHED);
         }
     }
 
     private static void requireWithinBudget(int tokens, long costMicros, Budget budget) {
         if (tokens > budget.maxTokens()) {
-            throw new AgentLoopException("token_budget", "Agent exceeded its token budget");
+            throw new AgentLoopException("token_budget", "Agent exceeded its token budget",
+                    StopCondition.BUDGET_EXHAUSTED);
         }
         if (costMicros > budget.maxCostMicros()) {
-            throw new AgentLoopException("cost_budget", "Agent exceeded its cost budget");
+            throw new AgentLoopException("cost_budget", "Agent exceeded its cost budget",
+                    StopCondition.BUDGET_EXHAUSTED);
         }
     }
 
@@ -163,6 +175,11 @@ public final class AgentToolLoop {
     }
 
     public enum Stop { TOOL_CALLS, FINAL }
+
+    public enum StopCondition {
+        SUCCESS_CRITERIA_MET, BUDGET_EXHAUSTED, DEADLINE_REACHED, NO_PROGRESS,
+        BLOCKED, CANCELLED, CONTRACT_ERROR, TOOL_ERROR, POLICY_DENIED
+    }
 
     public record Actor(String subject, String role) {
         public Actor {
@@ -220,19 +237,27 @@ public final class AgentToolLoop {
     public record Message(String role, String content, List<ToolCall> toolCalls) {
     }
 
-    public record Result(String finalResult, int turns, int tokens, long costMicros) {
+    public record Result(String finalResult, int turns, int tokens, long costMicros, StopCondition stopCondition) {
     }
 
-    public static final class AgentLoopException extends RuntimeException {
+    public static class AgentLoopException extends RuntimeException {
         private final String reason;
+        private final StopCondition stopCondition;
 
         AgentLoopException(String reason, String message) {
+            this(reason, message, StopCondition.BLOCKED);
+        }
+
+        AgentLoopException(String reason, String message, StopCondition stopCondition) {
             super(message);
             this.reason = reason;
+            this.stopCondition = Objects.requireNonNull(stopCondition);
         }
 
         public String reason() {
             return reason;
         }
+
+        public StopCondition stopCondition() { return stopCondition; }
     }
 }

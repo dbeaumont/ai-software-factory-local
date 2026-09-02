@@ -284,7 +284,7 @@
 - [x] **MAH-147** — Ajouter concurrence globale, par tâche, par rôle et par serveur MCP. _(Quatre sémaphores équitables acquis dans un ordre fixe sous une même deadline ; plafonds configurables 32/4/8/16, conservation des permis jusqu'à l'arrêt réel et tests isolant chaque dimension.)_
 - [x] **MAH-148** — Interdire à une délégation enfant d'augmenter le budget reçu de son parent. _(Comparaison hôte composante par composante des tours, tokens, coût, délai et appels d'outils avant acceptation du DAG ; tests de refus indépendants sur les cinq dimensions.)_
 - [x] **MAH-149** — Réserver une part du budget au Reviewer et aux gates finaux. _(Deux enveloppes atomiques distinctes : le travail standard ne peut consommer la réserve de 10k/5k tokens, 10M coût, 6 tours et 32 appels ; Reviewer et gates policy/manifest/SCM utilisent exclusivement la voie de finalisation.)_
-- [ ] **MAH-150** — Définir une condition d'arrêt stable pour budget épuisé, deadline ou absence de progression.
+- [x] **MAH-150** — Définir une condition d'arrêt stable pour budget épuisé, deadline ou absence de progression. _(Conditions typées communes `BUDGET_EXHAUSTED`, `DEADLINE_REACHED`, `NO_PROGRESS` et `SUCCESS_CRITERIA_MET`, distinctes des codes diagnostics ; quotas cumulés et contrat d'événement alignés.)_
 - [ ] **MAH-151** — Étendre le kill switch aux rôles hiérarchiques et aux modes shadow/canary/active.
 - [ ] **MAH-152** — Tester exhaustivement que chaque rôle refuse les outils des autres périmètres.
 

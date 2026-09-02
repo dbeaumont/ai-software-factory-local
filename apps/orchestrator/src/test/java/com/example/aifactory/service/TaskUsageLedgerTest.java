@@ -52,6 +52,9 @@ class TaskUsageLedgerTest {
                 .isInstanceOf(TaskUsageLedger.QuotaExceededException.class)
                 .extracting(error -> ((TaskUsageLedger.QuotaExceededException) error).quota())
                 .isEqualTo(quota);
+        assertThatThrownBy(() -> ledger.consume("task-1", "attempt-2", delta))
+                .extracting(error -> ((TaskUsageLedger.QuotaExceededException) error).stopCondition())
+                .isEqualTo(AgentToolLoop.StopCondition.BUDGET_EXHAUSTED);
         assertThat(ledger.snapshot("task-1"))
                 .isEqualTo(new TaskUsageLedger.Snapshot(1, 1, 1, 1, 1, "attempt-1"));
     }

@@ -34,6 +34,7 @@ class AgentToolLoopTest {
         assertEquals(2, result.turns());
         assertEquals(290, result.tokens());
         assertEquals(5_000, result.costMicros());
+        assertEquals(AgentToolLoop.StopCondition.SUCCESS_CRITERIA_MET, result.stopCondition());
     }
 
     @Test
@@ -64,15 +65,19 @@ class AgentToolLoopTest {
     @Test
     void failsClosedOnTurnsTokensCostDeadlineAndMissingFinal() {
         AgentToolLoop loop = new AgentToolLoop(messages -> toolTurn(), call -> "ok");
-        assertEquals("max_turns", exceptionFor(loop,
-                new AgentToolLoop.Budget(1, Duration.ofSeconds(1), 1_000, 10_000)).reason());
+        AgentToolLoop.AgentLoopException error = exceptionFor(loop,
+                new AgentToolLoop.Budget(1, Duration.ofSeconds(1), 1_000, 10_000));
+        assertEquals("max_turns", error.reason());
+        assertEquals(AgentToolLoop.StopCondition.BUDGET_EXHAUSTED, error.stopCondition());
     }
 
     @Test
     void rejectsEveryBudgetBoundaryIndependently() {
-        assertEquals("token_budget", exceptionFor(
+        AgentToolLoop.AgentLoopException tokenBudget = exceptionFor(
                 new AgentToolLoop(messages -> finalTurn(101, 0, 0), call -> "ok"),
-                new AgentToolLoop.Budget(1, Duration.ofSeconds(1), 100, 10)).reason());
+                new AgentToolLoop.Budget(1, Duration.ofSeconds(1), 100, 10));
+        assertEquals("token_budget", tokenBudget.reason());
+        assertEquals(AgentToolLoop.StopCondition.BUDGET_EXHAUSTED, tokenBudget.stopCondition());
         assertEquals("cost_budget", exceptionFor(
                 new AgentToolLoop(messages -> finalTurn(1, 1, 11), call -> "ok"),
                 new AgentToolLoop.Budget(1, Duration.ofSeconds(1), 100, 10)).reason());
@@ -82,8 +87,10 @@ class AgentToolLoopTest {
             clock.set(Duration.ofSeconds(2).toNanos());
             return finalTurn(1, 1, 0);
         }, call -> "ok", (actor, tool) -> true, AgentToolLoop.SafetyLimits.defaults(), clock::get);
-        assertEquals("deadline", exceptionFor(deadlineLoop,
-                new AgentToolLoop.Budget(1, Duration.ofSeconds(1), 100, 10)).reason());
+        AgentToolLoop.AgentLoopException deadline = exceptionFor(deadlineLoop,
+                new AgentToolLoop.Budget(1, Duration.ofSeconds(1), 100, 10));
+        assertEquals("deadline", deadline.reason());
+        assertEquals(AgentToolLoop.StopCondition.DEADLINE_REACHED, deadline.stopCondition());
 
         AgentToolLoop invalidFinal = new AgentToolLoop(
                 messages -> new AgentToolLoop.Turn(AgentToolLoop.Stop.FINAL, "", List.of(), 1, 1, 0),
@@ -117,7 +124,9 @@ class AgentToolLoopTest {
 
         AgentToolLoop repeated = loopReturning(List.of(tool("ignored-id", "same")), "ok",
                 new AgentToolLoop.SafetyLimits(2, 1, 1_000));
-        assertEquals("repeated_call", exceptionFor(repeated, BUDGET).reason());
+        AgentToolLoop.AgentLoopException noProgress = exceptionFor(repeated, BUDGET);
+        assertEquals("repeated_call", noProgress.reason());
+        assertEquals(AgentToolLoop.StopCondition.NO_PROGRESS, noProgress.stopCondition());
 
         AgentToolLoop oversized = loopReturning(List.of(tool("1", "context")), "x".repeat(1_001),
                 new AgentToolLoop.SafetyLimits(2, 2, 1_000));

@@ -63,11 +63,12 @@ public final class TaskUsageLedger {
         static Snapshot zero() { return new Snapshot(0, 0, 0, 0, 0, null); }
     }
 
-    public static final class QuotaExceededException extends RuntimeException {
+    public static final class QuotaExceededException extends AgentToolLoop.AgentLoopException {
         private final String quota;
 
         QuotaExceededException(String quota) {
-            super("Task cumulative quota exceeded: " + quota);
+            super("task_quota", "Task cumulative quota exceeded: " + quota,
+                    AgentToolLoop.StopCondition.BUDGET_EXHAUSTED);
             this.quota = quota;
         }
 
