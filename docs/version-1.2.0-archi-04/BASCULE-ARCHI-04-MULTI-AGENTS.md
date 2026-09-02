@@ -382,7 +382,7 @@
 - [x] **MAH-242** — Désactiver la collecte du contenu des prompts, résultats et preuves par défaut. _(Politique Spring, Compose et OpenTelemetry en opt-in explicite par canal ; les spans ne portent que métadonnées et identifiants de corrélation.)_
 - [x] **MAH-243** — Mesurer tokens, coût, durée, tours, fan-out et profondeur par rôle. _(`AgentMetrics` publie compteurs, timers et distributions Micrometer aux frontières d'exécution et après validation du DAG ; le tag rôle est borné au catalogue.)_
 - [x] **MAH-244** — Mesurer temps d'attente des task queues et taux de saturation par périmètre. _(`TaskQueueMetrics` mesure le schedule-to-start Temporal et publie actifs/ratio de saturation pour chaque file déclarée, avec capacité worker configurable.)_
-- [ ] **MAH-245** — Mesurer taux de succès, retries, réparations, replans, contradictions et escalades.
+- [x] **MAH-245** — Mesurer taux de succès, retries, réparations, replans, contradictions et escalades. _(Le taux de succès dérive des timers d'agents par outcome ; `ai_workflow_events` compte les cinq événements de fiabilité depuis leurs points de décision, avec tags fermés.)_
 - [ ] **MAH-246** — Corréler jobs sandbox, digests, verdicts assurance et livraison SCM.
 - [ ] **MAH-247** — Journaliser autorisations, refus, approbations et changements de mode de manière inviolable.
 - [ ] **MAH-248** — Créer dashboards global, Supervisor, agents, Temporal, MCP et sandbox.

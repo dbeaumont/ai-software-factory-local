@@ -16,9 +16,15 @@ import java.util.Set;
 public final class DelegationReplanPolicy {
     static final int MAX_ACCEPTED_REPLANS = 2;
     private final DelegationScheduler scheduler;
+    private final Runnable acceptedReplan;
 
     public DelegationReplanPolicy(DelegationScheduler scheduler) {
+        this(scheduler, () -> { });
+    }
+
+    public DelegationReplanPolicy(DelegationScheduler scheduler, Runnable acceptedReplan) {
         this.scheduler = Objects.requireNonNull(scheduler);
+        this.acceptedReplan = Objects.requireNonNull(acceptedReplan);
     }
 
     public State initial(SoftwareFactoryWorkflow.Request root, List<DelegationWorkflow.Request> plan) {
@@ -64,6 +70,7 @@ public final class DelegationReplanPolicy {
         List<String> history = new java.util.ArrayList<>(effectiveState.dagDigestHistory());
         history.add(replacementDigest);
         State updated = new State(effectiveState.acceptedReplans() + 1, replacementDigest, history);
+        acceptedReplan.run();
         return new AcceptedReplan(replacement, updated, proposal.justification());
     }
 

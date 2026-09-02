@@ -1,6 +1,7 @@
 package com.example.aifactory.service;
 
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -22,6 +23,16 @@ public final class CrossPerimeterContradictionDetector {
     private static final Pattern ID = Pattern.compile("[A-Za-z0-9][A-Za-z0-9_-]{0,127}");
     private static final Pattern SUBJECT = Pattern.compile("[a-z0-9][a-z0-9._:/-]{0,255}");
     private static final Pattern DIGEST = Pattern.compile("[a-f0-9]{64}");
+    private final WorkflowOperationalMetrics metrics;
+
+    public CrossPerimeterContradictionDetector() {
+        this(WorkflowOperationalMetrics.noop());
+    }
+
+    @Autowired
+    public CrossPerimeterContradictionDetector(WorkflowOperationalMetrics metrics) {
+        this.metrics = metrics;
+    }
 
     public List<Candidate> detect(Request request) {
         requireRequest(request);
@@ -39,11 +50,13 @@ public final class CrossPerimeterContradictionDetector {
             }
         }
 
-        return bySubject.entrySet().stream()
+        List<Candidate> candidates = bySubject.entrySet().stream()
                 .filter(entry -> isCrossPerimeterConflict(entry.getValue()))
                 .sorted(Map.Entry.comparingByKey())
                 .map(entry -> candidate(request, entry.getKey(), entry.getValue()))
                 .toList();
+        metrics.contradictions(candidates.size());
+        return candidates;
     }
 
     private static Candidate candidate(Request request, String subject, List<NormalizedAssertion> assertions) {

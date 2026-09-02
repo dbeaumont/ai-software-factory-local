@@ -2,6 +2,7 @@ package com.example.aifactory.service;
 
 import com.example.aifactory.workflow.temporal.SoftwareFactoryWorkflow;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -27,6 +28,16 @@ public final class HumanDecisionEscalator {
                     ContradictionClassifier.Classification.FACTUAL),
             DecisionDomain.DATA, Set.of(ContradictionClassifier.Classification.INCOMPATIBLE_SCOPE,
                     ContradictionClassifier.Classification.RISK, ContradictionClassifier.Classification.FACTUAL));
+    private final WorkflowOperationalMetrics metrics;
+
+    public HumanDecisionEscalator() {
+        this(WorkflowOperationalMetrics.noop());
+    }
+
+    @Autowired
+    public HumanDecisionEscalator(WorkflowOperationalMetrics metrics) {
+        this.metrics = metrics;
+    }
 
     public Escalation escalate(ContradictionClassifier.ClassifiedCandidate contradiction,
                                DeterministicContradictionResolver.Result resolution,
@@ -45,6 +56,7 @@ public final class HumanDecisionEscalator {
         SoftwareFactoryWorkflow.HumanDecisionRequest workflowRequest =
                 new SoftwareFactoryWorkflow.HumanDecisionRequest(requestId, question, allowed, evidenceUris,
                         objectDigest, Set.of(domain.name()));
+        metrics.escalation();
         return new Escalation(requestId, contradiction.candidate().contradictionId(), domain, objectDigest,
                 options, evidenceUris, workflowRequest);
     }

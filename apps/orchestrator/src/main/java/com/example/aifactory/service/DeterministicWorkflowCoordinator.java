@@ -44,6 +44,7 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
     private final ObjectMapper objectMapper;
     private final com.example.aifactory.config.AgentToolingProperties agentTooling;
     private final AgentContextToolHost agentTools;
+    private final WorkflowOperationalMetrics operationalMetrics;
 
     public DeterministicWorkflowCoordinator(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
                        PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses,
@@ -65,6 +66,7 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
         this.objectMapper = objectMapper;
         this.agentTooling = agentTooling;
         this.agentTools = agentTools;
+        this.operationalMetrics = new WorkflowOperationalMetrics(metrics);
         this.completedTasks = Counter.builder("ai_factory_tasks_completed").description("Tasks that completed validation").register(metrics);
         this.failedTasks = Counter.builder("ai_factory_tasks_failed").description("Tasks that failed before approval").register(metrics);
         this.plannerContractRetries = Counter.builder("ai_factory_planner_contract_retries")
@@ -226,6 +228,7 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
                 state.patchRepairs++;
                 log.warn("Task {} ({}) patch validation failed; starting repair attempt {}/{}: {}",
                         state.id, state.ticketNumber, repairAttempt + 1, MAX_PATCH_REPAIR_ATTEMPTS, validationFailure.getMessage());
+                operationalMetrics.repair();
                 Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
                 String repairRepositoryContext = contextService.collectForRole(
                         workspace, state.id, state.sourceCommit, "patch-repair");

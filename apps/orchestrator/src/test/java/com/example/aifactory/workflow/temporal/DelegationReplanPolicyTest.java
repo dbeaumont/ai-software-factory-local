@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -99,6 +100,24 @@ class DelegationReplanPolicyTest {
         assertThatThrownBy(() -> new DelegationReplanPolicy.State(
                 1, "b".repeat(64), List.of("a".repeat(64), "a".repeat(64))))
                 .hasMessageContaining("history is inconsistent");
+    }
+
+    @Test
+    void emitsOneOperationalEventOnlyAfterAReplanIsAccepted() {
+        AtomicInteger accepted = new AtomicInteger();
+        DelegationReplanPolicy observed = new DelegationReplanPolicy(
+                new DelegationScheduler((workflowId, request) ->
+                        () -> new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE")),
+                accepted::incrementAndGet);
+        SoftwareFactoryWorkflow.Request root = root();
+        List<DelegationWorkflow.Request> initial = List.of(node("architecture"));
+        List<DelegationWorkflow.Request> replacement = List.of(node("code"));
+        DelegationReplanPolicy.State state = observed.initial(root, initial);
+
+        observed.apply(root, initial, state, proposal(state.currentDagDigest(),
+                observed.digest(root, replacement), replacement, "Change executable perimeter."));
+
+        assertThat(accepted).hasValue(1);
     }
 
     private static DelegationReplanPolicy.Proposal proposal(String currentDigest, String replacementDigest,

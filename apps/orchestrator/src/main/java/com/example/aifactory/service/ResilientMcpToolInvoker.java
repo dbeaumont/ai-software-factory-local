@@ -44,6 +44,7 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
     private final ObjectMapper objectMapper;
     private final TaskUsageLedger usage;
     private final ExecutionTracer tracer;
+    private final WorkflowOperationalMetrics operationalMetrics;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final Semaphore globalLimit;
     private final ConcurrentMap<String, Semaphore> serverLimits = new ConcurrentHashMap<>();
@@ -84,6 +85,7 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
         this.objectMapper = objectMapper;
         this.usage = usage;
         this.tracer = tracer;
+        this.operationalMetrics = new WorkflowOperationalMetrics(metrics);
         this.globalLimit = new Semaphore(properties.maxInflightGlobal(), true);
         properties.servers().values().forEach(server -> {
             serverLimits.put(server.expectedName(), new Semaphore(properties.maxInflightPerServer(), true));
@@ -132,6 +134,7 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
                 }
                 Counter.builder("mcp_client_retries").tag("server", serverName).tag("tool", toolName)
                         .register(metrics).increment();
+                operationalMetrics.retry("mcp");
                 sleep(backoff(retry, attempt));
             }
         }
