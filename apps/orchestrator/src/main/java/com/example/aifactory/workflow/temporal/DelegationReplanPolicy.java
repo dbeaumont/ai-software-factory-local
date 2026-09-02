@@ -5,8 +5,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /** Host-owned guard for Supervisor replan proposals. */
 public final class DelegationReplanPolicy {
@@ -24,6 +28,11 @@ public final class DelegationReplanPolicy {
 
     public AcceptedReplan apply(SoftwareFactoryWorkflow.Request root, List<DelegationWorkflow.Request> currentPlan,
                                 State state, Proposal proposal) {
+        return apply(root, currentPlan, state, proposal, Set.of());
+    }
+
+    public AcceptedReplan apply(SoftwareFactoryWorkflow.Request root, List<DelegationWorkflow.Request> currentPlan,
+                                State state, Proposal proposal, Set<String> completedNodeIds) {
         Objects.requireNonNull(proposal, "Replan proposal is required");
         if (!"supervisor".equals(proposal.actorRole())) throw invalid("only Supervisor may propose a replan");
         if (proposal.justification() == null || proposal.justification().isBlank()
@@ -45,6 +54,13 @@ public final class DelegationReplanPolicy {
             throw invalid("replacement DAG digest mismatch");
         }
         if (replacementDigest.equals(actualCurrentDigest)) throw invalid("replacement DAG digest is unchanged");
+        if (effectiveState.dagDigestHistory().contains(replacementDigest)) {
+            throw invalid("replan cycle detected");
+        }
+        rejectRepeatedDelegations(currentPlan, replacement, completedNodeIds);
+        if (progressDigest(currentPlan).equals(progressDigest(replacement))) {
+            throw invalid("replan makes no executable progress");
+        }
         List<String> history = new java.util.ArrayList<>(effectiveState.dagDigestHistory());
         history.add(replacementDigest);
         State updated = new State(effectiveState.acceptedReplans() + 1, replacementDigest, history);
@@ -79,6 +95,43 @@ public final class DelegationReplanPolicy {
         }
     }
 
+    private static String progressDigest(List<DelegationWorkflow.Request> plan) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            plan.stream().map(DelegationReplanPolicy::workSignature).sorted()
+                    .forEach(signature -> update(digest, signature));
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException unavailable) {
+            throw new IllegalStateException("SHA-256 is unavailable", unavailable);
+        }
+    }
+
+    private static void rejectRepeatedDelegations(List<DelegationWorkflow.Request> currentPlan,
+                                                   List<DelegationWorkflow.Request> replacement,
+                                                   Set<String> completedNodeIds) {
+        Map<String, DelegationWorkflow.Request> current = new LinkedHashMap<>();
+        currentPlan.forEach(node -> current.put(node.nodeId(), node));
+        Set<String> completedSignatures = new LinkedHashSet<>();
+        for (String completedNodeId : completedNodeIds) {
+            DelegationWorkflow.Request completed = current.get(completedNodeId);
+            if (completed == null) throw invalid("completed delegation is absent from current DAG");
+            completedSignatures.add(workSignature(completed));
+        }
+        for (DelegationWorkflow.Request node : replacement) {
+            if (completedNodeIds.contains(node.nodeId()) || completedSignatures.contains(workSignature(node))) {
+                throw invalid("completed delegation is repeated by " + node.nodeId());
+            }
+        }
+    }
+
+    private static String workSignature(DelegationWorkflow.Request node) {
+        return String.join("\u0000", node.role(), node.objective().strip(), Integer.toString(node.priority()),
+                Long.toString(node.budget().maxTokens()), Long.toString(node.budget().maxCostMicros()),
+                Integer.toString(node.budget().maxTurns()), Long.toString(node.budget().timeoutSeconds()),
+                Boolean.toString(node.parentNodeId() != null && !"supervisor".equals(node.parentNodeId())),
+                Integer.toString(node.dependsOn().size()));
+    }
+
     private static void update(MessageDigest digest, String value) {
         if (value == null) {
             digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(-1).array());
@@ -111,6 +164,11 @@ public final class DelegationReplanPolicy {
                 throw invalid("state is invalid");
             }
             dagDigestHistory = dagDigestHistory == null ? List.of() : List.copyOf(dagDigestHistory);
+            if (dagDigestHistory.size() != acceptedReplans + 1
+                    || !currentDagDigest.equals(dagDigestHistory.getLast())
+                    || dagDigestHistory.stream().distinct().count() != dagDigestHistory.size()) {
+                throw invalid("DAG digest history is inconsistent");
+            }
         }
     }
 

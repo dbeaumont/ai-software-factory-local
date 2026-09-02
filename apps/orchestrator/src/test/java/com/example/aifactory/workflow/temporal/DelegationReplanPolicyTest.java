@@ -62,6 +62,45 @@ class DelegationReplanPolicyTest {
                 .hasMessageContaining("unchanged");
     }
 
+    @Test
+    void rejectsReplanCyclesRenameOnlyChangesAndCompletedWorkRepeatedUnderAnotherId() {
+        SoftwareFactoryWorkflow.Request root = root();
+        List<DelegationWorkflow.Request> initial = List.of(node("architecture"));
+        List<DelegationWorkflow.Request> second = List.of(node("code"));
+        DelegationReplanPolicy.State initialState = policy.initial(root, initial);
+        DelegationReplanPolicy.AcceptedReplan first = policy.apply(root, initial, initialState,
+                proposal(initialState.currentDagDigest(), policy.digest(root, second), second,
+                        "Architecture is complete; implementation is now required."));
+
+        assertThatThrownBy(() -> policy.apply(root, second, first.state(),
+                proposal(first.state().currentDagDigest(), initialState.currentDagDigest(), initial,
+                        "Returning to the first plan would create a cycle.")))
+                .hasMessageContaining("replan cycle");
+
+        List<DelegationWorkflow.Request> renamedOnly = List.of(nodeWithObjective("renamed", "code"));
+        assertThatThrownBy(() -> policy.apply(root, second, first.state(),
+                proposal(first.state().currentDagDigest(), policy.digest(root, renamedOnly), renamedOnly,
+                        "Renaming alone must not count as executable progress.")))
+                .hasMessageContaining("no executable progress");
+
+        List<DelegationWorkflow.Request> current = List.of(
+                nodeWithObjective("done", "analyze architecture"), nodeWithObjective("pending", "write code"));
+        DelegationReplanPolicy.State currentState = policy.initial(root, current);
+        List<DelegationWorkflow.Request> repeatsCompleted = List.of(
+                nodeWithObjective("done-again", "analyze architecture"), nodeWithObjective("tests", "run tests"));
+        assertThatThrownBy(() -> policy.apply(root, current, currentState,
+                proposal(currentState.currentDagDigest(), policy.digest(root, repeatsCompleted), repeatsCompleted,
+                        "Completed work must not be rescheduled."), Set.of("done")))
+                .hasMessageContaining("completed delegation is repeated");
+    }
+
+    @Test
+    void rejectsAnInconsistentDigestHistoryBeforeEvaluatingAProposal() {
+        assertThatThrownBy(() -> new DelegationReplanPolicy.State(
+                1, "b".repeat(64), List.of("a".repeat(64), "a".repeat(64))))
+                .hasMessageContaining("history is inconsistent");
+    }
+
     private static DelegationReplanPolicy.Proposal proposal(String currentDigest, String replacementDigest,
                                                              List<DelegationWorkflow.Request> replacement,
                                                              String justification) {
@@ -74,7 +113,11 @@ class DelegationReplanPolicyTest {
     }
 
     private static DelegationWorkflow.Request node(String id) {
+        return nodeWithObjective(id, id);
+    }
+
+    private static DelegationWorkflow.Request nodeWithObjective(String id, String objective) {
         return new DelegationWorkflow.Request("task-1", "attempt-1", id, "supervisor", "code-agent",
-                "a".repeat(40), id, 100, Set.of(), new DelegationWorkflow.Budget(100, 100, 1));
+                "a".repeat(40), objective, 100, Set.of(), new DelegationWorkflow.Budget(100, 100, 1));
     }
 }
