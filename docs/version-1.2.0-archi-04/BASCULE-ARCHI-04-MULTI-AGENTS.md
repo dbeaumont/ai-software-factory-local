@@ -290,7 +290,7 @@
 
 ### Gate du lot 6
 
-- [ ] Aucun agent ne peut élargir son autorité, son scope, son budget ou la profondeur de délégation.
+- [x] Aucun agent ne peut élargir son autorité, son scope, son budget ou la profondeur de délégation. _(Preuves : `docs/multiagents/GATE-LOT-6-PERMISSIONS-BUDGETS.md` ; 241 tests orchestrateur réussis.)_
 
 ## 11. Lot 7 — Scheduler de DAG et routage
 
