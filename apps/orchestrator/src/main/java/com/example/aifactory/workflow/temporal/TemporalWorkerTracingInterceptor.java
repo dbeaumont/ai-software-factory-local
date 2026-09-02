@@ -2,6 +2,7 @@ package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.service.ExecutionIdentity;
 import com.example.aifactory.service.ExecutionTracer;
+import com.example.aifactory.service.TaskQueueMetrics;
 import io.temporal.activity.ActivityExecutionContext;
 import io.temporal.common.interceptors.ActivityInboundCallsInterceptor;
 import io.temporal.common.interceptors.ActivityInboundCallsInterceptorBase;
@@ -10,15 +11,23 @@ import io.temporal.common.interceptors.WorkflowInboundCallsInterceptor;
 import io.temporal.common.interceptors.WorkflowInboundCallsInterceptorBase;
 import io.temporal.workflow.Workflow;
 import io.temporal.workflow.WorkflowInfo;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Worker interceptor that creates root/child workflow and Activity observations outside business payloads. */
 @Component
 public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBase {
     private final ExecutionTracer tracer;
+    private final TaskQueueMetrics queueMetrics;
 
     public TemporalWorkerTracingInterceptor(ExecutionTracer tracer) {
+        this(tracer, TaskQueueMetrics.noop());
+    }
+
+    @Autowired
+    public TemporalWorkerTracingInterceptor(ExecutionTracer tracer, TaskQueueMetrics queueMetrics) {
         this.tracer = tracer;
+        this.queueMetrics = queueMetrics;
     }
 
     @Override
@@ -54,8 +63,11 @@ public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBas
                 ExecutionIdentity identity = ExecutionIdentity.deterministic(
                         bounded(info.getWorkflowId()), bounded(info.getWorkflowRunId()),
                         bounded(info.getActivityId()), bounded(info.getActivityRunId()));
-                return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, identity, info.getActivityType(),
-                        () -> super.execute(input));
+                try (TaskQueueMetrics.Lease ignored = queueMetrics.start(info.getActivityTaskQueue(),
+                        info.getCurrentAttemptScheduledTimestamp(), info.getStartedTimestamp())) {
+                    return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, identity, info.getActivityType(),
+                            () -> super.execute(input));
+                }
             }
         };
     }

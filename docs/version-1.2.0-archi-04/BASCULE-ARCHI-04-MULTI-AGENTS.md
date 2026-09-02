@@ -381,7 +381,7 @@
 - [x] **MAH-241** — Créer un span pour workflow, Child Workflow, Activity, appel LLM et appel MCP. _(`ExecutionTracer` normalise les cinq familles de spans et leur corrélation ; l'intercepteur worker couvre workflows racine/enfant et Activities, les frontières runtime couvrent LLM et MCP.)_
 - [x] **MAH-242** — Désactiver la collecte du contenu des prompts, résultats et preuves par défaut. _(Politique Spring, Compose et OpenTelemetry en opt-in explicite par canal ; les spans ne portent que métadonnées et identifiants de corrélation.)_
 - [x] **MAH-243** — Mesurer tokens, coût, durée, tours, fan-out et profondeur par rôle. _(`AgentMetrics` publie compteurs, timers et distributions Micrometer aux frontières d'exécution et après validation du DAG ; le tag rôle est borné au catalogue.)_
-- [ ] **MAH-244** — Mesurer temps d'attente des task queues et taux de saturation par périmètre.
+- [x] **MAH-244** — Mesurer temps d'attente des task queues et taux de saturation par périmètre. _(`TaskQueueMetrics` mesure le schedule-to-start Temporal et publie actifs/ratio de saturation pour chaque file déclarée, avec capacité worker configurable.)_
 - [ ] **MAH-245** — Mesurer taux de succès, retries, réparations, replans, contradictions et escalades.
 - [ ] **MAH-246** — Corréler jobs sandbox, digests, verdicts assurance et livraison SCM.
 - [ ] **MAH-247** — Journaliser autorisations, refus, approbations et changements de mode de manière inviolable.
