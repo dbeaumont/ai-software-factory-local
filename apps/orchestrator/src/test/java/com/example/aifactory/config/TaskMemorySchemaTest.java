@@ -120,4 +120,17 @@ class TaskMemorySchemaTest {
                 .contains("divergent legacy task re-import")
                 .doesNotContain("snapshot_content", "content_base64", "raw_content");
     }
+
+    @Test
+    void arbitrationJournalStoresCompleteAppendOnlyDecisionMetadata() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V008__arbitration_journal.sql"));
+
+        assertThat(sql).contains("CREATE TABLE arbitration_records")
+                .contains("CREATE TABLE arbitration_inputs")
+                .contains("CREATE TABLE arbitration_evidence")
+                .contains("contradiction_id", "rule_id", "rule_version", "decision", "author", "author_type")
+                .contains("input_digest", "evidence_uri", "evidence_digest", "record_digest")
+                .contains("FOREIGN KEY (task_id, attempt_id, source_commit)")
+                .contains("REVOKE UPDATE, DELETE, TRUNCATE");
+    }
 }
