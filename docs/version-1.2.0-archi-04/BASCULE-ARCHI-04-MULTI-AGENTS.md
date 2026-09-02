@@ -249,7 +249,7 @@
 
 ### Tests
 
-- [ ] **MAH-124** — Séparer `test-design` de `test-evidence`.
+- [x] **MAH-124** — Séparer `test-design` de `test-evidence`. _(Façade hôte et trois manifestes/prompts : stratégie en `test-strategy-v1`, analyse des résultats en `test-assessment-v1`.)_
 - [ ] **MAH-125** — Faire produire à Test Design une stratégie liée aux critères d'acceptation.
 - [ ] **MAH-126** — Faire analyser à Test Evidence uniquement des résultats fournis ou référencés par le workflow.
 - [ ] **MAH-127** — Interdire toute déclaration `PASSED` sans preuve déterministe complète.

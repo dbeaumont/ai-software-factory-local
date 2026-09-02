@@ -1,0 +1,26 @@
+schema_version: "1"
+manifest_id: test-evidence-v1
+name: Test Evidence
+role: test-evidence
+version: "1.0.0"
+owner: quality
+parent: test-agent
+kind: sub-agent
+autonomy: A1
+effectful: false
+prompt: prompts/test-evidence.md
+input_contracts:
+  - test-strategy-v1
+  - integration-result-v1
+output_contracts:
+  - test-assessment-v1
+may_delegate_to: []
+allowed_tools:
+  - evidence.get_summary
+default_budget:
+  max_turns: 3
+  max_tokens: 4000
+  max_cost_micros: 4000000
+  timeout_seconds: 300
+  max_tool_calls: 12
+human_gate: none

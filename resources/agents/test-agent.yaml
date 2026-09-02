@@ -1,0 +1,33 @@
+schema_version: "1"
+manifest_id: test-agent-v1
+name: Test Agent
+role: test-agent
+version: "1.0.0"
+owner: quality
+parent: supervisor
+kind: agent
+autonomy: A2
+effectful: false
+prompt: prompts/test-agent.md
+input_contracts:
+  - specialist-task-v1
+  - test-strategy-v1
+  - integration-result-v1
+output_contracts:
+  - test-assessment-v1
+may_delegate_to:
+  - test-design
+  - test-evidence
+allowed_tools:
+  - context.search_code
+  - context.read_file
+  - context.get_dependencies
+  - context.get_symbols
+  - evidence.get_summary
+default_budget:
+  max_turns: 5
+  max_tokens: 8000
+  max_cost_micros: 8000000
+  timeout_seconds: 600
+  max_tool_calls: 20
+human_gate: none
