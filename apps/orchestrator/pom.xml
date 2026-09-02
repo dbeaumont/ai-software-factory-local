@@ -16,6 +16,7 @@
     <spring-ai.version>2.0.1</spring-ai.version>
     <mcp.schemas.directory>../../resources/mcp/schemas</mcp.schemas.directory>
     <multiagent.schemas.directory>../../resources/multiagents/schemas</multiagent.schemas.directory>
+    <agents.directory>../../resources/agents</agents.directory>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -55,6 +56,11 @@
       <version>3.0.6</version>
     </dependency>
     <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>2.6</version>
+    </dependency>
+    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <optional>true</optional>
@@ -78,6 +84,10 @@
       <resource>
         <directory>${multiagent.schemas.directory}</directory>
         <targetPath>multiagents/schemas</targetPath>
+      </resource>
+      <resource>
+        <directory>${agents.directory}</directory>
+        <targetPath>agents</targetPath>
       </resource>
     </resources>
     <plugins>

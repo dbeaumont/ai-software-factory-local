@@ -136,7 +136,7 @@
 - [x] **MAH-041** — Extraire le pipeline actuel de `TaskService` dans `DeterministicWorkflowCoordinator`. _(Le coordinateur implémente le port et possède désormais l'exécution asynchrone complète.)_
 - [x] **MAH-042** — Réduire `TaskService` à la création, consultation et commande des tâches. _(Boundary test : aucune dépendance sandbox, assurance, SCM ou outils d'agents.)_
 - [x] **MAH-043** — Introduire `AgentRuntime` pour exécuter un rôle avec prompt, contrat, outils et budget explicites. _(Entrée immutable, outils filtrés par l'hôte et sortie validée par contrat.)_
-- [ ] **MAH-044** — Introduire `AgentCatalog` pour charger les manifestes de rôles versionnés.
+- [x] **MAH-044** — Introduire `AgentCatalog` pour charger les manifestes de rôles versionnés. _(Catalogue YAML embarqué, parsing sûr et références parent/enfant validées.)_
 - [ ] **MAH-045** — Introduire `DelegationValidator` pour rôle, scope, budget, dépendances et profondeur.
 - [ ] **MAH-046** — Introduire `PatchIntegrator` comme service déterministe distinct des agents.
 - [ ] **MAH-047** — Introduire `TaskMemory` comme port, sans coupler les agents au stockage choisi.

@@ -262,6 +262,7 @@ services:
       additional_contexts:
         mcp-schemas: ../resources/mcp/schemas
         multiagent-schemas: ../resources/multiagents/schemas
+        agent-resources: ../resources/agents
       args:
         MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
       secrets:
