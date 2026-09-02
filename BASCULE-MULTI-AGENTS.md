@@ -69,7 +69,7 @@
 
 - [x] **MAH-001** — Rédiger l'ADR actant Spring Boot comme control plane et Temporal comme moteur de workflow durable. _(ADR : `docs/adr/ADR-MAH-001-workflow-coordinator-temporal.md`.)_
 - [x] **MAH-002** — Décider du mode Temporal local : serveur de développement dans Compose ou environnement partagé dédié. _(Décision : Compose avec PostgreSQL dédié ; ADR `docs/adr/ADR-MAH-002-temporal-local-compose.md`.)_
-- [ ] **MAH-003** — Décider de la topologie cible Temporal : Cloud, self-managed ou service interne opéré par la plateforme.
+- [x] **MAH-003** — Décider de la topologie cible Temporal : Cloud, self-managed ou service interne opéré par la plateforme. _(Décision : Temporal Cloud par défaut, GKE pour le profil souverain ; ADR `docs/adr/ADR-MAH-003-temporal-target-topology.md`.)_
 - [ ] **MAH-004** — Définir la frontière entre état Temporal, projection métier PostgreSQL et artefacts Evidence MCP.
 - [ ] **MAH-005** — Définir les modes `PIPELINE`, `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY` et `HIERARCHICAL_ACTIVE`.
 - [ ] **MAH-006** — Définir le catalogue officiel des agents, sous-agents, propriétaires et niveaux d'autonomie.
