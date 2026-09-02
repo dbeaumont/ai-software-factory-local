@@ -337,7 +337,7 @@
 - [x] **MAH-201** — Détecter les contradictions entre Architecture, Code, Tests et Sécurité. _(`CrossPerimeterContradictionDetector` compare les assertions normalisées, liées aux preuves et à la tentative, et produit des candidats stables entre périmètres distincts.)_
 - [x] **MAH-202** — Classifier contradiction factuelle, scope incompatible, risque, test manquant ou recommandation divergente. _(`ContradictionClassifier` mappe une taxonomie fermée portée par les assertions vers les cinq types contractuels, sans heuristique textuelle.)_
 - [x] **MAH-203** — Résoudre automatiquement uniquement les contradictions couvertes par une règle déterministe. _(`DeterministicContradictionResolver` applique une matrice versionnée classification/autorité, reste ouvert par défaut et escalade les conflits de même autorité.)_
-- [ ] **MAH-204** — Déclencher une délégation ciblée lorsque de nouvelles preuves peuvent résoudre la contradiction.
+- [x] **MAH-204** — Déclencher une délégation ciblée lorsque de nouvelles preuves peuvent résoudre la contradiction. _(`ContradictionEvidenceDelegator` planifie et lance un Child Workflow borné selon une matrice catégorie/preuve/rôle et refuse toute contradiction non ouverte ou hors tentative.)_
 - [ ] **MAH-205** — Escalader à l'humain lorsqu'un choix produit, architecture, sécurité ou données reste ouvert.
 - [ ] **MAH-206** — Empêcher le Supervisor d'annuler un échec de tests, qualité, sécurité ou politique.
 - [ ] **MAH-207** — Enregistrer chaque arbitrage avec entrées, règle, décision, auteur et preuves.
