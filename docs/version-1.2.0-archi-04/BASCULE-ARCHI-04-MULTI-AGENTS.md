@@ -295,7 +295,7 @@
 ## 11. Lot 7 — Scheduler de DAG et routage
 
 - [x] **MAH-160** — Implémenter `DelegationScheduler` au-dessus des Child Workflows Temporal. _(Frontière déterministe dédiée propriétaire de l'identité et du lancement des Child Workflows ; le workflow racine ne crée plus directement les délégations génériques.)_
-- [ ] **MAH-161** — Vérifier acyclicité, dépendances satisfaites et unicité des identifiants avant exécution.
+- [x] **MAH-161** — Vérifier acyclicité, dépendances satisfaites et unicité des identifiants avant exécution. _(Le scheduler valide en bloc lignée, unicité, références et cycles, calcule un ordre topologique stable puis revérifie les prérequis terminés avant chaque Child Workflow.)_
 - [ ] **MAH-162** — Refuser les DAG dépassant profondeur, fan-out, coût prévisionnel ou durée maximale.
 - [ ] **MAH-163** — Exécuter en parallèle uniquement les nœuds indépendants et autorisés par les quotas.
 - [ ] **MAH-164** — Garantir un ordre déterministe pour les nœuds de même priorité lors de la consolidation.

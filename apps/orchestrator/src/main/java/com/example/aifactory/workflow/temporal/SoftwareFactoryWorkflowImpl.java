@@ -33,17 +33,19 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         List<String> chronology = new ArrayList<>(request.continuationState().chronology());
         if (chronology.isEmpty()) chronology.add("WORKFLOW_STARTED");
         List<DelegationWorkflow.Result> results = new ArrayList<>(request.continuationState().delegations());
+        List<DelegationWorkflow.Request> orderedDelegations = scheduler.validateAndOrder(request, request.delegations());
         int processedThisRun = 0;
         for (int index = request.continuationState().nextDelegationIndex();
-            index < request.delegations().size(); index++) {
-            DelegationWorkflow.Request delegation = request.delegations().get(index);
+             index < orderedDelegations.size(); index++) {
+            DelegationWorkflow.Request delegation = orderedDelegations.get(index);
+            scheduler.requireDependenciesSatisfied(delegation, completedDelegations.keySet(), orderedDelegations);
             DelegationWorkflow.Result result = scheduler.execute(request, delegation);
             results.add(result);
             completedDelegations.put(result.nodeId(), result);
             chronology.add("DELEGATION_COMPLETED:" + result.nodeId());
             processedThisRun++;
             int nextIndex = index + 1;
-            if (nextIndex < request.delegations().size()
+            if (nextIndex < orderedDelegations.size()
                     && shouldContinueAsNew(request.executionPolicy(), processedThisRun)) {
                 continueAsNew(request, nextIndex, results, chronology);
                 return null;
