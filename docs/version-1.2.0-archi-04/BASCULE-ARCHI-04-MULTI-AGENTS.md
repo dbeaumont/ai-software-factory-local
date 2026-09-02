@@ -266,7 +266,7 @@
 - [x] **MAH-132** — Renommer et formaliser le rôle existant en `independent-reviewer`. _(Manifeste, prompt et point d'entrée hôte dédiés ; identité parente `workflow`, contrat `independent-review-v1`, rôle historique `reviewer` conservé uniquement comme compatibilité `PIPELINE`.)_
 - [x] **MAH-133** — Le lancer depuis le workflow racine, jamais comme sous-agent du Supervisor. _(`SoftwareFactoryWorkflow` lance un `IndependentReviewWorkflow` dédié après les délégations ; le chemin générique refuse le rôle `independent-reviewer` et lie la revue à la tâche, tentative et source du workflow racine.)_
 - [x] **MAH-134** — Lui fournir le patch consolidé, le manifeste final et les contradictions résolues ou ouvertes. _(`IndependentReviewBundle` transporte des références immuables URI/digest pour patch, manifeste, résultats et contradictions `OPEN`/`RESOLVED` ; l'hôte construit l'entrée JSON, contrôle la lignée et borne les références autorisées dans la sortie.)_
-- [ ] **MAH-135** — Vérifier qu'il ne peut ni replanifier, ni modifier, ni livrer le changement.
+- [x] **MAH-135** — Vérifier qu'il ne peut ni replanifier, ni modifier, ni livrer le changement. _(Invariant de catalogue et tests dédiés : aucun enfant, opération de replan, adaptateur à effet ou outil sandbox/assurance/stockage/SCM ; le contrat fermé refuse également ces instructions.)_
 
 ### Gate du lot 5
 

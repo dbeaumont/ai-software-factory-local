@@ -63,6 +63,13 @@ public final class AgentCatalog {
                 throw new IllegalStateException("Supervisor delegation target has another parent: " + child);
             }
         });
+        Role reviewer = roles.get("independent-reviewer");
+        if (reviewer == null || !"workflow".equals(reviewer.parent()) || reviewer.effectful()
+                || !reviewer.mayDelegateTo().isEmpty()
+                || reviewer.tools().stream().anyMatch(AgentCatalog::effectfulTool)) {
+            throw new IllegalStateException(
+                    "Independent Reviewer must be a read-only workflow child without delegation authority");
+        }
     }
 
     private static boolean effectfulTool(String name) {
