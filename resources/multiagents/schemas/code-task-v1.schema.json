@@ -20,13 +20,14 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository_id", "modules", "read_paths", "write_paths", "forbidden_paths", "max_changed_files", "max_patch_bytes"],
+      "required": ["repository_id", "modules", "read_paths", "write_paths", "forbidden_paths", "rules", "max_changed_files", "max_patch_bytes"],
       "properties": {
         "repository_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
         "modules": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
         "read_paths": {"type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
         "write_paths": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
         "forbidden_paths": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+        "rules": {"type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": {"$ref": "#/$defs/scopeRule"}},
         "max_changed_files": {"type": "integer", "minimum": 1, "maximum": 64},
         "max_patch_bytes": {"type": "integer", "minimum": 1, "maximum": 1048576}
       }
@@ -46,6 +47,16 @@
   "$defs": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
     "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "path": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"}
+    "path": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"},
+    "scopeRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "access", "path"],
+      "properties": {
+        "kind": {"enum": ["FILE", "DIRECTORY", "MODULE"]},
+        "access": {"enum": ["READ", "WRITE"]},
+        "path": {"$ref": "#/$defs/path"}
+      }
+    }
   }
 }
