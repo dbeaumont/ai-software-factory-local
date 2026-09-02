@@ -44,4 +44,14 @@ class MultiAgentUiContractTest {
                 "node.toolsUsed", "function formatDuration(durationMillis)");
         assertThat(css).contains(".delegation-metrics", ".delegation-tools");
     }
+
+    @Test
+    void displaysCodeScopesTouchedFilesAndCollisions() throws Exception {
+        String javascript = Files.readString(WEB.resolve("app.js"));
+        String css = Files.readString(WEB.resolve("pipeline.css"));
+
+        assertThat(javascript).contains("node.codeImpact.scopes", "node.codeImpact.touchedFiles",
+                "node.codeImpact.collisions", "has-collisions");
+        assertThat(css).contains(".delegation-code-impact", ".has-collisions");
+    }
 }

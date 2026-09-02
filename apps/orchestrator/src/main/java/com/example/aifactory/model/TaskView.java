@@ -45,7 +45,7 @@ public record TaskView(
     public record DelegationView(String delegationId, String parentDelegationId, String role,
                                  List<String> dependsOn, String status, String stopReason,
                                  Long durationMillis, Integer turns, Long tokens, Long costMicros,
-                                 List<String> toolsUsed) {
+                                 List<String> toolsUsed, CodeImpactView codeImpact) {
         public DelegationView {
             dependsOn = dependsOn == null ? List.of() : List.copyOf(dependsOn);
             durationMillis = durationMillis == null ? 0L : durationMillis;
@@ -58,7 +58,15 @@ public record TaskView(
         public DelegationView(String delegationId, String parentDelegationId, String role,
                               List<String> dependsOn, String status, String stopReason) {
             this(delegationId, parentDelegationId, role, dependsOn, status, stopReason,
-                    0L, 0, 0L, 0L, List.of());
+                    0L, 0, 0L, 0L, List.of(), null);
+        }
+    }
+
+    public record CodeImpactView(List<String> scopes, List<String> touchedFiles, List<String> collisions) {
+        public CodeImpactView {
+            scopes = scopes == null ? List.of() : List.copyOf(scopes);
+            touchedFiles = touchedFiles == null ? List.of() : List.copyOf(touchedFiles);
+            collisions = collisions == null ? List.of() : List.copyOf(collisions);
         }
     }
 

@@ -99,6 +99,10 @@
 .delegation-metrics dt { color: var(--muted); font-size: 8px; }
 .delegation-metrics dd { overflow: hidden; margin: 1px 0 0; color: #344563; font-size: 9px; font-weight: 700; text-overflow: ellipsis; }
 .delegation-tools { display: block; overflow-wrap: anywhere; margin-top: 6px; color: #44546f; font-size: 9px; line-height: 1.35; }
+.delegation-code-impact { margin-top: 8px; padding: 7px; border-radius: 3px; background: #f7f8fa; }
+.delegation-code-impact strong { color: #0055cc; font-size: 9px; }
+.delegation-code-impact p { overflow-wrap: anywhere; margin: 3px 0 0; color: var(--muted); font-size: 9px; line-height: 1.35; }
+.delegation-code-impact .has-collisions { color: var(--red); font-weight: 700; }
 .delegation-children { display: grid; gap: 7px; margin: 9px 0 0 8px; padding-left: 10px; border-left: 1px solid #b6c2cf; }
 .delegation-node.status-completed,.delegation-node.status-succeeded { border-left-color: #22a06b; }
 .delegation-node.status-running { border-left-color: var(--blue); background: var(--blue-soft); }

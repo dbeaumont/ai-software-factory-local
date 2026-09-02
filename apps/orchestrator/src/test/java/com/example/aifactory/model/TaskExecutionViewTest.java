@@ -64,7 +64,7 @@ class TaskExecutionViewTest {
         assertThat(state.view().delegations()).containsExactly(new TaskView.DelegationView(
                 "security-1", "supervisor", "security-agent", java.util.List.of(), "SUCCESS",
                 "SUCCESS_CRITERIA_MET", 12_345L, 3, 2_048L, 45_000L,
-                java.util.List.of("assurance.evaluate_security_gate", "sandbox.run_security")));
+                java.util.List.of("assurance.evaluate_security_gate", "sandbox.run_security"), null));
     }
 
     @Test
@@ -79,6 +79,24 @@ class TaskExecutionViewTest {
         assertThat(legacy.tokens()).isZero();
         assertThat(legacy.costMicros()).isZero();
         assertThat(legacy.toolsUsed()).isEmpty();
+    }
+
+    @Test
+    void exposesValidatedCodeScopesTouchedFilesAndCollisions() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.recordDelegation("code-1", "supervisor", "code-agent", java.util.List.of(), "RUNNING", null);
+
+        state.recordDelegationCodeImpact("code-1", java.util.List.of("src/main/**"),
+                java.util.List.of("src/main/App.java", "pom.xml"), java.util.List.of("pom.xml"));
+        state.recordDelegation("code-1", "supervisor", "code-agent", java.util.List.of(),
+                "SUCCESS", "SUCCESS_CRITERIA_MET");
+
+        assertThat(state.view().delegations().getFirst().codeImpact()).isEqualTo(new TaskView.CodeImpactView(
+                java.util.List.of("src/main/**"), java.util.List.of("pom.xml", "src/main/App.java"),
+                java.util.List.of("pom.xml")));
+        assertThatThrownBy(() -> state.recordDelegationCodeImpact("code-1", java.util.List.of("../secrets"),
+                java.util.List.of(), java.util.List.of())).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

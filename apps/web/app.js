@@ -475,6 +475,25 @@ function renderDelegationDag(task) {
       tools.textContent = `Outils : ${node.toolsUsed.join(', ')}`;
       branch.append(tools);
     }
+    if (node.codeImpact) {
+      const impact = document.createElement('section');
+      impact.className = 'delegation-code-impact';
+      const impactTitle = document.createElement('strong');
+      impactTitle.textContent = 'Impact Code';
+      impact.append(impactTitle);
+      [
+        ['Scopes', node.codeImpact.scopes],
+        ['Fichiers', node.codeImpact.touchedFiles],
+        ['Collisions', node.codeImpact.collisions]
+      ].forEach(([label, values]) => {
+        const line = document.createElement('p');
+        const safeValues = Array.isArray(values) ? values : [];
+        line.className = label === 'Collisions' && safeValues.length > 0 ? 'has-collisions' : '';
+        line.textContent = `${label} : ${safeValues.length > 0 ? safeValues.join(', ') : 'aucun'}`;
+        impact.append(line);
+      });
+      branch.append(impact);
+    }
     visited.add(node.delegationId);
     const descendants = (children.get(node.delegationId) || []).filter((child) => !visited.has(child.delegationId));
     if (descendants.length > 0) {

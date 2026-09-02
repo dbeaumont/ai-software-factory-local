@@ -133,9 +133,36 @@ public class TaskState {
         }
         TaskView.DelegationView view = new TaskView.DelegationView(delegationId, parentDelegationId, role,
                 dependsOn.stream().sorted().toList(), status, stopReason, durationMillis, turns, tokens,
-                costMicros, toolsUsed.stream().sorted().toList());
+                costMicros, toolsUsed.stream().sorted().toList(),
+                delegations.containsKey(delegationId) ? delegations.get(delegationId).codeImpact() : null);
         delegations.put(delegationId, view);
         updatedAt = Instant.now();
+    }
+
+    public synchronized void recordDelegationCodeImpact(String delegationId, List<String> scopes,
+                                                        List<String> touchedFiles, List<String> collisions) {
+        TaskView.DelegationView current = delegations.get(delegationId);
+        if (current == null) throw new IllegalArgumentException("Unknown delegation " + delegationId);
+        if (!validPaths(scopes) || !validPaths(touchedFiles) || !validPaths(collisions)) {
+            throw new IllegalArgumentException("Task delegation code impact is invalid");
+        }
+        TaskView.CodeImpactView impact = new TaskView.CodeImpactView(sortedDistinct(scopes),
+                sortedDistinct(touchedFiles), sortedDistinct(collisions));
+        delegations.put(delegationId, new TaskView.DelegationView(current.delegationId(),
+                current.parentDelegationId(), current.role(), current.dependsOn(), current.status(),
+                current.stopReason(), current.durationMillis(), current.turns(), current.tokens(),
+                current.costMicros(), current.toolsUsed(), impact));
+        updatedAt = Instant.now();
+    }
+
+    private static boolean validPaths(List<String> paths) {
+        return paths != null && paths.size() <= 256 && paths.stream().allMatch(path -> path != null
+                && !path.isBlank() && path.length() <= 512 && !path.startsWith("/")
+                && !path.contains("\\") && !List.of(path.split("/", -1)).contains(".."));
+    }
+
+    private static List<String> sortedDistinct(List<String> values) {
+        return values.stream().distinct().sorted().toList();
     }
 
     public synchronized void recordArtifact(String artifactId, String type, String status, String classification,
