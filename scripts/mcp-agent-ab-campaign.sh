@@ -2,7 +2,11 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+campaign_consent_override="${AI_FACTORY_RUN_CLOUD_CAMPAIGN:-}"
 [ -f .env ] && set -a && source .env && set +a
+if [ -n "$campaign_consent_override" ]; then
+  AI_FACTORY_RUN_CLOUD_CAMPAIGN="$campaign_consent_override"
+fi
 
 manifest="${AI_FACTORY_AGENT_AB_MANIFEST:-resources/mcp/baselines/context-shadow-campaign-v1.json}"
 api="${AI_FACTORY_AGENT_AB_API:-http://localhost:${ORCHESTRATOR_PORT:-8088}}"
