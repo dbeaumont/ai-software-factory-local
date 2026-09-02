@@ -14,11 +14,14 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     private ApprovalSignal receivedApproval;
     private CancellationSignal receivedCancellation;
     private final Map<String, HumanDecisionSignal> receivedDecisions = new LinkedHashMap<>();
+    private final Map<String, DelegationWorkflow.Result> completedDelegations = new LinkedHashMap<>();
+    private String phase = "CREATED";
 
     @Override
     public Result run(Request request) {
         requireValid(request);
         this.request = request;
+        phase = "RUNNING";
         List<String> chronology = new ArrayList<>();
         chronology.add("WORKFLOW_STARTED");
         List<DelegationWorkflow.Result> results = new ArrayList<>();
@@ -27,12 +30,14 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                     ChildWorkflowOptions.newBuilder().setWorkflowId(delegationId(request, delegation)).build());
             DelegationWorkflow.Result result = child.run(delegation);
             results.add(result);
+            completedDelegations.put(result.nodeId(), result);
             chronology.add("DELEGATION_COMPLETED:" + result.nodeId());
         }
         Map<String, String> decisions = new LinkedHashMap<>();
         for (HumanDecisionRequest decision : request.humanDecisionRequests()) {
             requireDecision(decision);
             chronology.add("WAITING_DECISION:" + decision.decisionId());
+            phase = "WAITING_HUMAN_DECISION";
             Workflow.await(() -> cancelled() || decisionMatches(decision));
             if (cancelled()) return cancelledResult(request, chronology, results, decisions);
             HumanDecisionSignal received = receivedDecisions.get(decision.decisionId());
@@ -40,16 +45,19 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
             chronology.add("DECISION_RECORDED:" + decision.decisionId() + ':' + received.decision());
         }
         if (request.approvalRequest() == null) {
+            phase = decisions.isEmpty() ? (results.isEmpty() ? "READY_FOR_DELEGATION" : "DELEGATIONS_COMPLETED")
+                    : "DECISIONS_COMPLETED";
             return new Result(request.taskId(), request.attemptId(), request.sourceCommit(),
-                    decisions.isEmpty() ? (results.isEmpty() ? "READY_FOR_DELEGATION" : "DELEGATIONS_COMPLETED")
-                            : "DECISIONS_COMPLETED",
+                    phase,
                     chronology, results, decisions, null, null, null);
         }
         requireManifest(request.approvalRequest());
         chronology.add("WAITING_APPROVAL:" + request.approvalRequest().manifestId());
+        phase = "WAITING_APPROVAL";
         Workflow.await(() -> cancelled() || approvalMatches(receivedApproval));
         if (cancelled()) return cancelledResult(request, chronology, results, decisions);
         chronology.add("APPROVED:" + request.approvalRequest().manifestId());
+        phase = "APPROVED";
         return new Result(request.taskId(), request.attemptId(), request.sourceCommit(), "APPROVED",
                 chronology, results, decisions, request.approvalRequest().manifestId(), receivedApproval.approver(), null);
     }
@@ -67,6 +75,48 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     @Override
     public void decide(HumanDecisionSignal signal) {
         if (signal != null && signal.decisionId() != null) receivedDecisions.put(signal.decisionId(), signal);
+    }
+
+    @Override
+    public String status() {
+        return phase;
+    }
+
+    @Override
+    public List<DelegationView> dag() {
+        if (request == null) return List.of();
+        return request.delegations().stream().map(node -> new DelegationView(
+                node.nodeId(), node.parentNodeId(), node.role(), completedDelegations.containsKey(node.nodeId())
+                ? completedDelegations.get(node.nodeId()).status() : "PENDING")).toList();
+    }
+
+    @Override
+    public Map<String, DelegationWorkflow.Budget> budgets() {
+        if (request == null) return Map.of();
+        Map<String, DelegationWorkflow.Budget> result = new LinkedHashMap<>();
+        request.delegations().forEach(node -> result.put(node.nodeId(), node.budget()));
+        return result;
+    }
+
+    @Override
+    public List<String> evidence() {
+        if (request == null) return List.of();
+        List<String> result = new ArrayList<>();
+        request.humanDecisionRequests().forEach(decision -> result.addAll(decision.evidenceUris()));
+        if (request.approvalRequest() != null) result.add(request.approvalRequest().uri());
+        return result.stream().distinct().sorted().toList();
+    }
+
+    @Override
+    public List<PendingEffectView> pendingEffects() {
+        if (request == null) return List.of();
+        List<PendingEffectView> result = new ArrayList<>();
+        request.humanDecisionRequests().stream().filter(decision -> !decisionMatches(decision))
+                .forEach(decision -> result.add(new PendingEffectView("HUMAN_DECISION", decision.decisionId())));
+        if (request.approvalRequest() != null && !approvalMatches(receivedApproval)) {
+            result.add(new PendingEffectView("APPROVAL", request.approvalRequest().manifestId()));
+        }
+        return List.copyOf(result);
     }
 
     private static void requireValid(Request request) {
@@ -127,6 +177,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     private Result cancelledResult(Request request, List<String> chronology,
                                    List<DelegationWorkflow.Result> results, Map<String, String> decisions) {
         chronology.add("CANCELLED");
+        phase = "CANCELLED";
         return new Result(request.taskId(), request.attemptId(), request.sourceCommit(), "CANCELLED",
                 chronology, results, decisions, null, null, receivedCancellation.reason());
     }

@@ -6,6 +6,8 @@ import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SoftwareFactoryWorkflowTest {
@@ -47,7 +49,8 @@ class SoftwareFactoryWorkflowTest {
                             .setTaskQueue("software-factory-test").build());
             DelegationWorkflow.Request child = new DelegationWorkflow.Request(
                     "task-2", "attempt-1", "code-1", "supervisor", "code-agent",
-                    "a".repeat(40), "produce a patch proposal");
+                    "a".repeat(40), "produce a patch proposal",
+                    new DelegationWorkflow.Budget(2_000, 500_000, 4));
 
             SoftwareFactoryWorkflow.Result result = workflow.run(new SoftwareFactoryWorkflow.Request(
                     "task-2", "attempt-1", "a".repeat(40), "change", java.util.List.of(child)));
@@ -72,11 +75,24 @@ class SoftwareFactoryWorkflowTest {
                             .setTaskQueue("software-factory-test").build());
             String manifestId = "b".repeat(64);
             String digest = "c".repeat(64);
+            DelegationWorkflow.Request approvalChild = new DelegationWorkflow.Request(
+                    "task-3", "attempt-1", "security-1", "supervisor", "security-agent",
+                    "a".repeat(40), "assess security", new DelegationWorkflow.Budget(3_000, 750_000, 5));
             SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
-                    "task-3", "attempt-1", "a".repeat(40), "change", java.util.List.of(),
+                    "task-3", "attempt-1", "a".repeat(40), "change", java.util.List.of(approvalChild),
                     new SoftwareFactoryWorkflow.ApprovalRequest(
                             manifestId, "evidence://task-3/attempt-1/manifest/" + manifestId, digest));
             io.temporal.client.WorkflowClient.start(workflow::run, request);
+
+            awaitStatus(workflow, "WAITING_APPROVAL");
+            assertThat(workflow.dag()).containsExactly(new SoftwareFactoryWorkflow.DelegationView(
+                    "security-1", "supervisor", "security-agent", "READY_FOR_ACTIVITIES"));
+            assertThat(workflow.budgets()).containsEntry(
+                    "security-1", new DelegationWorkflow.Budget(3_000, 750_000, 5));
+            assertThat(workflow.evidence()).containsExactly(
+                    "evidence://task-3/attempt-1/manifest/" + manifestId);
+            assertThat(workflow.pendingEffects()).containsExactly(
+                    new SoftwareFactoryWorkflow.PendingEffectView("APPROVAL", manifestId));
 
             workflow.approve(new SoftwareFactoryWorkflow.ApprovalSignal(
                     "task-3", "attempt-1", "d".repeat(64), digest,
@@ -91,7 +107,8 @@ class SoftwareFactoryWorkflowTest {
             assertThat(result.approvedManifestId()).isEqualTo(manifestId);
             assertThat(result.approvedBy()).isEqualTo("reviewer@example.test");
             assertThat(result.chronology()).containsExactly(
-                    "WORKFLOW_STARTED", "WAITING_APPROVAL:" + manifestId, "APPROVED:" + manifestId);
+                    "WORKFLOW_STARTED", "DELEGATION_COMPLETED:security-1",
+                    "WAITING_APPROVAL:" + manifestId, "APPROVED:" + manifestId);
         }
     }
 
@@ -136,5 +153,16 @@ class SoftwareFactoryWorkflowTest {
         return environment.getWorkflowClient().newWorkflowStub(SoftwareFactoryWorkflow.class,
                 WorkflowOptions.newBuilder().setWorkflowId(TemporalIds.workflow(taskId, "attempt-1"))
                         .setTaskQueue("software-factory-test").build());
+    }
+
+    private static void awaitStatus(SoftwareFactoryWorkflow workflow, String expected) {
+        long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+        String observed;
+        do {
+            observed = workflow.status();
+            if (expected.equals(observed)) return;
+            Thread.onSpinWait();
+        } while (System.nanoTime() < deadline);
+        assertThat(observed).isEqualTo(expected);
     }
 }

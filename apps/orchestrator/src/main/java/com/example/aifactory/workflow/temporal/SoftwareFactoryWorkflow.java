@@ -3,6 +3,7 @@ package com.example.aifactory.workflow.temporal;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import io.temporal.workflow.SignalMethod;
+import io.temporal.workflow.QueryMethod;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,21 @@ public interface SoftwareFactoryWorkflow {
 
     @SignalMethod(name = "humanDecision")
     void decide(HumanDecisionSignal signal);
+
+    @QueryMethod(name = "status")
+    String status();
+
+    @QueryMethod(name = "dag")
+    List<DelegationView> dag();
+
+    @QueryMethod(name = "budgets")
+    Map<String, DelegationWorkflow.Budget> budgets();
+
+    @QueryMethod(name = "evidence")
+    List<String> evidence();
+
+    @QueryMethod(name = "pendingEffects")
+    List<PendingEffectView> pendingEffects();
 
     record Request(String taskId, String attemptId, String sourceCommit, String requirement,
                    List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
@@ -72,4 +88,8 @@ public interface SoftwareFactoryWorkflow {
                                String actor, String decidedAt) {}
 
     record CancellationSignal(String taskId, String attemptId, String reason, String actor, String decidedAt) {}
+
+    record DelegationView(String nodeId, String parentNodeId, String role, String status) {}
+
+    record PendingEffectView(String type, String id) {}
 }
