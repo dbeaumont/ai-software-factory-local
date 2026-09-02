@@ -182,7 +182,7 @@
 ### Reprise et résilience
 
 - [x] **MAH-076** — Tester redémarrage d'un worker pendant une délégation LLM. _(Arrêt/reprise du polling entre deux tentatives et achèvement durable de la délégation.)_
-- [ ] **MAH-077** — Tester redémarrage pendant un job sandbox et reprise par `execution_id`.
+- [x] **MAH-077** — Tester redémarrage pendant un job sandbox et reprise par `execution_id`. _(Heartbeat de l'identifiant, récupération au retry et preuve d'une unique soumission externe.)_
 - [ ] **MAH-078** — Tester une attente d'approbation sur plusieurs jours puis reprise.
 - [ ] **MAH-079** — Tester timeout, retry, doublon, réponse tardive et indisponibilité d'une task queue.
 - [ ] **MAH-080** — Tester l'annulation en cascade des Child Workflows et jobs sandbox.
