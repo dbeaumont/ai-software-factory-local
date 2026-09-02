@@ -410,7 +410,7 @@
 - [x] **MAH-267** — Tester agents Code parallèles sur scopes disjoints. _(`CodeScopePolicyTest` prouve la disjonction paire à paire ; `CodeWorkspaceManagerTest` crée ensuite deux worktrees détachés et vérifie leur isolation d'écriture.)_
 - [x] **MAH-268** — Tester conflit de patches, réparation ciblée et escalade. _(Les scénarios détectent fichiers/hunks/renames incompatibles avant sandbox, bornent la réparation au worktree et aux propositions en conflit, puis escaladent après deux réparations ou trois intégrations.)_
 - [x] **MAH-269** — Tester approbation, refus, expiration et changement de manifeste. _(Le workflow termine désormais un refus correctement lié en `REJECTED` ; les suites couvrent aussi approbation, manifeste obsolète et expiration cryptographique de l'attestation SCM.)_
-- [ ] **MAH-270** — Tester création idempotente d'une seule draft PR malgré retry ou redémarrage.
+- [x] **MAH-270** — Tester création idempotente d'une seule draft PR malgré retry ou redémarrage. _(`ScmDeliveryServiceTest` vérifie rejeu du résultat persistant, découverte de la branche/PR existante et récupération après timeout post-création avec un seul appel distant.)_
 
 ### Tests de sécurité
 
