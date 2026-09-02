@@ -34,6 +34,9 @@ class ExecutionTracerTest {
         assertThat(stopped).allSatisfy(context -> assertThat(context.getHighCardinalityKeyValues().stream()
                 .map(value -> value.getKey()).toList()).contains(
                 "trace_id", "run_id", "delegation_id", "agent_run_id"));
+        assertThat(stopped).allSatisfy(context -> assertThat(context.getAllKeyValues().stream()
+                .map(value -> value.getKey()).toList()).doesNotContain(
+                "gen_ai.prompt", "gen_ai.completion", "ai.result", "ai.evidence"));
     }
 
     @Test

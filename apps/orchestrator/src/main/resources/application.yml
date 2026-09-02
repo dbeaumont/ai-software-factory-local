@@ -43,6 +43,11 @@ management:
         enabled: true
 
 ai-factory:
+  observability:
+    content:
+      prompts: ${AI_FACTORY_OBSERVABILITY_CAPTURE_PROMPTS:false}
+      results: ${AI_FACTORY_OBSERVABILITY_CAPTURE_RESULTS:false}
+      evidence: ${AI_FACTORY_OBSERVABILITY_CAPTURE_EVIDENCE:false}
   delegation:
     max-depth: ${AI_FACTORY_DELEGATION_MAX_DEPTH:2}
     max-fan-out: ${AI_FACTORY_DELEGATION_MAX_FAN_OUT:4}
