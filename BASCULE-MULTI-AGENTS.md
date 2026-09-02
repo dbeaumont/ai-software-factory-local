@@ -184,7 +184,7 @@
 - [x] **MAH-076** — Tester redémarrage d'un worker pendant une délégation LLM. _(Arrêt/reprise du polling entre deux tentatives et achèvement durable de la délégation.)_
 - [x] **MAH-077** — Tester redémarrage pendant un job sandbox et reprise par `execution_id`. _(Heartbeat de l'identifiant, récupération au retry et preuve d'une unique soumission externe.)_
 - [x] **MAH-078** — Tester une attente d'approbation sur plusieurs jours puis reprise. _(Sept jours d'horloge Temporal, Query toujours disponible, puis reprise et achèvement par Signal.)_
-- [ ] **MAH-079** — Tester timeout, retry, doublon, réponse tardive et indisponibilité d'une task queue.
+- [x] **MAH-079** — Tester timeout, retry, doublon, réponse tardive et indisponibilité d'une task queue. _(Trois scénarios couvrent retry sur timeout, réponse obsolète, idempotence et Schedule-To-Start expiré.)_
 - [ ] **MAH-080** — Tester l'annulation en cascade des Child Workflows et jobs sandbox.
 
 ### Gate du lot 3
