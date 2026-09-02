@@ -17,7 +17,8 @@ public final class AgentContextToolHost {
             "context.read_file", Set.of("path", "start_line", "end_line", "max_bytes"),
             "context.search_code", Set.of("query", "path", "max_results"),
             "context.get_repository_rules", Set.of(),
-            "context.get_dependencies", Set.of("module", "ecosystem", "max_dependencies", "cursor"));
+            "context.get_dependencies", Set.of("module", "ecosystem", "max_dependencies", "cursor"),
+            "context.get_symbols", Set.of("path", "query", "language", "max_results", "cursor"));
 
     private final McpToolInvoker invoker;
     private final McpFactoryProperties properties;
@@ -43,7 +44,11 @@ public final class AgentContextToolHost {
                 requiredDefinition("context.get_dependencies", "Read direct dependencies without executing code.",
                         "module", Map.of("module", string(), "ecosystem", Map.of("type", "string",
                                 "enum", List.of("MAVEN", "GRADLE", "NPM", "UNKNOWN")),
-                                "max_dependencies", integer(1, 100))));
+                                "max_dependencies", integer(1, 100))),
+                definition("context.get_symbols", "Read a bounded symbol index by path or query.", Map.of(
+                        "path", string(), "query", Map.of("type", "string", "maxLength", 256),
+                        "language", Map.of("type", "string", "maxLength", 32),
+                        "max_results", integer(1, 500))));
     }
 
     public AgentToolLoop.ToolExecutor executor(String taskId, String sourceCommit, String role) {
