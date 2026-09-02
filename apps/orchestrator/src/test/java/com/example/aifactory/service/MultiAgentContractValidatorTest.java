@@ -100,6 +100,31 @@ class MultiAgentContractValidatorTest {
         }
     }
 
+    @Test
+    void supervisorPlanRequiresBoundCitationsAssumptionsRisksBudgetsAndSuccessCriteria() throws Exception {
+        JsonNode plan = new ObjectMapper().readTree(Files.readString(fixturePath()))
+                .path("documents").path("delegation-plan-v1");
+        validator.validate("delegation-plan-v1", plan,
+                new MultiAgentContractValidator.ContractContext("task-1", "attempt-1", Set.of("context-1")));
+
+        for (String required : java.util.List.of("citations", "assumptions", "risks")) {
+            var missing = plan.deepCopy();
+            ((tools.jackson.databind.node.ObjectNode) missing).remove(required);
+            assertThatThrownBy(() -> validator.validate("delegation-plan-v1", missing))
+                    .as("missing " + required).hasMessageContaining("violates");
+        }
+        assertThatThrownBy(() -> validator.validate("delegation-plan-v1", plan,
+                new MultiAgentContractValidator.ContractContext("task-1", "attempt-1", Set.of("another-ref"))))
+                .hasMessageContaining("citation outside task");
+
+        for (String required : java.util.List.of("budget", "success_criteria")) {
+            var missing = plan.deepCopy();
+            ((tools.jackson.databind.node.ObjectNode) missing.path("nodes").get(0)).remove(required);
+            assertThatThrownBy(() -> validator.validate("delegation-plan-v1", missing))
+                    .as("missing node " + required).hasMessageContaining("violates");
+        }
+    }
+
     private static Path fixturePath() {
         Path workingDirectory = Path.of("").toAbsolutePath();
         for (Path candidate : java.util.List.of(

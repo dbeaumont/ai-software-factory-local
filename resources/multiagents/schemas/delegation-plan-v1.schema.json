@@ -4,7 +4,7 @@
   "title": "DelegationPlan v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "plan_id", "task_id", "attempt_id", "source_commit", "mode", "risk_class", "root_role", "nodes", "created_at"],
+  "required": ["schema_version", "plan_id", "task_id", "attempt_id", "source_commit", "mode", "risk_class", "root_role", "citations", "assumptions", "risks", "nodes", "created_at"],
   "properties": {
     "schema_version": {"const": "1"},
     "plan_id": {"$ref": "#/$defs/id"},
@@ -14,6 +14,22 @@
     "mode": {"enum": ["HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY", "HIERARCHICAL_ACTIVE"]},
     "risk_class": {"enum": ["R0", "R1", "R2", "R3", "R4"]},
     "root_role": {"const": "supervisor"},
+    "citations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/citation"}
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {"type": "string", "minLength": 1, "maxLength": 1000}
+    },
+    "risks": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/riskItem"}
+    },
     "nodes": {
       "type": "array",
       "minItems": 1,
@@ -24,6 +40,28 @@
   },
   "$defs": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_id", "kind", "digest"],
+      "properties": {
+        "reference_id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["CONTEXT", "EVIDENCE", "RESULT"]},
+        "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "riskItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk_id", "level", "description", "mitigation"],
+      "properties": {
+        "risk_id": {"$ref": "#/$defs/id"},
+        "level": {"$ref": "#/$defs/risk"},
+        "description": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "mitigation": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "risk": {"type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"]},
     "role": {
       "enum": [
         "architecture-agent", "impact-analysis", "dependencies-contracts",

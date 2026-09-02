@@ -230,7 +230,7 @@
 - [x] **MAH-111** — Limiter Supervisor à décomposition, sélection de rôles, consolidation et proposition de replan. _(`SupervisorAgent` n'expose que `DECOMPOSE`, `CONSOLIDATE` et `REPLAN`, avec contrat de sortie imposé par l'hôte.)_
 - [x] **MAH-112** — Lui interdire tout outil à effet et toute création de rôle non catalogué. _(Catalogue Supervisor validé en lecture seule, écritures Evidence incluses dans les effets interdits et rôles hors schéma rejetés avant planification.)_
 - [x] **MAH-113** — Valider son DAG avant d'exécuter la première délégation. _(`SupervisorAgent` applique contrat, acyclicité, hiérarchie, scopes, profondeur, fan-out et budgets hôte avant de rendre tout résultat `DECOMPOSE`.)_
-- [ ] **MAH-114** — Exiger citations, hypothèses, risques, budget proposé et critères de succès.
+- [x] **MAH-114** — Exiger citations, hypothèses, risques, budget proposé et critères de succès. _(Contrat Supervisor renforcé : citations digestées et liées au contexte, hypothèses/risques explicites, budget et critères obligatoires par nœud.)_
 
 ### Architecture
 

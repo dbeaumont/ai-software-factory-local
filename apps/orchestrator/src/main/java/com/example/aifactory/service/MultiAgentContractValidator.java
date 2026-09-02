@@ -101,6 +101,14 @@ public final class MultiAgentContractValidator {
                 throw new ContractValidationException(contract, "reference outside task in " + field);
             }
         }
+        if ("delegation-plan-v1".equals(contract)) {
+            for (JsonNode citation : validated.path("citations")) {
+                String referenceId = citation.path("reference_id").asText();
+                if (!context.allowedReferenceIds().contains(referenceId)) {
+                    throw new ContractValidationException(contract, "citation outside task: " + referenceId);
+                }
+            }
+        }
         return validated;
     }
 
