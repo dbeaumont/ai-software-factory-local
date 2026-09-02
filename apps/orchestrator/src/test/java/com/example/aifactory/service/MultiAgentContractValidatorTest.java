@@ -141,6 +141,24 @@ class MultiAgentContractValidatorTest {
                 .hasMessageContaining("reference outside task");
     }
 
+    @Test
+    void supervisorReplanRequiresCurrentAndReplacementDigestsAndAJustification() throws Exception {
+        JsonNode decision = new ObjectMapper().readTree(Files.readString(fixturePath()))
+                .path("documents").path("supervisor-decision-v1").deepCopy();
+        tools.jackson.databind.node.ObjectNode object = (tools.jackson.databind.node.ObjectNode) decision;
+        object.put("action", "REPLAN");
+        object.put("replacement_plan_id", "plan-2");
+
+        assertThatThrownBy(() -> validator.validate("supervisor-decision-v1", decision))
+                .hasMessageContaining("violates");
+
+        tools.jackson.databind.node.ObjectNode replan = object.putObject("replan");
+        replan.put("expected_current_dag_digest", "a".repeat(64));
+        replan.put("replacement_dag_digest", "b".repeat(64));
+        replan.put("justification", "Verified results require a replacement DAG.");
+        validator.validate("supervisor-decision-v1", decision);
+    }
+
     private static Path fixturePath() {
         Path workingDirectory = Path.of("").toAbsolutePath();
         for (Path candidate : java.util.List.of(

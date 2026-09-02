@@ -22,18 +22,29 @@
     "rejected_result_ids": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
     "required_gates": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"enum": ["BEFORE_CODE", "BEFORE_EXTERNAL_EFFECT"]}},
     "replacement_plan_id": {"$ref": "#/$defs/id"},
+    "replan": {"$ref": "#/$defs/replan"},
     "human_decision_request_id": {"$ref": "#/$defs/id"},
     "evidence_uri": {"type": "string", "pattern": "^evidence://", "maxLength": 1024},
     "created_at": {"type": "string", "format": "date-time"}
   },
   "allOf": [
     {"if": {"properties": {"action": {"const": "CONSOLIDATE"}}}, "then": {"properties": {"selected_result_ids": {"minItems": 1}}}},
-    {"if": {"properties": {"action": {"const": "REPLAN"}}}, "then": {"required": ["replacement_plan_id"]}},
+    {"if": {"properties": {"action": {"const": "REPLAN"}}}, "then": {"required": ["replacement_plan_id", "replan"]}},
     {"if": {"properties": {"action": {"const": "ESCALATE_TO_HUMAN"}}}, "then": {"required": ["human_decision_request_id"]}}
   ],
   "$defs": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
     "risk": {"type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"]},
+    "replan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_current_dag_digest", "replacement_dag_digest", "justification"],
+      "properties": {
+        "expected_current_dag_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "replacement_dag_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "justification": {"type": "string", "minLength": 1, "maxLength": 4000}
+      }
+    },
     "inputResult": {
       "type": "object",
       "additionalProperties": false,

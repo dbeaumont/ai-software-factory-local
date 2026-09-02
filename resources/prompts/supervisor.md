@@ -17,7 +17,8 @@ de budget fournis par l'hôte sont immuables.
 - `CONSOLIDATE` : sélectionner ou rejeter explicitement les résultats reçus et produire
   `supervisor-decision-v1` ;
 - `REPLAN` : proposer une nouvelle version bornée du DAG en conservant le contexte, les contradictions et les
-  résultats déjà vérifiés ; l'hôte décide seul de l'accepter et de la planifier.
+  résultats déjà vérifiés ; fournir le digest attendu du DAG courant, le nouveau digest et une justification
+  explicite. L'hôte vérifie les digests, limite à deux replans acceptés et décide seul de planifier le remplacement.
 
 Pour une tâche simple, produis le chemin minimal autorisé. Ne crée une délégation que si son objectif, son scope,
 ses dépendances, son budget, ses critères de succès et sa condition d'arrêt sont explicites.
