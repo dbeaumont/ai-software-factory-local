@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/delegation-plan-v1.schema.json",
+  "title": "DelegationPlan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "task_id", "attempt_id", "source_commit", "mode", "risk_class", "root_role", "nodes", "created_at"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "plan_id": {"$ref": "#/$defs/id"},
+    "task_id": {"$ref": "#/$defs/id"},
+    "attempt_id": {"$ref": "#/$defs/id"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "mode": {"enum": ["HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY", "HIERARCHICAL_ACTIVE"]},
+    "risk_class": {"enum": ["R0", "R1", "R2", "R3", "R4"]},
+    "root_role": {"const": "supervisor"},
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/node"}
+    },
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "role": {
+      "enum": [
+        "architecture-agent", "impact-analysis", "dependencies-contracts",
+        "code-agent", "developer", "patch-repair",
+        "test-agent", "test-design", "test-evidence",
+        "security-agent", "threat-model", "security-findings"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_id", "read_paths", "write_paths"],
+      "properties": {
+        "repository_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
+        "read_paths": {"type": "array", "maxItems": 128, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+        "write_paths": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 512}}
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_turns", "max_tokens", "max_cost_micros", "timeout_seconds", "max_tool_calls"],
+      "properties": {
+        "max_turns": {"type": "integer", "minimum": 1, "maximum": 16},
+        "max_tokens": {"type": "integer", "minimum": 1, "maximum": 100000},
+        "max_cost_micros": {"type": "integer", "minimum": 0, "maximum": 100000000},
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 3600},
+        "max_tool_calls": {"type": "integer", "minimum": 0, "maximum": 64}
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "role", "parent_node_id", "depends_on", "objective", "scope", "budget", "success_criteria", "stop_condition"],
+      "properties": {
+        "node_id": {"$ref": "#/$defs/id"},
+        "role": {"$ref": "#/$defs/role"},
+        "parent_node_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/id"}]},
+        "depends_on": {"type": "array", "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "objective": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "scope": {"$ref": "#/$defs/scope"},
+        "budget": {"$ref": "#/$defs/budget"},
+        "success_criteria": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+        "stop_condition": {"type": "string", "enum": ["SUCCESS_CRITERIA_MET", "BUDGET_EXHAUSTED", "DEADLINE_REACHED", "BLOCKED_OR_ESCALATE"]}
+      }
+    }
+  }
+}

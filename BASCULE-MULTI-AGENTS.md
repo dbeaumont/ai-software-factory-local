@@ -97,7 +97,7 @@
 
 ### Contrats communs
 
-- [ ] **MAH-020** — Créer `delegation-plan-v1.schema.json` pour le DAG proposé par le Supervisor.
+- [x] **MAH-020** — Créer `delegation-plan-v1.schema.json` pour le DAG proposé par le Supervisor. _(`resources/multiagents/schemas/delegation-plan-v1.schema.json`.)_
 - [ ] **MAH-021** — Créer `specialist-task-v1.schema.json` pour la mission remise à un agent ou sous-agent.
 - [ ] **MAH-022** — Créer `specialist-result-v1.schema.json` pour le résultat commun et ses références de preuves.
 - [ ] **MAH-023** — Créer `agent-run-event-v1.schema.json` pour les transitions, consommations et raisons d'arrêt.
