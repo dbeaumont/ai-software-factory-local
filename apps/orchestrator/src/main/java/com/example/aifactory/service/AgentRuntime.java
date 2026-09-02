@@ -61,8 +61,9 @@ public final class AgentRuntime implements AgentExecutor {
                 toolHost.executor(invocation.taskId(), invocation.attemptId(),
                         invocation.sourceCommit(), invocation.role()),
                 toolHost.authorization(), AgentToolLoop.SafetyLimits.defaults(), delta -> usage.consume(
-                invocation.taskId(), invocation.attemptId(), new TaskUsageLedger.Delta(delta.inputTokens(),
-                        delta.outputTokens(), delta.costMicros(), delta.turns(), delta.mcpCalls())));
+                invocation.taskId(), invocation.attemptId(), usageLane(invocation.role()),
+                new TaskUsageLedger.Delta(delta.inputTokens(), delta.outputTokens(), delta.costMicros(),
+                        delta.turns(), 0)));
         AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(invocation.taskId(), invocation.role()),
                 prompt, invocation.untrustedInput(), invocation.budget());
         JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),
@@ -74,6 +75,11 @@ public final class AgentRuntime implements AgentExecutor {
     static boolean effectfulTool(String name) {
         return name.startsWith("sandbox.") || name.startsWith("assurance.") || name.startsWith("scm.")
                 || name.equals("evidence.store") || name.equals("evidence.create_manifest");
+    }
+
+    private static TaskUsageLedger.Lane usageLane(String role) {
+        return "independent-reviewer".equals(role)
+                ? TaskUsageLedger.Lane.FINALIZATION : TaskUsageLedger.Lane.STANDARD;
     }
 
     public record Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,

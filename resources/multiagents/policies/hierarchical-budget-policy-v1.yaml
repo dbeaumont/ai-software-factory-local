@@ -43,3 +43,10 @@ actual_usage:
   max_cost_micros: 80000000
   max_turns: 60
   max_mcp_calls: 208
+
+finalization_reserve:
+  max_input_tokens: 10000
+  max_output_tokens: 5000
+  max_cost_micros: 10000000
+  max_turns: 6
+  max_mcp_calls: 32

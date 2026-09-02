@@ -138,6 +138,20 @@ class ResilientMcpToolInvokerTest {
                 "server-a", "task-a", "developer", "server-b", "task-b", "developer"));
     }
 
+    @Test
+    void accountsEveryTransportAttemptAndProtectsFinalGateCapacity() {
+        TaskUsageLedger usage = new TaskUsageLedger(new HierarchicalBudgetPolicy());
+        invoker = new ResilientMcpToolInvoker(delegate((server, tool, arguments) ->
+                new ObjectMapper().createObjectNode().put("ok", true)),
+                properties(1, Duration.ofSeconds(1)), new SimpleMeterRegistry(), new ObjectMapper(), usage);
+
+        invoker.call("repository-context-mcp", "context.list_tree", arguments("task-1", "developer"));
+        invoker.call("repository-context-mcp", "assurance.evaluate_policy", arguments("task-1", "workflow"));
+
+        assertThat(usage.snapshot("task-1", TaskUsageLedger.Lane.STANDARD).mcpCalls()).isEqualTo(1);
+        assertThat(usage.snapshot("task-1", TaskUsageLedger.Lane.FINALIZATION).mcpCalls()).isEqualTo(1);
+    }
+
     private void assertConcurrencyLimit(ConcurrencyCase limits) throws Exception {
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);

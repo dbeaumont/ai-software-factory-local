@@ -33,6 +33,8 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
             "sandbox.run_security", "sandbox.cancel_execution", "assurance.evaluate_quality_gate",
             "assurance.normalize_findings", "assurance.evaluate_policy", "evidence.store",
             "evidence.create_manifest", "scm.create_draft_pull_request");
+    private static final Set<String> FINAL_GATE_TOOLS = Set.of(
+            "assurance.evaluate_policy", "evidence.create_manifest", "scm.create_draft_pull_request");
     private static final int CIRCUIT_FAILURE_THRESHOLD = 5;
     private static final Duration CIRCUIT_OPEN_DURATION = Duration.ofSeconds(30);
 
@@ -40,6 +42,7 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
     private final McpClientProperties properties;
     private final MeterRegistry metrics;
     private final ObjectMapper objectMapper;
+    private final TaskUsageLedger usage;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final Semaphore globalLimit;
     private final ConcurrentMap<String, Semaphore> serverLimits = new ConcurrentHashMap<>();
@@ -53,10 +56,22 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
             McpClientProperties properties,
             MeterRegistry metrics,
             ObjectMapper objectMapper) {
+        this(delegate, properties, metrics, objectMapper,
+                new TaskUsageLedger(new HierarchicalBudgetPolicy()));
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ResilientMcpToolInvoker(
+            @Qualifier("validatedMcpToolInvoker") McpToolInvoker delegate,
+            McpClientProperties properties,
+            MeterRegistry metrics,
+            ObjectMapper objectMapper,
+            TaskUsageLedger usage) {
         this.delegate = delegate;
         this.properties = properties;
         this.metrics = metrics;
         this.objectMapper = objectMapper;
+        this.usage = usage;
         this.globalLimit = new Semaphore(properties.maxInflightGlobal(), true);
         properties.servers().values().forEach(server -> {
             serverLimits.put(server.expectedName(), new Semaphore(properties.maxInflightPerServer(), true));
@@ -82,6 +97,7 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
         for (int attempt = 1; attempt <= attempts; attempt++) {
             long started = System.nanoTime();
             try {
+                accountMcp(toolName, arguments);
                 JsonNode response = timedCall(serverName, toolName, arguments);
                 circuit.success();
                 recordSuccess(serverName, toolName, arguments, response, started);
@@ -102,6 +118,15 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
             }
         }
         throw last == null ? new IllegalStateException("MCP call failed") : last;
+    }
+
+    private void accountMcp(String toolName, Map<String, Object> arguments) {
+        String actor = String.valueOf(arguments.getOrDefault("actor", "unknown"));
+        TaskUsageLedger.Lane lane = "independent-reviewer".equals(actor) || FINAL_GATE_TOOLS.contains(toolName)
+                ? TaskUsageLedger.Lane.FINALIZATION : TaskUsageLedger.Lane.STANDARD;
+        usage.consume(String.valueOf(arguments.getOrDefault("task_id", "unknown")),
+                String.valueOf(arguments.getOrDefault("attempt_id", "unknown")), lane,
+                new TaskUsageLedger.Delta(0, 0, 0, 0, 1));
     }
 
     private JsonNode timedCall(String serverName, String toolName, Map<String, Object> arguments) {

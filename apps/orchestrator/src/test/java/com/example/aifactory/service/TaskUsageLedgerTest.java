@@ -27,6 +27,23 @@ class TaskUsageLedgerTest {
         assertQuota("mcp_calls", new TaskUsageLedger.Delta(0, 0, 0, 0, 209));
     }
 
+    @Test
+    void standardWorkCannotConsumeTheFinalizationReserve() {
+        TaskUsageLedger ledger = ledger();
+        ledger.consume("task-1", "attempt-1", TaskUsageLedger.Lane.STANDARD,
+                new TaskUsageLedger.Delta(110_000, 35_000, 70_000_000, 54, 176));
+
+        assertThatThrownBy(() -> ledger.consume("task-1", "attempt-1", TaskUsageLedger.Lane.STANDARD,
+                new TaskUsageLedger.Delta(0, 0, 0, 0, 1)))
+                .isInstanceOf(TaskUsageLedger.QuotaExceededException.class);
+
+        TaskUsageLedger.Snapshot complete = ledger.consume("task-1", "attempt-2",
+                TaskUsageLedger.Lane.FINALIZATION,
+                new TaskUsageLedger.Delta(10_000, 5_000, 10_000_000, 6, 32));
+        assertThat(complete).isEqualTo(
+                new TaskUsageLedger.Snapshot(120_000, 40_000, 80_000_000, 60, 208, "attempt-2"));
+    }
+
     private static void assertQuota(String quota, TaskUsageLedger.Delta delta) {
         TaskUsageLedger ledger = ledger();
         ledger.consume("task-1", "attempt-1", new TaskUsageLedger.Delta(1, 1, 1, 1, 1));

@@ -25,6 +25,10 @@ class HierarchicalBudgetPolicyTest {
                 "architecture-agent", "code-agent", "test-agent", "security-agent");
         assertThat(policy.actualUsage()).isEqualTo(
                 new HierarchicalBudgetPolicy.UsageQuota(120_000, 40_000, 80_000_000, 60, 208));
+        assertThat(policy.finalizationReserve()).isEqualTo(
+                new HierarchicalBudgetPolicy.UsageQuota(10_000, 5_000, 10_000_000, 6, 32));
+        assertThat(policy.standardUsage()).isEqualTo(
+                new HierarchicalBudgetPolicy.UsageQuota(110_000, 35_000, 70_000_000, 54, 176));
     }
 
     @Test
@@ -47,7 +51,7 @@ class HierarchicalBudgetPolicyTest {
 
         assertThatThrownBy(() -> policy.validateTask(
                 new HierarchicalBudgetPolicy.Usage(60, 80_001, 80_000_000, 208)))
-                .hasMessageContaining("task budget exceeded");
+                .hasMessageContaining("task before finalization reserve budget exceeded");
     }
 
     @Test

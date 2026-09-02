@@ -21,6 +21,7 @@ public final class HierarchicalBudgetPolicy {
     private final Map<String, AggregateBudget> perimeters;
     private final AggregateBudget task;
     private final UsageQuota actualUsage;
+    private final UsageQuota finalizationReserve;
 
     public HierarchicalBudgetPolicy() {
         Map<String, Object> root = load();
@@ -34,6 +35,11 @@ public final class HierarchicalBudgetPolicy {
         actualUsage = new UsageQuota(number(usage, "max_input_tokens"), number(usage, "max_output_tokens"),
                 number(usage, "max_cost_micros"), number(usage, "max_turns"),
                 number(usage, "max_mcp_calls"));
+        Map<String, Object> reserve = map(root.get("finalization_reserve"), "finalization_reserve");
+        finalizationReserve = new UsageQuota(number(reserve, "max_input_tokens"),
+                number(reserve, "max_output_tokens"), number(reserve, "max_cost_micros"),
+                number(reserve, "max_turns"), number(reserve, "max_mcp_calls"));
+        actualUsage.minus(finalizationReserve);
     }
 
     public String policyId() { return policyId; }
@@ -41,6 +47,8 @@ public final class HierarchicalBudgetPolicy {
     public Map<String, AggregateBudget> perimeters() { return perimeters; }
     public AggregateBudget task() { return task; }
     public UsageQuota actualUsage() { return actualUsage; }
+    public UsageQuota finalizationReserve() { return finalizationReserve; }
+    public UsageQuota standardUsage() { return actualUsage.minus(finalizationReserve); }
 
     public void validateInvocation(String role, AgentToolLoop.Budget requested) {
         Budget ceiling = agents.get(role);
@@ -74,7 +82,7 @@ public final class HierarchicalBudgetPolicy {
     }
 
     public void validateTask(Usage usage) {
-        requireWithin(usage, task, "task");
+        requireWithin(usage, task.minus(finalizationReserve), "task before finalization reserve");
     }
 
     private static void requireWithin(Budget requested, Budget ceiling, String level) {
@@ -169,6 +177,12 @@ public final class HierarchicalBudgetPolicy {
                 throw new IllegalArgumentException("Aggregate budget ceilings must be positive");
             }
         }
+
+        AggregateBudget minus(UsageQuota reserved) {
+            return new AggregateBudget(maxTurns - reserved.maxTurns,
+                    maxTokens - reserved.maxInputTokens - reserved.maxOutputTokens,
+                    maxCostMicros - reserved.maxCostMicros, maxToolCalls - reserved.maxMcpCalls);
+        }
     }
 
     public record Usage(long turns, long tokens, long costMicros, long toolCalls) {
@@ -187,6 +201,13 @@ public final class HierarchicalBudgetPolicy {
                     || maxTurns < 1 || maxMcpCalls < 0) {
                 throw new IllegalArgumentException("Actual usage quotas must be positive");
             }
+        }
+
+        UsageQuota minus(UsageQuota reserved) {
+            return new UsageQuota(maxInputTokens - reserved.maxInputTokens,
+                    maxOutputTokens - reserved.maxOutputTokens,
+                    maxCostMicros - reserved.maxCostMicros,
+                    maxTurns - reserved.maxTurns, maxMcpCalls - reserved.maxMcpCalls);
         }
     }
 }
