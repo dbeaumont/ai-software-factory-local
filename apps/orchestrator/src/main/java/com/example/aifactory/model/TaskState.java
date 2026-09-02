@@ -261,6 +261,18 @@ public class TaskState {
         return humanActions.values().stream().anyMatch(action -> "PENDING".equals(action.status()));
     }
 
+    public synchronized void bindApprovalManifest(String manifestId, String manifestUri, String manifestDigest) {
+        if (pendingEffect == null || manifestId == null || !manifestId.matches("[0-9a-f]{64}")
+                || manifestUri == null || !manifestUri.startsWith("evidence://") || manifestUri.length() > 1_024
+                || manifestDigest == null || !manifestDigest.matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Approval manifest metadata is invalid");
+        }
+        pendingEffect = new PendingEffect(pendingEffect.tool(), pendingEffect.safeArguments(), pendingEffect.impact(),
+                pendingEffect.policyDecision(), pendingEffect.confirmationRequired(), manifestId, manifestUri,
+                manifestDigest);
+        updatedAt = Instant.now();
+    }
+
     public synchronized void cancel(String reason, String actor) {
         if (status == TaskStatus.CANCELLED) return;
         if (List.of(TaskStatus.APPROVED, TaskStatus.PR_CREATED, TaskStatus.FAILED).contains(status)) {

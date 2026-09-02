@@ -4,6 +4,7 @@ import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskCancellationRequest;
 import com.example.aifactory.model.HumanDecisionResponse;
+import com.example.aifactory.model.ManifestApprovalRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +29,8 @@ class RestApiCompatibilityTest {
         assertRoute(TaskController.class.getMethod("list"), GetMapping.class, "", false);
         assertRoute(TaskController.class.getMethod("get", String.class), GetMapping.class, "/{id}", false);
         assertRoute(TaskController.class.getMethod("approve", String.class), PostMapping.class, "/{id}/approve", true);
+        assertRoute(TaskController.class.getMethod("approveManifest", String.class, ManifestApprovalRequest.class),
+                PostMapping.class, "/{id}/approve-manifest", true);
         assertRoute(TaskController.class.getMethod("cancel", String.class, TaskCancellationRequest.class),
                 PostMapping.class, "/{id}/cancel", true);
         assertRoute(TaskController.class.getMethod("answerDecision", String.class, String.class,

@@ -135,3 +135,4 @@
 .decision-alternatives strong,.decision-alternatives small { display: block; }
 .decision-alternatives small { margin-top: 2px; color: var(--muted); line-height: 1.35; }
 .human-decision.status-answered,.human-decision.status-approved { border-color: #7ee2b8; background: #dcfff1; }
+.effect-manifest { overflow-wrap: anywhere; padding: 7px; border-left: 2px solid var(--blue); color: #344563; background: var(--blue-soft); font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 9px; line-height: 1.4; }

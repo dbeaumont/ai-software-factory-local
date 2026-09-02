@@ -3,6 +3,7 @@ package com.example.aifactory.controller;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskCancellationRequest;
 import com.example.aifactory.model.HumanDecisionResponse;
+import com.example.aifactory.model.ManifestApprovalRequest;
 import com.example.aifactory.model.TaskView;
 import com.example.aifactory.service.TaskService;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,12 @@ public class TaskController {
     @PostMapping("/{id}/approve")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public TaskView approve(@PathVariable String id) { return tasks.approve(id); }
+
+    @PostMapping("/{id}/approve-manifest")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public TaskView approveManifest(@PathVariable String id, @RequestBody ManifestApprovalRequest request) {
+        return tasks.approveManifest(id, request);
+    }
 
     @PostMapping("/{id}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)

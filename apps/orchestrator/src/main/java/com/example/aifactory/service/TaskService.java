@@ -5,6 +5,7 @@ import com.example.aifactory.model.CloudAvailability;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskCancellationRequest;
 import com.example.aifactory.model.HumanDecisionResponse;
+import com.example.aifactory.model.ManifestApprovalRequest;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.model.TaskView;
@@ -70,6 +71,29 @@ public class TaskService {
 
     public TaskView approve(String id) {
         TaskState state = requireTask(id);
+        if (state.pendingEffect != null && state.pendingEffect.manifestId() != null) {
+            throw new IllegalStateException("Manifest-bound approval endpoint is required");
+        }
+        return approve(state);
+    }
+
+    public TaskView approveManifest(String id, ManifestApprovalRequest request) {
+        if (request == null || request.manifestId() == null || !request.manifestId().matches("[0-9a-f]{64}")
+                || request.manifestDigest() == null || !request.manifestDigest().matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Manifest approval request is required");
+        }
+        TaskState state = requireTask(id);
+        synchronized (state) {
+            if (state.pendingEffect == null || state.pendingEffect.manifestId() == null
+                    || !state.pendingEffect.manifestId().equals(request.manifestId())
+                    || !state.pendingEffect.manifestDigest().equals(request.manifestDigest())) {
+                throw new IllegalStateException("Approval manifest changed; reload the task before approving");
+            }
+            return approve(state);
+        }
+    }
+
+    private TaskView approve(TaskState state) {
         if (state.status != TaskStatus.WAITING_APPROVAL)
             throw new IllegalStateException("Task is not waiting for approval");
         if (state.hasPendingHumanActions())

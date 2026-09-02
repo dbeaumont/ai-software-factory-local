@@ -4,6 +4,9 @@ import com.example.aifactory.model.LlmMode;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
+import com.example.aifactory.model.PendingEffect;
+import com.example.aifactory.model.ManifestApprovalRequest;
+import com.example.aifactory.workflow.WorkflowCoordinator;
 import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -165,6 +168,26 @@ class TaskServiceTest {
         assertEquals(TaskStatus.WAITING_APPROVAL, state.status);
     }
 
+    @Test
+    void approvesOnlyTheManifestCurrentlyDisplayedToTheOperator() {
+        TestableTaskService service = new TestableTaskService();
+        TaskState state = new TaskState("task-177", "AF-0177", new TaskRequest(
+                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
+        state.status = TaskStatus.WAITING_APPROVAL;
+        state.pendingEffect = new PendingEffect("scm.create_draft_pull_request", java.util.Map.of(), "Create PR",
+                "ALLOW", true);
+        state.bindApprovalManifest("a".repeat(64), "evidence://task-177/manifest", "b".repeat(64));
+        service.memory.save(state);
+
+        IllegalStateException stale = assertThrows(IllegalStateException.class, () -> service.approveManifest(
+                state.id, new ManifestApprovalRequest("a".repeat(64), "c".repeat(64))));
+        assertEquals("Approval manifest changed; reload the task before approving", stale.getMessage());
+        assertEquals(TaskStatus.WAITING_APPROVAL, state.status);
+
+        service.approveManifest(state.id, new ManifestApprovalRequest("a".repeat(64), "b".repeat(64)));
+        assertEquals(TaskStatus.APPROVED, state.status);
+    }
+
     private static final class TestableTaskService extends TaskService {
         private final InMemoryTaskMemory memory;
 
@@ -173,7 +196,10 @@ class TaskServiceTest {
         }
 
         private TestableTaskService(InMemoryTaskMemory memory) {
-            super(null, null, null, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            super(null, null, new WorkflowCoordinator() {
+                @Override public void start(TaskState task) {}
+                @Override public void resumeAfterApproval(TaskState task) {}
+            }, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
             this.memory = memory;
         }
     }

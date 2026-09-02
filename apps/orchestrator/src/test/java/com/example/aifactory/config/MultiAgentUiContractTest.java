@@ -79,4 +79,14 @@ class MultiAgentUiContractTest {
                 "action.alternatives", "option.consequence", "hasPendingHumanDecision");
         assertThat(css).contains(".human-contradiction", ".decision-alternatives");
     }
+
+    @Test
+    void bindsApprovalToTheDisplayedFinalManifestAndRefreshesOnConflict() throws Exception {
+        String html = Files.readString(WEB.resolve("index.html"));
+        String javascript = Files.readString(WEB.resolve("app.js"));
+
+        assertThat(html).contains("id=\"effect-manifest\"");
+        assertThat(javascript).contains("effect.manifestId", "effect.manifestDigest", "approve-manifest",
+                "response.status === 409", "await refreshTask()");
+    }
 }

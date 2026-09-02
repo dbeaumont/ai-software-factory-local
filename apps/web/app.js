@@ -28,6 +28,7 @@ const effectConfirmation = document.querySelector('#effect-confirmation');
 const effectTool = document.querySelector('#effect-tool');
 const effectArguments = document.querySelector('#effect-arguments');
 const effectImpact = document.querySelector('#effect-impact');
+const effectManifest = document.querySelector('#effect-manifest');
 const effectPolicy = document.querySelector('#effect-policy');
 const proposalButton = document.querySelector('#proposal-button');
 const reviewButton = document.querySelector('#review-button');
@@ -661,6 +662,9 @@ function renderPendingEffect(effect, visible) {
     effectArguments.append(term, detail);
   });
   effectImpact.textContent = `Impact : ${effect.impact || 'non précisé'}`;
+  effectManifest.hidden = !effect.manifestId;
+  effectManifest.textContent = effect.manifestId
+    ? `Manifeste final : ${effect.manifestId} · SHA-256 ${effect.manifestDigest}` : '';
   effectPolicy.textContent = `Policy gate : ${effect.policyDecision || 'INDETERMINATE'}`;
 }
 
@@ -800,9 +804,24 @@ approveButton.addEventListener('click', async () => {
   approveButton.disabled = true;
   approveButton.textContent = 'Approbation en cours...';
   try {
-    const response = await fetch(`/api/tasks/${activeTaskId}/approve`, { method: 'POST' });
+    const effect = activeTask?.pendingEffect;
+    const manifestBound = Boolean(effect?.manifestId && effect?.manifestDigest);
+    const response = await fetch(`/api/tasks/${activeTaskId}/${manifestBound ? 'approve-manifest' : 'approve'}`, {
+      method: 'POST',
+      headers: manifestBound ? { 'Content-Type': 'application/json' } : {},
+      body: manifestBound ? JSON.stringify({
+        manifestId: effect.manifestId,
+        manifestDigest: effect.manifestDigest
+      }) : undefined
+    });
     const task = await readApiResponse(response);
-    if (!response.ok) throw new Error(task.error || "L'approbation a échoué.");
+    if (!response.ok) {
+      if (response.status === 409 && manifestBound) {
+        await refreshTask();
+        throw new Error('Le manifeste final a changé. La vue a été actualisée ; vérifiez-le avant de réessayer.');
+      }
+      throw new Error(task.error || "L'approbation a échoué.");
+    }
     renderTask(task);
     clearInterval(pollTimer);
     pollTimer = setInterval(refreshTask, 3000);
