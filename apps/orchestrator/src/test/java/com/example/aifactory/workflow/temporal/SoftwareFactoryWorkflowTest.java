@@ -16,7 +16,8 @@ class SoftwareFactoryWorkflowTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
             worker.registerWorkflowImplementationTypes(
-                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
             environment.start();
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class,
@@ -41,7 +42,8 @@ class SoftwareFactoryWorkflowTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
             worker.registerWorkflowImplementationTypes(
-                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
             environment.start();
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class, WorkflowOptions.newBuilder()
@@ -67,7 +69,8 @@ class SoftwareFactoryWorkflowTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
             worker.registerWorkflowImplementationTypes(
-                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
             environment.start();
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class, WorkflowOptions.newBuilder()
@@ -117,7 +120,8 @@ class SoftwareFactoryWorkflowTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
             worker.registerWorkflowImplementationTypes(
-                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
             environment.start();
             SoftwareFactoryWorkflow decisions = stub(environment, "task-4");
             SoftwareFactoryWorkflow.HumanDecisionRequest decisionRequest =
@@ -154,7 +158,8 @@ class SoftwareFactoryWorkflowTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
             worker.registerWorkflowImplementationTypes(
-                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
             environment.start();
             SoftwareFactoryWorkflow workflow = stub(environment, "task-6");
             java.util.List<DelegationWorkflow.Request> delegations = java.util.stream.IntStream.rangeClosed(1, 3)
@@ -184,7 +189,8 @@ class SoftwareFactoryWorkflowTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
             worker.registerWorkflowImplementationTypes(
-                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
             environment.start();
             SoftwareFactoryWorkflow workflow = stub(environment, "task-7");
             String manifest = "7".repeat(64);
@@ -208,6 +214,40 @@ class SoftwareFactoryWorkflowTest {
 
             assertThat(WorkflowStub.fromTyped(workflow).getResult(SoftwareFactoryWorkflow.Result.class).status())
                     .isEqualTo("APPROVED");
+        }
+    }
+
+    @Test
+    void launchesIndependentReviewerFromRootAndRejectsItAsASupervisorDelegation() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = stub(environment, "task-8");
+            IndependentReviewWorkflow.Request review = new IndependentReviewWorkflow.Request(
+                    "task-8", "attempt-1", "final-review", "a".repeat(40), "review final result", null);
+            SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
+                    "task-8", "attempt-1", "sample-repo", "a".repeat(40), "change",
+                    java.util.List.of(), null, java.util.List.of(), null, null, review);
+
+            SoftwareFactoryWorkflow.Result result = workflow.run(request);
+
+            assertThat(result.independentReview()).isEqualTo(new IndependentReviewWorkflow.Result(
+                    "final-review", "independent-reviewer", "READY_FOR_ACTIVITIES"));
+            assertThat(result.chronology()).containsExactly(
+                    "WORKFLOW_STARTED", "INDEPENDENT_REVIEW_COMPLETED:final-review");
+            assertThat(workflow.dag()).containsExactly(new SoftwareFactoryWorkflow.DelegationView(
+                    "final-review", "workflow", "independent-reviewer", "READY_FOR_ACTIVITIES"));
+
+            DelegationWorkflow.Request supervisorChild = new DelegationWorkflow.Request(
+                    "task-9", "attempt-1", "invalid-review", "supervisor", "independent-reviewer",
+                    "a".repeat(40), "review");
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> new SoftwareFactoryWorkflowImpl().run(
+                    new SoftwareFactoryWorkflow.Request("task-9", "attempt-1", "a".repeat(40),
+                            "change", java.util.List.of(supervisorChild))))
+                    .hasMessageContaining("workflow request is invalid");
         }
     }
 

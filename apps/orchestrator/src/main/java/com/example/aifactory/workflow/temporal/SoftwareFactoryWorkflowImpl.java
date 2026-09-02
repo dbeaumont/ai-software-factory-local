@@ -19,6 +19,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     private CancellationSignal receivedCancellation;
     private final Map<String, HumanDecisionSignal> receivedDecisions = new LinkedHashMap<>();
     private final Map<String, DelegationWorkflow.Result> completedDelegations = new LinkedHashMap<>();
+    private IndependentReviewWorkflow.Result completedReview;
     private String phase = "CREATED";
 
     @Override
@@ -49,6 +50,15 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                 return null;
             }
         }
+        if (request.independentReview() != null) {
+            IndependentReviewWorkflow.Request reviewRequest = request.independentReview();
+            IndependentReviewWorkflow reviewer = Workflow.newChildWorkflowStub(IndependentReviewWorkflow.class,
+                    ChildWorkflowOptions.newBuilder().setWorkflowId(
+                            TemporalIds.delegation(request.taskId(), request.attemptId(), reviewRequest.reviewId()))
+                            .build());
+            completedReview = reviewer.run(reviewRequest);
+            chronology.add("INDEPENDENT_REVIEW_COMPLETED:" + completedReview.reviewId());
+        }
         Map<String, String> decisions = new LinkedHashMap<>();
         for (HumanDecisionRequest decision : request.humanDecisionRequests()) {
             requireDecision(decision);
@@ -61,11 +71,12 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
             chronology.add("DECISION_RECORDED:" + decision.decisionId() + ':' + received.decision());
         }
         if (request.approvalRequest() == null) {
-            phase = decisions.isEmpty() ? (results.isEmpty() ? "READY_FOR_DELEGATION" : "DELEGATIONS_COMPLETED")
+            phase = decisions.isEmpty() ? (completedReview != null ? "INDEPENDENT_REVIEW_COMPLETED"
+                    : results.isEmpty() ? "READY_FOR_DELEGATION" : "DELEGATIONS_COMPLETED")
                     : "DECISIONS_COMPLETED";
             return new Result(request.taskId(), request.attemptId(), request.sourceCommit(),
                     phase,
-                    chronology, results, decisions, null, null, null);
+                    chronology, results, decisions, null, null, null, completedReview);
         }
         requireManifest(request.approvalRequest());
         chronology.add("WAITING_APPROVAL:" + request.approvalRequest().manifestId());
@@ -75,7 +86,8 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         chronology.add("APPROVED:" + request.approvalRequest().manifestId());
         phase = "APPROVED";
         return new Result(request.taskId(), request.attemptId(), request.sourceCommit(), "APPROVED",
-                chronology, results, decisions, request.approvalRequest().manifestId(), receivedApproval.approver(), null);
+                chronology, results, decisions, request.approvalRequest().manifestId(), receivedApproval.approver(),
+                null, completedReview);
     }
 
     @Override
@@ -101,9 +113,14 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     @Override
     public List<DelegationView> dag() {
         if (request == null) return List.of();
-        return request.delegations().stream().map(node -> new DelegationView(
+        List<DelegationView> result = new ArrayList<>(request.delegations().stream().map(node -> new DelegationView(
                 node.nodeId(), node.parentNodeId(), node.role(), completedDelegations.containsKey(node.nodeId())
-                ? completedDelegations.get(node.nodeId()).status() : "PENDING")).toList();
+                ? completedDelegations.get(node.nodeId()).status() : "PENDING")).toList());
+        if (request.independentReview() != null) {
+            result.add(new DelegationView(request.independentReview().reviewId(), "workflow",
+                    "independent-reviewer", completedReview == null ? "PENDING" : completedReview.status()));
+        }
+        return List.copyOf(result);
     }
 
     @Override
@@ -111,6 +128,9 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         if (request == null) return Map.of();
         Map<String, DelegationWorkflow.Budget> result = new LinkedHashMap<>();
         request.delegations().forEach(node -> result.put(node.nodeId(), node.budget()));
+        if (request.independentReview() != null) {
+            result.put(request.independentReview().reviewId(), request.independentReview().budget());
+        }
         return result;
     }
 
@@ -145,9 +165,21 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                 || request.continuationState().nextDelegationIndex() > request.delegations().size()
                 || request.continuationState().generation() < 0
                 || request.continuationState().delegations().size()
-                != request.continuationState().nextDelegationIndex()) {
+                != request.continuationState().nextDelegationIndex()
+                || request.delegations().stream().anyMatch(delegation ->
+                "independent-reviewer".equals(delegation.role()))
+                || !reviewMatchesRoot(request)) {
             throw new IllegalArgumentException("Software factory workflow request is invalid");
         }
+    }
+
+    private static boolean reviewMatchesRoot(Request request) {
+        IndependentReviewWorkflow.Request review = request.independentReview();
+        return review == null || request.taskId().equals(review.taskId())
+                && request.attemptId().equals(review.attemptId())
+                && request.sourceCommit().equals(review.sourceCommit())
+                && request.delegations().stream().noneMatch(delegation ->
+                review.reviewId().equals(delegation.nodeId()));
     }
 
     private static void requireManifest(ApprovalRequest manifest) {
@@ -201,7 +233,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         chronology.add("CANCELLED");
         phase = "CANCELLED";
         return new Result(request.taskId(), request.attemptId(), request.sourceCommit(), "CANCELLED",
-                chronology, results, decisions, null, null, receivedCancellation.reason());
+                chronology, results, decisions, null, null, receivedCancellation.reason(), completedReview);
     }
 
     private static String delegationId(Request root, DelegationWorkflow.Request child) {

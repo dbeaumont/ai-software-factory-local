@@ -264,7 +264,7 @@
 ### Revue indépendante
 
 - [x] **MAH-132** — Renommer et formaliser le rôle existant en `independent-reviewer`. _(Manifeste, prompt et point d'entrée hôte dédiés ; identité parente `workflow`, contrat `independent-review-v1`, rôle historique `reviewer` conservé uniquement comme compatibilité `PIPELINE`.)_
-- [ ] **MAH-133** — Le lancer depuis le workflow racine, jamais comme sous-agent du Supervisor.
+- [x] **MAH-133** — Le lancer depuis le workflow racine, jamais comme sous-agent du Supervisor. _(`SoftwareFactoryWorkflow` lance un `IndependentReviewWorkflow` dédié après les délégations ; le chemin générique refuse le rôle `independent-reviewer` et lie la revue à la tâche, tentative et source du workflow racine.)_
 - [ ] **MAH-134** — Lui fournir le patch consolidé, le manifeste final et les contradictions résolues ou ouvertes.
 - [ ] **MAH-135** — Vérifier qu'il ne peut ni replanifier, ni modifier, ni livrer le changement.
 
