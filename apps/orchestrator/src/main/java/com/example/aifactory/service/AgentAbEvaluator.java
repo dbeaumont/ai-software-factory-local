@@ -8,14 +8,23 @@ import java.util.stream.Collectors;
 /** Produces a fail-closed A/B qualification from paired reference-suite observations. */
 public final class AgentAbEvaluator {
     public Report evaluate(List<Observation> observations, Thresholds thresholds) {
+        return evaluate(observations, thresholds, Variant.BASELINE, Variant.CANDIDATE);
+    }
+
+    public Report evaluate(List<Observation> observations, Thresholds thresholds,
+                           Variant referenceVariant, Variant candidateVariant) {
+        if (referenceVariant == null || candidateVariant == null || referenceVariant == candidateVariant) {
+            throw new IllegalArgumentException("Two distinct evaluation variants are required");
+        }
         Map<String, List<Observation>> byCase = observations.stream().collect(Collectors.groupingBy(Observation::caseId));
+        Set<Variant> expectedVariants = Set.of(referenceVariant, candidateVariant);
         if (byCase.size() < thresholds.minimumCases()
-                || byCase.values().stream().anyMatch(values -> variants(values).size() != 2)) {
+                || byCase.values().stream().anyMatch(values -> !variants(values).equals(expectedVariants))) {
             return new Report("INCOMPLETE", byCase.size(), null, null,
                     List.of("paired_reference_suite_required"));
         }
-        Metrics baseline = metrics(observations, Variant.BASELINE);
-        Metrics candidate = metrics(observations, Variant.CANDIDATE);
+        Metrics baseline = metrics(observations, referenceVariant);
+        Metrics candidate = metrics(observations, candidateVariant);
         java.util.ArrayList<String> failures = new java.util.ArrayList<>();
         if (candidate.firstPatchSuccessRate() < baseline.firstPatchSuccessRate() - thresholds.maxQualityRegression())
             failures.add("first_patch_success_regression");
@@ -56,7 +65,7 @@ public final class AgentAbEvaluator {
         return values.isEmpty() ? 0 : (double) values.stream().filter(predicate).count() / values.size();
     }
 
-    public enum Variant { BASELINE, CANDIDATE }
+    public enum Variant { BASELINE, CANDIDATE, HIERARCHICAL_SHADOW }
 
     public record Observation(String caseId, Variant variant, boolean firstPatchSuccess, int repairs,
                               boolean testsPassed, boolean humanAccepted, long tokens,

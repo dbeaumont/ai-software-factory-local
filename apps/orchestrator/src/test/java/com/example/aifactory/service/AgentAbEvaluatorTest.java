@@ -29,6 +29,22 @@ class AgentAbEvaluatorTest {
         assertEquals("INCOMPLETE", evaluator.evaluate(campaign(false).subList(0, 10), thresholds).verdict());
     }
 
+    @Test
+    void collectsHierarchicalShadowAsAnExplicitPairedVariant() {
+        List<AgentAbEvaluator.Observation> observations = new ArrayList<>();
+        for (int i = 1; i <= 20; i++) {
+            String caseId = "SHADOW-%03d".formatted(i);
+            observations.add(observation(caseId, AgentAbEvaluator.Variant.BASELINE, false));
+            observations.add(observation(caseId, AgentAbEvaluator.Variant.HIERARCHICAL_SHADOW, false));
+        }
+
+        AgentAbEvaluator.Report report = evaluator.evaluate(observations, thresholds,
+                AgentAbEvaluator.Variant.BASELINE, AgentAbEvaluator.Variant.HIERARCHICAL_SHADOW);
+
+        assertEquals("QUALIFIED", report.verdict());
+        assertEquals(20, report.pairedCases());
+    }
+
     private static List<AgentAbEvaluator.Observation> campaign(boolean candidateSecurityFailure) {
         List<AgentAbEvaluator.Observation> values = new ArrayList<>();
         for (int i = 1; i <= 20; i++) {
