@@ -102,7 +102,7 @@
 - [x] **MAH-022** — Créer `specialist-result-v1.schema.json` pour le résultat commun et ses références de preuves. _(`resources/multiagents/schemas/specialist-result-v1.schema.json`.)_
 - [x] **MAH-023** — Créer `agent-run-event-v1.schema.json` pour les transitions, consommations et raisons d'arrêt. _(`resources/multiagents/schemas/agent-run-event-v1.schema.json`.)_
 - [x] **MAH-024** — Créer `contradiction-v1.schema.json` pour les conclusions incompatibles et leur arbitrage. _(`resources/multiagents/schemas/contradiction-v1.schema.json`.)_
-- [ ] **MAH-025** — Créer `supervisor-decision-v1.schema.json` pour consolidation, replanification ou escalade.
+- [x] **MAH-025** — Créer `supervisor-decision-v1.schema.json` pour consolidation, replanification ou escalade. _(`resources/multiagents/schemas/supervisor-decision-v1.schema.json`.)_
 - [ ] **MAH-026** — Créer `human-decision-request-v1.schema.json` pour une question matérialisant plusieurs choix à impact.
 
 ### Contrats par périmètre
