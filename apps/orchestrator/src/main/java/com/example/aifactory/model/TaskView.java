@@ -28,5 +28,12 @@ public record TaskView(
         String error,
         List<AgentStep> steps,
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt,
+        String executionMode,
+        String workflowRunId,
+        String dagVersion,
+        GlobalBudget globalBudget) {
+
+    public record GlobalBudget(Long maxTokens, Long maxCostMicros, Integer maxTurns,
+                               long usedTokens, long usedCostMicros, int usedTurns) {}
 }

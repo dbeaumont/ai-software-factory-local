@@ -42,7 +42,12 @@ class RestApiCompatibilityTest {
         assertThat(response.propertyNames()).containsAll(Set.of(
                 "id", "ticketNumber", "status", "repositoryUrl", "baseBranch", "requirement", "llmMode",
                 "workspace", "sourceCommit", "model", "plan", "patch", "testSummary", "qualitySummary",
-                "securitySummary", "review", "pullRequestUrl", "error", "steps", "createdAt", "updatedAt"));
+                "securitySummary", "review", "pullRequestUrl", "error", "steps", "createdAt", "updatedAt",
+                "executionMode", "workflowRunId", "dagVersion", "globalBudget"));
+        assertThat(response.path("executionMode").asText()).isEqualTo("PIPELINE");
+        assertThat(response.path("dagVersion").asText()).isEqualTo("pipeline-v1");
+        assertThat(response.path("globalBudget").propertyNames()).containsAll(Set.of(
+                "maxTokens", "maxCostMicros", "maxTurns", "usedTokens", "usedCostMicros", "usedTurns"));
     }
 
     private static void assertRoute(Method method, Class<?> annotationType, String path, boolean accepted) {

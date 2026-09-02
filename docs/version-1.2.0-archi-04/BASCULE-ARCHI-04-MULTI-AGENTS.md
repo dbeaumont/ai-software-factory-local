@@ -353,7 +353,7 @@
 
 ### API
 
-- [ ] **MAH-220** — Étendre la vue de tâche avec mode, workflow run, version du DAG et budget global.
+- [x] **MAH-220** — Étendre la vue de tâche avec mode, workflow run, version du DAG et budget global. _(`TaskView` expose des champs additifs et `TaskState.bindExecution` lie les métadonnées hiérarchiques et plafonds/consommations.)_
 - [ ] **MAH-221** — Exposer les délégations, rôles, dépendances, statuts et raisons d'arrêt.
 - [ ] **MAH-222** — Exposer les artefacts uniquement par métadonnées et URI autorisées.
 - [ ] **MAH-223** — Exposer contradictions, décisions et points nécessitant une action humaine.

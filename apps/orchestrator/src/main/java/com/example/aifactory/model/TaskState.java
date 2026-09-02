@@ -39,6 +39,12 @@ public class TaskState {
     public final List<AgentStep> steps = new ArrayList<>();
     public final Instant createdAt = Instant.now();
     public Instant updatedAt = Instant.now();
+    public String executionMode = "PIPELINE";
+    public String workflowRunId;
+    public String dagVersion = "pipeline-v1";
+    public Long globalMaxTokens;
+    public Long globalMaxCostMicros;
+    public Integer globalMaxTurns;
 
     public TaskState(String id, String ticketNumber, TaskRequest request) {
         this.id = id;
@@ -66,7 +72,26 @@ public class TaskState {
                 request.effectiveLlmMode(), workspace, sourceCommit, model, Map.copyOf(promptFingerprints), plan, patch,
                 testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), evaluationMetrics(),
                 review, pendingEffect,
-                pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
+                pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt,
+                executionMode, workflowRunId, dagVersion,
+                new TaskView.GlobalBudget(globalMaxTokens, globalMaxCostMicros, globalMaxTurns,
+                        llmTokens, llmCostMicros, agentTurns));
+    }
+
+    public synchronized void bindExecution(String mode, String runId, String version,
+                                           long maxTokens, long maxCostMicros, int maxTurns) {
+        if (mode == null || !List.of("PIPELINE", "HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY",
+                "HIERARCHICAL_ACTIVE").contains(mode) || runId == null || runId.isBlank()
+                || version == null || version.isBlank() || maxTokens < 1 || maxCostMicros < 0 || maxTurns < 1) {
+            throw new IllegalArgumentException("Task execution metadata is invalid");
+        }
+        executionMode = mode;
+        workflowRunId = runId;
+        dagVersion = version;
+        globalMaxTokens = maxTokens;
+        globalMaxCostMicros = maxCostMicros;
+        globalMaxTurns = maxTurns;
+        updatedAt = Instant.now();
     }
 
     public synchronized void recordAgentUsage(int turns, long tokens, long costMicros) {
