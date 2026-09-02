@@ -1,0 +1,33 @@
+schema_version: "1"
+manifest_id: security-agent-v1
+name: Security Agent
+role: security-agent
+version: "1.0.0"
+owner: security
+parent: supervisor
+kind: agent
+autonomy: A2
+effectful: false
+prompt: prompts/security-agent.md
+input_contracts:
+  - specialist-task-v1
+  - specialist-result-v1
+  - integration-result-v1
+output_contracts:
+  - security-assessment-v1
+may_delegate_to:
+  - threat-model
+  - security-findings
+allowed_tools:
+  - context.search_code
+  - context.read_file
+  - context.get_dependencies
+  - context.get_symbols
+  - evidence.get_summary
+default_budget:
+  max_turns: 6
+  max_tokens: 10000
+  max_cost_micros: 10000000
+  timeout_seconds: 600
+  max_tool_calls: 24
+human_gate: risk-dependent

@@ -1,0 +1,26 @@
+schema_version: "1"
+manifest_id: security-findings-v1
+name: Security Findings
+role: security-findings
+version: "1.0.0"
+owner: security
+parent: security-agent
+kind: sub-agent
+autonomy: A1
+effectful: false
+prompt: prompts/security-findings.md
+input_contracts:
+  - specialist-task-v1
+  - vulnerability-result-v1
+output_contracts:
+  - security-assessment-v1
+may_delegate_to: []
+allowed_tools:
+  - evidence.get_summary
+default_budget:
+  max_turns: 3
+  max_tokens: 5000
+  max_cost_micros: 5000000
+  timeout_seconds: 300
+  max_tool_calls: 12
+human_gate: none

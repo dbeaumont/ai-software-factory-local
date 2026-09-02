@@ -256,7 +256,7 @@
 
 ### Sécurité
 
-- [ ] **MAH-128** — Créer `security-agent`, `threat-model` et `security-findings`.
+- [x] **MAH-128** — Créer `security-agent`, `threat-model` et `security-findings`. _(Trois manifestes/prompts et façade hôte distincte, tous liés à `security-assessment-v1` et au catalogue.)_
 - [ ] **MAH-129** — Limiter Threat Model aux lectures de contexte et dépendances.
 - [ ] **MAH-130** — Fournir à Security Findings les findings normalisés et références de preuves nécessaires.
 - [ ] **MAH-131** — Interdire à Security Agent d'accepter un risque ou de déclasser un finding sans politique explicite.
