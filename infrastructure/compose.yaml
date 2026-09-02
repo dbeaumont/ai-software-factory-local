@@ -40,6 +40,19 @@ services:
       start_period: 30s
     networks: [workflow-internal]
 
+  # Developer diagnostics only; never routed through the product reverse proxy.
+  temporal-ui:
+    image: temporalio/ui:${TEMPORAL_UI_VERSION:-2.53.0}
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://127.0.0.1:${TEMPORAL_UI_PORT:-8233}
+    ports:
+      - "${TEMPORAL_UI_BIND_ADDRESS:-127.0.0.1}:${TEMPORAL_UI_PORT:-8233}:8080"
+    networks: [workflow-internal]
+
   # Source-control service and its dedicated persistent PostgreSQL database.
   gitea-db:
     image: postgres:16-alpine

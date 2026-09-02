@@ -34,6 +34,23 @@ class TemporalComposeTest {
                 .containsEntry("internal", true);
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void temporalUiIsBoundToLoopbackAndAbsentFromTheProductProxy() throws Exception {
+        Map<String, Object> root;
+        try (var input = Files.newInputStream(composeFile())) {
+            root = new Yaml().load(input);
+        }
+        Map<String, Map<String, Object>> services = (Map<String, Map<String, Object>>) root.get("services");
+        Map<String, Object> ui = services.get("temporal-ui");
+
+        assertThat(ui.get("image").toString()).startsWith("temporalio/ui:").doesNotEndWith("latest");
+        assertThat((List<String>) ui.get("ports")).singleElement().asString().startsWith(
+                "${TEMPORAL_UI_BIND_ADDRESS:-127.0.0.1}:");
+        assertThat(ui.get("networks")).isEqualTo(List.of("workflow-internal"));
+        assertThat(Files.readString(composeFile())).doesNotContain("proxy_pass http://temporal-ui");
+    }
+
     private static Path composeFile() {
         Path cwd = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         return List.of(cwd.resolve("infrastructure/compose.yaml"),
