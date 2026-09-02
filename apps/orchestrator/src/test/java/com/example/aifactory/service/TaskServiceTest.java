@@ -21,7 +21,7 @@ class TaskServiceTest {
         String response = "Here is the patch:\n```diff\ndiff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-old\n+new\n```";
 
         assertEquals("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-old\n+new",
-                TaskService.stripFence(response));
+                DeterministicWorkflowCoordinator.stripFence(response));
     }
 
     @Test
@@ -54,11 +54,11 @@ class TaskServiceTest {
 
     @Test
     void boundsLlmOutputByAgentRole() {
-        assertEquals(1_200, TaskService.maxTokensFor("planner"));
-        assertEquals(1_200, TaskService.maxTokensFor("developer"));
-        assertEquals(1_600, TaskService.maxTokensFor("patch-repair"));
-        assertEquals(1_200, TaskService.maxTokensFor("reviewer"));
-        assertEquals(1_200, TaskService.maxTokensFor("unknown"));
+        assertEquals(1_200, DeterministicWorkflowCoordinator.maxTokensFor("planner"));
+        assertEquals(1_200, DeterministicWorkflowCoordinator.maxTokensFor("developer"));
+        assertEquals(1_600, DeterministicWorkflowCoordinator.maxTokensFor("patch-repair"));
+        assertEquals(1_200, DeterministicWorkflowCoordinator.maxTokensFor("reviewer"));
+        assertEquals(1_200, DeterministicWorkflowCoordinator.maxTokensFor("unknown"));
     }
 
     @Test
@@ -66,7 +66,7 @@ class TaskServiceTest {
         AtomicInteger calls = new AtomicInteger();
         AtomicInteger retries = new AtomicInteger();
 
-        String response = TaskService.withSingleContractRetry(
+        String response = DeterministicWorkflowCoordinator.withSingleContractRetry(
                 () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
                 () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
                 value -> value.contains("IMPLEMENTABLE"), reason -> retries.incrementAndGet());
@@ -80,7 +80,7 @@ class TaskServiceTest {
     void doesNotRetryAValidPlannerDecision() {
         AtomicInteger calls = new AtomicInteger();
 
-        String response = TaskService.withSingleContractRetry(
+        String response = DeterministicWorkflowCoordinator.withSingleContractRetry(
                 () -> {
                     calls.incrementAndGet();
                     return "{\"status\":\"NEEDS_CLARIFICATION\"}";
@@ -100,7 +100,7 @@ class TaskServiceTest {
     void retriesATruncatedPlannerCompletionWithTheLargerBudget() {
         AtomicInteger retries = new AtomicInteger();
 
-        String response = TaskService.withSingleContractRetry(
+        String response = DeterministicWorkflowCoordinator.withSingleContractRetry(
                 () -> {
                     throw new LlmCompletionException("length", true, "truncated");
                 }, () -> "valid", value -> true,
@@ -111,12 +111,12 @@ class TaskServiceTest {
 
         assertEquals("valid", response);
         assertEquals(1, retries.get());
-        assertEquals(2_400, TaskService.retryMaxTokensFor("planner"));
+        assertEquals(2_400, DeterministicWorkflowCoordinator.retryMaxTokensFor("planner"));
     }
 
     @Test
     void doesNotRetryARefusal() {
-        assertThrows(LlmCompletionException.class, () -> TaskService.withSingleContractRetry(
+        assertThrows(LlmCompletionException.class, () -> DeterministicWorkflowCoordinator.withSingleContractRetry(
                 () -> {
                     throw new LlmCompletionException("refusal", false, "refused");
                 }, () -> "unexpected", value -> true,

@@ -18,8 +18,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /** Owns task admission, lookup and commands; execution belongs to {@link WorkflowCoordinator}. */
 @Service
@@ -88,14 +86,4 @@ public class TaskService {
         return "AF-%04d".formatted(ticketSequence.getAndIncrement());
     }
 
-    static String stripFence(String value) { return DeterministicWorkflowCoordinator.stripFence(value); }
-    static int maxTokensFor(String role) { return DeterministicWorkflowCoordinator.maxTokensFor(role); }
-    static int retryMaxTokensFor(String role) { return DeterministicWorkflowCoordinator.retryMaxTokensFor(role); }
-    static String untrusted(String label, String content) {
-        return DeterministicWorkflowCoordinator.untrusted(label, content);
-    }
-    static String withSingleContractRetry(Supplier<String> invocation, Supplier<String> retryInvocation,
-                                         Predicate<String> contract, java.util.function.Consumer<String> observer) {
-        return DeterministicWorkflowCoordinator.withSingleContractRetry(invocation, retryInvocation, contract, observer);
-    }
 }
