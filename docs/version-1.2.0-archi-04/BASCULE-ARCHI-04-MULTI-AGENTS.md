@@ -398,7 +398,7 @@
 ### Tests unitaires et de contrats
 
 - [x] **MAH-260** — Tester validation du DAG, cycles, profondeur, fan-out, scopes et budgets. _(`DelegationPlanValidatorTest`, `DelegationValidatorTest` et `HierarchicalBudgetPolicyTest` couvrent les graphes invalides, plafonds hôte, scopes et cinq dimensions de budget.)_
-- [ ] **MAH-261** — Tester tous les contrats d'agents avec sorties valides, invalides et surdimensionnées.
+- [x] **MAH-261** — Tester tous les contrats d'agents avec sorties valides, invalides et surdimensionnées. _(`MultiAgentContractValidatorTest` parcourt les 18 contrats épinglés avec fixtures golden, champs supplémentaires/manquants, fuzzing et charge supérieure à 1 Mio.)_
 - [ ] **MAH-262** — Tester routage chemin court versus hiérarchique.
 - [ ] **MAH-263** — Tester règles d'arbitrage et impossibilité de contourner une gate.
 - [ ] **MAH-264** — Tester déterminisme du code Workflow Temporal.
