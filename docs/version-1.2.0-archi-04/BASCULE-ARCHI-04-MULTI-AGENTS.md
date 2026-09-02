@@ -329,7 +329,7 @@
 
 ### Gate du lot 8
 
-- [ ] Aucun agent parallèle ne modifie l'espace d'intégration et aucun conflit n'est résolu silencieusement.
+- [x] Aucun agent parallèle ne modifie l'espace d'intégration et aucun conflit n'est résolu silencieusement. _(Preuves et verdict : `docs/multiagents/GATE-LOT-8-WORKTREES-INTEGRATION.md`.)_
 
 ## 13. Lot 9 — Consolidation, contradictions et décisions
 
