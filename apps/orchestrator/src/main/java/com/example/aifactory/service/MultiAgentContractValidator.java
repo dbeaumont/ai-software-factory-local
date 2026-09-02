@@ -29,6 +29,7 @@ public final class MultiAgentContractValidator {
             Map.entry("agent-run-event-v1", Set.of("specialist_task_id", "node_id")),
             Map.entry("supervisor-decision-v1", Set.of("delegation_plan_id", "replacement_plan_id", "human_decision_request_id")),
             Map.entry("architecture-assessment-v1", Set.of("specialist_task_id")),
+            Map.entry("integration-proposal-v1", Set.of("delegation_plan_id", "node_id", "architecture_assessment_id")),
             Map.entry("code-task-v1", Set.of("delegation_plan_id", "node_id", "architecture_assessment_id")),
             Map.entry("patch-proposal-v1", Set.of("code_task_id", "node_id")),
             Map.entry("test-assessment-v1", Set.of("strategy_id")));

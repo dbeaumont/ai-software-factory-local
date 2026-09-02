@@ -12,6 +12,7 @@
     "architecture-assessment-v1": "architecture-assessment-v1.schema.json",
     "code-task-v1": "code-task-v1.schema.json",
     "patch-proposal-v1": "patch-proposal-v1.schema.json",
+    "integration-proposal-v1": "integration-proposal-v1.schema.json",
     "integration-result-v1": "integration-result-v1.schema.json",
     "test-strategy-v1": "test-strategy-v1.schema.json",
     "test-assessment-v1": "test-assessment-v1.schema.json",

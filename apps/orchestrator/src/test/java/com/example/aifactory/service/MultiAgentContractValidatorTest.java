@@ -16,7 +16,7 @@ class MultiAgentContractValidatorTest {
 
     @Test
     void loadsEveryPinnedContractAndRejectsAnInvalidDocument() {
-        assertThat(validator.contracts()).hasSize(15);
+        assertThat(validator.contracts()).hasSize(16);
         validator.contracts().forEach(contract -> assertThatThrownBy(() -> validator.validate(contract, "{}"))
                 .isInstanceOf(MultiAgentContractValidator.ContractValidationException.class)
                 .hasMessageContaining("violates the local schema"));
@@ -73,7 +73,7 @@ class MultiAgentContractValidatorTest {
     @Test
     void validatesGoldenAndRejectsNegativeFuzzedAndOversizedFixturesForEveryContract() throws Exception {
         JsonNode fixtures = new ObjectMapper().readTree(Files.readString(fixturePath())).path("documents");
-        assertThat(validator.contracts()).hasSize(15);
+        assertThat(validator.contracts()).hasSize(16);
         for (String contract : validator.contracts()) {
             JsonNode golden = fixtures.path(contract);
             assertThat(golden.isObject()).as(contract + " golden fixture").isTrue();

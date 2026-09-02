@@ -241,7 +241,7 @@
 
 ### Code
 
-- [ ] **MAH-119** — Créer `code-agent` comme coordinateur logique des délégations Developer.
+- [x] **MAH-119** — Créer `code-agent` comme coordinateur logique des délégations Developer. _(Façade hôte, manifeste/prompt et contrat `integration-proposal-v1`, distinct du résultat d'intégration déterministe.)_
 - [ ] **MAH-120** — Faire évoluer Developer pour accepter un scope et un contrat de patch explicites.
 - [ ] **MAH-121** — Faire évoluer Patch Repair pour une délégation, un worktree et une tentative précis.
 - [ ] **MAH-122** — Empêcher Developer et Patch Repair d'appeler directement `sandbox.*`.

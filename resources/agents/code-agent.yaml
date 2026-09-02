@@ -1,0 +1,31 @@
+schema_version: "1"
+manifest_id: code-agent-v1
+name: Code Agent
+role: code-agent
+version: "1.0.0"
+owner: engineering
+parent: supervisor
+kind: agent
+autonomy: A2
+effectful: false
+prompt: prompts/code-agent.md
+input_contracts:
+  - specialist-task-v1
+  - architecture-assessment-v1
+  - patch-proposal-v1
+output_contracts:
+  - integration-proposal-v1
+may_delegate_to:
+  - developer
+  - patch-repair
+allowed_tools:
+  - context.list_tree
+  - context.search_code
+  - context.get_repository_rules
+default_budget:
+  max_turns: 6
+  max_tokens: 10000
+  max_cost_micros: 10000000
+  timeout_seconds: 600
+  max_tool_calls: 16
+human_gate: risk-dependent
