@@ -18,6 +18,7 @@ import java.util.Set;
 @Component
 public final class MultiAgentContractValidator {
     private static final String ROOT = "multiagents/schemas/";
+    private static final int MAX_DOCUMENT_BYTES = 1_048_576;
     private static final Set<String> KNOWN_ROLES = Set.of("workflow", "supervisor", "architecture-agent",
             "impact-analysis", "dependencies-contracts", "code-agent", "developer", "patch-repair",
             "test-agent", "test-design", "test-evidence", "security-agent", "threat-model",
@@ -36,7 +37,11 @@ public final class MultiAgentContractValidator {
 
     public MultiAgentContractValidator(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        SchemaRegistry registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12);
+        String vulnerabilitySchema = readTextResource("mcp/schemas/vulnerability-result-v1.schema.json");
+        SchemaRegistry registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12,
+                builder -> builder.schemas(Map.of(
+                        "https://ai-factory.local/mcp/schemas/vulnerability-result-v1.schema.json",
+                        vulnerabilitySchema)));
         Map<String, String> catalog = readCatalog();
         Map<String, Schema> loaded = new LinkedHashMap<>();
         catalog.forEach((name, resource) -> loaded.put(name, load(registry, resource)));
@@ -49,6 +54,9 @@ public final class MultiAgentContractValidator {
 
     public JsonNode validate(String contract, String document) {
         try {
+            if (document == null || document.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_DOCUMENT_BYTES) {
+                throw new ContractValidationException(contract, "document exceeds maximum size");
+            }
             return validate(contract, objectMapper.readTree(document));
         } catch (ContractValidationException exception) {
             throw exception;
@@ -127,6 +135,15 @@ public final class MultiAgentContractValidator {
         InputStream input = getClass().getClassLoader().getResourceAsStream(ROOT + name);
         if (input == null) throw new IllegalStateException("Missing multi-agent contract resource: " + name);
         return input;
+    }
+
+    private String readTextResource(String path) {
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream(path)) {
+            if (input == null) throw new IllegalStateException("Missing contract dependency: " + path);
+            return new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Cannot read contract dependency: " + path, exception);
+        }
     }
 
     public static final class ContractValidationException extends IllegalArgumentException {

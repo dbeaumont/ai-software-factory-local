@@ -122,7 +122,7 @@
 - [x] **MAH-036** — Valider que les dépendances forment un DAG sans cycle, nœud orphelin ou référence inconnue. _(`DelegationPlanValidator` et tests de cycle, orphelin, auto-référence et doublon.)_
 - [x] **MAH-037** — Vérifier que chaque délégation dispose de critères de succès et d'une condition d'arrêt exécutable. _(`DelegationPlanValidator` impose critères non vides et conditions d'arrêt allow-listées.)_
 - [x] **MAH-038** — Définir la politique de compatibilité N/N-1 et les migrations additives des schémas. _(Politique : `resources/multiagents/policies/contract-compatibility-policy-v1.yaml`.)_
-- [ ] **MAH-039** — Ajouter fixtures golden, tests négatifs, fuzzing et limites de taille pour chaque contrat.
+- [x] **MAH-039** — Ajouter fixtures golden, tests négatifs, fuzzing et limites de taille pour chaque contrat. _(15 fixtures dans `resources/multiagents/fixtures/golden-contracts-v1.json` et couverture exhaustive dans `MultiAgentContractValidatorTest`.)_
 
 ### Gate du lot 1
 

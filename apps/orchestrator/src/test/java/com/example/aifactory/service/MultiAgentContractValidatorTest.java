@@ -1,8 +1,11 @@
 package com.example.aifactory.service;
 
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,5 +68,45 @@ class MultiAgentContractValidatorTest {
         ((tools.jackson.databind.node.ObjectNode) foreignTask).put("task_id", "task-2");
         assertThatThrownBy(() -> validator.validate("agent-run-event-v1", foreignTask, context))
                 .hasMessageContaining("outside the current task context");
+    }
+
+    @Test
+    void validatesGoldenAndRejectsNegativeFuzzedAndOversizedFixturesForEveryContract() throws Exception {
+        JsonNode fixtures = new ObjectMapper().readTree(Files.readString(fixturePath())).path("documents");
+        assertThat(validator.contracts()).hasSize(15);
+        for (String contract : validator.contracts()) {
+            JsonNode golden = fixtures.path(contract);
+            assertThat(golden.isObject()).as(contract + " golden fixture").isTrue();
+            validator.validate(contract, golden);
+
+            var additional = golden.deepCopy();
+            ((tools.jackson.databind.node.ObjectNode) additional).put("unexpected", true);
+            assertThatThrownBy(() -> validator.validate(contract, additional)).as(contract + " additional field")
+                    .isInstanceOf(MultiAgentContractValidator.ContractValidationException.class);
+
+            var missingId = golden.deepCopy();
+            ((tools.jackson.databind.node.ObjectNode) missingId).remove("task_id");
+            assertThatThrownBy(() -> validator.validate(contract, missingId)).as(contract + " missing id")
+                    .isInstanceOf(MultiAgentContractValidator.ContractValidationException.class);
+
+            var fuzzed = golden.deepCopy();
+            ((tools.jackson.databind.node.ObjectNode) fuzzed).put("task_id", "x".repeat(4096));
+            assertThatThrownBy(() -> validator.validate(contract, fuzzed)).as(contract + " fuzzed id")
+                    .isInstanceOf(MultiAgentContractValidator.ContractValidationException.class);
+
+            String oversized = "{\"padding\":\"" + "x".repeat(1_048_576) + "\"}";
+            assertThatThrownBy(() -> validator.validate(contract, oversized)).as(contract + " size limit")
+                    .hasMessageContaining("maximum size");
+        }
+    }
+
+    private static Path fixturePath() {
+        Path workingDirectory = Path.of("").toAbsolutePath();
+        for (Path candidate : java.util.List.of(
+                workingDirectory.resolve("resources/multiagents/fixtures/golden-contracts-v1.json"),
+                workingDirectory.resolve("../../resources/multiagents/fixtures/golden-contracts-v1.json").normalize())) {
+            if (Files.isRegularFile(candidate)) return candidate;
+        }
+        throw new IllegalStateException("Cannot find multi-agent golden fixtures");
     }
 }
