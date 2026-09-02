@@ -1,0 +1,116 @@
+{
+  "version": "1",
+  "suite_id": "multi-domain-hierarchical-v1",
+  "cohort": "MULTI_DOMAIN_HIERARCHICAL",
+  "description": "Cas nécessitant conjointement une analyse Architecture, Code, Tests et Sécurité.",
+  "cases": [
+    {
+      "id": "HIER-001",
+      "repository": "customer-api",
+      "ecosystem": "MAVEN",
+      "risk": "R2",
+      "requirement": "Ajouter une pagination cursor-based à GET /customers avec un contrat de réponse compatible, des limites strictes et des tests de non-régression.",
+      "rationale": "Le contrat public, le calcul du curseur et la validation des entrées traversent plusieurs responsabilités.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-002",
+      "repository": "customer-api",
+      "ecosystem": "MAVEN",
+      "risk": "R2",
+      "requirement": "Introduire un contrat d'erreur JSON versionné et compatible pour toutes les validations de Customer, puis migrer contrôleur et tests.",
+      "rationale": "Le changement affecte architecture de contrat, implémentation, stratégie de tests et fuite potentielle de données dans les erreurs.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-003",
+      "repository": "customer-api",
+      "ecosystem": "MAVEN",
+      "risk": "R2",
+      "requirement": "Ajouter ETag et requêtes conditionnelles à la lecture des clients sans modifier les champs métier existants.",
+      "rationale": "La sémantique HTTP, la concurrence, les tests de cache et l'exposition d'identifiants doivent être évaluées ensemble.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-004",
+      "repository": "customer-api",
+      "ecosystem": "MAVEN",
+      "risk": "R3",
+      "requirement": "Protéger la consultation d'un client par un rôle reader issu d'un jeton signé, sans exposer le jeton ni ses claims dans les logs.",
+      "rationale": "Authentification, autorisation, dépendance cryptographique, tests négatifs et redaction imposent une décision humaine préalable.",
+      "expected": {"path": "HUMAN_TRIAGE", "agents_after_approval": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_CODE"}
+    },
+    {
+      "id": "HIER-005",
+      "repository": "inventory-gradle",
+      "ecosystem": "GRADLE",
+      "risk": "R2",
+      "requirement": "Ajouter une réservation idempotente avec clé de requête, gestion de concurrence et expiration déterministe.",
+      "rationale": "L'état, les invariants, la concurrence, les tests temporels et les abus de clés exigent plusieurs expertises.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-006",
+      "repository": "inventory-gradle",
+      "ecosystem": "GRADLE",
+      "risk": "R2",
+      "requirement": "Séparer le stockage de stock derrière un port, conserver l'implémentation mémoire et ajouter une implémentation fichier atomique testable.",
+      "rationale": "Les frontières, la durabilité, les collisions de fichiers et les permissions nécessitent Architecture, Code, Tests et Sécurité.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-007",
+      "repository": "inventory-gradle",
+      "ecosystem": "GRADLE",
+      "risk": "R2",
+      "requirement": "Ajouter un import de mouvements de stock par lots avec validation complète avant application et rapport d'erreurs borné.",
+      "rationale": "Atomicité métier, parsing non fiable, volumétrie et tests de rollback concernent les quatre domaines.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-008",
+      "repository": "inventory-gradle",
+      "ecosystem": "GRADLE",
+      "risk": "R3",
+      "requirement": "Publier les mouvements de stock vers un service externe avec authentification mutuelle et reprise idempotente.",
+      "rationale": "Frontière réseau, secret client, garanties de livraison et scénarios de panne imposent une porte humaine avant Code.",
+      "expected": {"path": "HUMAN_TRIAGE", "agents_after_approval": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_CODE"}
+    },
+    {
+      "id": "HIER-009",
+      "repository": "checkout-node",
+      "ecosystem": "NPM",
+      "risk": "R2",
+      "requirement": "Introduire des montants en unités mineures et une devise explicite tout en conservant une façade compatible pour le calcul existant.",
+      "rationale": "Migration de représentation, compatibilité, propriétés arithmétiques et validation de données requièrent les quatre agents.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-010",
+      "repository": "checkout-node",
+      "ecosystem": "NPM",
+      "risk": "R2",
+      "requirement": "Ajouter un moteur de politiques de remise composables, avec ordre explicite, plafond total et traces sans données sensibles.",
+      "rationale": "Composition de règles, contrats de modules, tests combinatoires et abus de remise justifient le chemin hiérarchique.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-011",
+      "repository": "checkout-node",
+      "ecosystem": "NPM",
+      "risk": "R2",
+      "requirement": "Accepter un panier JSON sérialisé selon un schéma versionné, sans prototype pollution ni propriétés inconnues.",
+      "rationale": "Schéma public, parsing hostile, compatibilité et tests adversariaux mobilisent Architecture, Code, Tests et Sécurité.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    },
+    {
+      "id": "HIER-012",
+      "repository": "checkout-node",
+      "ecosystem": "NPM",
+      "risk": "R2",
+      "requirement": "Remplacer la validation interne par une dépendance de schéma approuvée, figée et auditée, sans changer les erreurs publiques.",
+      "rationale": "Choix de dépendance, supply chain, compatibilité et preuves de tests imposent une analyse multi-domaine.",
+      "expected": {"path": "HIERARCHICAL_PATH", "agents": ["architecture-agent", "code-agent", "test-agent", "security-agent", "independent-reviewer"], "human_gate": "BEFORE_EXTERNAL_EFFECT"}
+    }
+  ]
+}
