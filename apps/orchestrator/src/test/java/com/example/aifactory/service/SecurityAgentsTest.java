@@ -52,6 +52,21 @@ class SecurityAgentsTest {
         assertThat(runtime.invocations).isEmpty();
     }
 
+    @Test
+    void threatModelIsLimitedToContextAndDependencyReads() {
+        RecordingExecutor runtime = new RecordingExecutor();
+        AgentCatalog catalog = new AgentCatalog();
+        new SecurityAgents(runtime, catalog).execute(request("threat-model"));
+
+        AgentRuntime.Invocation invocation = runtime.invocations.getFirst();
+        assertThat(invocation.allowedTools()).containsExactlyInAnyOrder(
+                "context.search_code", "context.read_file", "context.get_dependencies", "context.get_symbols");
+        assertThat(invocation.allowedTools()).noneMatch(tool -> tool.startsWith("evidence.")
+                || tool.startsWith("sandbox.") || tool.startsWith("scm.") || tool.startsWith("assurance."));
+        assertThat(invocation.allowedTools()).containsExactlyInAnyOrderElementsOf(
+                catalog.require("threat-model").tools());
+    }
+
     private static SecurityAgents.Request request(String role) {
         return new SecurityAgents.Request("task-1", "attempt-1", "a".repeat(40), role,
                 Set.of("security-1"), "untrusted input",
