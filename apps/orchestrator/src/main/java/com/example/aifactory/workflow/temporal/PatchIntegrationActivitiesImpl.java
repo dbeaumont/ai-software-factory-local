@@ -3,6 +3,7 @@ package com.example.aifactory.workflow.temporal;
 import com.example.aifactory.service.PatchIntegrationPlanner;
 import com.example.aifactory.service.PatchIntegrator;
 import com.example.aifactory.service.SandboxExecutor;
+import com.example.aifactory.service.CodeWorkspaceManager;
 import com.example.aifactory.workflow.EvidenceRepository;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +20,14 @@ public final class PatchIntegrationActivitiesImpl implements PatchIntegrationAct
     private final EvidenceRepository evidence;
     private final PatchIntegrator patchIntegrator;
     private final SandboxExecutor sandbox;
+    private final CodeWorkspaceManager worktrees;
 
     public PatchIntegrationActivitiesImpl(EvidenceRepository evidence, PatchIntegrator patchIntegrator,
-                                          SandboxExecutor sandbox) {
+                                          SandboxExecutor sandbox, CodeWorkspaceManager worktrees) {
         this.evidence = evidence;
         this.patchIntegrator = patchIntegrator;
         this.sandbox = sandbox;
+        this.worktrees = worktrees;
     }
 
     @Override
@@ -90,6 +93,43 @@ public final class PatchIntegrationActivitiesImpl implements PatchIntegrationAct
             throw exception;
         } catch (Exception exception) {
             throw new IllegalStateException("Consolidated patch verification failed", exception);
+        }
+    }
+
+    @Override
+    public CleanupResult cleanup(CleanupRequest request) {
+        if (request == null || request.metadata() == null || request.plan() == null || request.outcome() == null) {
+            throw new IllegalArgumentException("Patch integration cleanup request is invalid");
+        }
+        DurableExecutionActivities.Metadata metadata = request.metadata();
+        CleanupPlan plan = request.plan();
+        if (plan.sourceRepository() == null || plan.sourceRepository().isBlank()
+                || plan.isolationRoot() == null || plan.isolationRoot().isBlank()
+                || plan.integrationWorkspace() == null || plan.integrationWorkspace().isBlank()
+                || plan.worktrees().isEmpty()) {
+            throw new IllegalArgumentException("Patch integration cleanup plan is invalid");
+        }
+        List<CodeWorkspaceManager.Allocation> allocations = plan.worktrees().stream().map(worktree -> {
+            if (worktree == null || !metadata.taskId().equals(worktree.taskId())
+                    || !metadata.attemptId().equals(worktree.attemptId())
+                    || !metadata.sourceCommit().equals(worktree.sourceCommit()) || worktree.path() == null) {
+                throw new SecurityException("Cleanup worktree is outside the workflow identity");
+            }
+            return new CodeWorkspaceManager.Allocation(worktree.worktreeId(), worktree.taskId(),
+                    worktree.attemptId(), worktree.nodeId(), worktree.sourceCommit(), Path.of(worktree.path()));
+        }).toList();
+        int existing = (int) allocations.stream().filter(allocation -> Files.exists(allocation.path())).count();
+        Path integrationWorkspace = Path.of(plan.integrationWorkspace()).toAbsolutePath().normalize();
+        try {
+            worktrees.cleanup(Path.of(plan.sourceRepository()), Path.of(plan.isolationRoot()), allocations);
+            boolean invalidRemoved = Files.deleteIfExists(integrationWorkspace.resolve("changes.invalid.patch"));
+            boolean consolidatedRemoved = request.outcome() == TerminalOutcome.SUCCESS ? false
+                    : Files.deleteIfExists(integrationWorkspace.resolve("changes.patch"));
+            return new CleanupResult(request.outcome(), existing, invalidRemoved, consolidatedRemoved, "CLEANED");
+        } catch (RuntimeException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Patch integration cleanup failed", exception);
         }
     }
 

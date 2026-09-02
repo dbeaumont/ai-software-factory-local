@@ -79,10 +79,62 @@ public final class CodeWorkspaceManager {
         scopes.requireParallelizable(requests.stream().map(request ->
                 new CodeScopePolicy.ScopedDelegation(request.request().nodeId(), request.scope())).toList());
         List<Allocation> allocations = new java.util.ArrayList<>();
-        for (ScopedRequest request : requests) {
-            allocations.add(create(sourceRepository, isolationRoot, request.request()));
+        try {
+            for (ScopedRequest request : requests) {
+                allocations.add(create(sourceRepository, isolationRoot, request.request()));
+            }
+            return List.copyOf(allocations);
+        } catch (Exception failure) {
+            cleanup(sourceRepository, isolationRoot, allocations);
+            throw failure;
         }
-        return List.copyOf(allocations);
+    }
+
+    public void cleanup(Path sourceRepository, Path isolationRoot, List<Allocation> allocations) throws Exception {
+        if (allocations == null) throw new IllegalArgumentException("Code worktree allocations are required");
+        Path source = sourceRepository.toRealPath();
+        Path root = canonicalCleanupRoot(isolationRoot);
+        if (root.startsWith(source) || source.startsWith(root)) {
+            throw new IllegalArgumentException("Code worktree cleanup root must be outside the source worktree");
+        }
+        for (Allocation allocation : allocations) {
+            if (allocation == null) throw new IllegalArgumentException("Code worktree allocation is required");
+            Request identity = new Request(allocation.taskId(), allocation.attemptId(),
+                    allocation.nodeId(), allocation.sourceCommit());
+            requireValid(identity);
+            String expectedId = worktreeId(identity);
+            Path expectedPath = root.resolve(expectedId).normalize();
+            if (!expectedId.equals(allocation.worktreeId()) || !expectedPath.equals(allocation.path())
+                    || !expectedPath.startsWith(root)) {
+                throw new SecurityException("Code worktree cleanup target differs from its allocation");
+            }
+            if (Files.exists(expectedPath)) {
+                if (Files.isSymbolicLink(expectedPath)) {
+                    throw new SecurityException("Code worktree cleanup target is a symbolic link");
+                }
+                runner.run(List.of("git", "worktree", "remove", "--force", expectedPath.toString()),
+                        source, GIT_TIMEOUT);
+                if (Files.exists(expectedPath)) {
+                    throw new IllegalStateException("Code worktree cleanup did not remove its target");
+                }
+            }
+        }
+        runner.run(List.of("git", "worktree", "prune"), source, GIT_TIMEOUT);
+        if (Files.isDirectory(root)) {
+            try (var entries = Files.list(root)) {
+                if (entries.findAny().isEmpty()) Files.delete(root);
+            }
+        }
+    }
+
+    private static Path canonicalCleanupRoot(Path isolationRoot) throws Exception {
+        Path normalized = isolationRoot.toAbsolutePath().normalize();
+        if (Files.exists(normalized)) return normalized.toRealPath();
+        Path parent = normalized.getParent();
+        if (parent == null || !Files.isDirectory(parent)) {
+            throw new IllegalArgumentException("Code worktree cleanup root parent does not exist");
+        }
+        return parent.toRealPath().resolve(normalized.getFileName()).normalize();
     }
 
     static String worktreeId(Request request) {

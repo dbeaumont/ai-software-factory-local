@@ -3,6 +3,8 @@ package com.example.aifactory.workflow.temporal;
 import com.example.aifactory.service.PatchIntegrationPlanner;
 import com.example.aifactory.service.PatchIntegrator;
 import com.example.aifactory.service.SandboxExecutor;
+import com.example.aifactory.service.CodeWorkspaceManager;
+import com.example.aifactory.service.ProcessRunner;
 import com.example.aifactory.workflow.EvidenceRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +32,8 @@ class PatchIntegrationActivitiesImplTest {
         EvidenceRepository evidence = new FakeEvidence(Map.of(a.uri(), raw(a, first), b.uri(), raw(b, second)));
         FakeSandbox sandbox = new FakeSandbox();
         PatchIntegrationActivitiesImpl activities = new PatchIntegrationActivitiesImpl(
-                evidence, new PatchIntegrator(sandbox), sandbox);
+                evidence, new PatchIntegrator(sandbox), sandbox,
+                new CodeWorkspaceManager(new ProcessRunner()));
 
         PatchIntegrationActivities.ApplicationResult result = activities.apply(new PatchIntegrationActivities.Request(
                 DurableExecutionActivities.Metadata.deterministic("task-1", "attempt-1", "a".repeat(40),
@@ -56,6 +60,59 @@ class PatchIntegrationActivitiesImplTest {
         assertThat(sandbox.tests).isEqualTo(1);
         assertThat(sandbox.qualityScans).isEqualTo(1);
         assertThat(sandbox.securityScans).isEqualTo(1);
+    }
+
+    @Test
+    void cleanupRemovesWorktreesAndTerminalTemporaryPatchDataForEveryOutcome() throws Exception {
+        ProcessRunner runner = new ProcessRunner();
+        Path repository = workspace.resolve("source");
+        Files.createDirectories(repository);
+        runner.run(List.of("git", "init"), repository, Duration.ofSeconds(5));
+        runner.run(List.of("git", "config", "user.email", "test@example.test"),
+                repository, Duration.ofSeconds(5));
+        runner.run(List.of("git", "config", "user.name", "Test"),
+                repository, Duration.ofSeconds(5));
+        Files.writeString(repository.resolve("app.txt"), "baseline\n");
+        runner.run(List.of("git", "add", "app.txt"), repository, Duration.ofSeconds(5));
+        runner.run(List.of("git", "commit", "-m", "baseline"), repository, Duration.ofSeconds(5));
+        String commit = runner.run(List.of("git", "rev-parse", "HEAD"),
+                repository, Duration.ofSeconds(5)).strip();
+        CodeWorkspaceManager manager = new CodeWorkspaceManager(runner);
+        PatchIntegrationActivitiesImpl activities = new PatchIntegrationActivitiesImpl(
+                new FakeEvidence(Map.of()), new PatchIntegrator(new FakeSandbox()),
+                new FakeSandbox(), manager);
+
+        for (PatchIntegrationActivities.TerminalOutcome outcome
+                : PatchIntegrationActivities.TerminalOutcome.values()) {
+            String suffix = outcome.name().toLowerCase();
+            Path isolation = workspace.resolve("isolated-" + suffix);
+            Path integration = workspace.resolve("integration-" + suffix);
+            Files.createDirectories(integration);
+            Files.writeString(integration.resolve("changes.patch"), "consolidated");
+            Files.writeString(integration.resolve("changes.invalid.patch"), "invalid");
+            CodeWorkspaceManager.Allocation allocation = manager.create(repository, isolation,
+                    new CodeWorkspaceManager.Request("task-1", "attempt-1", "developer-" + suffix, commit));
+            PatchIntegrationActivities.CleanupPlan plan = new PatchIntegrationActivities.CleanupPlan(
+                    repository.toString(), isolation.toString(), integration.toString(), List.of(
+                    new PatchIntegrationActivities.WorktreeRef(allocation.worktreeId(), allocation.taskId(),
+                            allocation.attemptId(), allocation.nodeId(), allocation.sourceCommit(),
+                            allocation.path().toString())));
+
+            PatchIntegrationActivities.CleanupResult result = activities.cleanup(
+                    new PatchIntegrationActivities.CleanupRequest(
+                            DurableExecutionActivities.Metadata.deterministic(
+                                    "task-1", "attempt-1", commit, "integration", "cleanup", 5),
+                            plan, outcome));
+
+            assertThat(result.status()).isEqualTo("CLEANED");
+            assertThat(allocation.path()).doesNotExist();
+            assertThat(integration.resolve("changes.invalid.patch")).doesNotExist();
+            if (outcome == PatchIntegrationActivities.TerminalOutcome.SUCCESS) {
+                assertThat(integration.resolve("changes.patch")).exists();
+            } else {
+                assertThat(integration.resolve("changes.patch")).doesNotExist();
+            }
+        }
     }
 
     private static String plan(PatchIntegrationActivities.PatchArtifact... artifacts) {

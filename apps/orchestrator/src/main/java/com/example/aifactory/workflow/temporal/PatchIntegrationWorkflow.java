@@ -16,7 +16,7 @@ public interface PatchIntegrationWorkflow {
 
     record Request(String taskId, String attemptId, String sourceCommit, String workspace,
                    String planDigest, List<PatchIntegrationActivities.PatchArtifact> patches,
-                   PatchAttemptPolicy.Decision authorization) {
+                   PatchAttemptPolicy.Decision authorization, PatchIntegrationActivities.CleanupPlan cleanupPlan) {
         public Request {
             patches = patches == null ? List.of() : List.copyOf(patches);
         }

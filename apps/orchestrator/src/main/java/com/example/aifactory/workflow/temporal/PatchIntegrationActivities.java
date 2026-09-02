@@ -14,6 +14,9 @@ public interface PatchIntegrationActivities {
     @ActivityMethod(name = "VerifyPatchIntegration")
     VerificationResult verify(VerificationRequest request);
 
+    @ActivityMethod(name = "CleanupPatchIntegration")
+    CleanupResult cleanup(CleanupRequest request);
+
     record PatchArtifact(String nodeId, String proposalId, String uri, String digest) {}
 
     record Request(DurableExecutionActivities.Metadata metadata, String workspace, String planDigest,
@@ -31,5 +34,23 @@ public interface PatchIntegrationActivities {
 
     record VerificationResult(VerificationKind kind, String outputDigest, String status) {}
 
+    record WorktreeRef(String worktreeId, String taskId, String attemptId, String nodeId,
+                       String sourceCommit, String path) {}
+
+    record CleanupPlan(String sourceRepository, String isolationRoot, String integrationWorkspace,
+                       List<WorktreeRef> worktrees) {
+        public CleanupPlan {
+            worktrees = worktrees == null ? List.of() : List.copyOf(worktrees);
+        }
+    }
+
+    record CleanupRequest(DurableExecutionActivities.Metadata metadata, CleanupPlan plan,
+                          TerminalOutcome outcome) {}
+
+    record CleanupResult(TerminalOutcome outcome, int removedWorktrees,
+                         boolean invalidPatchRemoved, boolean consolidatedPatchRemoved, String status) {}
+
     enum VerificationKind { TESTS, QUALITY, SECURITY }
+
+    enum TerminalOutcome { SUCCESS, FAILED, TIMED_OUT, CANCELLED }
 }

@@ -95,6 +95,44 @@ class CodeWorkspaceManagerTest {
         assertThat(Files.exists(isolationRoot)).isFalse();
     }
 
+    @Test
+    void cleanupRemovesOnlyTheExactAllocatedWorktreesAndIsIdempotent() throws Exception {
+        Path repository = repository();
+        String commit = runner.run(List.of("git", "rev-parse", "HEAD"),
+                repository, Duration.ofSeconds(5)).strip();
+        CodeWorkspaceManager manager = new CodeWorkspaceManager(runner);
+        Path isolationRoot = temporaryDirectory.resolve("isolated-code");
+        CodeWorkspaceManager.Allocation allocation = manager.create(repository, isolationRoot,
+                new CodeWorkspaceManager.Request("task-1", "attempt-1", "developer-a", commit));
+        Files.writeString(allocation.path().resolve("temporary.txt"), "temporary\n");
+
+        manager.cleanup(repository, isolationRoot, List.of(allocation));
+        manager.cleanup(repository, isolationRoot, List.of(allocation));
+
+        assertThat(allocation.path()).doesNotExist();
+        assertThat(isolationRoot).doesNotExist();
+        assertThat(runner.run(List.of("git", "worktree", "list", "--porcelain"),
+                repository, Duration.ofSeconds(5))).doesNotContain(allocation.worktreeId());
+    }
+
+    @Test
+    void cleanupRejectsAPathThatDoesNotMatchTheAllocationIdentity() throws Exception {
+        Path repository = repository();
+        String commit = runner.run(List.of("git", "rev-parse", "HEAD"),
+                repository, Duration.ofSeconds(5)).strip();
+        CodeWorkspaceManager manager = new CodeWorkspaceManager(runner);
+        Path isolationRoot = temporaryDirectory.resolve("isolated-code");
+        CodeWorkspaceManager.Allocation allocation = manager.create(repository, isolationRoot,
+                new CodeWorkspaceManager.Request("task-1", "attempt-1", "developer-a", commit));
+        CodeWorkspaceManager.Allocation forged = new CodeWorkspaceManager.Allocation(
+                allocation.worktreeId(), allocation.taskId(), allocation.attemptId(), allocation.nodeId(),
+                allocation.sourceCommit(), temporaryDirectory.resolve("another-path"));
+
+        assertThatThrownBy(() -> manager.cleanup(repository, isolationRoot, List.of(forged)))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("differs from its allocation");
+        assertThat(allocation.path()).exists();
+    }
+
     private Path repository() throws Exception {
         Path repository = temporaryDirectory.resolve("source");
         Files.createDirectories(repository);
