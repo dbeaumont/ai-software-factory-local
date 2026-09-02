@@ -204,7 +204,7 @@
 
 ### Intégration Evidence MCP
 
-- [ ] **MAH-096** — Brancher `evidence-mcp` dans la configuration et le registre client de l'orchestrateur.
+- [x] **MAH-096** — Brancher `evidence-mcp` dans la configuration et le registre client de l'orchestrateur. _(Connexion Spring AI, contrat client épinglé, variables Compose et dépendance de readiness.)_
 - [ ] **MAH-097** — Stocker plans, évaluations, patches, résultats d'intégration et reviews par `evidence.store`.
 - [ ] **MAH-098** — Créer le manifeste final avec `evidence.create_manifest` avant l'approbation humaine.
 - [ ] **MAH-099** — Réserver `evidence.read` au Reviewer, au workflow et aux usages humains audités.

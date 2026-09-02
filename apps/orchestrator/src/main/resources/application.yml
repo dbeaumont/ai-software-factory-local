@@ -28,6 +28,9 @@ spring:
             assurance:
               url: ${AI_FACTORY_MCP_ASSURANCE_URL:http://assurance-mcp:8094}
               endpoint: /mcp
+            evidence:
+              url: ${AI_FACTORY_MCP_EVIDENCE_URL:http://evidence-mcp:8095}
+              endpoint: /mcp
 
 management:
   endpoints:
@@ -138,6 +141,14 @@ ai-factory:
           expected-name: assurance-mcp
           expected-version: ${AI_FACTORY_MCP_ASSURANCE_VERSION:0.1.0}
           allowed-tools: assurance.evaluate_quality_gate,assurance.normalize_findings,assurance.evaluate_policy
+        evidence:
+          enabled: ${AI_FACTORY_MCP_EVIDENCE_ENABLED:false}
+          uri: ${AI_FACTORY_MCP_EVIDENCE_URL:http://evidence-mcp:8095}
+          audience: ${AI_FACTORY_MCP_EVIDENCE_AUDIENCE:evidence-mcp}
+          request-timeout: ${AI_FACTORY_MCP_EVIDENCE_REQUEST_TIMEOUT:${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}}
+          expected-name: evidence-mcp
+          expected-version: ${AI_FACTORY_MCP_EVIDENCE_VERSION:0.1.0}
+          allowed-tools: evidence.store,evidence.create_manifest,evidence.get_summary,evidence.read
     kill-switch:
       control-file: ${AI_FACTORY_MCP_KILL_SWITCH_FILE:}
   llm-base-url: ${AI_FACTORY_LLM_BASE_URL}

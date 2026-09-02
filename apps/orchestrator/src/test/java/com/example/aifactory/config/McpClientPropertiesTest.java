@@ -30,7 +30,8 @@ class McpClientPropertiesTest {
                     .containsExactlyInAnyOrder("2025-11-25", "2025-06-18");
             assertThat(properties.retry().readOnly().maxAttempts()).isEqualTo(3);
             assertThat(properties.retry().effectful().maxAttempts()).isEqualTo(2);
-            assertThat(properties.servers()).containsOnlyKeys("repository-context", "sandbox-execution");
+            assertThat(properties.servers()).containsOnlyKeys(
+                    "repository-context", "sandbox-execution", "evidence");
             assertThat(properties.servers().get("repository-context").uri())
                     .isEqualTo(URI.create("http://repository-context-mcp:8091"));
             assertThat(properties.servers().get("repository-context").audience())
@@ -39,6 +40,10 @@ class McpClientPropertiesTest {
             assertThat(properties.servers().get("repository-context").allowedTools())
                     .containsExactlyInAnyOrder("context.get_repository_rules", "context.list_tree");
             assertThat(properties.servers().get("sandbox-execution").enabled()).isTrue();
+            assertThat(properties.servers().get("evidence").uri())
+                    .isEqualTo(URI.create("http://evidence-mcp:8095"));
+            assertThat(properties.servers().get("evidence").allowedTools()).containsExactlyInAnyOrder(
+                    "evidence.store", "evidence.create_manifest", "evidence.get_summary", "evidence.read");
         });
     }
 
@@ -88,7 +93,14 @@ class McpClientPropertiesTest {
                 "ai-factory.mcp.client.servers.sandbox-execution.request-timeout=20s",
                 "ai-factory.mcp.client.servers.sandbox-execution.expected-name=sandbox-execution-mcp",
                 "ai-factory.mcp.client.servers.sandbox-execution.expected-version=0.1.0",
-                "ai-factory.mcp.client.servers.sandbox-execution.allowed-tools=sandbox.run_tests,sandbox.get_execution"
+                "ai-factory.mcp.client.servers.sandbox-execution.allowed-tools=sandbox.run_tests,sandbox.get_execution",
+                "ai-factory.mcp.client.servers.evidence.enabled=true",
+                "ai-factory.mcp.client.servers.evidence.uri=http://evidence-mcp:8095",
+                "ai-factory.mcp.client.servers.evidence.audience=evidence-mcp",
+                "ai-factory.mcp.client.servers.evidence.request-timeout=20s",
+                "ai-factory.mcp.client.servers.evidence.expected-name=evidence-mcp",
+                "ai-factory.mcp.client.servers.evidence.expected-version=0.1.0",
+                "ai-factory.mcp.client.servers.evidence.allowed-tools=evidence.store,evidence.create_manifest,evidence.get_summary,evidence.read"
         };
     }
 
