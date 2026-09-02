@@ -23,6 +23,7 @@ class McpRequestMetadataTest {
         assertThat(traceId).matches("[0-9a-f]{32}");
         assertThat(traceparent).matches("00-[0-9a-f]{32}-[0-9a-f]{16}-01");
         assertThat(traceparent).contains("-" + traceId + "-");
+        assertThat(arguments).containsKeys("run_id", "delegation_id", "agent_run_id");
         assertThat(Instant.parse(arguments.get("deadline").toString()))
                 .isAfter(before.plus(Duration.ofMinutes(4)));
     }

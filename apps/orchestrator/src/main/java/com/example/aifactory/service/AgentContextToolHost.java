@@ -70,6 +70,12 @@ public final class AgentContextToolHost {
     }
 
     public AgentToolLoop.ToolExecutor executor(String taskId, String attemptId, String sourceCommit, String role) {
+        return executor(taskId, attemptId, sourceCommit, role,
+                ExecutionIdentity.deterministic(taskId, attemptId, role, role));
+    }
+
+    public AgentToolLoop.ToolExecutor executor(String taskId, String attemptId, String sourceCommit, String role,
+                                               ExecutionIdentity identity) {
         return call -> {
             Set<String> allowed = BUSINESS_ARGUMENTS.get(call.name());
             if (allowed == null || !allowed.containsAll(call.arguments().keySet())) {
@@ -87,7 +93,7 @@ public final class AgentContextToolHost {
                 return JSON.valueToTree(result).toString();
             }
             Map<String, Object> arguments = new LinkedHashMap<>(McpRequestMetadata.create(
-                    taskId, sourceCommit, role, Duration.ofSeconds(20)).arguments());
+                    taskId, sourceCommit, role, Duration.ofSeconds(20), identity).arguments());
             arguments.put("attempt_id", attemptId);
             arguments.putAll(call.arguments());
             JsonNode result = invoker.call(properties.repositoryContextServerName(), call.name(), arguments);

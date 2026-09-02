@@ -49,7 +49,11 @@ class DurableExecutionActivitiesTest {
         verify(mcp).call(org.mockito.ArgumentMatchers.eq("sandbox-execution-mcp"),
                 org.mockito.ArgumentMatchers.eq("sandbox.run_tests"), arguments.capture());
         assertThat(arguments.getValue()).containsEntry("idempotency_key", "task-1-attempt-1-tests-1")
-                .containsEntry("operation_id", "tests-1");
+                .containsEntry("operation_id", "tests-1")
+                .containsEntry("trace_id", metadata.traceId())
+                .containsEntry("run_id", metadata.runId())
+                .containsEntry("delegation_id", metadata.delegationId())
+                .containsEntry("agent_run_id", metadata.agentRunId());
         verify(evidence).store(store);
     }
 

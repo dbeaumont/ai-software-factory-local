@@ -76,7 +76,7 @@ public final class AgentRuntime implements AgentExecutor {
         AgentToolLoop loop = new AgentToolLoop(
                 messages -> llm.nextToolTurn(messages, tools, Math.min(invocation.budget().maxTokens(), 8_192)),
                 toolHost.executor(invocation.taskId(), invocation.attemptId(),
-                        invocation.sourceCommit(), invocation.role()),
+                        invocation.sourceCommit(), invocation.role(), invocation.executionIdentity()),
                 toolHost.authorization(), AgentToolLoop.SafetyLimits.defaults(), delta -> usage.consume(
                 invocation.taskId(), invocation.attemptId(), usageLane(invocation.role()),
                 new TaskUsageLedger.Delta(delta.inputTokens(), delta.outputTokens(), delta.costMicros(),
@@ -102,7 +102,24 @@ public final class AgentRuntime implements AgentExecutor {
 
     public record Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,
                              String outputContract, Set<String> allowedTools, Set<String> allowedReferenceIds,
-                             String untrustedInput, AgentToolLoop.Budget budget, String executionMode) {
+                             String untrustedInput, AgentToolLoop.Budget budget, String executionMode,
+                             String traceId, String runId, String delegationId, String agentRunId) {
+        public Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,
+                          String outputContract, Set<String> allowedTools, Set<String> allowedReferenceIds,
+                          String untrustedInput, AgentToolLoop.Budget budget, String executionMode) {
+            this(taskId, attemptId, sourceCommit, role, promptName, outputContract, allowedTools,
+                    allowedReferenceIds, untrustedInput, budget, executionMode,
+                    ExecutionIdentity.deterministic(taskId, attemptId, role, role));
+        }
+
+        private Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,
+                           String outputContract, Set<String> allowedTools, Set<String> allowedReferenceIds,
+                           String untrustedInput, AgentToolLoop.Budget budget, String executionMode,
+                           ExecutionIdentity identity) {
+            this(taskId, attemptId, sourceCommit, role, promptName, outputContract, allowedTools,
+                    allowedReferenceIds, untrustedInput, budget, executionMode, identity.traceId(), identity.runId(),
+                    identity.delegationId(), identity.agentRunId());
+        }
         public Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,
                           String outputContract, Set<String> allowedTools, Set<String> allowedReferenceIds,
                           String untrustedInput, AgentToolLoop.Budget budget) {
@@ -121,6 +138,11 @@ public final class AgentRuntime implements AgentExecutor {
             }
             allowedTools = Set.copyOf(allowedTools);
             allowedReferenceIds = Set.copyOf(allowedReferenceIds);
+            new ExecutionIdentity(traceId, runId, delegationId, agentRunId);
+        }
+
+        public ExecutionIdentity executionIdentity() {
+            return new ExecutionIdentity(traceId, runId, delegationId, agentRunId);
         }
     }
 
