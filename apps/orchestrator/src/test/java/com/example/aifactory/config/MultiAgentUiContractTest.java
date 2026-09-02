@@ -54,4 +54,17 @@ class MultiAgentUiContractTest {
                 "node.codeImpact.collisions", "has-collisions");
         assertThat(css).contains(".delegation-code-impact", ".has-collisions");
     }
+
+    @Test
+    void displaysEvidenceMetadataWithoutLoadingSensitiveContent() throws Exception {
+        String html = Files.readString(WEB.resolve("index.html"));
+        String javascript = Files.readString(WEB.resolve("app.js"));
+        String css = Files.readString(WEB.resolve("pipeline.css"));
+
+        assertThat(html).contains("id=\"evidence-panel\"", "id=\"evidence-list\"");
+        assertThat(javascript).contains("function renderEvidence(task)", "artifact.status",
+                "artifact.classification", "artifact.digest", "artifact.uri", "artifact.sizeBytes")
+                .doesNotContain("artifact.content");
+        assertThat(css).contains(".evidence-item", ".evidence-header");
+    }
 }

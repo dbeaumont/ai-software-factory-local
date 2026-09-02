@@ -366,7 +366,7 @@
 - [x] **MAH-227** — Distinguer visuellement Architecture, Code, Tests, Sécurité et Revue indépendante. _(Le DAG classe chaque rôle dans un périmètre nommé, matérialisé par un badge, une couleur et une légende accessible.)_
 - [x] **MAH-228** — Afficher état, durée, tours, tokens, coût et outils utilisés par délégation. _(La projection enrichie expose ces métriques et outils avec valeurs anciennes normalisées à zéro ; chaque nœud du DAG les rend sans masquer son état.)_
 - [x] **MAH-229** — Afficher scopes Code, fichiers touchés et collisions éventuelles. _(Un `codeImpact` validé et stable porte scopes, chemins touchés et collisions ; le DAG les affiche et signale explicitement toute collision.)_
-- [ ] **MAH-230** — Afficher les preuves, leur statut et les digests sans contenu sensible par défaut.
+- [x] **MAH-230** — Afficher les preuves, leur statut et les digests sans contenu sensible par défaut. _(La section Preuves rend uniquement type, statut, classification, taille, SHA-256 et URI autorisée ; elle ne lit ni n'affiche aucun contenu.)_
 - [ ] **MAH-231** — Présenter les contradictions et alternatives avant toute décision humaine.
 - [ ] **MAH-232** — Lier l'approbation au manifeste final et invalider l'écran si celui-ci change.
 - [ ] **MAH-233** — Ajouter les actions annuler, relancer un nœud autorisé et basculer vers le chemin de repli.

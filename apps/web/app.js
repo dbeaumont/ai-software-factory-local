@@ -16,6 +16,9 @@ const pipelineProgress = document.querySelector('#pipeline-progress');
 const delegationGraph = document.querySelector('#delegation-graph');
 const delegationTree = document.querySelector('#delegation-tree');
 const delegationCount = document.querySelector('#delegation-count');
+const evidencePanel = document.querySelector('#evidence-panel');
+const evidenceList = document.querySelector('#evidence-list');
+const evidenceCount = document.querySelector('#evidence-count');
 const prLink = document.querySelector('#pr-link');
 const approveButton = document.querySelector('#approve-button');
 const effectConfirmation = document.querySelector('#effect-confirmation');
@@ -160,6 +163,8 @@ function resetTicketDraft() {
   steps.replaceChildren();
   delegationGraph.hidden = true;
   delegationTree.replaceChildren();
+  evidencePanel.hidden = true;
+  evidenceList.replaceChildren();
   prLink.hidden = true;
   prLink.removeAttribute('href');
   approveButton.hidden = true;
@@ -529,6 +534,41 @@ function delegationPerimeter(role) {
   return { id: 'code', label: 'Code' };
 }
 
+function renderEvidence(task) {
+  const artifacts = Array.isArray(task.artifacts) ? task.artifacts : [];
+  evidenceList.replaceChildren();
+  evidencePanel.hidden = artifacts.length === 0;
+  if (artifacts.length === 0) return;
+
+  evidenceList.append(...artifacts.map((artifact) => {
+    const item = document.createElement('article');
+    item.className = `evidence-item status-${String(artifact.status || 'unknown').toLowerCase()}`;
+    const header = document.createElement('div');
+    header.className = 'evidence-header';
+    const type = document.createElement('strong');
+    type.textContent = artifact.type || 'PREUVE';
+    const status = document.createElement('span');
+    status.textContent = artifact.status || 'UNKNOWN';
+    header.append(type, status);
+    const metadata = document.createElement('p');
+    metadata.textContent = `${artifact.classification || 'NON CLASSIFIÉ'} · ${formatBytes(artifact.sizeBytes)}`;
+    const digest = document.createElement('code');
+    digest.textContent = `SHA-256 ${artifact.digest || 'indisponible'}`;
+    const uri = document.createElement('small');
+    uri.textContent = artifact.uri ? `URI autorisée : ${artifact.uri}` : 'URI masquée par la politique d’accès';
+    item.append(header, metadata, digest, uri);
+    return item;
+  }));
+  evidenceCount.textContent = `${artifacts.length} artefact${artifacts.length > 1 ? 's' : ''}`;
+}
+
+function formatBytes(value) {
+  const bytes = Number(value || 0);
+  if (bytes < 1_024) return `${bytes} o`;
+  if (bytes < 1_048_576) return `${(bytes / 1_024).toFixed(1)} Kio`;
+  return `${(bytes / 1_048_576).toFixed(1)} Mio`;
+}
+
 function renderTask(task) {
   activeTask = task;
   restoreTicketFields(task);
@@ -545,6 +585,7 @@ function renderTask(task) {
   progressBar.style.width = `${progress[task.status] || 10}%`;
   renderPipeline(task);
   renderDelegationDag(task);
+  renderEvidence(task);
   proposalButton.hidden = !task.patch || task.status === 'PR_CREATED';
   reviewButton.hidden = !task.review;
   approveButton.hidden = task.status !== 'WAITING_APPROVAL';

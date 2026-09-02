@@ -112,3 +112,14 @@
 .delegation-node.perimeter-tests { box-shadow: inset 2px 0 #22a06b; }
 .delegation-node.perimeter-security { box-shadow: inset 2px 0 #c9372c; }
 .delegation-node.perimeter-review { box-shadow: inset 2px 0 #f5a623; }
+.evidence-panel { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.evidence-list { display: grid; gap: 7px; margin-top: 10px; }
+.evidence-item { display: grid; gap: 4px; padding: 8px; border: 1px solid var(--line); border-left: 3px solid #8993a4; border-radius: 4px; background: #fff; }
+.evidence-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.evidence-header strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; }
+.evidence-header span { padding: 2px 5px; border-radius: 3px; color: #44546f; background: #ebecf0; font-size: 8px; font-weight: 700; }
+.evidence-item p { margin: 0; color: var(--muted); font-size: 9px; }
+.evidence-item code { overflow-wrap: anywhere; color: #344563; font-size: 8px; }
+.evidence-item small { overflow-wrap: anywhere; color: var(--muted); font-size: 8px; }
+.evidence-item.status-complete { border-left-color: #22a06b; }
+.evidence-item.status-partial,.evidence-item.status-corrupted,.evidence-item.status-missing { border-left-color: var(--red); }
