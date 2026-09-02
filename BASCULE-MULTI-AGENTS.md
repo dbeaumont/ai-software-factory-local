@@ -75,7 +75,7 @@
 - [x] **MAH-006** — Définir le catalogue officiel des agents, sous-agents, propriétaires et niveaux d'autonomie. _(Catalogue : `resources/agents/catalog-v1.yaml` ; documentation : `docs/agents/CATALOGUE-AGENTS-V1.md`.)_
 - [x] **MAH-007** — Décider si Planner devient `SupervisorAgent`, `ArchitectureAgent`, ou reste un rôle de compatibilité. _(Décision : Planner reste réservé au mode `PIPELINE` ; ADR `docs/adr/ADR-MAH-007-planner-role-transition.md`.)_
 - [x] **MAH-008** — Définir la règle de routage entre chemin court mono-agent et chemin hiérarchique multi-agent. _(ADR : `docs/adr/ADR-MAH-008-routing-short-or-hierarchical.md` ; politique : `resources/multiagents/policies/routing-policy-v1.yaml`.)_
-- [ ] **MAH-009** — Définir les classes de risque autorisées par mode et les cas imposant une décision humaine préalable.
+- [x] **MAH-009** — Définir les classes de risque autorisées par mode et les cas imposant une décision humaine préalable. _(ADR : `docs/adr/ADR-MAH-009-risk-and-human-gates.md` ; politique : `resources/multiagents/policies/risk-policy-v1.yaml`.)_
 - [ ] **MAH-010** — Faire valider architecture, permissions, données et modèle de menace par les responsables produit et sécurité.
 
 ### Baseline et critères de passage

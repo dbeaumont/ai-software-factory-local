@@ -1,0 +1,119 @@
+version: "1"
+policyId: multiagent-risk-v1
+defaultDecision: HUMAN_TRIAGE
+unknownOrConflictingInput: HUMAN_TRIAGE
+riskMonotonicWithinAttempt: true
+
+classes:
+  R0:
+    description: Analyse ou changement sans comportement de production.
+    examples: [documentation, comments, isolated-fixtures]
+  R1:
+    description: Changement local et réversible sans frontière sensible.
+    examples: [bounded-module-fix, associated-tests]
+  R2:
+    description: Changement transverse ou de contrat maîtrisé.
+    examples: [compatible-public-contract, approved-dependency, additive-schema]
+  R3:
+    description: Changement sensible exigeant une décision experte avant Code.
+    impacts:
+      - authentication
+      - authorization
+      - secrets
+      - cryptography
+      - iam
+      - network
+      - personal-data
+      - data-migration
+      - breaking-public-contract
+      - infrastructure
+      - ci-cd
+      - security-policy
+      - tool-permissions
+      - material-architecture-decision
+      - scope-expansion
+      - budget-expansion
+  R4:
+    description: Action irréversible, directe en production ou hors mandat.
+    impacts:
+      - destructive-data-operation
+      - direct-production-deployment
+      - unbounded-privilege-expansion
+      - irreversible-external-effect
+      - outside-authorized-scope
+
+modeMatrix:
+  PIPELINE:
+    R0: AUTO
+    R1: AUTO
+    R2: HUMAN_BEFORE_EXTERNAL_EFFECT
+    R3: HUMAN_BEFORE_CODE
+    R4: DENY
+  HIERARCHICAL_SHADOW:
+    R0: SHADOW_ANALYSIS_ONLY
+    R1: SHADOW_ANALYSIS_ONLY
+    R2: SHADOW_ANALYSIS_ONLY
+    R3: SHADOW_ANALYSIS_ONLY_NO_PATCH
+    R4: DENY
+  HIERARCHICAL_CANARY:
+    R0: AUTO
+    R1: AUTO
+    R2: HUMAN_TRIAGE
+    R3: HUMAN_TRIAGE
+    R4: DENY
+  HIERARCHICAL_ACTIVE:
+    R0: AUTO
+    R1: AUTO
+    R2: HUMAN_BEFORE_EXTERNAL_EFFECT
+    R3: HUMAN_BEFORE_CODE
+    R4: DENY
+
+gates:
+  BEFORE_CODE:
+    requiredForRisks: [R3]
+    invalidatedBy: [attempt-change, source-commit-change, scope-change, risk-change, object-digest-change, expiry]
+  BEFORE_EXTERNAL_EFFECT:
+    requiredForRisks: [R2, R3]
+    effects:
+      - protected-branch-write
+      - merge
+      - artifact-publication
+      - release
+      - deployment
+      - infrastructure-change
+      - shared-data-mutation
+      - data-migration
+      - secret-rotation
+      - iam-change
+      - sensitive-configuration-activation
+    invalidatedBy: [attempt-change, source-commit-change, scope-change, risk-change, object-digest-change, expiry]
+
+approval:
+  requiredBindings:
+    - task_id
+    - attempt_id
+    - source_commit
+    - risk_class
+    - effective_mode
+    - scope
+    - action
+    - object_digest
+    - approver_identity
+    - approver_role
+    - decision
+    - justification
+    - expires_at
+  missingExpiredOrAmbiguous: DENY
+  separationOfDuties: true
+  roleByImpact:
+    product: [scope, behavior]
+    security: [authentication, authorization, secrets, cryptography, security-policy]
+    data: [personal-data, data-migration, destructive-data-operation]
+    platform: [iam, network, ci-cd, infrastructure, production]
+
+reevaluation:
+  afterSpecialistResult: true
+  beforeDelegation: true
+  beforeExternalEffect: true
+  onRiskIncrease: SUSPEND_AND_REQUEST_HUMAN_DECISION
+  onR4: DENY_AND_AUDIT
