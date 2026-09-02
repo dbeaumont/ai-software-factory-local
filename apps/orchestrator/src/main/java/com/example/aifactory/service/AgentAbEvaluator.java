@@ -23,6 +23,10 @@ public final class AgentAbEvaluator {
             return new Report("INCOMPLETE", byCase.size(), null, null,
                     List.of("paired_reference_suite_required"));
         }
+        String costFailure = costTelemetryFailure(observations);
+        if (costFailure != null) {
+            return new Report("INCOMPLETE", byCase.size(), null, null, List.of(costFailure));
+        }
         Metrics baseline = metrics(observations, referenceVariant);
         Metrics candidate = metrics(observations, candidateVariant);
         java.util.ArrayList<String> failures = new java.util.ArrayList<>();
@@ -62,6 +66,11 @@ public final class AgentAbEvaluator {
             return new ComparisonReport("INCOMPLETE", byCase.size(), Map.of(),
                     List.of("same_ticket_commit_and_variants_required"));
         }
+        String costFailure = costTelemetryFailure(observations.stream()
+                .map(CampaignObservation::observation).toList());
+        if (costFailure != null) {
+            return new ComparisonReport("INCOMPLETE", byCase.size(), Map.of(), List.of(costFailure));
+        }
         Map<Variant, Metrics> metrics = expectedVariants.stream().collect(Collectors.toUnmodifiableMap(
                 variant -> variant, variant -> metrics(observations.stream()
                         .map(CampaignObservation::observation).toList(), variant)));
@@ -70,6 +79,21 @@ public final class AgentAbEvaluator {
 
     private static Set<Variant> variants(List<Observation> values) {
         return values.stream().map(Observation::variant).collect(Collectors.toSet());
+    }
+
+    private static String costTelemetryFailure(List<Observation> observations) {
+        if (observations.stream().map(Observation::costTelemetry)
+                .anyMatch(telemetry -> telemetry == null || telemetry.status() != CostStatus.AVAILABLE)) {
+            return "complete_cost_telemetry_required";
+        }
+        if (observations.stream().map(value -> value.costTelemetry().currency()).distinct().count() != 1
+                || observations.stream().map(value -> value.costTelemetry().pricingSource()).distinct().count() != 1
+                || observations.stream().map(value -> value.costTelemetry().pricingVersion()).distinct().count() != 1
+                || observations.stream().map(value -> value.costTelemetry().requestedModel()).distinct().count() != 1
+                || observations.stream().map(value -> value.costTelemetry().resolvedModel()).distinct().count() != 1) {
+            return "comparable_cost_telemetry_required";
+        }
+        return null;
     }
 
     private static Metrics metrics(List<Observation> all, Variant variant) {
@@ -92,7 +116,34 @@ public final class AgentAbEvaluator {
 
     public record Observation(String caseId, Variant variant, boolean firstPatchSuccess, int repairs,
                               boolean testsPassed, boolean humanAccepted, long tokens,
-                              long durationMillis, long costMicros, boolean securityFailure) {
+                              long durationMillis, long costMicros, boolean securityFailure,
+                              CostTelemetry costTelemetry) {
+        public Observation(String caseId, Variant variant, boolean firstPatchSuccess, int repairs,
+                           boolean testsPassed, boolean humanAccepted, long tokens,
+                           long durationMillis, long costMicros, boolean securityFailure) {
+            this(caseId, variant, firstPatchSuccess, repairs, testsPassed, humanAccepted, tokens,
+                    durationMillis, costMicros, securityFailure, CostTelemetry.unavailable());
+        }
+    }
+
+    public enum CostStatus { AVAILABLE, PARTIAL, UNAVAILABLE }
+
+    public record CostTelemetry(CostStatus status, String currency, String pricingSource,
+                                String pricingVersion, String requestedModel, String resolvedModel) {
+        public CostTelemetry {
+            if (status == null) throw new IllegalArgumentException("Cost telemetry status is required");
+            if (status == CostStatus.AVAILABLE && (currency == null || !currency.matches("[A-Z]{3}")
+                    || pricingSource == null || pricingSource.isBlank()
+                    || pricingVersion == null || pricingVersion.isBlank()
+                    || requestedModel == null || requestedModel.isBlank()
+                    || resolvedModel == null || resolvedModel.isBlank())) {
+                throw new IllegalArgumentException("Available cost telemetry requires complete provenance");
+            }
+        }
+
+        public static CostTelemetry unavailable() {
+            return new CostTelemetry(CostStatus.UNAVAILABLE, null, null, null, null, null);
+        }
     }
 
     public record CampaignObservation(String ticketId, String sourceCommit, Observation observation) {

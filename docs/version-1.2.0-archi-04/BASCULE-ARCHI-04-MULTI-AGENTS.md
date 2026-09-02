@@ -444,7 +444,7 @@
 - [x] **MAH-296** — Mesurer sécurité : outils refusés, injections, dépassements, preuves invalides et effets tentés. _(`SecurityEvaluation` agrège tentatives et blocages par catégorie, refuse les compteurs incohérents et signale tout incident non contenu.)_
 - [x] **MAH-297** — Inclure un nombre représentatif de tâches simples, multi-domaines et adversariales. _(La suite contient 8 cas simples, 12 multi-domaines, 8 adversariaux et 8 de reprise ; `EvaluationSuiteCoverageTest` impose les minima de politique, 36 cas appariés, des identifiants uniques et au moins trois écosystèmes.)_
 - [x] **MAH-298** — Rejeter la qualification si le chemin hiérarchique est utilisé inutilement sur les tâches simples. _(`RoutingEvaluation` calcule ce taux sur le seul cohort simple et rend `REJECTED` dès qu'il dépasse le maximum de politique de 5 %.)_
-- [ ] **MAH-299** — Exiger une télémétrie de coût exploitable avant verdict.
+- [x] **MAH-299** — Exiger une télémétrie de coût exploitable avant verdict. _(`AgentAbEvaluator` exige `AVAILABLE` sur 100 % des observations avec devise, source, version de prix et modèles demandé/résolu identiques ; sinon le verdict reste `INCOMPLETE`.)_
 - [ ] **MAH-300** — Faire approuver le rapport de qualification par Produit, Architecture, Sécurité et Exploitation.
 - [ ] **MAH-301** — Maintenir tous les rôles hiérarchiques désactivés si le verdict n'est pas `QUALIFIED`.
 

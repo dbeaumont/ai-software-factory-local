@@ -73,6 +73,20 @@ class AgentAbEvaluatorTest {
         assertEquals("INCOMPLETE", evaluator.compareAll(observations, thresholds, variants).status());
     }
 
+    @Test
+    void requiresCompleteComparableCostTelemetryBeforeAnyVerdict() {
+        List<AgentAbEvaluator.Observation> observations = campaign(false);
+        AgentAbEvaluator.Observation first = observations.getFirst();
+        observations.set(0, new AgentAbEvaluator.Observation(first.caseId(), first.variant(),
+                first.firstPatchSuccess(), first.repairs(), first.testsPassed(), first.humanAccepted(),
+                first.tokens(), first.durationMillis(), first.costMicros(), first.securityFailure()));
+
+        AgentAbEvaluator.Report report = evaluator.evaluate(observations, thresholds);
+
+        assertEquals("INCOMPLETE", report.verdict());
+        assertTrue(report.failures().contains("complete_cost_telemetry_required"));
+    }
+
     private static List<AgentAbEvaluator.Observation> campaign(boolean candidateSecurityFailure) {
         List<AgentAbEvaluator.Observation> values = new ArrayList<>();
         for (int i = 1; i <= 20; i++) {
@@ -86,6 +100,8 @@ class AgentAbEvaluatorTest {
     private static AgentAbEvaluator.Observation observation(String id, AgentAbEvaluator.Variant variant,
                                                             boolean securityFailure) {
         return new AgentAbEvaluator.Observation(id, variant, true, 0, true, true,
-                1_000, 10_000, 20_000, securityFailure);
+                1_000, 10_000, 20_000, securityFailure, new AgentAbEvaluator.CostTelemetry(
+                AgentAbEvaluator.CostStatus.AVAILABLE, "EUR", "gateway-certified-response-cost",
+                "pricing-2026-09-02", "factory-model", "factory-model"));
     }
 }
