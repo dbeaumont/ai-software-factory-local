@@ -18,6 +18,19 @@ import java.util.Set;
 @Component
 public final class MultiAgentContractValidator {
     private static final String ROOT = "multiagents/schemas/";
+    private static final Set<String> KNOWN_ROLES = Set.of("workflow", "supervisor", "architecture-agent",
+            "impact-analysis", "dependencies-contracts", "code-agent", "developer", "patch-repair",
+            "test-agent", "test-design", "test-evidence", "security-agent", "threat-model",
+            "security-findings", "independent-reviewer");
+    private static final Map<String, Set<String>> REFERENCE_FIELDS = Map.ofEntries(
+            Map.entry("specialist-task-v1", Set.of("delegation_plan_id", "node_id")),
+            Map.entry("specialist-result-v1", Set.of("specialist_task_id", "delegation_plan_id", "node_id")),
+            Map.entry("agent-run-event-v1", Set.of("specialist_task_id", "node_id")),
+            Map.entry("supervisor-decision-v1", Set.of("delegation_plan_id", "replacement_plan_id", "human_decision_request_id")),
+            Map.entry("architecture-assessment-v1", Set.of("specialist_task_id")),
+            Map.entry("code-task-v1", Set.of("delegation_plan_id", "node_id", "architecture_assessment_id")),
+            Map.entry("patch-proposal-v1", Set.of("code_task_id", "node_id")),
+            Map.entry("test-assessment-v1", Set.of("strategy_id")));
     private final ObjectMapper objectMapper;
     private final Map<String, Schema> schemas;
 
@@ -54,6 +67,39 @@ public final class MultiAgentContractValidator {
                             + errors.getFirst().getKeyword() + ")");
         }
         return document;
+    }
+
+    public JsonNode validate(String contract, JsonNode document, ContractContext context) {
+        JsonNode validated = validate(contract, document);
+        requireBinding(contract, "task_id", validated.path("task_id"), context.taskId());
+        requireBinding(contract, "attempt_id", validated.path("attempt_id"), context.attemptId());
+        for (String roleField : List.of("role", "parent_role", "root_role")) {
+            JsonNode role = validated.path(roleField);
+            if (role.isTextual() && !KNOWN_ROLES.contains(role.asText())) {
+                throw new ContractValidationException(contract, "unknown role in " + roleField);
+            }
+        }
+        for (String collection : List.of("sources", "input_results")) {
+            for (JsonNode entry : validated.path(collection)) {
+                JsonNode role = entry.path("role");
+                if (role.isTextual() && !KNOWN_ROLES.contains(role.asText())) {
+                    throw new ContractValidationException(contract, "unknown role in " + collection);
+                }
+            }
+        }
+        for (String field : REFERENCE_FIELDS.getOrDefault(contract, Set.of())) {
+            JsonNode reference = validated.path(field);
+            if (reference.isTextual() && !context.allowedReferenceIds().contains(reference.asText())) {
+                throw new ContractValidationException(contract, "reference outside task in " + field);
+            }
+        }
+        return validated;
+    }
+
+    private static void requireBinding(String contract, String field, JsonNode actual, String expected) {
+        if (!actual.isTextual() || !expected.equals(actual.asText())) {
+            throw new ContractValidationException(contract, field + " is outside the current task context");
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -98,6 +144,15 @@ public final class MultiAgentContractValidator {
 
         public String contract() {
             return contract;
+        }
+    }
+
+    public record ContractContext(String taskId, String attemptId, Set<String> allowedReferenceIds) {
+        public ContractContext {
+            if (taskId == null || taskId.isBlank() || attemptId == null || attemptId.isBlank()) {
+                throw new IllegalArgumentException("Task and attempt identifiers are required");
+            }
+            allowedReferenceIds = Set.copyOf(allowedReferenceIds);
         }
     }
 }
