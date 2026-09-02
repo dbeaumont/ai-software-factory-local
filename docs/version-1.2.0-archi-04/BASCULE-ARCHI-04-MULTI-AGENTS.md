@@ -215,7 +215,7 @@
 ### Projection et API
 
 - [x] **MAH-103** — Construire une projection PostgreSQL pour les lectures UI sans dupliquer les contenus sensibles. _(Trois vues de lecture restreintes aux statuts, DAG, budgets, compteurs et métadonnées de preuve.)_
-- [ ] **MAH-104** — Reconstituer la projection depuis l'historique Temporal et Evidence MCP après perte contrôlée.
+- [x] **MAH-104** — Reconstituer la projection depuis l'historique Temporal et Evidence MCP après perte contrôlée. _(Rebuilder fail-closed alimenté par l'historique d'événements Temporal, résumés Evidence MCP revérifiés et test de perte/restauration à l'identique.)_
 - [ ] **MAH-105** — Migrer les tâches en mémoire vers le nouveau modèle sans casser les tâches déjà terminées.
 
 ### Gate du lot 4

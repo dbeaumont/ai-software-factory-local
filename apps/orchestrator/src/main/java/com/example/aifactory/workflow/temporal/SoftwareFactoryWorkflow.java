@@ -38,7 +38,7 @@ public interface SoftwareFactoryWorkflow {
     @QueryMethod(name = "pendingEffects")
     List<PendingEffectView> pendingEffects();
 
-    record Request(String taskId, String attemptId, String sourceCommit, String requirement,
+    record Request(String taskId, String attemptId, String repositoryId, String sourceCommit, String requirement,
                    List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
                    List<HumanDecisionRequest> humanDecisionRequests, ExecutionPolicy executionPolicy,
                    ContinuationState continuationState) {
@@ -50,35 +50,43 @@ public interface SoftwareFactoryWorkflow {
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement) {
-            this(taskId, attemptId, sourceCommit, requirement, List.of(), null, List.of(), null, null);
+            this(taskId, attemptId, "legacy", sourceCommit, requirement, List.of(), null, List.of(), null, null);
+        }
+
+        public Request(String taskId, String attemptId, String repositoryId, String sourceCommit,
+                       String requirement) {
+            this(taskId, attemptId, repositoryId, sourceCommit, requirement,
+                    List.of(), null, List.of(), null, null);
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement,
                        List<DelegationWorkflow.Request> delegations) {
-            this(taskId, attemptId, sourceCommit, requirement, delegations, null, List.of(), null, null);
+            this(taskId, attemptId, "legacy", sourceCommit, requirement,
+                    delegations, null, List.of(), null, null);
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement,
                        List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest) {
-            this(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest, List.of(), null, null);
+            this(taskId, attemptId, "legacy", sourceCommit, requirement,
+                    delegations, approvalRequest, List.of(), null, null);
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement,
                        List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
                        List<HumanDecisionRequest> humanDecisionRequests) {
-            this(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest,
+            this(taskId, attemptId, "legacy", sourceCommit, requirement, delegations, approvalRequest,
                     humanDecisionRequests, null, null);
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement,
                        List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
                        List<HumanDecisionRequest> humanDecisionRequests, ExecutionPolicy executionPolicy) {
-            this(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest,
+            this(taskId, attemptId, "legacy", sourceCommit, requirement, delegations, approvalRequest,
                     humanDecisionRequests, executionPolicy, null);
         }
 
         Request continuedWith(ContinuationState state) {
-            return new Request(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest,
+            return new Request(taskId, attemptId, repositoryId, sourceCommit, requirement, delegations, approvalRequest,
                     humanDecisionRequests, executionPolicy, state);
         }
     }

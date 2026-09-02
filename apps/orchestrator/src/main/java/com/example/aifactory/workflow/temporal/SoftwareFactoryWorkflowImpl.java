@@ -138,6 +138,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     private static void requireValid(Request request) {
         if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.repositoryId() == null || !request.repositoryId().matches("[A-Za-z0-9._/-]{1,63}")
                 || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
                 || request.requirement() == null || request.requirement().isBlank()
                 || request.continuationState().nextDelegationIndex() < 0
