@@ -76,6 +76,25 @@ class CodeWorkspaceManagerTest {
                 .hasMessageContaining("source commit drifted");
     }
 
+    @Test
+    void refusesAnOverlappingParallelBatchBeforeCreatingAnyWorktree() throws Exception {
+        Path repository = repository();
+        String commit = runner.run(List.of("git", "rev-parse", "HEAD"), repository, Duration.ofSeconds(5)).strip();
+        CodeWorkspaceManager manager = new CodeWorkspaceManager(runner, new CodeScopePolicy());
+        Path isolationRoot = temporaryDirectory.resolve("isolated-code");
+        CodeScopePolicy.Scope broad = scope(CodeScopePolicy.Kind.DIRECTORY, "src");
+        CodeScopePolicy.Scope nested = scope(CodeScopePolicy.Kind.FILE, "src/App.java");
+
+        assertThatThrownBy(() -> manager.createParallel(repository, isolationRoot, List.of(
+                new CodeWorkspaceManager.ScopedRequest(new CodeWorkspaceManager.Request(
+                        "task-1", "attempt-1", "developer-a", commit), broad),
+                new CodeWorkspaceManager.ScopedRequest(new CodeWorkspaceManager.Request(
+                        "task-1", "attempt-1", "developer-b", commit), nested))))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("not provably disjoint");
+        assertThat(Files.exists(isolationRoot)).isFalse();
+    }
+
     private Path repository() throws Exception {
         Path repository = temporaryDirectory.resolve("source");
         Files.createDirectories(repository);
@@ -87,5 +106,10 @@ class CodeWorkspaceManagerTest {
         runner.run(List.of("git", "add", "app.txt"), repository, Duration.ofSeconds(5));
         runner.run(List.of("git", "commit", "-m", "baseline"), repository, Duration.ofSeconds(5));
         return repository;
+    }
+
+    private static CodeScopePolicy.Scope scope(CodeScopePolicy.Kind kind, String path) {
+        return new CodeScopePolicy.Scope("customer-api", java.util.Set.of(
+                new CodeScopePolicy.Rule(kind, CodeScopePolicy.Access.WRITE, path)));
     }
 }

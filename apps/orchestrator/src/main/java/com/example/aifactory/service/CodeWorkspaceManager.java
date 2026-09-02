@@ -1,5 +1,6 @@
 package com.example.aifactory.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -15,9 +16,16 @@ import java.util.List;
 public final class CodeWorkspaceManager {
     private static final Duration GIT_TIMEOUT = Duration.ofSeconds(30);
     private final ProcessRunner runner;
+    private final CodeScopePolicy scopes;
 
     public CodeWorkspaceManager(ProcessRunner runner) {
+        this(runner, new CodeScopePolicy());
+    }
+
+    @Autowired
+    public CodeWorkspaceManager(ProcessRunner runner, CodeScopePolicy scopes) {
         this.runner = runner;
+        this.scopes = scopes;
     }
 
     public Allocation create(Path sourceRepository, Path isolationRoot, Request request) throws Exception {
@@ -66,6 +74,17 @@ public final class CodeWorkspaceManager {
         return allocation;
     }
 
+    public List<Allocation> createParallel(Path sourceRepository, Path isolationRoot,
+                                           List<ScopedRequest> requests) throws Exception {
+        scopes.requireParallelizable(requests.stream().map(request ->
+                new CodeScopePolicy.ScopedDelegation(request.request().nodeId(), request.scope())).toList());
+        List<Allocation> allocations = new java.util.ArrayList<>();
+        for (ScopedRequest request : requests) {
+            allocations.add(create(sourceRepository, isolationRoot, request.request()));
+        }
+        return List.copyOf(allocations);
+    }
+
     static String worktreeId(Request request) {
         String identity = String.join("\u0000", request.taskId(), request.attemptId(), request.nodeId());
         try {
@@ -87,6 +106,8 @@ public final class CodeWorkspaceManager {
     }
 
     public record Request(String taskId, String attemptId, String nodeId, String sourceCommit) {}
+
+    public record ScopedRequest(Request request, CodeScopePolicy.Scope scope) {}
 
     public record Allocation(String worktreeId, String taskId, String attemptId, String nodeId,
                              String sourceCommit, Path path) {

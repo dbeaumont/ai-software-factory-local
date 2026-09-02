@@ -36,6 +36,31 @@ public final class CodeScopePolicy {
         return overlaps ? Relation.OVERLAPPING : Relation.DISJOINT;
     }
 
+    public ParallelismProof requireParallelizable(List<ScopedDelegation> delegations) {
+        if (delegations == null || delegations.size() < 2 || delegations.size() > 4) {
+            throw new IllegalArgumentException("Parallel Code batch must contain between two and four delegations");
+        }
+        Set<String> nodeIds = new LinkedHashSet<>();
+        delegations.forEach(delegation -> {
+            if (delegation == null || delegation.nodeId() == null || delegation.scope() == null
+                    || !nodeIds.add(delegation.nodeId())) {
+                throw new IllegalArgumentException("Parallel Code delegation identity is missing or duplicated");
+            }
+        });
+        for (int left = 0; left < delegations.size(); left++) {
+            for (int right = left + 1; right < delegations.size(); right++) {
+                ScopedDelegation first = delegations.get(left);
+                ScopedDelegation second = delegations.get(right);
+                Relation relation = classify(first.scope(), second.scope());
+                if (relation != Relation.DISJOINT) {
+                    throw new SecurityException("Parallel Code scopes are not provably disjoint: "
+                            + first.nodeId() + " / " + second.nodeId() + " = " + relation);
+                }
+            }
+        }
+        return new ParallelismProof(nodeIds.stream().sorted().toList(), "PAIRWISE_DISJOINT_WRITE_SCOPES");
+    }
+
     private static List<Rule> writes(Scope scope) {
         return scope.rules().stream().filter(rule -> rule.access() == Access.WRITE)
                 .sorted(Comparator.comparing(Rule::path).thenComparing(rule -> rule.kind().name())).toList();
@@ -92,6 +117,14 @@ public final class CodeScopePolicy {
         public Rule {
             if (kind == null || access == null) throw invalid("scope rule type and access are required");
             path = normalize(path);
+        }
+    }
+
+    public record ScopedDelegation(String nodeId, Scope scope) {}
+
+    public record ParallelismProof(List<String> nodeIds, String reason) {
+        public ParallelismProof {
+            nodeIds = List.copyOf(nodeIds);
         }
     }
 

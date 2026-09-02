@@ -58,11 +58,36 @@ class CodeScopePolicyTest {
                 .hasMessageContaining("write rule");
     }
 
+    @Test
+    void authorizesParallelismOnlyWhenEveryWriteScopePairIsProvablyDisjoint() {
+        CodeScopePolicy.ParallelismProof proof = policy.requireParallelizable(java.util.List.of(
+                scoped("developer-b", scope(rule(CodeScopePolicy.Kind.FILE, "src/B.java"))),
+                scoped("developer-a", scope(rule(CodeScopePolicy.Kind.FILE, "src/A.java")))));
+
+        assertThat(proof.nodeIds()).containsExactly("developer-a", "developer-b");
+        assertThat(proof.reason()).isEqualTo("PAIRWISE_DISJOINT_WRITE_SCOPES");
+        assertThatThrownBy(() -> policy.requireParallelizable(java.util.List.of(
+                scoped("developer-a", scope(rule(CodeScopePolicy.Kind.DIRECTORY, "src"))),
+                scoped("developer-b", scope(rule(CodeScopePolicy.Kind.FILE, "src/B.java"))))))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("not provably disjoint")
+                .hasMessageContaining("CONTAINS");
+        assertThatThrownBy(() -> policy.requireParallelizable(java.util.List.of(
+                scoped("developer-a", scope(rule(CodeScopePolicy.Kind.MODULE, "module-a"))),
+                scoped("developer-b", scope(rule(CodeScopePolicy.Kind.MODULE, "module-a"))))))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("IDENTICAL");
+    }
+
     private static CodeScopePolicy.Scope scope(CodeScopePolicy.Rule... rules) {
         return new CodeScopePolicy.Scope("customer-api", Set.of(rules));
     }
 
     private static CodeScopePolicy.Rule rule(CodeScopePolicy.Kind kind, String path) {
         return new CodeScopePolicy.Rule(kind, CodeScopePolicy.Access.WRITE, path);
+    }
+
+    private static CodeScopePolicy.ScopedDelegation scoped(String nodeId, CodeScopePolicy.Scope scope) {
+        return new CodeScopePolicy.ScopedDelegation(nodeId, scope);
     }
 }
