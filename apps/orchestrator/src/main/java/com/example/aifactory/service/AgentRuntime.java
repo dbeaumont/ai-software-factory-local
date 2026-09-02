@@ -40,7 +40,8 @@ public final class AgentRuntime implements AgentExecutor {
         String fingerprint = prompts.fingerprint(invocation.promptName());
         AgentToolLoop loop = new AgentToolLoop(
                 messages -> llm.nextToolTurn(messages, tools, Math.min(invocation.budget().maxTokens(), 8_192)),
-                toolHost.executor(invocation.taskId(), invocation.sourceCommit(), invocation.role()),
+                toolHost.executor(invocation.taskId(), invocation.attemptId(),
+                        invocation.sourceCommit(), invocation.role()),
                 toolHost.authorization());
         AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(invocation.taskId(), invocation.role()),
                 prompt, invocation.untrustedInput(), invocation.budget());

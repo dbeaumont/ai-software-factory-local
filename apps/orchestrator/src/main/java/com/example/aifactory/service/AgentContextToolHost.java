@@ -1,8 +1,11 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.config.McpFactoryProperties;
+import com.example.aifactory.workflow.EvidenceRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -18,17 +21,28 @@ public final class AgentContextToolHost {
             "context.search_code", Set.of("query", "path", "max_results"),
             "context.get_repository_rules", Set.of(),
             "context.get_dependencies", Set.of("module", "ecosystem", "max_dependencies", "cursor"),
-            "context.get_symbols", Set.of("path", "query", "language", "max_results", "cursor"));
+            "context.get_symbols", Set.of("path", "query", "language", "max_results", "cursor"),
+            "evidence.get_summary", Set.of("uri"),
+            "evidence.read", Set.of("uri"));
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final McpToolInvoker invoker;
     private final McpFactoryProperties properties;
     private final OperationalKillSwitch killSwitch;
+    private final EvidenceRepository evidence;
 
+    @Autowired
     public AgentContextToolHost(McpToolInvoker invoker, McpFactoryProperties properties,
-                                OperationalKillSwitch killSwitch) {
+                                OperationalKillSwitch killSwitch, EvidenceRepository evidence) {
         this.invoker = invoker;
         this.properties = properties;
         this.killSwitch = killSwitch;
+        this.evidence = evidence;
+    }
+
+    AgentContextToolHost(McpToolInvoker invoker, McpFactoryProperties properties,
+                         OperationalKillSwitch killSwitch) {
+        this(invoker, properties, killSwitch, null);
     }
 
     public List<LlmGatewayClient.ToolDefinition> definitions() {
@@ -48,18 +62,33 @@ public final class AgentContextToolHost {
                 definition("context.get_symbols", "Read a bounded symbol index by path or query.", Map.of(
                         "path", string(), "query", Map.of("type", "string", "maxLength", 256),
                         "language", Map.of("type", "string", "maxLength", 32),
-                        "max_results", integer(1, 500))));
+                        "max_results", integer(1, 500))),
+                requiredDefinition("evidence.get_summary", "Read task-bound evidence metadata without content.",
+                        "uri", Map.of("uri", string())),
+                requiredDefinition("evidence.read", "Read task-bound raw evidence with an immutable audit event.",
+                        "uri", Map.of("uri", string())));
     }
 
-    public AgentToolLoop.ToolExecutor executor(String taskId, String sourceCommit, String role) {
+    public AgentToolLoop.ToolExecutor executor(String taskId, String attemptId, String sourceCommit, String role) {
         return call -> {
             Set<String> allowed = BUSINESS_ARGUMENTS.get(call.name());
             if (allowed == null || !allowed.containsAll(call.arguments().keySet())) {
                 throw new AgentToolLoop.AgentLoopException("invalid_arguments",
                         "Model supplied unknown or host-controlled tool arguments");
             }
+            if (call.name().startsWith("evidence.")) {
+                if (evidence == null) throw new AgentToolLoop.AgentLoopException(
+                        "evidence_unavailable", "Evidence repository is unavailable");
+                String uri = requiredString(call.arguments(), "uri");
+                Object result = "evidence.get_summary".equals(call.name())
+                        ? evidence.getSummary(taskId, attemptId, uri, role)
+                        : evidence.read(new EvidenceRepository.ReadRequest(
+                        taskId, attemptId, uri, role, "human-review"));
+                return JSON.valueToTree(result).toString();
+            }
             Map<String, Object> arguments = new LinkedHashMap<>(McpRequestMetadata.create(
                     taskId, sourceCommit, role, Duration.ofSeconds(20)).arguments());
+            arguments.put("attempt_id", attemptId);
             arguments.putAll(call.arguments());
             JsonNode result = invoker.call(properties.repositoryContextServerName(), call.name(), arguments);
             return result.toString();
@@ -94,5 +123,13 @@ public final class AgentContextToolHost {
     private static Map<String, Object> string() { return Map.of("type", "string", "maxLength", 1024); }
     private static Map<String, Object> integer(int min, int max) {
         return Map.of("type", "integer", "minimum", min, "maximum", max);
+    }
+
+    private static String requiredString(Map<String, Object> arguments, String name) {
+        Object value = arguments.get(name);
+        if (!(value instanceof String text) || text.isBlank()) {
+            throw new AgentToolLoop.AgentLoopException("invalid_arguments", name + " is required");
+        }
+        return text;
     }
 }

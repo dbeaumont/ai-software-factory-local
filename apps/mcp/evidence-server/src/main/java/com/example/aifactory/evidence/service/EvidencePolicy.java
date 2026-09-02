@@ -6,8 +6,8 @@ import java.util.Map;
 @Service
 public class EvidencePolicy {
     private static final java.util.Set<String> SUMMARY_ACTORS = java.util.Set.of(
-            "workflow", "planner", "reviewer", "supervisor", "architecture-agent", "code-agent",
-            "test-design", "test-evidence", "security-agent", "independent-reviewer");
+            "workflow", "supervisor", "test-agent", "test-evidence", "security-agent",
+            "security-findings", "independent-reviewer", "planner", "reviewer");
     private static final Map<String, Rule> RULES = Map.ofEntries(
             Map.entry("plan", new Rule("INTERNAL", 90)), Map.entry("patch", new Rule("INTERNAL", 90)),
             Map.entry("evaluation", new Rule("INTERNAL", 180)), Map.entry("integration", new Rule("INTERNAL", 90)),
@@ -38,7 +38,7 @@ public class EvidencePolicy {
 
     public Rule requireRead(String type, String actor, String purpose) {
         Rule rule = require(type);
-        if (!("workflow".equals(actor) || "reviewer".equals(actor))
+        if (!("workflow".equals(actor) || "reviewer".equals(actor) || "independent-reviewer".equals(actor))
                 || !("human-review".equals(purpose) || "incident-investigation".equals(purpose))
                 || ("approval".equals(type) && !"workflow".equals(actor))) {
             throw new SecurityException("raw evidence read is not authorized");

@@ -56,7 +56,7 @@ class McpEvidenceRepositoryTest {
             @Override
             public tools.jackson.databind.JsonNode call(String server, String tool, Map<String, Object> arguments) {
                 assertThat(tool).isEqualTo("evidence.read");
-                assertThat(arguments).containsEntry("actor", "reviewer")
+                assertThat(arguments).containsEntry("actor", "independent-reviewer")
                         .containsEntry("purpose", "human-review");
                 return new ObjectMapper().valueToTree(Map.of(
                         "uri", uri, "type", "review", "digest", digest, "status", "COMPLETE",
@@ -69,7 +69,7 @@ class McpEvidenceRepositoryTest {
         McpEvidenceRepository repository = new McpEvidenceRepository(mcp, properties());
 
         assertThat(repository.read(new EvidenceRepository.ReadRequest(
-                "task-1", "attempt-1", uri, "reviewer", "human-review")).content()).isEqualTo(content);
+                "task-1", "attempt-1", uri, "independent-reviewer", "human-review")).content()).isEqualTo(content);
         assertThatThrownBy(() -> repository.read(new EvidenceRepository.ReadRequest(
                 "task-1", "attempt-1", uri, "developer", "human-review"))).isInstanceOf(SecurityException.class);
     }
@@ -82,7 +82,7 @@ class McpEvidenceRepositoryTest {
             @Override
             public tools.jackson.databind.JsonNode call(String server, String tool, Map<String, Object> arguments) {
                 assertThat(tool).isEqualTo("evidence.get_summary");
-                assertThat(arguments).containsEntry("actor", "architecture-agent");
+                assertThat(arguments).containsEntry("actor", "security-agent");
                 return new ObjectMapper().valueToTree(Map.of(
                         "uri", uri, "type", "tests", "digest", digest, "status", "COMPLETE",
                         "classification", "INTERNAL", "size_bytes", 123));
@@ -92,7 +92,7 @@ class McpEvidenceRepositoryTest {
         };
 
         EvidenceRepository.EvidenceSummary summary = new McpEvidenceRepository(mcp, properties())
-                .getSummary("task-1", "attempt-1", uri, "architecture-agent");
+                .getSummary("task-1", "attempt-1", uri, "security-agent");
 
         assertThat(summary.sizeBytes()).isEqualTo(123);
         assertThat(summary.digest()).isEqualTo(digest);

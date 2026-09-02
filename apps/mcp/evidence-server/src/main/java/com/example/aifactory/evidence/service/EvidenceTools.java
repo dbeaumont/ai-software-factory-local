@@ -65,7 +65,7 @@ public class EvidenceTools {
                             @ToolParam(description = "Task identifier") String task_id,
                             @ToolParam(description = "Attempt identifier") String attempt_id,
                             @ToolParam(description = "Evidence URI") String uri,
-                            @ToolParam(description = "workflow or reviewer") String actor,
+                            @ToolParam(description = "workflow or independent reviewer") String actor,
                             @ToolParam(description = "human-review or incident-investigation") String purpose) throws Exception {
         if (!"1".equals(schema_version)) throw new IllegalArgumentException("unsupported schema version");
         try {

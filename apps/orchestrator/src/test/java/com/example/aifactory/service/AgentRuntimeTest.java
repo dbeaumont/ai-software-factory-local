@@ -26,7 +26,8 @@ class AgentRuntimeTest {
         when(host.definitions()).thenReturn(List.of(
                 new LlmGatewayClient.ToolDefinition("context.read_file", "read", Map.of("type", "object")),
                 new LlmGatewayClient.ToolDefinition("context.search_code", "search", Map.of("type", "object"))));
-        when(host.executor("task-1", "a".repeat(40), "developer")).thenReturn(call -> "{}");
+        when(host.executor("task-1", "attempt-1", "a".repeat(40), "developer"))
+                .thenReturn(call -> "{}");
         when(host.authorization()).thenReturn((actor, tool) -> true);
         when(llm.nextToolTurn(any(), any(), anyInt())).thenReturn(new AgentToolLoop.Turn(AgentToolLoop.Stop.FINAL,
                 event(), List.of(), 10, 5, 20));

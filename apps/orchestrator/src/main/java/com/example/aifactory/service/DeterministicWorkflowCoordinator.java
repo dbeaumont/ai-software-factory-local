@@ -289,7 +289,8 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
             long started = System.nanoTime();
             AgentToolLoop loop = new AgentToolLoop(
                     messages -> llm.nextToolTurn(messages, agentTools.definitions(), maxTokensFor(promptName)),
-                    agentTools.executor(state.id, state.sourceCommit, promptName), agentTools.authorization());
+                    agentTools.executor(state.id, "pipeline-1", state.sourceCommit, promptName),
+                    agentTools.authorization());
             AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(state.id, promptName), systemPrompt,
                     untrustedInput, new AgentToolLoop.Budget(6, Duration.ofMinutes(3), 12_000, 5_000_000));
             state.recordAgentUsage(result.turns(), result.tokens(), result.costMicros());

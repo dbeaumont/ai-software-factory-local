@@ -125,7 +125,8 @@ public final class McpEvidenceRepository implements EvidenceRepository {
     @Override
     public RawEvidence read(ReadRequest request) {
         if (!server.enabled()) throw new IllegalStateException("evidence MCP server is disabled");
-        if (request == null || !("workflow".equals(request.actor()) || "reviewer".equals(request.actor()))
+        if (request == null || !("workflow".equals(request.actor()) || "reviewer".equals(request.actor())
+                || "independent-reviewer".equals(request.actor()))
                 || request.purpose() == null || request.purpose().isBlank()) {
             throw new SecurityException("raw evidence read is not authorized");
         }

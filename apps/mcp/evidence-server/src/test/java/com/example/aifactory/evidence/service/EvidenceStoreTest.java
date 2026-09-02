@@ -86,18 +86,20 @@ class EvidenceStoreTest {
         EvidenceTools.EvidenceSummary summary = tools.getSummary("1", "task-1", "attempt-1", stored.uri(), "planner");
         assertEquals(content.length, summary.sizeBytes());
         assertEquals(content.length, tools.getSummary(
-                "1", "task-1", "attempt-1", stored.uri(), "architecture-agent").sizeBytes());
+                "1", "task-1", "attempt-1", stored.uri(), "security-agent").sizeBytes());
+        assertThrows(SecurityException.class, () -> tools.getSummary(
+                "1", "task-1", "attempt-1", stored.uri(), "architecture-agent"));
         assertThrows(SecurityException.class, () -> tools.getSummary(
                 "1", "task-1", "attempt-2", stored.uri(), "planner"));
         assertThrows(SecurityException.class, () -> tools.read(
                 "1", "task-1", "attempt-1", stored.uri(), "planner", "human-review"));
         EvidenceTools.RawEvidence raw = tools.read(
-                "1", "task-1", "attempt-1", stored.uri(), "reviewer", "human-review");
+                "1", "task-1", "attempt-1", stored.uri(), "independent-reviewer", "human-review");
         assertArrayEquals(content, Base64.getDecoder().decode(raw.contentBase64()));
         String audit = java.nio.file.Files.readString(root.resolve("audit/raw-reads.jsonl"));
         assertTrue(audit.contains("DENIED"));
         assertTrue(audit.contains("ALLOWED"));
-        assertTrue(audit.contains("reviewer"));
+        assertTrue(audit.contains("independent-reviewer"));
         assertTrue(audit.contains("human-review"));
         assertTrue(audit.contains(stored.uri()));
         assertFalse(audit.contains("review proof"));
