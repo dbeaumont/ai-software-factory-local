@@ -8,6 +8,9 @@
 # Maven build output
 **/target/
 
+# Gradle local state
+**/.gradle/
+
 # IDE settings
 .idea/
 *.iml
