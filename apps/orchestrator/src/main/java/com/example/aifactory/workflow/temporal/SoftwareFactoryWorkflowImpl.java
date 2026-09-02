@@ -35,6 +35,6 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     }
 
     private static String delegationId(Request root, DelegationWorkflow.Request child) {
-        return "task-" + root.taskId() + "-attempt-" + root.attemptId() + "-node-" + child.nodeId();
+        return TemporalIds.delegation(root.taskId(), root.attemptId(), child.nodeId());
     }
 }

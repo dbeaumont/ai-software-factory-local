@@ -18,7 +18,7 @@ class SoftwareFactoryWorkflowTest {
             environment.start();
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class,
-                    WorkflowOptions.newBuilder().setWorkflowId("task-task-1-attempt-attempt-1")
+                    WorkflowOptions.newBuilder().setWorkflowId(TemporalIds.workflow("task-1", "attempt-1"))
                             .setTaskQueue("software-factory-test").build());
 
             SoftwareFactoryWorkflow.Result result = workflow.run(new SoftwareFactoryWorkflow.Request(
@@ -28,7 +28,7 @@ class SoftwareFactoryWorkflowTest {
             assertThat(result.chronology()).containsExactly("WORKFLOW_STARTED");
             assertThat(result.delegations()).isEmpty();
             assertThat(WorkflowStub.fromTyped(workflow).getExecution().getWorkflowId())
-                    .isEqualTo("task-task-1-attempt-attempt-1");
+                    .isEqualTo(TemporalIds.workflow("task-1", "attempt-1"));
         }
     }
 
@@ -41,7 +41,7 @@ class SoftwareFactoryWorkflowTest {
             environment.start();
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class, WorkflowOptions.newBuilder()
-                            .setWorkflowId("task-task-2-attempt-attempt-1")
+                            .setWorkflowId(TemporalIds.workflow("task-2", "attempt-1"))
                             .setTaskQueue("software-factory-test").build());
             DelegationWorkflow.Request child = new DelegationWorkflow.Request(
                     "task-2", "attempt-1", "code-1", "supervisor", "code-agent",

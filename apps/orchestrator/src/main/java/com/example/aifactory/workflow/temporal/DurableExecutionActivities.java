@@ -30,6 +30,13 @@ public interface DurableExecutionActivities {
                 throw new IllegalArgumentException("Activity metadata is invalid or not idempotent");
             }
         }
+
+        public static Metadata deterministic(String taskId, String attemptId, String sourceCommit,
+                                             String nodeId, String operation, int sequence) {
+            return new Metadata(taskId, attemptId, sourceCommit,
+                    TemporalIds.activity(taskId, attemptId, nodeId, operation, sequence),
+                    TemporalIds.effectKey(taskId, attemptId, nodeId, operation, sequence));
+        }
     }
 
     record AgentCall(Metadata metadata, AgentRuntime.Invocation invocation) {}

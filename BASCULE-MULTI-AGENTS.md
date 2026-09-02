@@ -171,7 +171,7 @@
 - [x] **MAH-066** — Créer un Child Workflow générique de délégation ou des workflows typés par périmètre. _(Child Workflow générique par nœud/rôle, identifiant déterministe et invocation depuis la racine.)_
 - [x] **MAH-067** — Mapper les appels LLM, MCP et stockage vers des Activities idempotentes. _(Activities typées pour AgentRuntime, MCP et EvidenceRepository avec liaison et clé d'idempotence obligatoires.)_
 - [x] **MAH-068** — Définir timeouts et Retry Policies distincts pour lecture, LLM, sandbox, assurance et SCM. _(Six profils bornés, erreurs non rejouables explicites et heartbeat sandbox.)_
-- [ ] **MAH-069** — Utiliser des identifiants déterministes pour les workflows, délégations et Activities à effet.
+- [x] **MAH-069** — Utiliser des identifiants déterministes pour les workflows, délégations et Activities à effet. _(Fabrique canonique bornée pour workflow, Child Workflow, Activity et clé d'idempotence.)_
 - [ ] **MAH-070** — Implémenter le Signal d'approbation humaine lié au manifeste soumis.
 - [ ] **MAH-071** — Implémenter les Signals d'annulation et de décision humaine complémentaire.
 - [ ] **MAH-072** — Implémenter les Queries de statut, DAG, budgets, preuves et effets en attente.
