@@ -369,7 +369,7 @@
 - [x] **MAH-230** — Afficher les preuves, leur statut et les digests sans contenu sensible par défaut. _(La section Preuves rend uniquement type, statut, classification, taille, SHA-256 et URI autorisée ; elle ne lit ni n'affiche aucun contenu.)_
 - [x] **MAH-231** — Présenter les contradictions et alternatives avant toute décision humaine. _(Chaque demande relie contradiction, sévérité et alternatives ordonnées avec conséquences/recommandation ; API et UI bloquent l'approbation tant qu'un choix reste en attente.)_
 - [x] **MAH-232** — Lier l'approbation au manifeste final et invalider l'écran si celui-ci change. _(La route hiérarchique exige l'ID et le digest affichés ; tout écart renvoie un conflit et l'UI recharge la tâche avant de permettre un nouvel essai.)_
-- [ ] **MAH-233** — Ajouter les actions annuler, relancer un nœud autorisé et basculer vers le chemin de repli.
+- [x] **MAH-233** — Ajouter les actions annuler, relancer un nœud autorisé et basculer vers le chemin de repli. _(L'UI pilote trois commandes serveur ; seules quatre causes récupérables autorisent une relance, et le fallback n'est accepté que depuis un mode hiérarchique non terminal.)_
 
 ### Gate du lot 10
 

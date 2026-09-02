@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 public class TaskState {
     private static final Logger log = LoggerFactory.getLogger(TaskState.class);
+    private static final List<String> RETRYABLE_STOP_REASONS = List.of(
+            "TIMEOUT", "DEPENDENCY_UNAVAILABLE", "CONTRACT_ERROR", "WORKER_RESTART");
     public final String id;
     public final String ticketNumber;
     public final TaskRequest request;
@@ -286,6 +288,41 @@ public class TaskState {
                 ? new TaskView.HumanActionView(action.requestId(), action.contradictionId(), action.domain(),
                 action.question(), action.objectDigest(), "CANCELLED", action.alternatives()) : action);
         transition(TaskStatus.CANCELLED, "Cancelled by " + actor + ": " + reason);
+    }
+
+    public synchronized void requestDelegationRetry(String delegationId, String reason, String actor) {
+        TaskView.DelegationView current = delegations.get(delegationId);
+        if (current == null) throw new IllegalArgumentException("Unknown delegation " + delegationId);
+        if (!"FAILED".equals(current.status()) || !RETRYABLE_STOP_REASONS.contains(current.stopReason())) {
+            throw new IllegalStateException("Delegation is not authorized for retry");
+        }
+        validateOperatorAction(reason, actor);
+        delegations.put(delegationId, new TaskView.DelegationView(current.delegationId(),
+                current.parentDelegationId(), current.role(), current.dependsOn(), "RETRY_REQUESTED",
+                "Requested by " + actor + ": " + reason, current.durationMillis(), current.turns(),
+                current.tokens(), current.costMicros(), current.toolsUsed(), current.codeImpact()));
+        updatedAt = Instant.now();
+        steps.add(new AgentStep("RETRY:" + delegationId, "OK", reason, updatedAt));
+    }
+
+    public synchronized void switchToPipelineFallback(String reason, String actor) {
+        if (!List.of("HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY", "HIERARCHICAL_ACTIVE")
+                .contains(executionMode) || List.of(TaskStatus.APPROVED, TaskStatus.PR_CREATED,
+                TaskStatus.CANCELLED, TaskStatus.FAILED).contains(status)) {
+            throw new IllegalStateException("Pipeline fallback is not available for this task");
+        }
+        validateOperatorAction(reason, actor);
+        executionMode = "PIPELINE";
+        dagVersion = "pipeline-v1";
+        updatedAt = Instant.now();
+        steps.add(new AgentStep("FALLBACK_REQUESTED", "OK", "Requested by " + actor + ": " + reason, updatedAt));
+    }
+
+    private static void validateOperatorAction(String reason, String actor) {
+        if (reason == null || reason.isBlank() || reason.length() > 1_000
+                || actor == null || actor.isBlank() || actor.length() > 256) {
+            throw new IllegalArgumentException("Operator action request is invalid");
+        }
     }
 
     private static boolean validProjectionId(String value) {

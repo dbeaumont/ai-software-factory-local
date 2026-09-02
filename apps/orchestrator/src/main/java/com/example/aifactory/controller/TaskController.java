@@ -4,6 +4,7 @@ import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskCancellationRequest;
 import com.example.aifactory.model.HumanDecisionResponse;
 import com.example.aifactory.model.ManifestApprovalRequest;
+import com.example.aifactory.model.OperatorActionRequest;
 import com.example.aifactory.model.TaskView;
 import com.example.aifactory.service.TaskService;
 import org.springframework.http.HttpStatus;
@@ -54,5 +55,18 @@ public class TaskController {
     public TaskView answerDecision(@PathVariable String id, @PathVariable String requestId,
                                    @RequestBody HumanDecisionResponse response) {
         return tasks.answerDecision(id, requestId, response);
+    }
+
+    @PostMapping("/{id}/delegations/{delegationId}/retry")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public TaskView retryDelegation(@PathVariable String id, @PathVariable String delegationId,
+                                    @RequestBody OperatorActionRequest request) {
+        return tasks.retryDelegation(id, delegationId, request);
+    }
+
+    @PostMapping("/{id}/fallback")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public TaskView fallback(@PathVariable String id, @RequestBody OperatorActionRequest request) {
+        return tasks.fallback(id, request);
     }
 }

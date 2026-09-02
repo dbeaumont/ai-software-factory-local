@@ -6,6 +6,7 @@ import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskCancellationRequest;
 import com.example.aifactory.model.HumanDecisionResponse;
 import com.example.aifactory.model.ManifestApprovalRequest;
+import com.example.aifactory.model.OperatorActionRequest;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.model.TaskView;
@@ -120,6 +121,20 @@ public class TaskService {
         TaskState state = requireTask(id);
         state.answerHumanAction(requestId, response.decision(), response.objectDigest(),
                 response.actor(), response.actorRole());
+        return state.view();
+    }
+
+    public TaskView retryDelegation(String id, String delegationId, OperatorActionRequest request) {
+        if (request == null) throw new IllegalArgumentException("Operator action request is required");
+        TaskState state = requireTask(id);
+        state.requestDelegationRetry(delegationId, request.reason(), request.actor());
+        return state.view();
+    }
+
+    public TaskView fallback(String id, OperatorActionRequest request) {
+        if (request == null) throw new IllegalArgumentException("Operator action request is required");
+        TaskState state = requireTask(id);
+        state.switchToPipelineFallback(request.reason(), request.actor());
         return state.view();
     }
 

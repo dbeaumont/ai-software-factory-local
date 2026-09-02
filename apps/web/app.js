@@ -22,6 +22,9 @@ const evidenceCount = document.querySelector('#evidence-count');
 const humanDecisionPanel = document.querySelector('#human-decision-panel');
 const humanDecisionList = document.querySelector('#human-decision-list');
 const humanDecisionCount = document.querySelector('#human-decision-count');
+const operatorActions = document.querySelector('#operator-actions');
+const cancelTaskButton = document.querySelector('#cancel-task-button');
+const fallbackButton = document.querySelector('#fallback-button');
 const prLink = document.querySelector('#pr-link');
 const approveButton = document.querySelector('#approve-button');
 const effectConfirmation = document.querySelector('#effect-confirmation');
@@ -171,6 +174,7 @@ function resetTicketDraft() {
   evidenceList.replaceChildren();
   humanDecisionPanel.hidden = true;
   humanDecisionList.replaceChildren();
+  operatorActions.hidden = true;
   prLink.hidden = true;
   prLink.removeAttribute('href');
   approveButton.hidden = true;
@@ -356,7 +360,7 @@ function browserPullRequestUrl(value) {
 }
 
 function isFinished(status) {
-  return ['WAITING_APPROVAL', 'PR_CREATED', 'FAILED'].includes(status);
+  return ['WAITING_APPROVAL', 'PR_CREATED', 'CANCELLED', 'FAILED'].includes(status);
 }
 
 function jobState(task, job, knownSteps) {
@@ -465,6 +469,16 @@ function renderDelegationDag(task) {
       reason.textContent = node.stopReason;
       branch.append(reason);
     }
+    if (isDelegationRetryAuthorized(node)) {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'delegation-retry';
+      retry.textContent = 'Relancer ce nœud';
+      retry.addEventListener('click', () => executeOperatorCommand(
+        `/api/tasks/${activeTaskId}/delegations/${encodeURIComponent(node.delegationId)}/retry`,
+        'Relance après échec récupérable'));
+      branch.append(retry);
+    }
     const metrics = document.createElement('dl');
     metrics.className = 'delegation-metrics';
     [
@@ -520,6 +534,11 @@ function renderDelegationDag(task) {
   delegationTree.append(...roots.map(renderBranch));
   delegationTree.append(...delegations.filter((node) => !visited.has(node.delegationId)).map(renderBranch));
   delegationCount.textContent = `${delegations.length} délégation${delegations.length > 1 ? 's' : ''}`;
+}
+
+function isDelegationRetryAuthorized(node) {
+  return node.status === 'FAILED' && ['TIMEOUT', 'DEPENDENCY_UNAVAILABLE', 'CONTRACT_ERROR', 'WORKER_RESTART']
+    .includes(node.stopReason);
 }
 
 function formatDuration(durationMillis) {
@@ -644,6 +663,10 @@ function renderTask(task) {
   reviewButton.hidden = !task.review;
   const hasPendingHumanDecision = (task.humanActions || []).some((action) => action.status === 'PENDING');
   approveButton.hidden = task.status !== 'WAITING_APPROVAL' || hasPendingHumanDecision;
+  operatorActions.hidden = ['APPROVED', 'PR_CREATED', 'CANCELLED', 'FAILED'].includes(task.status);
+  cancelTaskButton.hidden = operatorActions.hidden;
+  fallbackButton.hidden = !['HIERARCHICAL_SHADOW', 'HIERARCHICAL_CANARY', 'HIERARCHICAL_ACTIVE']
+    .includes(task.executionMode) || operatorActions.hidden;
   renderPendingEffect(task.pendingEffect, task.status === 'WAITING_APPROVAL');
   prLink.hidden = !task.pullRequestUrl;
   if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);
@@ -781,8 +804,34 @@ function statusDescription(status) {
   if (status === 'WAITING_APPROVAL') return 'Contrôles terminés. La tâche attend une approbation humaine.';
   if (status === 'PR_CREATED') return 'La pull request a été créée dans Gitea.';
   if (status === 'FAILED') return 'L’exécution s’est arrêtée. Consultez l’erreur remontée par l’usine.';
+  if (status === 'CANCELLED') return 'L’exécution a été annulée par un opérateur.';
   return 'L’usine traite votre ticket. Cette vue se met à jour automatiquement.';
 }
+
+async function executeOperatorCommand(url, reason) {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason, actor: 'ui-operator' })
+    });
+    const task = await readApiResponse(response);
+    if (!response.ok) throw new Error(task.error || "La commande opérateur a échoué.");
+    renderTask(task);
+  } catch (error) {
+    taskDetail.textContent = error.message;
+  }
+}
+
+cancelTaskButton.addEventListener('click', () => {
+  const reason = window.prompt("Motif de l'annulation");
+  if (reason?.trim()) executeOperatorCommand(`/api/tasks/${activeTaskId}/cancel`, reason.trim());
+});
+
+fallbackButton.addEventListener('click', () => {
+  const reason = window.prompt('Motif de la bascule vers le pipeline');
+  if (reason?.trim()) executeOperatorCommand(`/api/tasks/${activeTaskId}/fallback`, reason.trim());
+});
 
 async function refreshTask() {
   if (!activeTaskId) return;

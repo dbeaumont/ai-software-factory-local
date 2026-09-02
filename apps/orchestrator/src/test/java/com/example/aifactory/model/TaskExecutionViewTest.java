@@ -179,4 +179,26 @@ class TaskExecutionViewTest {
         state.fail(new IllegalStateException("late failure"));
         assertThat(state.status).isEqualTo(TaskStatus.CANCELLED);
     }
+
+    @Test
+    void authorizesOnlyRetryableDelegationFailuresAndHierarchicalFallback() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.bindExecution("HIERARCHICAL_ACTIVE", "run-1", "dag-v4", 10_000, 1_000_000, 20);
+        state.recordDelegation("code-1", "supervisor", "code-agent", java.util.List.of(),
+                "FAILED", "TIMEOUT");
+        state.recordDelegation("security-1", "supervisor", "security-agent", java.util.List.of(),
+                "FAILED", "BUDGET_EXHAUSTED");
+
+        state.requestDelegationRetry("code-1", "Transient failure", "operator");
+        assertThat(state.view().delegations()).filteredOn(item -> item.delegationId().equals("code-1"))
+                .singleElement().extracting(TaskView.DelegationView::status).isEqualTo("RETRY_REQUESTED");
+        assertThatThrownBy(() -> state.requestDelegationRetry("security-1", "Add budget", "operator"))
+                .isInstanceOf(IllegalStateException.class);
+
+        state.switchToPipelineFallback("Canary divergence", "operator");
+        assertThat(state.executionMode).isEqualTo("PIPELINE");
+        assertThat(state.dagVersion).isEqualTo("pipeline-v1");
+        assertThat(state.steps).extracting(AgentStep::name).contains("RETRY:code-1", "FALLBACK_REQUESTED");
+    }
 }
