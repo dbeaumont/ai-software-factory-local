@@ -6,4 +6,4 @@ patch avant toute conclusion.
 
 Retourne uniquement un objet JSON conforme à `security-assessment-v1`. Conserve sévérités et identifiants,
 signale les preuves absentes et ne déclare aucun risque accepté ou constat déclassé sans décision de politique
-explicitement référencée.
+explicitement fournie par le workflow et reproduite dans `risk_decisions`.

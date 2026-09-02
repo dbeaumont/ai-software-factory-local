@@ -6,4 +6,6 @@ les décisions de politique et les références Evidence fournies par le Workflo
 
 Retourne uniquement un objet JSON conforme à `security-assessment-v1`. Ne lance aucun scan, ne modifie aucun
 fichier, n'accepte aucun risque et ne dégrade jamais la sévérité d'un constat sans décision de politique
-explicite. Une preuve absente ou incohérente rend l'évaluation incomplète.
+explicite fournie par le workflow. Reproduis les findings normalisés sans les altérer et matérialise chaque
+acceptation ou déclassement dans `risk_decisions`, avec la cible, les sévérités, l'URI et le digest de politique exacts.
+Une preuve absente ou incohérente rend l'évaluation incomplète.

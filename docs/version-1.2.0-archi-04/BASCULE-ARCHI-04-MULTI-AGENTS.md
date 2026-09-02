@@ -259,7 +259,7 @@
 - [x] **MAH-128** — Créer `security-agent`, `threat-model` et `security-findings`. _(Trois manifestes/prompts et façade hôte distincte, tous liés à `security-assessment-v1` et au catalogue.)_
 - [x] **MAH-129** — Limiter Threat Model aux lectures de contexte et dépendances. _(Allowlist exacte testée : recherche/lecture, dépendances et symboles ; aucun accès Evidence, sandbox, SCM ou assurance.)_
 - [x] **MAH-130** — Fournir à Security Findings les findings normalisés et références de preuves nécessaires. _(Entrée construite par l'hôte, validée contre `vulnerability-result-v1` et liée à une preuve `COMPLETE` URI/digest fournie par le workflow.)_
-- [ ] **MAH-131** — Interdire à Security Agent d'accepter un risque ou de déclasser un finding sans politique explicite.
+- [x] **MAH-131** — Interdire à Security Agent d'accepter un risque ou de déclasser un finding sans politique explicite. _(Le contrat expose des `risk_decisions` structurées et l'hôte exige une correspondance exacte avec la décision URI/digest fournie par le workflow, sans altération des findings normalisés.)_
 
 ### Revue indépendante
 

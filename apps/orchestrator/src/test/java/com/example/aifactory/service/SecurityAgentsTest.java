@@ -73,12 +73,12 @@ class SecurityAgentsTest {
                 Set.of("security-1"), "untrusted input",
                 new AgentToolLoop.Budget(3, Duration.ofMinutes(2), 3000, 1000000),
                 normalizedFindings(), Set.of(new SecurityFindingsInputValidator.EvidenceReference(
-                "evidence://task-1/security", "b".repeat(64))));
+                "evidence://task-1/security", "b".repeat(64))), Set.of());
     }
 
     private static SecurityAgents agents(RecordingExecutor runtime) {
         return new SecurityAgents(runtime, new AgentCatalog(),
-                new SecurityFindingsInputValidator(new ObjectMapper()));
+                new SecurityFindingsInputValidator(new ObjectMapper()), new SecurityDecisionValidator());
     }
 
     private static String normalizedFindings() {
@@ -98,7 +98,14 @@ class SecurityAgentsTest {
 
         @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(null, "f".repeat(64), 1, 10, 1);
+            try {
+                var document = new ObjectMapper().readTree(Files.readString(
+                        RESOURCES.resolve("multiagents/fixtures/golden-contracts-v1.json")))
+                        .path("documents").path("security-assessment-v1");
+                return new AgentRuntime.Result(document, "f".repeat(64), 1, 10, 1);
+            } catch (Exception exception) {
+                throw new IllegalStateException(exception);
+            }
         }
     }
 }
