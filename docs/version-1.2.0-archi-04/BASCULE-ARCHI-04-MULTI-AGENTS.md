@@ -373,7 +373,7 @@
 
 ### Gate du lot 10
 
-- [ ] Un opérateur peut expliquer la trajectoire complète, les coûts, les preuves et les décisions d'une tâche.
+- [x] Un opérateur peut expliquer la trajectoire complète, les coûts, les preuves et les décisions d'une tâche. _(Scénario, preuves et verdict : `docs/multiagents/GATE-LOT-10-EXPERIENCE-OPERATEUR.md`.)_
 
 ## 15. Lot 11 — Observabilité, audit et exploitation
 
