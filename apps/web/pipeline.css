@@ -73,3 +73,21 @@
 @keyframes pulse-job {
   50% { box-shadow: 0 0 0 4px #0c66e424; }
 }
+
+.delegation-graph { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.delegation-graph-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.delegation-graph-heading h3 { margin: 0; color: #44546f; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.delegation-graph-heading span { color: var(--muted); font-size: 10px; }
+.delegation-tree { display: grid; gap: 8px; margin-top: 10px; }
+.delegation-node { position: relative; min-width: 0; padding: 9px; border: 1px solid var(--line); border-left: 3px solid #8993a4; border-radius: 4px; background: #fff; }
+.delegation-node-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.delegation-identity { display: grid; min-width: 0; }
+.delegation-identity strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; text-transform: capitalize; }
+.delegation-identity small { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; }
+.delegation-status { flex: none; padding: 2px 5px; border-radius: 3px; color: #44546f; background: #ebecf0; font-size: 8px; font-weight: 700; }
+.delegation-dependencies,.delegation-stop-reason { display: block; margin-top: 6px; color: var(--muted); font-size: 9px; line-height: 1.35; }
+.delegation-stop-reason { color: var(--red); }
+.delegation-children { display: grid; gap: 7px; margin: 9px 0 0 8px; padding-left: 10px; border-left: 1px solid #b6c2cf; }
+.delegation-node.status-completed,.delegation-node.status-succeeded { border-left-color: #22a06b; }
+.delegation-node.status-running { border-left-color: var(--blue); background: var(--blue-soft); }
+.delegation-node.status-failed,.delegation-node.status-cancelled { border-left-color: var(--red); }

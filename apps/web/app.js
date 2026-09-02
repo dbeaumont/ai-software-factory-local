@@ -13,6 +13,9 @@ const taskDetail = document.querySelector('#task-detail');
 const progressBar = document.querySelector('#progress-bar');
 const steps = document.querySelector('#steps');
 const pipelineProgress = document.querySelector('#pipeline-progress');
+const delegationGraph = document.querySelector('#delegation-graph');
+const delegationTree = document.querySelector('#delegation-tree');
+const delegationCount = document.querySelector('#delegation-count');
 const prLink = document.querySelector('#pr-link');
 const approveButton = document.querySelector('#approve-button');
 const effectConfirmation = document.querySelector('#effect-confirmation');
@@ -155,6 +158,8 @@ function resetTicketDraft() {
   progressBar.style.width = '8%';
   pipelineProgress.textContent = '0/9 opérations terminées';
   steps.replaceChildren();
+  delegationGraph.hidden = true;
+  delegationTree.replaceChildren();
   prLink.hidden = true;
   prLink.removeAttribute('href');
   approveButton.hidden = true;
@@ -393,6 +398,71 @@ function renderPipeline(task) {
   pipelineProgress.textContent = `${completed}/${pipelineJobs.length} opérations terminées`;
 }
 
+function renderDelegationDag(task) {
+  const delegations = Array.isArray(task.delegations) ? task.delegations : [];
+  delegationTree.replaceChildren();
+  delegationGraph.hidden = delegations.length === 0;
+  if (delegations.length === 0) return;
+
+  const nodeIds = new Set(delegations.map((node) => node.delegationId));
+  const children = new Map();
+  delegations.forEach((node) => {
+    const parent = node.parentDelegationId && nodeIds.has(node.parentDelegationId)
+      ? node.parentDelegationId : '__root__';
+    if (!children.has(parent)) children.set(parent, []);
+    children.get(parent).push(node);
+  });
+  children.forEach((nodes) => nodes.sort((left, right) => left.delegationId.localeCompare(right.delegationId)));
+
+  const visited = new Set();
+  const renderBranch = (node) => {
+    const branch = document.createElement('article');
+    branch.className = `delegation-node status-${String(node.status || 'unknown').toLowerCase()}`;
+    branch.dataset.delegationId = node.delegationId;
+    const header = document.createElement('div');
+    header.className = 'delegation-node-header';
+    const identity = document.createElement('span');
+    identity.className = 'delegation-identity';
+    const role = document.createElement('strong');
+    role.textContent = node.role || 'agent';
+    const id = document.createElement('small');
+    id.textContent = node.delegationId;
+    identity.append(role, id);
+    const status = document.createElement('span');
+    status.className = 'delegation-status';
+    status.textContent = node.status || 'UNKNOWN';
+    header.append(identity, status);
+    branch.append(header);
+
+    if (Array.isArray(node.dependsOn) && node.dependsOn.length > 0) {
+      const dependencies = document.createElement('small');
+      dependencies.className = 'delegation-dependencies';
+      dependencies.textContent = `Dépend de : ${node.dependsOn.join(', ')}`;
+      branch.append(dependencies);
+    }
+    if (node.stopReason) {
+      const reason = document.createElement('small');
+      reason.className = 'delegation-stop-reason';
+      reason.textContent = node.stopReason;
+      branch.append(reason);
+    }
+    visited.add(node.delegationId);
+    const descendants = (children.get(node.delegationId) || []).filter((child) => !visited.has(child.delegationId));
+    if (descendants.length > 0) {
+      const childContainer = document.createElement('div');
+      childContainer.className = 'delegation-children';
+      childContainer.append(...descendants.map(renderBranch));
+      branch.append(childContainer);
+    }
+    return branch;
+  };
+
+  const roots = children.get('__root__') || [];
+  delegationTree.append(...roots.map(renderBranch));
+  delegationTree.append(...delegations.filter((node) => !visited.has(node.delegationId)).map(renderBranch));
+  delegationCount.textContent = `${delegations.length} délégation${delegations.length > 1 ? 's' : ''}`;
+}
+
 function renderTask(task) {
   activeTask = task;
   restoreTicketFields(task);
@@ -408,6 +478,7 @@ function renderTask(task) {
   taskDetail.textContent = task.error || statusDescription(task.status);
   progressBar.style.width = `${progress[task.status] || 10}%`;
   renderPipeline(task);
+  renderDelegationDag(task);
   proposalButton.hidden = !task.patch || task.status === 'PR_CREATED';
   reviewButton.hidden = !task.review;
   approveButton.hidden = task.status !== 'WAITING_APPROVAL';
