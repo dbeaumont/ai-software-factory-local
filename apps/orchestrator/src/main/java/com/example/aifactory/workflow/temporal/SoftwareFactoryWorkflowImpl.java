@@ -73,6 +73,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
             }
         }
         if (request.independentReview() != null) {
+            chronology.add("CONSOLIDATION_COMPLETED");
             IndependentReviewWorkflow.Request reviewRequest = request.independentReview();
             IndependentReviewWorkflow reviewer = Workflow.newChildWorkflowStub(IndependentReviewWorkflow.class,
                     ChildWorkflowOptions.newBuilder().setWorkflowId(
@@ -171,9 +172,12 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     public List<PendingEffectView> pendingEffects() {
         if (request == null) return List.of();
         List<PendingEffectView> result = new ArrayList<>();
-        request.humanDecisionRequests().stream().filter(decision -> !decisionMatches(decision))
-                .forEach(decision -> result.add(new PendingEffectView("HUMAN_DECISION", decision.decisionId())));
-        if (request.approvalRequest() != null && !approvalMatches(receivedApproval)) {
+        if ("WAITING_HUMAN_DECISION".equals(phase)) {
+            request.humanDecisionRequests().stream().filter(decision -> !decisionMatches(decision))
+                    .forEach(decision -> result.add(new PendingEffectView("HUMAN_DECISION", decision.decisionId())));
+        }
+        if ("WAITING_APPROVAL".equals(phase) && request.approvalRequest() != null
+                && !approvalMatches(receivedApproval)) {
             result.add(new PendingEffectView("APPROVAL", request.approvalRequest().manifestId()));
         }
         return List.copyOf(result);
@@ -192,6 +196,8 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                 != request.continuationState().nextDelegationIndex()
                 || request.delegations().stream().anyMatch(delegation ->
                 "independent-reviewer".equals(delegation.role()))
+                || request.approvalRequest() != null && !"legacy".equals(request.repositoryId())
+                && request.independentReview() == null
                 || !reviewMatchesRoot(request)) {
             throw new IllegalArgumentException("Software factory workflow request is invalid");
         }

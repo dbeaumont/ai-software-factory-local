@@ -1,8 +1,11 @@
 package com.example.aifactory.workflow.projection;
 
 import com.example.aifactory.workflow.EvidenceRepository;
+import com.example.aifactory.service.IndependentReviewBundle;
 import com.example.aifactory.workflow.temporal.DelegationWorkflow;
 import com.example.aifactory.workflow.temporal.DelegationWorkflowImpl;
+import com.example.aifactory.workflow.temporal.IndependentReviewWorkflow;
+import com.example.aifactory.workflow.temporal.IndependentReviewWorkflowImpl;
 import com.example.aifactory.workflow.temporal.SoftwareFactoryWorkflow;
 import com.example.aifactory.workflow.temporal.SoftwareFactoryWorkflowImpl;
 import com.example.aifactory.workflow.temporal.TemporalIds;
@@ -32,7 +35,8 @@ class ProjectionRebuilderTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("projection-rebuild-test");
             worker.registerWorkflowImplementationTypes(
-                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
             environment.start();
             String workflowId = TemporalIds.workflow("task-rebuild", "attempt-1");
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
@@ -44,7 +48,7 @@ class ProjectionRebuilderTest {
             SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
                     "task-rebuild", "attempt-1", "sample-repository", COMMIT, "secure the endpoint",
                     List.of(delegation), new SoftwareFactoryWorkflow.ApprovalRequest(
-                    MANIFEST_ID, MANIFEST_URI, MANIFEST_DIGEST), List.of(), null, null);
+                    MANIFEST_ID, MANIFEST_URI, MANIFEST_DIGEST), List.of(), null, null, review());
 
             WorkflowExecution execution = WorkflowClient.start(workflow::run, request);
             awaitStatus(workflow, "WAITING_APPROVAL");
@@ -67,7 +71,8 @@ class ProjectionRebuilderTest {
             assertThat(store.snapshot).isEqualTo(original);
             assertThat(restored.task().repositoryId()).isEqualTo("sample-repository");
             assertThat(restored.workflowRun().status()).isEqualTo("APPROVED");
-            assertThat(restored.delegations()).singleElement().satisfies(projected -> {
+            assertThat(restored.delegations()).filteredOn(projected -> "security-agent".equals(projected.role()))
+                    .singleElement().satisfies(projected -> {
                 assertThat(projected.delegationId()).isEqualTo("security-1");
                 assertThat(projected.status()).isEqualTo("READY_FOR_ACTIVITIES");
                 assertThat(projected.budgetTokens()).isEqualTo(2_000);
@@ -116,6 +121,17 @@ class ProjectionRebuilderTest {
             }
             @Override public RawEvidence read(ReadRequest request) { throw new UnsupportedOperationException(); }
         };
+    }
+
+    private static IndependentReviewWorkflow.Request review() {
+        IndependentReviewBundle bundle = new IndependentReviewBundle("task-rebuild", "attempt-1", COMMIT,
+                new IndependentReviewBundle.ConsolidatedPatch("patch-1", "evidence://task-rebuild/patch",
+                        "d".repeat(64), List.of("src/App.java")),
+                new IndependentReviewBundle.FinalManifest(MANIFEST_ID, MANIFEST_URI, MANIFEST_DIGEST),
+                List.of(new IndependentReviewBundle.ResultReference("security-1", "security-agent",
+                        "evidence://task-rebuild/security", "e".repeat(64))), List.of());
+        return new IndependentReviewWorkflow.Request("task-rebuild", "attempt-1", "final-review", COMMIT,
+                bundle, null);
     }
 
     private static void awaitStatus(SoftwareFactoryWorkflow workflow, String expected) {

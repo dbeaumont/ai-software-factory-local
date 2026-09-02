@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SoftwareFactoryWorkflowTest {
     @Test
@@ -275,7 +276,8 @@ class SoftwareFactoryWorkflowTest {
             assertThat(result.independentReview()).isEqualTo(new IndependentReviewWorkflow.Result(
                     "final-review", "independent-reviewer", "READY_FOR_ACTIVITIES"));
             assertThat(result.chronology()).containsExactly(
-                    "WORKFLOW_STARTED", "INDEPENDENT_REVIEW_COMPLETED:final-review");
+                    "WORKFLOW_STARTED", "CONSOLIDATION_COMPLETED",
+                    "INDEPENDENT_REVIEW_COMPLETED:final-review");
             assertThat(workflow.dag()).containsExactly(new SoftwareFactoryWorkflow.DelegationView(
                     "final-review", "workflow", "independent-reviewer", "READY_FOR_ACTIVITIES"));
 
@@ -287,6 +289,53 @@ class SoftwareFactoryWorkflowTest {
                             "change", java.util.List.of(supervisorChild))))
                     .hasMessageContaining("workflow request is invalid");
         }
+    }
+
+    @Test
+    void runsIndependentReviewAfterConsolidationBeforeExposingApprovalEffect() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = stub(environment, "task-81");
+            String manifestId = "b".repeat(64);
+            String manifestDigest = "c".repeat(64);
+            IndependentReviewWorkflow.Request review = new IndependentReviewWorkflow.Request(
+                    "task-81", "attempt-1", "final-review", "a".repeat(40), reviewBundle("task-81"), null);
+            var request = new SoftwareFactoryWorkflow.Request("task-81", "attempt-1", "sample-repo",
+                    "a".repeat(40), "change", java.util.List.of(),
+                    new SoftwareFactoryWorkflow.ApprovalRequest(manifestId,
+                            "evidence://task-81/manifest", manifestDigest),
+                    java.util.List.of(), null, null, review);
+            io.temporal.client.WorkflowClient.start(workflow::run, request);
+
+            awaitStatus(workflow, "WAITING_APPROVAL");
+            assertThat(workflow.pendingEffects()).containsExactly(
+                    new SoftwareFactoryWorkflow.PendingEffectView("APPROVAL", manifestId));
+            workflow.approve(new SoftwareFactoryWorkflow.ApprovalSignal("task-81", "attempt-1",
+                    manifestId, manifestDigest, "APPROVE", "reviewer", "2026-09-02T22:00:00Z"));
+            SoftwareFactoryWorkflow.Result result = WorkflowStub.fromTyped(workflow)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
+
+            assertThat(result.chronology()).containsSubsequence(
+                    "CONSOLIDATION_COMPLETED", "INDEPENDENT_REVIEW_COMPLETED:final-review",
+                    "WAITING_APPROVAL:" + manifestId, "APPROVED:" + manifestId);
+        }
+    }
+
+    @Test
+    void rejectsHierarchicalApprovalWithoutIndependentReview() {
+        var request = new SoftwareFactoryWorkflow.Request("task-82", "attempt-1", "sample-repo",
+                "a".repeat(40), "change", java.util.List.of(),
+                new SoftwareFactoryWorkflow.ApprovalRequest("b".repeat(64),
+                        "evidence://task-82/manifest", "c".repeat(64)),
+                java.util.List.of(), null, null, null);
+
+        assertThatThrownBy(() -> new SoftwareFactoryWorkflowImpl().run(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("workflow request is invalid");
     }
 
     @Test

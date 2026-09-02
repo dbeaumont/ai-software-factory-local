@@ -342,7 +342,7 @@
 - [x] **MAH-206** — Empêcher le Supervisor d'annuler un échec de tests, qualité, sécurité ou politique. _(`SupervisorConsolidationGuard` impose les quatre gates déterministes et interdit `CONSOLIDATE` dès qu'un statut n'est pas `PASSED`.)_
 - [x] **MAH-207** — Enregistrer chaque arbitrage avec entrées, règle, décision, auteur et preuves. _(Port et journal append-only `ArbitrationJournal`, digest canonique dans `ArbitrationRecorder` et stockage PostgreSQL métadonnées-only V008.)_
 - [x] **MAH-208** — Produire une synthèse finale stable contenant décisions, risques résiduels et points humains. _(`FinalConsolidationSummaryBuilder` produit une vue canonique liée à la tentative, ordonnée et munie d'un digest reproductible.)_
-- [ ] **MAH-209** — Faire exécuter l'Independent Reviewer après consolidation et avant création de l'effet en attente.
+- [x] **MAH-209** — Faire exécuter l'Independent Reviewer après consolidation et avant création de l'effet en attente. _(Le workflow matérialise le checkpoint de consolidation, exécute le Reviewer racine puis seulement expose l'approbation ; le chemin hiérarchique refuse l'absence de review.)_
 - [ ] **MAH-210** — Bloquer l'approbation si une contradiction requise reste ouverte ou si le manifeste a changé.
 
 ### Gate du lot 9
