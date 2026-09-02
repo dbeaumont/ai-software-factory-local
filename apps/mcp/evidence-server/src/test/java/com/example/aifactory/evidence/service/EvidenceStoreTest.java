@@ -104,4 +104,22 @@ class EvidenceStoreTest {
         assertTrue(audit.contains(stored.uri()));
         assertFalse(audit.contains("review proof"));
     }
+
+    @Test
+    void retainsAndRecoversUnexpiredEvidenceAfterStoreRestart(@TempDir Path root) throws Exception {
+        EvidenceProperties properties = new EvidenceProperties(root, 1024);
+        byte[] content = "durable proof".getBytes(StandardCharsets.UTF_8);
+        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        EvidenceStore first = new EvidenceStore(properties, new ObjectMapper(), new EvidencePolicy());
+        EvidenceStore.StoredEvidence stored = first.store("task-1", "attempt-1", "review", "text/plain",
+                Base64.getEncoder().encodeToString(content), digest, "workflow");
+
+        EvidenceStore restarted = new EvidenceStore(properties, new ObjectMapper(), new EvidencePolicy());
+        EvidenceStore.ReadEvidence recovered = restarted.read(
+                "task-1", "attempt-1", stored.uri(), "independent-reviewer", "human-review", true);
+
+        assertArrayEquals(content, Base64.getDecoder().decode(recovered.contentBase64()));
+        assertEquals(digest, recovered.digest());
+        assertEquals("COMPLETE", recovered.status());
+    }
 }

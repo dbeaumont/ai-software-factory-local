@@ -427,7 +427,7 @@
 - [ ] **MAH-278** — Tuer et redémarrer workers, orchestrateur, Temporal et serveurs MCP à chaque phase critique.
 - [x] **MAH-279** — Tester latence, partition réseau, réponse tardive, doublon et saturation des queues. _(`TemporalFailureModesTest` couvre timeout, réponse tardive ignorée, livraison dupliquée idempotente et queue indisponible ; `ResilientMcpToolInvokerTest` couvre partition MCP, latence, circuit breaker et saturation globale/par serveur/par tâche/par rôle.)_
 - [x] **MAH-280** — Tester la capacité maximale et vérifier la backpressure plutôt qu'un fan-out incontrôlé. _(`DelegationSchedulerTest` plafonne les Child Workflows à quatre, `AgentToolLoopTest` borne les appels par tour, `ResilientMcpToolInvokerTest` refuse au-delà des sémaphores et `SandboxJobServiceTest` rejette au-delà des capacités active et en attente.)_
-- [ ] **MAH-281** — Vérifier nettoyage, rétention et reprise des preuves après tous les états terminaux.
+- [x] **MAH-281** — Vérifier nettoyage, rétention et reprise des preuves après tous les états terminaux. _(`PatchIntegrationActivitiesImplTest` nettoie les worktrees pour SUCCESS, FAILED, TIMED_OUT et CANCELLED ; `EvidenceStoreTest` récupère une preuve chiffrée après redémarrage ; `ProjectionRebuilderTest` reconstruit les preuves vérifiées après APPROVED, REJECTED, CANCELLED, FAILED et TIMED_OUT.)_
 
 ### Gate du lot 12
 

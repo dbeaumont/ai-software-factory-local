@@ -16,6 +16,8 @@ import io.temporal.client.WorkflowStub;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Instant;
 import java.util.List;
@@ -105,6 +107,34 @@ class ProjectionRebuilderTest {
                 .hasMessageContaining("diverges");
         assertThat(store.snapshot).isNull();
         assertThat(store.replacements).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"APPROVED", "REJECTED", "CANCELLED", "FAILED", "TIMED_OUT"})
+    void rebuildsVerifiedEvidenceAfterEveryRootTerminalStatus(String terminalStatus) {
+        SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
+                "task-rebuild", "attempt-1", "sample-repository", COMMIT, "secure the endpoint",
+                List.of(), new SoftwareFactoryWorkflow.ApprovalRequest(
+                MANIFEST_ID, MANIFEST_URI, MANIFEST_DIGEST), List.of(), null, null);
+        SoftwareFactoryWorkflow.Result result = new SoftwareFactoryWorkflow.Result(
+                "task-rebuild", "attempt-1", COMMIT, terminalStatus,
+                List.of("WORKFLOW_STARTED", terminalStatus), List.of(), java.util.Map.of(),
+                null, null, "CANCELLED".equals(terminalStatus) ? "operator request" : null);
+        ProjectionHistorySource source = (workflowId, runId) -> new ProjectionHistorySource.History(
+                workflowId, runId, Instant.parse("2026-09-02T10:00:00Z"),
+                Instant.parse("2026-09-02T10:01:00Z"), terminalStatus, request, result);
+        RecordingProjectionStore store = new RecordingProjectionStore();
+
+        UiProjectionSnapshot restored = new ProjectionRebuilder(source, evidence(MANIFEST_DIGEST), store)
+                .rebuild("workflow-1", "run-1");
+
+        assertThat(restored.workflowRun().status()).isEqualTo(terminalStatus);
+        assertThat(restored.evidence()).singleElement().satisfies(projected -> {
+            assertThat(projected.uri()).isEqualTo(MANIFEST_URI);
+            assertThat(projected.digest()).isEqualTo(MANIFEST_DIGEST);
+            assertThat(projected.status()).isEqualTo("COMPLETE");
+        });
+        assertThat(store.snapshot).isEqualTo(restored);
     }
 
     private static EvidenceRepository evidence(String digest) {
