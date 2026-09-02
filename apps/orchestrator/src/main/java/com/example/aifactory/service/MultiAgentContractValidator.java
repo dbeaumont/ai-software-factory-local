@@ -104,6 +104,11 @@ public final class MultiAgentContractValidator {
         return validated;
     }
 
+    public JsonNode validate(String contract, String document, ContractContext context) {
+        JsonNode parsed = validate(contract, document);
+        return validate(contract, parsed, context);
+    }
+
     private static void requireBinding(String contract, String field, JsonNode actual, String expected) {
         if (!actual.isTextual() || !expected.equals(actual.asText())) {
             throw new ContractValidationException(contract, field + " is outside the current task context");
