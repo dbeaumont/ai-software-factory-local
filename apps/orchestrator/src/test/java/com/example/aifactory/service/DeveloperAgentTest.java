@@ -30,7 +30,8 @@ class DeveloperAgentTest {
         JsonNode fixtures = mapper.readTree(Files.readString(
                 RESOURCES.resolve("multiagents/fixtures/golden-contracts-v1.json"))).path("documents");
         RecordingExecutor runtime = new RecordingExecutor(fixtures.path("patch-proposal-v1"));
-        DeveloperAgent developer = new DeveloperAgent(runtime, new AgentCatalog(), contracts);
+        DeveloperAgent developer = new DeveloperAgent(runtime, new AgentCatalog(), contracts,
+                new PatchScopeValidator());
 
         developer.execute(request(fixtures.path("code-task-v1").toString()));
 
@@ -54,10 +55,26 @@ class DeveloperAgentTest {
         var divergent = fixtures.path("patch-proposal-v1").deepCopy();
         ((tools.jackson.databind.node.ObjectNode) divergent).put("scope_digest", "f".repeat(64));
         DeveloperAgent developer = new DeveloperAgent(
-                new RecordingExecutor(divergent), new AgentCatalog(), contracts);
+                new RecordingExecutor(divergent), new AgentCatalog(), contracts, new PatchScopeValidator());
 
         assertThatThrownBy(() -> developer.execute(request(fixtures.path("code-task-v1").toString())))
                 .isInstanceOf(SecurityException.class).hasMessageContaining("not bound");
+    }
+
+    @Test
+    void rejectsEveryFileOutsideTheAssignedWriteScopeBeforeSandbox() throws Exception {
+        JsonNode fixtures = mapper.readTree(Files.readString(
+                RESOURCES.resolve("multiagents/fixtures/golden-contracts-v1.json"))).path("documents");
+        var escaped = fixtures.path("patch-proposal-v1").deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) escaped.path("files_touched").get(0))
+                .put("path", "infrastructure/deploy.yaml");
+        DeveloperAgent developer = new DeveloperAgent(
+                new RecordingExecutor(escaped), new AgentCatalog(), contracts, new PatchScopeValidator());
+
+        assertThatThrownBy(() -> developer.execute(request(fixtures.path("code-task-v1").toString())))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("before sandbox")
+                .hasMessageContaining("outside assigned write scope");
     }
 
     private static DeveloperAgent.Request request(String task) {

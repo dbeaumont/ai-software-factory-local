@@ -12,11 +12,14 @@ public final class DeveloperAgent {
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;
     private final MultiAgentContractValidator contracts;
+    private final PatchScopeValidator scopes;
 
-    public DeveloperAgent(AgentExecutor runtime, AgentCatalog catalog, MultiAgentContractValidator contracts) {
+    public DeveloperAgent(AgentExecutor runtime, AgentCatalog catalog, MultiAgentContractValidator contracts,
+                          PatchScopeValidator scopes) {
         this.runtime = runtime;
         this.catalog = catalog;
         this.contracts = contracts;
+        this.scopes = scopes;
     }
 
     public AgentRuntime.Result execute(Request request) {
@@ -44,6 +47,7 @@ public final class DeveloperAgent {
                 || !task.path("scope_digest").asText().equals(proposal.path("scope_digest").asText())) {
             throw new SecurityException("Patch proposal is not bound to the assigned code task and scope");
         }
+        scopes.validateDeveloper(task, proposal);
         return result;
     }
 

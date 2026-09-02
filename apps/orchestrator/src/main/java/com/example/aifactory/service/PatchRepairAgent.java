@@ -16,11 +16,14 @@ public final class PatchRepairAgent {
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;
     private final MultiAgentContractValidator contracts;
+    private final PatchScopeValidator scopes;
 
-    public PatchRepairAgent(AgentExecutor runtime, AgentCatalog catalog, MultiAgentContractValidator contracts) {
+    public PatchRepairAgent(AgentExecutor runtime, AgentCatalog catalog, MultiAgentContractValidator contracts,
+                            PatchScopeValidator scopes) {
         this.runtime = runtime;
         this.catalog = catalog;
         this.contracts = contracts;
+        this.scopes = scopes;
     }
 
     public AgentRuntime.Result execute(Request request) {
@@ -50,6 +53,7 @@ public final class PatchRepairAgent {
         if (!task.path("original_proposal_id").asText().equals(proposal.path("replaces_proposal_id").asText())) {
             throw new SecurityException("Patch repair changed the proposal it replaces");
         }
+        scopes.validateRepair(task, proposal);
         return result;
     }
 

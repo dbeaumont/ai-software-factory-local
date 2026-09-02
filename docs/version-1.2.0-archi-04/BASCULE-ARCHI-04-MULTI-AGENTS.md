@@ -245,7 +245,7 @@
 - [x] **MAH-120** — Faire évoluer Developer pour accepter un scope et un contrat de patch explicites. _(`DeveloperAgent` valide `code-task-v1`, impose `patch-proposal-v1` et revérifie tâche, nœud, commit et digest du scope ; prompt pipeline conservé.)_
 - [x] **MAH-121** — Faire évoluer Patch Repair pour une délégation, un worktree et une tentative précis. _(Contrats dédiés d'entrée/sortie et `PatchRepairAgent` revérifiant neuf liens immuables ; prompt pipeline conservé.)_
 - [x] **MAH-122** — Empêcher Developer et Patch Repair d'appeler directement `sandbox.*`. _(Verrou transversal testé : catalogues sans sandbox, matrice deny-by-default, rejet runtime et absence de dépendance aux adaptateurs d'effet.)_
-- [ ] **MAH-123** — Refuser tout fichier touché hors scope avant validation sandbox.
+- [x] **MAH-123** — Refuser tout fichier touché hors scope avant validation sandbox. _(`PatchScopeValidator` contrôle chemins actuels/renommés, interdictions, nombre de fichiers et taille avant retour des agents Code.)_
 
 ### Tests
 

@@ -25,7 +25,7 @@ class PatchRepairAgentTest {
         JsonNode documents = mapper.readTree(Files.readString(FIXTURES)).path("documents");
         RecordingExecutor runtime = new RecordingExecutor(documents.path("patch-repair-proposal-v1"));
 
-        new PatchRepairAgent(runtime, new AgentCatalog(), contracts)
+        new PatchRepairAgent(runtime, new AgentCatalog(), contracts, new PatchScopeValidator())
                 .execute(request(documents.path("patch-repair-task-v1").toString()));
 
         AgentRuntime.Invocation invocation = runtime.invocations.getFirst();
@@ -47,11 +47,24 @@ class PatchRepairAgentTest {
                 ((tools.jackson.databind.node.ObjectNode) divergent).put(field, "other-binding");
             }
             PatchRepairAgent repair = new PatchRepairAgent(
-                    new RecordingExecutor(divergent), new AgentCatalog(), contracts);
+                    new RecordingExecutor(divergent), new AgentCatalog(), contracts, new PatchScopeValidator());
             assertThatThrownBy(() -> repair.execute(request(
                     documents.path("patch-repair-task-v1").toString())))
                     .as(field).isInstanceOfAny(SecurityException.class, IllegalArgumentException.class);
         }
+    }
+
+    @Test
+    void rejectsARepairTouchingAFileOutsideItsOriginalScope() throws Exception {
+        JsonNode documents = mapper.readTree(Files.readString(FIXTURES)).path("documents");
+        var escaped = documents.path("patch-repair-proposal-v1").deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) escaped.path("files_touched").get(0))
+                .put("path", "src/Other.java");
+        PatchRepairAgent repair = new PatchRepairAgent(
+                new RecordingExecutor(escaped), new AgentCatalog(), contracts, new PatchScopeValidator());
+
+        assertThatThrownBy(() -> repair.execute(request(documents.path("patch-repair-task-v1").toString())))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("before sandbox");
     }
 
     private static PatchRepairAgent.Request request(String task) {
