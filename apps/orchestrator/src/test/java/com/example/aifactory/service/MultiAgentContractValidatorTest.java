@@ -125,6 +125,22 @@ class MultiAgentContractValidatorTest {
         }
     }
 
+    @Test
+    void bindsIndependentReviewToTheWorkflowSuppliedManifestResultsAndContradictions() throws Exception {
+        JsonNode review = new ObjectMapper().readTree(Files.readString(fixturePath()))
+                .path("documents").path("independent-review-v1");
+        var context = new MultiAgentContractValidator.ContractContext("task-1", "attempt-1",
+                Set.of("b".repeat(64), "result-1"));
+
+        validator.validate("independent-review-v1", review, context);
+
+        var foreign = review.deepCopy();
+        ((tools.jackson.databind.node.ArrayNode) foreign.path("reviewed_result_ids"))
+                .set(0, new ObjectMapper().getNodeFactory().textNode("foreign-result"));
+        assertThatThrownBy(() -> validator.validate("independent-review-v1", foreign, context))
+                .hasMessageContaining("reference outside task");
+    }
+
     private static Path fixturePath() {
         Path workingDirectory = Path.of("").toAbsolutePath();
         for (Path candidate : java.util.List.of(

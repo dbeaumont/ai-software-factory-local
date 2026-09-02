@@ -178,6 +178,8 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         return review == null || request.taskId().equals(review.taskId())
                 && request.attemptId().equals(review.attemptId())
                 && request.sourceCommit().equals(review.sourceCommit())
+                && review.bundle() != null && review.bundle().boundTo(
+                request.taskId(), request.attemptId(), request.sourceCommit())
                 && request.delegations().stream().noneMatch(delegation ->
                 review.reviewId().equals(delegation.nodeId()));
     }

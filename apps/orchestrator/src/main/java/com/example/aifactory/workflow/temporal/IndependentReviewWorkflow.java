@@ -1,5 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.service.IndependentReviewBundle;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
@@ -10,7 +11,7 @@ public interface IndependentReviewWorkflow {
     Result run(Request request);
 
     record Request(String taskId, String attemptId, String reviewId, String sourceCommit,
-                   String objective, DelegationWorkflow.Budget budget) {
+                   IndependentReviewBundle bundle, DelegationWorkflow.Budget budget) {
         public Request {
             budget = budget == null ? new DelegationWorkflow.Budget(10_000, 10_000_000, 6) : budget;
         }

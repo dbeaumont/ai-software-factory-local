@@ -112,6 +112,17 @@ public final class MultiAgentContractValidator {
                 }
             }
         }
+        if ("independent-review-v1".equals(contract)) {
+            requireBinding(contract, "final_manifest.manifest_id",
+                    validated.path("final_manifest").path("manifest_id"), context.allowedReferenceIds());
+            for (JsonNode resultId : validated.path("reviewed_result_ids")) {
+                requireBinding(contract, "reviewed_result_ids", resultId, context.allowedReferenceIds());
+            }
+            for (JsonNode contradictionId : validated.path("open_contradiction_ids")) {
+                requireBinding(contract, "open_contradiction_ids", contradictionId,
+                        context.allowedReferenceIds());
+            }
+        }
         return validated;
     }
 
@@ -123,6 +134,12 @@ public final class MultiAgentContractValidator {
     private static void requireBinding(String contract, String field, JsonNode actual, String expected) {
         if (!actual.isTextual() || !expected.equals(actual.asText())) {
             throw new ContractValidationException(contract, field + " is outside the current task context");
+        }
+    }
+
+    private static void requireBinding(String contract, String field, JsonNode actual, Set<String> expected) {
+        if (!actual.isTextual() || !expected.contains(actual.asText())) {
+            throw new ContractValidationException(contract, "reference outside task in " + field);
         }
     }
 

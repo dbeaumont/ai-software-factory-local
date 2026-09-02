@@ -4,6 +4,7 @@ import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
+import com.example.aifactory.service.IndependentReviewBundle;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -227,7 +228,7 @@ class SoftwareFactoryWorkflowTest {
             environment.start();
             SoftwareFactoryWorkflow workflow = stub(environment, "task-8");
             IndependentReviewWorkflow.Request review = new IndependentReviewWorkflow.Request(
-                    "task-8", "attempt-1", "final-review", "a".repeat(40), "review final result", null);
+                    "task-8", "attempt-1", "final-review", "a".repeat(40), reviewBundle("task-8"), null);
             SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
                     "task-8", "attempt-1", "sample-repo", "a".repeat(40), "change",
                     java.util.List.of(), null, java.util.List.of(), null, null, review);
@@ -249,6 +250,19 @@ class SoftwareFactoryWorkflowTest {
                             "change", java.util.List.of(supervisorChild))))
                     .hasMessageContaining("workflow request is invalid");
         }
+    }
+
+    private static IndependentReviewBundle reviewBundle(String taskId) {
+        return new IndependentReviewBundle(taskId, "attempt-1", "a".repeat(40),
+                new IndependentReviewBundle.ConsolidatedPatch("patch-1", "evidence://" + taskId + "/patch",
+                        "b".repeat(64), java.util.List.of("src/App.java")),
+                new IndependentReviewBundle.FinalManifest("c".repeat(64),
+                        "evidence://" + taskId + "/manifest", "d".repeat(64)),
+                java.util.List.of(new IndependentReviewBundle.ResultReference("result-1", "code-agent",
+                        "evidence://" + taskId + "/result", "e".repeat(64))),
+                java.util.List.of(new IndependentReviewBundle.ContradictionReference(
+                        "contradiction-1", "OPEN", "evidence://" + taskId + "/contradiction",
+                        "f".repeat(64))));
     }
 
     private static SoftwareFactoryWorkflow stub(TestWorkflowEnvironment environment, String taskId) {
