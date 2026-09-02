@@ -176,7 +176,7 @@
 - [x] **MAH-071** — Implémenter les Signals d'annulation et de décision humaine complémentaire. _(Décisions bornées et annulation liées à la tâche/tentative, persistées dans la chronologie.)_
 - [x] **MAH-072** — Implémenter les Queries de statut, DAG, budgets, preuves et effets en attente. _(Cinq Queries Temporal typées et consultables pendant les attentes durables.)_
 - [x] **MAH-073** — Garantir que le code Workflow ne réalise aucun I/O, appel réseau, horloge système ou aléa direct. _(Test d'architecture bloquant les accès directs aux effets et sources usuelles de non-déterminisme.)_
-- [ ] **MAH-074** — Définir la politique de versionnement des workflows lors des déploiements applicatifs.
+- [x] **MAH-074** — Définir la politique de versionnement des workflows lors des déploiements applicatifs. _(Worker Versioning rainbow, workflows épinglés, patching de repli, replay, rollout, rollback et drainage formalisés.)_
 - [ ] **MAH-075** — Borner l'historique et prévoir `Continue-As-New` pour les tâches ou boucles longues.
 
 ### Reprise et résilience
