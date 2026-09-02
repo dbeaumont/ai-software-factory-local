@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/security-assessment-v1.schema.json",
+  "title": "SecurityAssessment v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "assessment_id", "task_id", "attempt_id", "source_commit", "patch_digest", "status", "threats", "normalized_findings", "policy_decision_uris", "required_human_gates", "residual_risk", "evidence", "completed_at"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "assessment_id": {"$ref": "#/$defs/id"}, "task_id": {"$ref": "#/$defs/id"}, "attempt_id": {"$ref": "#/$defs/id"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "patch_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"enum": ["PASSED", "REJECTED", "INDETERMINATE"]},
+    "threats": {"type": "array", "maxItems": 128, "items": {"$ref": "#/$defs/threat"}},
+    "normalized_findings": {"$ref": "../../mcp/schemas/vulnerability-result-v1.schema.json"},
+    "policy_decision_uris": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "pattern": "^evidence://", "maxLength": 1024}},
+    "required_human_gates": {"type": "array", "maxItems": 2, "uniqueItems": true, "items": {"enum": ["BEFORE_CODE", "BEFORE_EXTERNAL_EFFECT"]}},
+    "residual_risk": {"enum": ["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL", "UNKNOWN"]},
+    "evidence": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/evidence"}},
+    "completed_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "threat": {"type": "object", "additionalProperties": false, "required": ["threat_id", "asset", "scenario", "severity", "mitigation", "status"], "properties": {"threat_id": {"$ref": "#/$defs/id"}, "asset": {"type": "string", "minLength": 1, "maxLength": 512}, "scenario": {"type": "string", "minLength": 1, "maxLength": 2000}, "severity": {"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]}, "mitigation": {"type": "string", "minLength": 1, "maxLength": 2000}, "status": {"enum": ["MITIGATED", "ACCEPTED", "OPEN", "NOT_APPLICABLE"]}}},
+    "evidence": {"type": "object", "additionalProperties": false, "required": ["uri", "digest", "type"], "properties": {"uri": {"type": "string", "pattern": "^evidence://", "maxLength": 1024}, "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "type": {"enum": ["THREAT_MODEL", "SAST", "SCA", "SBOM", "VULNERABILITY_SCAN", "POLICY_DECISION", "REVIEW"]}}}
+  }
+}
