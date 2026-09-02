@@ -14,6 +14,7 @@ import io.temporal.common.VersioningBehavior;
 
 /** Root durable workflow; subsequent migration steps add child workflows and activities. */
 public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflow {
+    private final DelegationScheduler scheduler = new DelegationScheduler();
     private Request request;
     private ApprovalSignal receivedApproval;
     private CancellationSignal receivedCancellation;
@@ -34,11 +35,9 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         List<DelegationWorkflow.Result> results = new ArrayList<>(request.continuationState().delegations());
         int processedThisRun = 0;
         for (int index = request.continuationState().nextDelegationIndex();
-             index < request.delegations().size(); index++) {
+            index < request.delegations().size(); index++) {
             DelegationWorkflow.Request delegation = request.delegations().get(index);
-            DelegationWorkflow child = Workflow.newChildWorkflowStub(DelegationWorkflow.class,
-                    ChildWorkflowOptions.newBuilder().setWorkflowId(delegationId(request, delegation)).build());
-            DelegationWorkflow.Result result = child.run(delegation);
+            DelegationWorkflow.Result result = scheduler.execute(request, delegation);
             results.add(result);
             completedDelegations.put(result.nodeId(), result);
             chronology.add("DELEGATION_COMPLETED:" + result.nodeId());
@@ -236,10 +235,6 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         phase = "CANCELLED";
         return new Result(request.taskId(), request.attemptId(), request.sourceCommit(), "CANCELLED",
                 chronology, results, decisions, null, null, receivedCancellation.reason(), completedReview);
-    }
-
-    private static String delegationId(Request root, DelegationWorkflow.Request child) {
-        return TemporalIds.delegation(root.taskId(), root.attemptId(), child.nodeId());
     }
 
     private void restoreContinuationState(ContinuationState state) {
