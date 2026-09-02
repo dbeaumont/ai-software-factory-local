@@ -391,7 +391,7 @@
 
 ### Gate du lot 11
 
-- [ ] Chaque tâche est traçable de l'intention à la PR sans exposer de secret ou contenu sensible.
+- [x] Chaque tâche est traçable de l'intention à la PR sans exposer de secret ou contenu sensible. _(Gate `PASS` : `docs/multiagents/GATE-LOT-11-OBSERVABILITE-AUDIT.md`.)_
 
 ## 16. Lot 12 — Tests fonctionnels, sécurité et résilience
 
