@@ -179,6 +179,38 @@ class SoftwareFactoryWorkflowTest {
         }
     }
 
+    @Test
+    void resumesAnApprovalAfterSeveralVirtualDays() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = stub(environment, "task-7");
+            String manifest = "7".repeat(64);
+            SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
+                    "task-7", "attempt-1", "a".repeat(40), "change", java.util.List.of(),
+                    new SoftwareFactoryWorkflow.ApprovalRequest(
+                            manifest, "evidence://task-7/attempt-1/manifest/" + manifest, "8".repeat(64)));
+            io.temporal.client.WorkflowClient.start(workflow::run, request);
+            awaitStatus(workflow, "WAITING_APPROVAL");
+            long before = environment.currentTimeMillis();
+
+            environment.sleep(Duration.ofDays(7));
+
+            assertThat(environment.currentTimeMillis() - before).isGreaterThanOrEqualTo(Duration.ofDays(7).toMillis());
+            assertThat(workflow.status()).isEqualTo("WAITING_APPROVAL");
+            assertThat(workflow.pendingEffects()).containsExactly(
+                    new SoftwareFactoryWorkflow.PendingEffectView("APPROVAL", manifest));
+            workflow.approve(new SoftwareFactoryWorkflow.ApprovalSignal(
+                    "task-7", "attempt-1", manifest, "8".repeat(64), "APPROVE",
+                    "reviewer@example.test", "2026-09-09T10:00:00Z"));
+
+            assertThat(WorkflowStub.fromTyped(workflow).getResult(SoftwareFactoryWorkflow.Result.class).status())
+                    .isEqualTo("APPROVED");
+        }
+    }
+
     private static SoftwareFactoryWorkflow stub(TestWorkflowEnvironment environment, String taskId) {
         return environment.getWorkflowClient().newWorkflowStub(SoftwareFactoryWorkflow.class,
                 WorkflowOptions.newBuilder().setWorkflowId(TemporalIds.workflow(taskId, "attempt-1"))
