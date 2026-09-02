@@ -441,7 +441,7 @@
 - [x] **MAH-293** — Mesurer qualité des scopes, collisions évitées et contradictions détectées. _(`CoordinationEvaluation` agrège taux de scopes valides, collisions potentielles bloquées et rappel des contradictions, tout en rejetant les compteurs incohérents.)_
 - [x] **MAH-294** — Mesurer succès au premier patch, réparations, tests, review et acceptation humaine. _(`DeliveryOutcomeEvaluation` expose le funnel complet avec taux par étape et moyenne des réparations, sans confondre review indépendante et acceptation humaine.)_
 - [x] **MAH-295** — Mesurer tokens, coût complet, durée, compute sandbox et temps humain. _(`ResourceEvaluation` agrège totaux et moyennes des cinq dimensions, ainsi que le p95 de durée, avec compteurs non négatifs et additions protégées contre les dépassements.)_
-- [ ] **MAH-296** — Mesurer sécurité : outils refusés, injections, dépassements, preuves invalides et effets tentés.
+- [x] **MAH-296** — Mesurer sécurité : outils refusés, injections, dépassements, preuves invalides et effets tentés. _(`SecurityEvaluation` agrège tentatives et blocages par catégorie, refuse les compteurs incohérents et signale tout incident non contenu.)_
 - [ ] **MAH-297** — Inclure un nombre représentatif de tâches simples, multi-domaines et adversariales.
 - [ ] **MAH-298** — Rejeter la qualification si le chemin hiérarchique est utilisé inutilement sur les tâches simples.
 - [ ] **MAH-299** — Exiger une télémétrie de coût exploitable avant verdict.
