@@ -40,6 +40,7 @@ public class AssuranceGateway {
         arguments.put("output", qualityEvidence);
         arguments.put("evidence_uri", "evidence://" + taskId + '/' + attemptId + "/quality");
         arguments.put("evidence_digest", digest(qualityEvidence));
+        arguments.put("actor", "workflow");
         JsonNode result = validator.validate("assurance.evaluate_quality_gate",
                 mcp.call(properties.serverName(), "assurance.evaluate_quality_gate", arguments));
         if (!"PASSED".equals(result.path("verdict").asText())) {

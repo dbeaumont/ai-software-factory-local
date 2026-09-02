@@ -36,8 +36,12 @@ class ToolPermissionMatrixTest {
     @Test
     void effectfulPipelineOperationsRemainWorkflowOnly() {
         for (String tool : ToolPermissionMatrix.WORKFLOW_EFFECTS) {
+            assertTrue(AgentRuntime.effectfulTool(tool), tool);
             assertTrue(matrix.isAllowed(new AgentToolLoop.Actor("engine", "workflow"), tool), tool);
-            for (String role : new String[]{"planner", "developer", "patch-repair", "tester", "reviewer"}) {
+            for (String role : new String[]{"supervisor", "architecture-agent", "impact-analysis",
+                    "dependencies-contracts", "code-agent", "developer", "patch-repair", "test-agent",
+                    "test-design", "test-evidence", "security-agent", "threat-model", "security-findings",
+                    "independent-reviewer", "planner", "tester", "reviewer"}) {
                 assertFalse(matrix.isAllowed(new AgentToolLoop.Actor("agent", role), tool), role + " / " + tool);
             }
         }

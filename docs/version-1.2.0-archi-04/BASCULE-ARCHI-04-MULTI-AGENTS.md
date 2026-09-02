@@ -277,7 +277,7 @@
 - [x] **MAH-140** — Étendre la matrice deny-by-default aux nouveaux rôles et sous-agents. _(Les 14 identités hiérarchiques sont déclarées explicitement dans la matrice hôte, la politique MCP et l'enveloppe commune ; toute identité absente reste refusée.)_
 - [x] **MAH-141** — Définir les outils `context.*` minimaux par rôle plutôt qu'un accès global en lecture. _(Six allowlists distinctes sont appliquées dans Repository Context MCP pour arbre, recherche, fichier, règles, dépendances et symboles ; tests positifs et négatifs par périmètre.)_
 - [x] **MAH-142** — Définir quels rôles peuvent obtenir `evidence.get_summary` et `evidence.read`. _(Résumé réservé à Supervisor, Test, Sécurité et Reviewer ; lecture brute réservée au workflow et au Reviewer indépendant, auditée avec le motif hôte `human-review`, lignée tâche/tentative conservée.)_
-- [ ] **MAH-143** — Conserver tous les outils à effet exclusivement au rôle `workflow`.
+- [x] **MAH-143** — Conserver tous les outils à effet exclusivement au rôle `workflow`. _(Inventaire unifié sandbox/assurance/stockage Evidence/livraison SCM ; matrice hôte et quatre serveurs MCP exigent l'identité `workflow`, y compris pour la création de draft PR.)_
 - [ ] **MAH-144** — Ajouter limites maximales de profondeur et de fan-out du DAG.
 - [ ] **MAH-145** — Ajouter budgets par agent, délégation, périmètre et tâche complète.
 - [ ] **MAH-146** — Ajouter quotas cumulés de tokens d'entrée, sortie, coût, tours et appels MCP.

@@ -26,7 +26,7 @@ class AssuranceToolsTest {
                 "CVE-1", "installed version 1", "upgrade to version 2");
         AssuranceTools.VulnerabilityResult result = tools.normalizeFindings("1", "task-1", "attempt-1",
                 "a".repeat(40), "SonarQube", List.of(sonar, trivy), "evidence://task-1/attempt-1/findings",
-                "b".repeat(64), "COMPLETE");
+                "b".repeat(64), "COMPLETE", "workflow");
 
         assertEquals(List.of("CRITICAL", "HIGH"), result.findings().stream().map(AssuranceTools.NormalizedFinding::severity).toList());
         assertEquals("REJECTED", result.verdict());
@@ -49,20 +49,24 @@ class AssuranceToolsTest {
                 null, "rule", "proof", "recommendation");
         AssuranceTools.VulnerabilityResult partial = tools.normalizeFindings("1", "task-1", "attempt-1",
                 "a".repeat(40), "Trivy", List.of(unknown), "evidence://task-1/attempt-1/trivy",
-                "b".repeat(64), "PARTIAL");
+                "b".repeat(64), "PARTIAL", "workflow");
         assertEquals("INDETERMINATE", partial.verdict());
         assertEquals("UNKNOWN", partial.findings().getFirst().severity());
         assertThrows(IllegalArgumentException.class, () -> tools.normalizeFindings("1", "task-1", "attempt-1",
                 "a".repeat(40), "UnknownScanner", List.of(), "evidence://task-1/attempt-1/security",
-                "b".repeat(64), "COMPLETE"));
+                "b".repeat(64), "COMPLETE", "workflow"));
+        assertThrows(SecurityException.class, () -> tools.normalizeFindings("1", "task-1", "attempt-1",
+                "a".repeat(40), "Trivy", List.of(), "evidence://task-1/attempt-1/security",
+                "b".repeat(64), "COMPLETE", "security-agent"));
     }
 
     private String policy(Map<String, String> verdicts, Map<String, String> digests) {
-        return tools.evaluatePolicy("1", "task-1", "attempt-1", verdicts, digests).decision();
+        return tools.evaluatePolicy("1", "task-1", "attempt-1", verdicts, digests, "workflow").decision();
     }
 
     private AssuranceTools.QualityGateResult evaluate(String status, Integer exitCode, String evidence, String output) {
         return tools.evaluateQualityGate("1", "task-1", "attempt-1", "a".repeat(40), "SonarQube", "default",
-                status, exitCode, evidence, output, "evidence://task-1/attempt-1/quality", "b".repeat(64));
+                status, exitCode, evidence, output, "evidence://task-1/attempt-1/quality", "b".repeat(64),
+                "workflow");
     }
 }

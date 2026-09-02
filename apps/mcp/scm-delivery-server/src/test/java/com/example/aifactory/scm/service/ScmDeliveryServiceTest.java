@@ -76,7 +76,7 @@ class ScmDeliveryServiceTest {
 
         ScmDeliveryService.CreateRequest request = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-1", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "Add endpoint",
-                "delivery", "delivery-task-1-attempt-1", proof);
+                "workflow", "delivery-task-1-attempt-1", proof);
         ScmDeliveryBackend.DeliveryResult result = service.create(request);
         ScmDeliveryBackend.DeliveryResult replay = service.create(request);
 
@@ -85,6 +85,10 @@ class ScmDeliveryServiceTest {
         assertEquals(root.resolve("state/worktrees/task-1-attempt-1"), captured.get().workspace());
         assertEquals(result, replay);
         assertEquals(1, creates.get());
+        ScmDeliveryService.CreateRequest unauthorized = new ScmDeliveryService.CreateRequest("1", "task-1",
+                "attempt-1", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "Add endpoint",
+                "delivery", "delivery-task-1-unauthorized", proof);
+        assertThrows(IllegalArgumentException.class, () -> service.create(unauthorized));
         String auditEvents = Files.readString(root.resolve("state/audit/scm-delivery.jsonl"));
         assertEquals(2, auditEvents.lines().count());
         org.junit.jupiter.api.Assertions.assertTrue(auditEvents.contains("BEFORE_WRITE"));
@@ -94,14 +98,14 @@ class ScmDeliveryServiceTest {
 
         ScmDeliveryService.CreateRequest missingApproval = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-missing", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "title",
-                "delivery", "delivery-task-1-missing", null);
+                "workflow", "delivery-task-1-missing", null);
         assertThrows(IllegalArgumentException.class, () -> service.create(missingApproval));
 
         ApprovalProof divergentProof = ApprovalProof.sign("task-1", "attempt-sha", "customer-api", "d".repeat(40),
                 patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
         ScmDeliveryService.CreateRequest divergentSha = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-sha", "customer-api", "d".repeat(40), patchDigest, evidenceDigests, "main", "title",
-                "delivery", "delivery-task-1-sha", divergentProof);
+                "workflow", "delivery-task-1-sha", divergentProof);
         assertThrows(SecurityException.class, () -> service.create(divergentSha));
 
         ApprovalProof outsideProof = ApprovalProof.sign("task-1", "attempt-outside", "outside-repository",
@@ -109,14 +113,14 @@ class ScmDeliveryServiceTest {
                 credentials.approvalKey());
         ScmDeliveryService.CreateRequest outsideRepository = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-outside", "outside-repository", sourceCommit, patchDigest, evidenceDigests, "main", "title",
-                "delivery", "delivery-task-1-outside", outsideProof);
+                "workflow", "delivery-task-1-outside", outsideProof);
         assertThrows(IllegalArgumentException.class, () -> service.create(outsideRepository));
 
         ApprovalProof existingProof = ApprovalProof.sign("task-1", "attempt-existing", "customer-api", sourceCommit,
                 patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
         ScmDeliveryService.CreateRequest existingRequest = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-existing", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "title",
-                "delivery", "delivery-task-1-existing", existingProof);
+                "workflow", "delivery-task-1-existing", existingProof);
         AtomicInteger existingCreates = new AtomicInteger();
         ScmDeliveryBackend existingBackend = new ScmDeliveryBackend() {
             @Override
@@ -140,7 +144,7 @@ class ScmDeliveryServiceTest {
                 patchDigest, "David Beaumont", approvedAt, approvedAt.plusSeconds(3600), credentials.approvalKey());
         ScmDeliveryService.CreateRequest timeoutRequest = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-timeout", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "title",
-                "delivery", "delivery-task-1-timeout", timeoutProof);
+                "workflow", "delivery-task-1-timeout", timeoutProof);
         AtomicBoolean remotelyCreated = new AtomicBoolean();
         AtomicInteger timeoutCreates = new AtomicInteger();
         ScmDeliveryBackend timeoutBackend = new ScmDeliveryBackend() {

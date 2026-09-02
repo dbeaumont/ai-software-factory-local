@@ -59,6 +59,7 @@ class ScmDeliveryGatewayTest {
 
         assertEquals("http://localhost:3000/aiadmin/customer-api/pulls/7", url);
         assertEquals("customer-api", captured.get().get("repository_id"));
+        assertEquals("workflow", captured.get().get("actor"));
         assertEquals("delivery-task-1-approval-1", captured.get().get("idempotency_key"));
         assertFalse(captured.get().toString().contains(key));
     }

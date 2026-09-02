@@ -8,7 +8,8 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
     public static final Set<String> WORKFLOW_EFFECTS = Set.of(
             "sandbox.validate_patch", "sandbox.apply_patch", "sandbox.run_tests",
             "sandbox.run_quality", "sandbox.run_security", "sandbox.cancel_execution",
-            "scm.create_draft_pull_request");
+            "assurance.evaluate_quality_gate", "assurance.normalize_findings", "assurance.evaluate_policy",
+            "evidence.store", "evidence.create_manifest", "scm.create_draft_pull_request");
     private final Map<String, Set<String>> permissions;
     private final OperationalKillSwitch killSwitch;
 

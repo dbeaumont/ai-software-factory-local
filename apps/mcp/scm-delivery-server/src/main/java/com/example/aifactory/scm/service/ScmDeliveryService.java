@@ -90,7 +90,7 @@ public class ScmDeliveryService {
     }
 
     private static void validate(CreateRequest request) {
-        if (!"1".equals(request.schemaVersion()) || !"delivery".equals(request.actor())
+        if (!"1".equals(request.schemaVersion()) || !"workflow".equals(request.actor())
                 || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
                 || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")

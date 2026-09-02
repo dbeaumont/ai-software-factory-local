@@ -30,7 +30,7 @@ public class ScmDeliveryTools {
             @ToolParam(description = "SHA-256 digests keyed by plan, tests, quality, sbom, security and review") Map<String, String> evidence_digests,
             @ToolParam(description = "Allow-listed base branch") String base_branch,
             @ToolParam(description = "Human-readable PR title") String title,
-            @ToolParam(description = "Authorized caller; delivery only") String actor,
+            @ToolParam(description = "Authorized deterministic workflow caller") String actor,
             @ToolParam(description = "Stable command idempotency key") String idempotency_key,
             @ToolParam(description = "Signed approval proof bound to this delivery") ApprovalProof approval_proof) throws Exception {
         return delivery.create(new ScmDeliveryService.CreateRequest(schema_version, task_id, attempt_id, repository_id,

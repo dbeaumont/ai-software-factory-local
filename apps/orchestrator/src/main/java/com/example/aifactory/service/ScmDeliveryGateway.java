@@ -56,7 +56,7 @@ public class ScmDeliveryGateway {
         arguments.put("evidence_digests", evidence);
         arguments.put("base_branch", baseBranch);
         arguments.put("title", title);
-        arguments.put("actor", "delivery");
+        arguments.put("actor", "workflow");
         arguments.put("idempotency_key", "delivery-" + taskId + '-' + attemptId);
         arguments.put("approval_proof", proof);
         JsonNode result = validator.validate("scm.create_draft_pull_request",

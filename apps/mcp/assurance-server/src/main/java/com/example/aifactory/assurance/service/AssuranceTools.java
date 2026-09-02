@@ -26,7 +26,9 @@ public class AssuranceTools {
             @ToolParam(description = "Evidence status") String evidence_status,
             @ToolParam(description = "Bounded scanner output") String output,
             @ToolParam(description = "Internal evidence URI") String evidence_uri,
-            @ToolParam(description = "SHA-256 evidence digest") String evidence_digest) {
+            @ToolParam(description = "SHA-256 evidence digest") String evidence_digest,
+            @ToolParam(description = "Authorized deterministic workflow actor") String actor) {
+        requireWorkflow(actor);
         validate(schema_version, task_id, attempt_id, source_commit, provider, gate, technical_status,
                 evidence_status, output, evidence_uri, evidence_digest);
         String upper = output.toUpperCase(java.util.Locale.ROOT);
@@ -59,7 +61,9 @@ public class AssuranceTools {
             @ToolParam(description = "Extracted scanner findings") List<RawFinding> findings,
             @ToolParam(description = "Internal evidence URI") String evidence_uri,
             @ToolParam(description = "SHA-256 evidence digest") String evidence_digest,
-            @ToolParam(description = "Evidence status") String evidence_status) {
+            @ToolParam(description = "Evidence status") String evidence_status,
+            @ToolParam(description = "Authorized deterministic workflow actor") String actor) {
+        requireWorkflow(actor);
         validate("1", task_id, attempt_id, source_commit, "SonarQube", "normalization", "SUCCEEDED",
                 evidence_status, "", evidence_uri, evidence_digest);
         if (!"1".equals(schema_version) || !("SonarQube".equals(scanner) || "Trivy".equals(scanner))
@@ -86,7 +90,9 @@ public class AssuranceTools {
             @ToolParam(description = "Task identifier") String task_id,
             @ToolParam(description = "Attempt identifier") String attempt_id,
             @ToolParam(description = "Verdicts keyed by tests, quality, security and sbom") Map<String, String> verdicts,
-            @ToolParam(description = "Digests keyed by the same mandatory inputs") Map<String, String> input_digests) {
+            @ToolParam(description = "Digests keyed by the same mandatory inputs") Map<String, String> input_digests,
+            @ToolParam(description = "Authorized deterministic workflow actor") String actor) {
+        requireWorkflow(actor);
         if (!"1".equals(schema_version) || task_id == null || !task_id.matches("[A-Za-z0-9_-]{1,64}")
                 || attempt_id == null || !attempt_id.matches("[A-Za-z0-9_-]{1,128}")
                 || verdicts == null || input_digests == null) {
@@ -134,6 +140,9 @@ public class AssuranceTools {
     }
 
     private static boolean blank(String value) { return value == null || value.isBlank(); }
+    private static void requireWorkflow(String actor) {
+        if (!"workflow".equals(actor)) throw new SecurityException("only workflow may evaluate assurance");
+    }
     private static String limit(String value, int maximum) { return value.strip().substring(0, Math.min(value.strip().length(), maximum)); }
     private static String nullableLimit(String value, int maximum) { return blank(value) ? null : limit(value, maximum); }
 
