@@ -1,7 +1,7 @@
 # Plan de bascule vers l'architecture multi-agent hiérarchique
 
 > Plan d'exécution pour faire évoluer le pipeline IA déterministe actuel vers l'architecture décrite dans
-> [`docs/cible-architecture-multi-agent-hierarchique.md`](docs/cible-architecture-multi-agent-hierarchique.md).
+> [`cible-architecture-multi-agent-hierarchique.md`](cible-architecture-multi-agent-hierarchique.md).
 >
 > Cible technologique recommandée : Spring Boot et Java pour le control plane, Temporal Java SDK pour le
 > workflow durable, Spring AI/LiteLLM pour l'exécution des agents, MCP pour les capacités techniques gouvernées,
@@ -499,7 +499,7 @@
 - [x] **MAH-335** — Documenter routage, replans, contradictions et décisions humaines. _(Chaîne de décision, plafonds, autorité, escalade et audit dans `docs/multiagents/ROUTAGE-REPLANS-CONTRADICTIONS.md`.)_
 - [x] **MAH-336** — Documenter procédures de canary, kill switch, rollback et reprise après incident. _(Procédure intégrée dans `docs/runbooks/CANARY-KILL-SWITCH-INCIDENT.md` et index de réponse dans `docs/runbooks/README.md`.)_
 - [ ] **MAH-337** — Former Produit, Architecture, Sécurité, Développement et Exploitation à leurs responsabilités.
-- [ ] **MAH-338** — Archiver les documents devenus obsolètes en conservant leur historique Git.
+- [x] **MAH-338** — Archiver les documents devenus obsolètes en conservant leur historique Git. _(Index et statut des archives dans `docs/old/README.md` ; doublon racine retiré au profit de la copie canonique versionnée, contenu toujours accessible par Git.)_
 
 ## 20. Dépendances entre lots
 
