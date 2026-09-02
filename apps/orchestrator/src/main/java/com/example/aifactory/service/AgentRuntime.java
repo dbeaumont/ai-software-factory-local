@@ -50,8 +50,9 @@ public final class AgentRuntime implements AgentExecutor {
         return new Result(document, fingerprint, result.turns(), result.tokens(), result.costMicros());
     }
 
-    private static boolean effectfulTool(String name) {
-        return name.startsWith("sandbox.") || name.startsWith("assurance.") || name.startsWith("scm.");
+    static boolean effectfulTool(String name) {
+        return name.startsWith("sandbox.") || name.startsWith("assurance.") || name.startsWith("scm.")
+                || name.equals("evidence.store") || name.equals("evidence.create_manifest");
     }
 
     public record Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,

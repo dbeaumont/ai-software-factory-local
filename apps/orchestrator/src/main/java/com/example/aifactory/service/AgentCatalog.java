@@ -53,6 +53,21 @@ public final class AgentCatalog {
                 if (!roles.containsKey(child)) throw new IllegalStateException("Unknown delegated role " + child);
             });
         });
+        Role supervisor = roles.get("supervisor");
+        if (supervisor == null || supervisor.effectful()
+                || supervisor.tools().stream().anyMatch(AgentCatalog::effectfulTool)) {
+            throw new IllegalStateException("Supervisor must exist and expose read-only tools only");
+        }
+        supervisor.mayDelegateTo().forEach(child -> {
+            if (!"supervisor".equals(roles.get(child).parent())) {
+                throw new IllegalStateException("Supervisor delegation target has another parent: " + child);
+            }
+        });
+    }
+
+    private static boolean effectfulTool(String name) {
+        return name.startsWith("sandbox.") || name.startsWith("assurance.") || name.startsWith("scm.")
+                || name.equals("evidence.store") || name.equals("evidence.create_manifest");
     }
 
     @SuppressWarnings("unchecked")

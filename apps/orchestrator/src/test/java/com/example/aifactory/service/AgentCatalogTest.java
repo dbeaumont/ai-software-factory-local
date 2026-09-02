@@ -14,6 +14,11 @@ class AgentCatalogTest {
         assertThat(catalog.roles()).hasSize(15);
         assertThat(catalog.require("supervisor").mayDelegateTo())
                 .containsExactly("architecture-agent", "code-agent", "test-agent", "security-agent");
+        assertThat(catalog.require("supervisor").effectful()).isFalse();
+        assertThat(catalog.require("supervisor").tools())
+                .allMatch(tool -> tool.startsWith("context.") || tool.equals("evidence.get_summary"));
+        assertThat(catalog.require("supervisor").mayDelegateTo())
+                .allMatch(child -> "supervisor".equals(catalog.require(child).parent()));
         assertThat(catalog.require("independent-reviewer").parent()).isEqualTo("workflow");
         assertThat(catalog.require("developer").tools()).doesNotContain("sandbox.apply_patch");
     }
