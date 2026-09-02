@@ -1,0 +1,284 @@
+version: "1"
+catalogId: multi-agent-hierarchy-v1
+default: deny
+
+autonomyLevels:
+  A0: deterministic workflow component; no model-selected action
+  A1: model may analyze and request allow-listed read-only tools
+  A2: model may propose bounded delegations; host validates and schedules them
+
+owners:
+  platform: AI Software Factory platform team
+  architecture: Architecture practice
+  engineering: Product engineering
+  quality: Quality engineering
+  security: Application security
+  risk: Product and risk owners
+
+roles:
+  workflow:
+    kind: control-plane
+    parent: null
+    owner: platform
+    autonomy: A0
+    effectful: true
+    mayDelegateTo:
+      - supervisor
+      - independent-reviewer
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+      - context.get_dependencies
+      - context.get_symbols
+      - sandbox.validate_patch
+      - sandbox.apply_patch
+      - sandbox.run_tests
+      - sandbox.run_quality
+      - sandbox.run_security
+      - sandbox.get_execution
+      - sandbox.cancel_execution
+      - assurance.evaluate_quality_gate
+      - assurance.normalize_findings
+      - assurance.evaluate_policy
+      - evidence.store
+      - evidence.create_manifest
+      - evidence.get_summary
+      - evidence.read
+      - scm.get_repository
+      - scm.resolve_revision
+      - scm.create_draft_pull_request
+    outputContract: workflow-state-v1
+    humanGate: required-before-scm-effect
+
+  supervisor:
+    kind: agent
+    parent: workflow
+    owner: platform
+    autonomy: A2
+    effectful: false
+    mayDelegateTo:
+      - architecture-agent
+      - code-agent
+      - test-agent
+      - security-agent
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.get_repository_rules
+      - context.get_dependencies
+      - evidence.get_summary
+    outputContract: supervisor-decision-v1
+    humanGate: risk-dependent
+
+  architecture-agent:
+    kind: agent
+    parent: supervisor
+    owner: architecture
+    autonomy: A2
+    effectful: false
+    mayDelegateTo:
+      - impact-analysis
+      - dependencies-contracts
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+      - context.get_dependencies
+      - context.get_symbols
+    outputContract: architecture-assessment-v1
+    humanGate: risk-dependent
+
+  impact-analysis:
+    kind: sub-agent
+    parent: architecture-agent
+    owner: architecture
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+      - context.get_symbols
+    outputContract: specialist-result-v1
+    humanGate: none
+
+  dependencies-contracts:
+    kind: sub-agent
+    parent: architecture-agent
+    owner: architecture
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - context.list_tree
+      - context.read_file
+      - context.get_dependencies
+    outputContract: specialist-result-v1
+    humanGate: none
+
+  code-agent:
+    kind: agent
+    parent: supervisor
+    owner: engineering
+    autonomy: A2
+    effectful: false
+    mayDelegateTo:
+      - developer
+      - patch-repair
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.get_repository_rules
+    outputContract: integration-proposal-v1
+    humanGate: risk-dependent
+
+  developer:
+    kind: sub-agent
+    parent: code-agent
+    owner: engineering
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+      - context.get_dependencies
+      - context.get_symbols
+    outputContract: patch-proposal-v1
+    humanGate: none
+
+  patch-repair:
+    kind: sub-agent
+    parent: code-agent
+    owner: engineering
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - context.read_file
+      - context.get_symbols
+    outputContract: patch-proposal-v1
+    humanGate: none
+
+  test-agent:
+    kind: agent
+    parent: supervisor
+    owner: quality
+    autonomy: A2
+    effectful: false
+    mayDelegateTo:
+      - test-design
+      - test-evidence
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+      - evidence.get_summary
+    outputContract: test-assessment-v1
+    humanGate: none
+
+  test-design:
+    kind: sub-agent
+    parent: test-agent
+    owner: quality
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+    outputContract: test-strategy-v1
+    humanGate: none
+
+  test-evidence:
+    kind: sub-agent
+    parent: test-agent
+    owner: quality
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - evidence.get_summary
+    outputContract: test-assessment-v1
+    humanGate: none
+
+  security-agent:
+    kind: agent
+    parent: supervisor
+    owner: security
+    autonomy: A2
+    effectful: false
+    mayDelegateTo:
+      - threat-model
+      - security-findings
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+      - evidence.get_summary
+    outputContract: security-assessment-v1
+    humanGate: risk-dependent
+
+  threat-model:
+    kind: sub-agent
+    parent: security-agent
+    owner: security
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+    outputContract: security-assessment-v1
+    humanGate: none
+
+  security-findings:
+    kind: sub-agent
+    parent: security-agent
+    owner: security
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - evidence.get_summary
+    outputContract: security-assessment-v1
+    humanGate: none
+
+  independent-reviewer:
+    kind: agent
+    parent: workflow
+    owner: risk
+    autonomy: A1
+    effectful: false
+    mayDelegateTo: []
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+      - evidence.get_summary
+      - evidence.read
+    outputContract: independent-review-v1
+    humanGate: required-after-review
+
+compatibilityRoles:
+  planner:
+    replacement: architecture-agent
+    availableInModes:
+      - PIPELINE
+  reviewer:
+    replacement: independent-reviewer
+    availableInModes:
+      - PIPELINE
