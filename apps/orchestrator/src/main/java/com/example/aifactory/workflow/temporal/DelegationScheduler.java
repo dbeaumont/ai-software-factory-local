@@ -13,6 +13,10 @@ import java.util.Set;
 
 /** Deterministic scheduling boundary above generic Temporal child workflows. */
 public final class DelegationScheduler {
+    static final int MAX_DEPTH = 2;
+    static final int MAX_FAN_OUT = 4;
+    static final long MAX_TOTAL_COST_MICROS = 70_000_000;
+    static final long MAX_CRITICAL_PATH_SECONDS = 2_700;
     private final ChildWorkflowLauncher children;
 
     public DelegationScheduler() {
@@ -64,7 +68,33 @@ public final class DelegationScheduler {
             }
             if (!progressed) throw invalid("cycle detected");
         }
+        requireWithinHardLimits(ordered, nodes);
         return List.copyOf(ordered);
+    }
+
+    private static void requireWithinHardLimits(List<DelegationWorkflow.Request> ordered,
+                                                Map<String, DelegationWorkflow.Request> nodes) {
+        Map<String, Integer> depths = new LinkedHashMap<>();
+        Map<String, Integer> children = new LinkedHashMap<>();
+        Map<String, Long> durations = new LinkedHashMap<>();
+        long totalCost = 0;
+        for (DelegationWorkflow.Request node : ordered) {
+            String parent = node.parentNodeId();
+            int depth = parent == null || "supervisor".equals(parent) ? 1 : depths.get(parent) + 1;
+            if (depth > MAX_DEPTH) throw invalid("maximum depth exceeded at " + node.nodeId());
+            depths.put(node.nodeId(), depth);
+            children.merge(parent == null || "supervisor".equals(parent) ? "$supervisor" : parent,
+                    1, Integer::sum);
+            if (children.values().stream().anyMatch(count -> count > MAX_FAN_OUT)) {
+                throw invalid("maximum fan-out exceeded");
+            }
+            totalCost = Math.addExact(totalCost, node.budget().maxCostMicros());
+            if (totalCost > MAX_TOTAL_COST_MICROS) throw invalid("maximum forecast cost exceeded");
+            long predecessor = dependencies(node, nodes).stream().mapToLong(durations::get).max().orElse(0);
+            long duration = Math.addExact(predecessor, node.budget().timeoutSeconds());
+            if (duration > MAX_CRITICAL_PATH_SECONDS) throw invalid("maximum critical-path duration exceeded");
+            durations.put(node.nodeId(), duration);
+        }
     }
 
     public void requireDependenciesSatisfied(DelegationWorkflow.Request node, Set<String> completedNodeIds,

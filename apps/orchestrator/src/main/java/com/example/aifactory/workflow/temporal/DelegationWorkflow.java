@@ -28,9 +28,13 @@ public interface DelegationWorkflow {
         }
     }
 
-    record Budget(long maxTokens, long maxCostMicros, int maxTurns) {
+    record Budget(long maxTokens, long maxCostMicros, int maxTurns, long timeoutSeconds) {
+        public Budget(long maxTokens, long maxCostMicros, int maxTurns) {
+            this(maxTokens, maxCostMicros, maxTurns, 600);
+        }
+
         public Budget {
-            if (maxTokens < 1 || maxCostMicros < 0 || maxTurns < 1) {
+            if (maxTokens < 1 || maxCostMicros < 0 || maxTurns < 1 || timeoutSeconds < 1) {
                 throw new IllegalArgumentException("Delegation budget is invalid");
             }
         }

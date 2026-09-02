@@ -1,6 +1,12 @@
 version: "1"
 policyId: hierarchical-budget-policy-v1
 
+dag:
+  max_depth: 2
+  max_fan_out: 4
+  max_total_cost_micros: 70000000
+  max_critical_path_seconds: 2700
+
 # Hard ceilings. Agent manifests may request less, never more.
 delegation:
   max_turns: 6

@@ -77,12 +77,45 @@ class DelegationSchedulerTest {
         assertThat(launched).isEmpty();
     }
 
+    @Test
+    void rejectsDepthFanOutForecastCostAndCriticalPathDurationAboveHardLimits() {
+        DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) ->
+                new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> scheduler.validateAndOrder(root(), List.of(
+                node("parent", "supervisor", Set.of()), node("child", "parent", Set.of()),
+                node("grandchild", "child", Set.of())))).hasMessageContaining("maximum depth");
+
+        List<DelegationWorkflow.Request> fanOut = new ArrayList<>();
+        fanOut.add(node("parent", "supervisor", Set.of()));
+        for (int index = 1; index <= 5; index++) fanOut.add(node("child-" + index, "parent", Set.of()));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> scheduler.validateAndOrder(root(), fanOut))
+                .hasMessageContaining("maximum fan-out");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> scheduler.validateAndOrder(root(), List.of(
+                node("cost-a", "supervisor", Set.of(), new DelegationWorkflow.Budget(100, 40_000_000, 1)),
+                node("cost-b", "supervisor", Set.of(), new DelegationWorkflow.Budget(100, 40_000_000, 1)))))
+                .hasMessageContaining("forecast cost");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> scheduler.validateAndOrder(root(), List.of(
+                node("slow-parent", "supervisor", Set.of(),
+                        new DelegationWorkflow.Budget(100, 100, 1, 1_500)),
+                node("slow-child", "slow-parent", Set.of(),
+                        new DelegationWorkflow.Budget(100, 100, 1, 1_500)))))
+                .hasMessageContaining("critical-path duration");
+    }
+
     private static SoftwareFactoryWorkflow.Request root() {
         return new SoftwareFactoryWorkflow.Request("task-1", "attempt-1", "a".repeat(40), "change");
     }
 
     private static DelegationWorkflow.Request node(String id, String parent, Set<String> dependencies) {
+        return node(id, parent, dependencies, new DelegationWorkflow.Budget(100, 100, 1));
+    }
+
+    private static DelegationWorkflow.Request node(String id, String parent, Set<String> dependencies,
+                                                   DelegationWorkflow.Budget budget) {
         return new DelegationWorkflow.Request("task-1", "attempt-1", id, parent, "code-agent",
-                "a".repeat(40), id, dependencies, new DelegationWorkflow.Budget(100, 100, 1));
+                "a".repeat(40), id, dependencies, budget);
     }
 }
