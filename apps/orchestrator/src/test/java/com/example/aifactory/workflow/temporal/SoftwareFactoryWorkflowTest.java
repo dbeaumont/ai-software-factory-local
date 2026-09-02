@@ -28,6 +28,7 @@ class SoftwareFactoryWorkflowTest {
             assertThat(result.chronology()).containsExactly("WORKFLOW_STARTED");
             assertThat(result.delegations()).isEmpty();
             assertThat(result.approvedManifestId()).isNull();
+            assertThat(result.humanDecisions()).isEmpty();
             assertThat(WorkflowStub.fromTyped(workflow).getExecution().getWorkflowId())
                     .isEqualTo(TemporalIds.workflow("task-1", "attempt-1"));
         }
@@ -92,5 +93,48 @@ class SoftwareFactoryWorkflowTest {
             assertThat(result.chronology()).containsExactly(
                     "WORKFLOW_STARTED", "WAITING_APPROVAL:" + manifestId, "APPROVED:" + manifestId);
         }
+    }
+
+    @Test
+    void recordsComplementaryHumanDecisionsAndSupportsCancellation() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow decisions = stub(environment, "task-4");
+            SoftwareFactoryWorkflow.HumanDecisionRequest decisionRequest =
+                    new SoftwareFactoryWorkflow.HumanDecisionRequest("risk-acceptance", "Accept R3?",
+                            java.util.Set.of("ACCEPT", "REJECT"), java.util.List.of("evidence://task-4/risk"));
+            io.temporal.client.WorkflowClient.start(decisions::run, new SoftwareFactoryWorkflow.Request(
+                    "task-4", "attempt-1", "a".repeat(40), "change", java.util.List.of(), null,
+                    java.util.List.of(decisionRequest)));
+            decisions.decide(new SoftwareFactoryWorkflow.HumanDecisionSignal(
+                    "task-4", "attempt-1", "risk-acceptance", "ACCEPT", "security-reviewer",
+                    "2026-09-02T11:00:00Z"));
+            SoftwareFactoryWorkflow.Result decisionResult = WorkflowStub.fromTyped(decisions)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
+            assertThat(decisionResult.status()).isEqualTo("DECISIONS_COMPLETED");
+            assertThat(decisionResult.humanDecisions()).containsEntry("risk-acceptance", "ACCEPT");
+
+            SoftwareFactoryWorkflow cancelled = stub(environment, "task-5");
+            String manifest = "e".repeat(64);
+            io.temporal.client.WorkflowClient.start(cancelled::run, new SoftwareFactoryWorkflow.Request(
+                    "task-5", "attempt-1", "a".repeat(40), "change", java.util.List.of(),
+                    new SoftwareFactoryWorkflow.ApprovalRequest(
+                            manifest, "evidence://task-5/attempt-1/manifest/" + manifest, "f".repeat(64))));
+            cancelled.cancel(new SoftwareFactoryWorkflow.CancellationSignal(
+                    "task-5", "attempt-1", "request withdrawn", "requester", "2026-09-02T11:01:00Z"));
+            SoftwareFactoryWorkflow.Result cancelledResult = WorkflowStub.fromTyped(cancelled)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
+            assertThat(cancelledResult.status()).isEqualTo("CANCELLED");
+            assertThat(cancelledResult.cancellationReason()).isEqualTo("request withdrawn");
+        }
+    }
+
+    private static SoftwareFactoryWorkflow stub(TestWorkflowEnvironment environment, String taskId) {
+        return environment.getWorkflowClient().newWorkflowStub(SoftwareFactoryWorkflow.class,
+                WorkflowOptions.newBuilder().setWorkflowId(TemporalIds.workflow(taskId, "attempt-1"))
+                        .setTaskQueue("software-factory-test").build());
     }
 }

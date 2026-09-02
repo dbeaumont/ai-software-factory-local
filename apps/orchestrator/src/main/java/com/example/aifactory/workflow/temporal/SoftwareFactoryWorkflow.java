@@ -5,6 +5,8 @@ import io.temporal.workflow.WorkflowMethod;
 import io.temporal.workflow.SignalMethod;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @WorkflowInterface
 public interface SoftwareFactoryWorkflow {
@@ -14,27 +16,42 @@ public interface SoftwareFactoryWorkflow {
     @SignalMethod(name = "approve")
     void approve(ApprovalSignal signal);
 
+    @SignalMethod(name = "cancel")
+    void cancel(CancellationSignal signal);
+
+    @SignalMethod(name = "humanDecision")
+    void decide(HumanDecisionSignal signal);
+
     record Request(String taskId, String attemptId, String sourceCommit, String requirement,
-                   List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest) {
+                   List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
+                   List<HumanDecisionRequest> humanDecisionRequests) {
         public Request {
             delegations = delegations == null ? List.of() : List.copyOf(delegations);
+            humanDecisionRequests = humanDecisionRequests == null ? List.of() : List.copyOf(humanDecisionRequests);
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement) {
-            this(taskId, attemptId, sourceCommit, requirement, List.of(), null);
+            this(taskId, attemptId, sourceCommit, requirement, List.of(), null, List.of());
         }
 
         public Request(String taskId, String attemptId, String sourceCommit, String requirement,
                        List<DelegationWorkflow.Request> delegations) {
-            this(taskId, attemptId, sourceCommit, requirement, delegations, null);
+            this(taskId, attemptId, sourceCommit, requirement, delegations, null, List.of());
+        }
+
+        public Request(String taskId, String attemptId, String sourceCommit, String requirement,
+                       List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest) {
+            this(taskId, attemptId, sourceCommit, requirement, delegations, approvalRequest, List.of());
         }
     }
 
     record Result(String taskId, String attemptId, String sourceCommit, String status, List<String> chronology,
-                  List<DelegationWorkflow.Result> delegations, String approvedManifestId, String approvedBy) {
+                  List<DelegationWorkflow.Result> delegations, Map<String, String> humanDecisions,
+                  String approvedManifestId, String approvedBy, String cancellationReason) {
         public Result {
             chronology = List.copyOf(chronology);
             delegations = List.copyOf(delegations);
+            humanDecisions = Map.copyOf(humanDecisions);
         }
     }
 
@@ -42,4 +59,17 @@ public interface SoftwareFactoryWorkflow {
 
     record ApprovalSignal(String taskId, String attemptId, String manifestId, String manifestDigest,
                           String decision, String approver, String decidedAt) {}
+
+    record HumanDecisionRequest(String decisionId, String question, Set<String> allowedDecisions,
+                                List<String> evidenceUris) {
+        public HumanDecisionRequest {
+            allowedDecisions = Set.copyOf(allowedDecisions);
+            evidenceUris = List.copyOf(evidenceUris);
+        }
+    }
+
+    record HumanDecisionSignal(String taskId, String attemptId, String decisionId, String decision,
+                               String actor, String decidedAt) {}
+
+    record CancellationSignal(String taskId, String attemptId, String reason, String actor, String decidedAt) {}
 }
