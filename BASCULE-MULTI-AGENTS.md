@@ -140,7 +140,7 @@
 - [x] **MAH-045** — Introduire `DelegationValidator` pour rôle, scope, budget, dépendances et profondeur. _(Validation hôte du catalogue, hiérarchie, scopes, DAG, profondeur, fan-out et budgets cumulés.)_
 - [x] **MAH-046** — Introduire `PatchIntegrator` comme service déterministe distinct des agents. _(Normalisation, validation et application contrôlée d'un artefact immuable vérifié par digest.)_
 - [x] **MAH-047** — Introduire `TaskMemory` comme port, sans coupler les agents au stockage choisi. _(Port de persistance neutre et adaptateur local concurrent remplaçable.)_
-- [ ] **MAH-048** — Introduire un port `EvidenceRepository` devant le client Evidence MCP.
+- [x] **MAH-048** — Introduire un port `EvidenceRepository` devant le client Evidence MCP. _(API typée indépendante de MCP pour dépôt, manifeste, résumé et lecture auditée.)_
 - [ ] **MAH-049** — Préserver les API REST existantes pendant le refactoring.
 
 ### Séparation des effets
