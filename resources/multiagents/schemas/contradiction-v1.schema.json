@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/contradiction-v1.schema.json",
+  "title": "Contradiction v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "contradiction_id", "task_id", "attempt_id", "subject", "type", "severity", "sources", "status", "resolution", "created_at", "updated_at"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "contradiction_id": {"$ref": "#/$defs/id"},
+    "task_id": {"$ref": "#/$defs/id"},
+    "attempt_id": {"$ref": "#/$defs/id"},
+    "subject": {"type": "string", "minLength": 1, "maxLength": 1000},
+    "type": {"enum": ["FACT", "SCOPE", "RISK", "ARCHITECTURE", "PATCH", "TEST", "SECURITY", "EVIDENCE", "RECOMMENDATION"]},
+    "severity": {"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]},
+    "sources": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"$ref": "#/$defs/source"}},
+    "status": {"enum": ["OPEN", "RESOLVED", "ESCALATED"]},
+    "resolution": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/resolution"}]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "OPEN"}}}, "then": {"properties": {"resolution": {"type": "null"}}}},
+    {"if": {"properties": {"status": {"enum": ["RESOLVED", "ESCALATED"]}}}, "then": {"properties": {"resolution": {"$ref": "#/$defs/resolution"}}}}
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result_id", "role", "conclusion", "result_digest", "evidence_uris"],
+      "properties": {
+        "result_id": {"$ref": "#/$defs/id"},
+        "role": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "maxLength": 64},
+        "conclusion": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "result_digest": {"$ref": "#/$defs/digest"},
+        "evidence_uris": {"type": "array", "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "pattern": "^evidence://", "maxLength": 1024}}
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "decision", "selected_source_ids", "justification", "decider", "decided_at"],
+      "properties": {
+        "strategy": {"enum": ["DETERMINISTIC_POLICY", "INDEPENDENT_REVIEW", "HUMAN_DECISION"]},
+        "decision": {"enum": ["SELECT_SOURCE", "MERGE_COMPATIBLE_PARTS", "REPLAN", "REQUEST_MORE_EVIDENCE", "ESCALATE", "REJECT_ALL"]},
+        "selected_source_ids": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "justification": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "decider": {"type": "string", "minLength": 1, "maxLength": 256},
+        "policy_decision_uri": {"type": "string", "pattern": "^evidence://", "maxLength": 1024},
+        "human_decision_id": {"$ref": "#/$defs/id"},
+        "decided_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}
