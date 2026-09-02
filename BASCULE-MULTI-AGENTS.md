@@ -85,7 +85,7 @@
 - [x] **MAH-013** — Corriger ou documenter toute métrique de coût fournisseur absente avant une nouvelle comparaison. _(Écart et règle fail-closed : `docs/multiagents/COST-TELEMETRY-V1.md` ; politique : `resources/multiagents/policies/evaluation-data-policy-v1.yaml`.)_
 - [x] **MAH-014** — Définir les seuils bloquants par métrique et le nombre minimal de cas appariés. _(Politique : `resources/multiagents/policies/qualification-thresholds-v1.yaml` ; synthèse : `docs/multiagents/QUALIFICATION-THRESHOLDS-V1.md`.)_
 - [x] **MAH-015** — Ajouter des cas multi-domaines qui justifient réellement Architecture, Code, Tests et Sécurité. _(12 cas sur Maven, Gradle et npm : `resources/multiagents/evaluations/multi-domain-cases-v1.json`.)_
-- [ ] **MAH-016** — Ajouter des cas simples devant obligatoirement emprunter le chemin court.
+- [x] **MAH-016** — Ajouter des cas simples devant obligatoirement emprunter le chemin court. _(8 cas R0/R1 mono-module : `resources/multiagents/evaluations/short-path-cases-v1.json`.)_
 - [ ] **MAH-017** — Ajouter des cas adversariaux : injection, délégation excessive, conflit de scopes et preuve falsifiée.
 - [ ] **MAH-018** — Définir la procédure de rollback et les conditions imposant une désactivation immédiate.
 

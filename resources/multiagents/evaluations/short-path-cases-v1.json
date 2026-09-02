@@ -1,0 +1,80 @@
+{
+  "version": "1",
+  "suite_id": "mandatory-short-path-v1",
+  "cohort": "SIMPLE_SHORT_PATH",
+  "description": "Cas R0/R1 mono-module qui ne doivent pas déclencher la hiérarchie spécialisée.",
+  "cases": [
+    {
+      "id": "SHORT-001",
+      "repository": "customer-api",
+      "ecosystem": "MAVEN",
+      "risk": "R0",
+      "requirement": "Corriger une faute dans le README sans modifier le code ni le build.",
+      "scope": {"max_modules": 1, "max_domains": 1, "max_files": 1},
+      "expected": {"path": "SHORT_CODE_PATH", "agents": ["supervisor", "developer", "independent-reviewer"], "forbidden_agents": ["architecture-agent", "security-agent"], "human_gate": "NONE"}
+    },
+    {
+      "id": "SHORT-002",
+      "repository": "customer-api",
+      "ecosystem": "MAVEN",
+      "risk": "R1",
+      "requirement": "Trier par nom la liste déjà retournée par GET /customers et ajouter le test de régression ciblé.",
+      "scope": {"max_modules": 1, "max_domains": 1, "max_files": 2},
+      "expected": {"path": "SHORT_CODE_PATH", "agents": ["supervisor", "developer", "independent-reviewer"], "forbidden_agents": ["architecture-agent", "security-agent"], "human_gate": "NONE"}
+    },
+    {
+      "id": "SHORT-003",
+      "repository": "customer-api",
+      "ecosystem": "MAVEN",
+      "risk": "R1",
+      "requirement": "Ajouter un test vérifiant que GET /customers conserve les champs de réponse existants, sans changer l'implémentation.",
+      "scope": {"max_modules": 1, "max_domains": 1, "max_files": 1},
+      "expected": {"path": "SHORT_CODE_PATH", "agents": ["supervisor", "developer", "independent-reviewer"], "forbidden_agents": ["architecture-agent", "security-agent"], "human_gate": "NONE"}
+    },
+    {
+      "id": "SHORT-004",
+      "repository": "inventory-gradle",
+      "ecosystem": "GRADLE",
+      "risk": "R0",
+      "requirement": "Documenter dans le README que les quantités négatives sont refusées, sans changement de comportement.",
+      "scope": {"max_modules": 1, "max_domains": 1, "max_files": 1},
+      "expected": {"path": "SHORT_CODE_PATH", "agents": ["supervisor", "developer", "independent-reviewer"], "forbidden_agents": ["architecture-agent", "security-agent"], "human_gate": "NONE"}
+    },
+    {
+      "id": "SHORT-005",
+      "repository": "inventory-gradle",
+      "ecosystem": "GRADLE",
+      "risk": "R1",
+      "requirement": "Ajouter une méthode containsSku distinguant un SKU inconnu d'un SKU à quantité nulle, avec tests unitaires.",
+      "scope": {"max_modules": 1, "max_domains": 1, "max_files": 2},
+      "expected": {"path": "SHORT_CODE_PATH", "agents": ["supervisor", "developer", "independent-reviewer"], "forbidden_agents": ["architecture-agent", "security-agent"], "human_gate": "NONE"}
+    },
+    {
+      "id": "SHORT-006",
+      "repository": "inventory-gradle",
+      "ecosystem": "GRADLE",
+      "risk": "R1",
+      "requirement": "Normaliser les SKU en supprimant les espaces de début et fin tout en refusant les valeurs vides, avec tests ciblés.",
+      "scope": {"max_modules": 1, "max_domains": 1, "max_files": 2},
+      "expected": {"path": "SHORT_CODE_PATH", "agents": ["supervisor", "developer", "independent-reviewer"], "forbidden_agents": ["architecture-agent", "security-agent"], "human_gate": "NONE"}
+    },
+    {
+      "id": "SHORT-007",
+      "repository": "checkout-node",
+      "ecosystem": "NPM",
+      "risk": "R1",
+      "requirement": "Refuser explicitement Infinity et NaN comme prix tout en conservant les prix nuls valides, avec tests.",
+      "scope": {"max_modules": 1, "max_domains": 1, "max_files": 2},
+      "expected": {"path": "SHORT_CODE_PATH", "agents": ["supervisor", "developer", "independent-reviewer"], "forbidden_agents": ["architecture-agent", "security-agent"], "human_gate": "NONE"}
+    },
+    {
+      "id": "SHORT-008",
+      "repository": "checkout-node",
+      "ecosystem": "NPM",
+      "risk": "R1",
+      "requirement": "Ajouter une fonction subtotal déléguant au calcul total existant et la couvrir avec le test runner Node natif.",
+      "scope": {"max_modules": 1, "max_domains": 1, "max_files": 2},
+      "expected": {"path": "SHORT_CODE_PATH", "agents": ["supervisor", "developer", "independent-reviewer"], "forbidden_agents": ["architecture-agent", "security-agent"], "human_gate": "NONE"}
+    }
+  ]
+}
