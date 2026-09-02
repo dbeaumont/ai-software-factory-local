@@ -1,6 +1,7 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.workflow.WorkflowCoordinator;
+import com.example.aifactory.workflow.TaskMemory;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
@@ -20,6 +21,8 @@ class TaskServiceBoundaryTest {
         assertThat(publicMethods).containsExactlyInAnyOrder("create", "get", "list", "approve");
         assertThat(Arrays.stream(TaskService.class.getDeclaredFields())
                 .anyMatch(field -> field.getType() == WorkflowCoordinator.class)).isTrue();
+        assertThat(Arrays.stream(TaskService.class.getDeclaredFields())
+                .anyMatch(field -> field.getType() == TaskMemory.class)).isTrue();
         assertThat(Arrays.stream(TaskService.class.getDeclaredFields()).map(field -> field.getType())
                 .noneMatch(type -> type == SandboxExecutor.class || type == AssuranceGateway.class
                         || type == ScmDeliveryGateway.class || type == AgentContextToolHost.class)).isTrue();

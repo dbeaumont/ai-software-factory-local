@@ -7,6 +7,7 @@ import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.model.TaskView;
 import com.example.aifactory.workflow.WorkflowCoordinator;
+import com.example.aifactory.workflow.TaskMemory;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
@@ -14,27 +15,26 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Owns task admission, lookup and commands; execution belongs to {@link WorkflowCoordinator}. */
 @Service
 public class TaskService {
     private static final Logger log = LoggerFactory.getLogger(TaskService.class);
-    private final Map<String, TaskState> tasks = new ConcurrentHashMap<>();
     private final AtomicInteger ticketSequence = new AtomicInteger(1);
     private final AiFactoryProperties props;
     private final LlmGatewayClient llm;
     private final WorkflowCoordinator coordinator;
+    private final TaskMemory memory;
     private final Counter submittedTasks;
 
-    public TaskService(AiFactoryProperties props, LlmGatewayClient llm, WorkflowCoordinator coordinator,
+    public TaskService(AiFactoryProperties props, LlmGatewayClient llm, WorkflowCoordinator coordinator, TaskMemory memory,
                        MeterRegistry metrics) {
         this.props = props;
         this.llm = llm;
         this.coordinator = coordinator;
+        this.memory = memory;
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted")
                 .description("Tasks submitted to the factory").register(metrics);
     }
@@ -49,7 +49,7 @@ public class TaskService {
         if (!availability.available()) throw new IllegalStateException(availability.error());
         String id = UUID.randomUUID().toString().substring(0, 8);
         TaskState state = new TaskState(id, nextTicketNumber(), request);
-        tasks.put(id, state);
+        memory.save(state);
         submittedTasks.increment();
         log.info("Task {} ({}) accepted: mode={}, branch={}", id, state.ticketNumber,
                 request.effectiveLlmMode(), request.effectiveBranch());
@@ -58,18 +58,16 @@ public class TaskService {
     }
 
     public TaskView get(String id) {
-        TaskState state = tasks.get(id);
-        if (state == null) throw new IllegalArgumentException("Unknown task " + id);
+        TaskState state = requireTask(id);
         return state.view();
     }
 
     public List<TaskView> list() {
-        return tasks.values().stream().map(TaskState::view).toList();
+        return memory.list().stream().map(TaskState::view).toList();
     }
 
     public TaskView approve(String id) {
-        TaskState state = tasks.get(id);
-        if (state == null) throw new IllegalArgumentException("Unknown task " + id);
+        TaskState state = requireTask(id);
         if (state.status != TaskStatus.WAITING_APPROVAL)
             throw new IllegalStateException("Task is not waiting for approval");
         if (state.pendingEffect == null || !state.pendingEffect.confirmationRequired()
@@ -84,6 +82,10 @@ public class TaskService {
 
     String nextTicketNumber() {
         return "AF-%04d".formatted(ticketSequence.getAndIncrement());
+    }
+
+    private TaskState requireTask(String id) {
+        return memory.find(id).orElseThrow(() -> new IllegalArgumentException("Unknown task " + id));
     }
 
 }

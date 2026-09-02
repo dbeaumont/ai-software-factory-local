@@ -5,13 +5,9 @@ import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -126,14 +122,11 @@ class TaskServiceTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void rejectsApprovalBeforeTheHumanApprovalGate() {
         TestableTaskService service = new TestableTaskService();
         TaskState state = new TaskState("task-1", "AF-0001", new TaskRequest(
                 "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
-        Map<String, TaskState> tasks = (Map<String, TaskState>) ReflectionTestUtils.getField(service, "tasks");
-        assertNotNull(tasks);
-        tasks.put(state.id, state);
+        service.memory.save(state);
 
         IllegalStateException error = assertThrows(IllegalStateException.class, () -> service.approve(state.id));
 
@@ -143,15 +136,12 @@ class TaskServiceTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void rejectsApprovalWithoutAPolicyApprovedPendingEffect() {
         TestableTaskService service = new TestableTaskService();
         TaskState state = new TaskState("task-175", "AF-0175", new TaskRequest(
                 "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
         state.status = TaskStatus.WAITING_APPROVAL;
-        Map<String, TaskState> tasks = (Map<String, TaskState>) ReflectionTestUtils.getField(service, "tasks");
-        assertNotNull(tasks);
-        tasks.put(state.id, state);
+        service.memory.save(state);
 
         IllegalStateException error = assertThrows(IllegalStateException.class, () -> service.approve(state.id));
 
@@ -160,8 +150,15 @@ class TaskServiceTest {
     }
 
     private static final class TestableTaskService extends TaskService {
+        private final InMemoryTaskMemory memory;
+
         private TestableTaskService() {
-            super(null, null, null, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            this(new InMemoryTaskMemory());
+        }
+
+        private TestableTaskService(InMemoryTaskMemory memory) {
+            super(null, null, null, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            this.memory = memory;
         }
     }
 }
