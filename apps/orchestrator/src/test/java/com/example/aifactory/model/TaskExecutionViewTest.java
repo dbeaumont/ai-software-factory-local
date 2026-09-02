@@ -52,4 +52,20 @@ class TaskExecutionViewTest {
                 .singleElement().extracting(TaskView.DelegationView::stopReason)
                 .isEqualTo("BUDGET_EXHAUSTED");
     }
+
+    @Test
+    void exposesOnlyArtifactMetadataAndRedactsUnauthorizedUris() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.recordArtifact("artifact-public", "TEST_RESULT", "COMPLETE", "INTERNAL",
+                "evidence://task-1/tests", "a".repeat(64), 512, true);
+        state.recordArtifact("artifact-secret", "SECURITY_SCAN", "COMPLETE", "RESTRICTED",
+                "evidence://task-1/security", "b".repeat(64), 1_024, false);
+
+        assertThat(state.view().artifacts()).containsExactly(
+                new TaskView.ArtifactView("artifact-public", "TEST_RESULT", "COMPLETE", "INTERNAL",
+                        "evidence://task-1/tests", "a".repeat(64), 512),
+                new TaskView.ArtifactView("artifact-secret", "SECURITY_SCAN", "COMPLETE", "RESTRICTED",
+                        null, "b".repeat(64), 1_024));
+    }
 }

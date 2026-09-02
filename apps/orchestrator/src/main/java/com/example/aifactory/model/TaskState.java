@@ -46,6 +46,7 @@ public class TaskState {
     public Long globalMaxCostMicros;
     public Integer globalMaxTurns;
     public final Map<String, TaskView.DelegationView> delegations = new LinkedHashMap<>();
+    private final Map<String, ArtifactMetadata> artifacts = new LinkedHashMap<>();
 
     public TaskState(String id, String ticketNumber, TaskRequest request) {
         this.id = id;
@@ -76,7 +77,8 @@ public class TaskState {
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt,
                 executionMode, workflowRunId, dagVersion,
                 new TaskView.GlobalBudget(globalMaxTokens, globalMaxCostMicros, globalMaxTurns,
-                        llmTokens, llmCostMicros, agentTurns), List.copyOf(delegations.values()));
+                        llmTokens, llmCostMicros, agentTurns), List.copyOf(delegations.values()),
+                artifacts.values().stream().map(ArtifactMetadata::project).toList());
     }
 
     public synchronized void bindExecution(String mode, String runId, String version,
@@ -111,6 +113,29 @@ public class TaskState {
                 dependsOn.stream().sorted().toList(), status, stopReason);
         delegations.put(delegationId, view);
         updatedAt = Instant.now();
+    }
+
+    public synchronized void recordArtifact(String artifactId, String type, String status, String classification,
+                                            String uri, String digest, long sizeBytes, boolean uriAuthorized) {
+        if (artifactId == null || !artifactId.matches("[A-Za-z0-9_-]{1,128}")
+                || type == null || type.isBlank() || type.length() > 64
+                || status == null || !List.of("COMPLETE", "PARTIAL", "CORRUPTED", "MISSING").contains(status)
+                || classification == null || !List.of("PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED")
+                .contains(classification) || uri == null || !uri.startsWith("evidence://") || uri.length() > 1_024
+                || digest == null || !digest.matches("[0-9a-f]{64}") || sizeBytes < 0) {
+            throw new IllegalArgumentException("Task artifact metadata is invalid");
+        }
+        artifacts.put(artifactId, new ArtifactMetadata(artifactId, type, status, classification, uri,
+                digest, sizeBytes, uriAuthorized));
+        updatedAt = Instant.now();
+    }
+
+    private record ArtifactMetadata(String artifactId, String type, String status, String classification,
+                                    String uri, String digest, long sizeBytes, boolean uriAuthorized) {
+        TaskView.ArtifactView project() {
+            return new TaskView.ArtifactView(artifactId, type, status, classification,
+                    uriAuthorized ? uri : null, digest, sizeBytes);
+        }
     }
 
     public synchronized void recordAgentUsage(int turns, long tokens, long costMicros) {

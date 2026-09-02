@@ -33,7 +33,8 @@ public record TaskView(
         String workflowRunId,
         String dagVersion,
         GlobalBudget globalBudget,
-        List<DelegationView> delegations) {
+        List<DelegationView> delegations,
+        List<ArtifactView> artifacts) {
 
     public record GlobalBudget(Long maxTokens, Long maxCostMicros, Integer maxTurns,
                                long usedTokens, long usedCostMicros, int usedTurns) {}
@@ -42,4 +43,7 @@ public record TaskView(
                                  List<String> dependsOn, String status, String stopReason) {
         public DelegationView { dependsOn = List.copyOf(dependsOn); }
     }
+
+    public record ArtifactView(String artifactId, String type, String status, String classification,
+                               String uri, String digest, long sizeBytes) {}
 }

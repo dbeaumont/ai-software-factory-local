@@ -355,7 +355,7 @@
 
 - [x] **MAH-220** — Étendre la vue de tâche avec mode, workflow run, version du DAG et budget global. _(`TaskView` expose des champs additifs et `TaskState.bindExecution` lie les métadonnées hiérarchiques et plafonds/consommations.)_
 - [x] **MAH-221** — Exposer les délégations, rôles, dépendances, statuts et raisons d'arrêt. _(`TaskView.delegations` fournit une projection structurée et `TaskState.recordDelegation` normalise les mises à jour par nœud.)_
-- [ ] **MAH-222** — Exposer les artefacts uniquement par métadonnées et URI autorisées.
+- [x] **MAH-222** — Exposer les artefacts uniquement par métadonnées et URI autorisées. _(`TaskView.artifacts` est métadonnées-only ; `TaskState` masque l'URI quand son autorisation n'est pas établie.)_
 - [ ] **MAH-223** — Exposer contradictions, décisions et points nécessitant une action humaine.
 - [ ] **MAH-224** — Ajouter endpoints ou commandes pour annuler, répondre à une décision et approuver.
 - [ ] **MAH-225** — Garantir compatibilité API pour les consommateurs du pipeline actuel.
