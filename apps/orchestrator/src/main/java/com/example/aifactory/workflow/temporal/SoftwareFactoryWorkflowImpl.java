@@ -108,8 +108,14 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         requireManifest(request.approvalRequest());
         chronology.add("WAITING_APPROVAL:" + request.approvalRequest().manifestId());
         phase = "WAITING_APPROVAL";
-        Workflow.await(() -> cancelled() || approvalMatches(receivedApproval));
+        Workflow.await(() -> cancelled() || approvalDecisionMatches(receivedApproval));
         if (cancelled()) return cancelledResult(request, chronology, results, decisions);
+        if (approvalRejected(receivedApproval)) {
+            chronology.add("REJECTED:" + request.approvalRequest().manifestId());
+            phase = "REJECTED";
+            return new Result(request.taskId(), request.attemptId(), request.sourceCommit(), "REJECTED",
+                    chronology, results, decisions, null, null, null, completedReview);
+        }
         chronology.add("APPROVED:" + request.approvalRequest().manifestId());
         phase = "APPROVED";
         return new Result(request.taskId(), request.attemptId(), request.sourceCommit(), "APPROVED",
@@ -237,12 +243,20 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     }
 
     private boolean approvalMatches(ApprovalSignal approval) {
+        return approvalDecisionMatches(approval) && "APPROVE".equals(approval.decision());
+    }
+
+    private boolean approvalRejected(ApprovalSignal approval) {
+        return approvalDecisionMatches(approval) && "REJECT".equals(approval.decision());
+    }
+
+    private boolean approvalDecisionMatches(ApprovalSignal approval) {
         ApprovalRequest manifest = request == null ? null : request.approvalRequest();
         return approval != null && manifest != null && request.taskId().equals(approval.taskId())
                 && request.attemptId().equals(approval.attemptId())
                 && manifest.manifestId().equals(approval.manifestId())
                 && manifest.digest().equals(approval.manifestDigest())
-                && "APPROVE".equals(approval.decision())
+                && Set.of("APPROVE", "REJECT").contains(approval.decision())
                 && approval.approver() != null && !approval.approver().isBlank()
                 && approval.decidedAt() != null && !approval.decidedAt().isBlank();
     }

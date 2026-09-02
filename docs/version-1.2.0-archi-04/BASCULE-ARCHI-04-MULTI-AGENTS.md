@@ -409,7 +409,7 @@
 - [x] **MAH-266** — Tester parallélisme Architecture, Tests et Sécurité. _(`DelegationSchedulerTest` vérifie que les trois Child Workflows indépendants sont tous démarrés avant l'attente du premier résultat.)_
 - [x] **MAH-267** — Tester agents Code parallèles sur scopes disjoints. _(`CodeScopePolicyTest` prouve la disjonction paire à paire ; `CodeWorkspaceManagerTest` crée ensuite deux worktrees détachés et vérifie leur isolation d'écriture.)_
 - [x] **MAH-268** — Tester conflit de patches, réparation ciblée et escalade. _(Les scénarios détectent fichiers/hunks/renames incompatibles avant sandbox, bornent la réparation au worktree et aux propositions en conflit, puis escaladent après deux réparations ou trois intégrations.)_
-- [ ] **MAH-269** — Tester approbation, refus, expiration et changement de manifeste.
+- [x] **MAH-269** — Tester approbation, refus, expiration et changement de manifeste. _(Le workflow termine désormais un refus correctement lié en `REJECTED` ; les suites couvrent aussi approbation, manifeste obsolète et expiration cryptographique de l'attestation SCM.)_
 - [ ] **MAH-270** — Tester création idempotente d'une seule draft PR malgré retry ou redémarrage.
 
 ### Tests de sécurité

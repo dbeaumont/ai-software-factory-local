@@ -121,6 +121,36 @@ class SoftwareFactoryWorkflowTest {
     }
 
     @Test
+    void terminatesOnARefusalBoundToTheSubmittedManifest() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = stub(environment, "task-refused");
+            String manifestId = "9".repeat(64);
+            String digest = "a".repeat(64);
+            io.temporal.client.WorkflowClient.start(workflow::run, new SoftwareFactoryWorkflow.Request(
+                    "task-refused", "attempt-1", "b".repeat(40), "change", java.util.List.of(),
+                    new SoftwareFactoryWorkflow.ApprovalRequest(
+                            manifestId, "evidence://task-refused/attempt-1/manifest/" + manifestId, digest)));
+            awaitStatus(workflow, "WAITING_APPROVAL");
+
+            workflow.approve(new SoftwareFactoryWorkflow.ApprovalSignal(
+                    "task-refused", "attempt-1", manifestId, digest,
+                    "REJECT", "reviewer@example.test", "2026-09-02T10:01:00Z"));
+            SoftwareFactoryWorkflow.Result result = WorkflowStub.fromTyped(workflow)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
+
+            assertThat(result.status()).isEqualTo("REJECTED");
+            assertThat(result.approvedManifestId()).isNull();
+            assertThat(result.chronology()).containsExactly(
+                    "WORKFLOW_STARTED", "WAITING_APPROVAL:" + manifestId, "REJECTED:" + manifestId);
+        }
+    }
+
+    @Test
     void recordsComplementaryHumanDecisionsAndSupportsCancellation() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
