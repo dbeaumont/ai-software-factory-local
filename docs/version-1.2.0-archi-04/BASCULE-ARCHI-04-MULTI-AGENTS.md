@@ -333,7 +333,7 @@
 
 ## 13. Lot 9 — Consolidation, contradictions et décisions
 
-- [ ] **MAH-200** — Formaliser l'ordre d'autorité : gate déterministe, politique, preuve, consensus spécialisé, Supervisor.
+- [x] **MAH-200** — Formaliser l'ordre d'autorité : gate déterministe, politique, preuve, consensus spécialisé, Supervisor. _(Politique hôte versionnée `decision-authority-v1` : priorité stricte, résultats stables et escalade des conflits au niveau dominant.)_
 - [ ] **MAH-201** — Détecter les contradictions entre Architecture, Code, Tests et Sécurité.
 - [ ] **MAH-202** — Classifier contradiction factuelle, scope incompatible, risque, test manquant ou recommandation divergente.
 - [ ] **MAH-203** — Résoudre automatiquement uniquement les contradictions couvertes par une règle déterministe.

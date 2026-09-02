@@ -1,0 +1,23 @@
+version: "1"
+policyId: decision-authority-v1
+
+# First entry has the strongest authority. A lower level can add context but
+# can never replace the verdict selected at a stronger level.
+authorityOrder:
+  - DETERMINISTIC_GATE
+  - POLICY
+  - VERIFIED_EVIDENCE
+  - SPECIALIST_CONSENSUS
+  - SUPERVISOR
+
+sameLevelConflict: ESCALATE
+lowerAuthorityOverride: FORBIDDEN
+
+audit:
+  requiredFields:
+    - policy_id
+    - policy_version
+    - controlling_authority
+    - verdict
+    - controlling_claim_ids
+    - ignored_claim_ids
