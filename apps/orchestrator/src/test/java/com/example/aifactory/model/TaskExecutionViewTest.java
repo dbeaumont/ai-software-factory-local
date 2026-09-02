@@ -68,4 +68,22 @@ class TaskExecutionViewTest {
                 new TaskView.ArtifactView("artifact-secret", "SECURITY_SCAN", "COMPLETE", "RESTRICTED",
                         null, "b".repeat(64), 1_024));
     }
+
+    @Test
+    void exposesContradictionsArbitrationsAndRequiredHumanActions() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.recordContradiction("contradiction-1", "API compatibility", "FACT", "HIGH", "ESCALATED");
+        state.recordDecision("arbitration-1", "contradiction-1", "human-decision", "OPTION_B", "architect");
+        state.recordHumanAction("decision-1", "contradiction-1", "ARCHITECTURE", "Choose contract",
+                "d".repeat(64), "PENDING");
+
+        TaskView view = state.view();
+        assertThat(view.contradictions()).containsExactly(new TaskView.ContradictionView(
+                "contradiction-1", "API compatibility", "FACT", "HIGH", "ESCALATED"));
+        assertThat(view.decisions()).containsExactly(new TaskView.DecisionView(
+                "arbitration-1", "contradiction-1", "human-decision", "OPTION_B", "architect"));
+        assertThat(view.humanActions()).containsExactly(new TaskView.HumanActionView(
+                "decision-1", "contradiction-1", "ARCHITECTURE", "Choose contract", "d".repeat(64), "PENDING"));
+    }
 }

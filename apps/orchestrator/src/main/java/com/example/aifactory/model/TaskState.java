@@ -47,6 +47,9 @@ public class TaskState {
     public Integer globalMaxTurns;
     public final Map<String, TaskView.DelegationView> delegations = new LinkedHashMap<>();
     private final Map<String, ArtifactMetadata> artifacts = new LinkedHashMap<>();
+    public final Map<String, TaskView.ContradictionView> contradictions = new LinkedHashMap<>();
+    public final Map<String, TaskView.DecisionView> decisions = new LinkedHashMap<>();
+    public final Map<String, TaskView.HumanActionView> humanActions = new LinkedHashMap<>();
 
     public TaskState(String id, String ticketNumber, TaskRequest request) {
         this.id = id;
@@ -78,7 +81,9 @@ public class TaskState {
                 executionMode, workflowRunId, dagVersion,
                 new TaskView.GlobalBudget(globalMaxTokens, globalMaxCostMicros, globalMaxTurns,
                         llmTokens, llmCostMicros, agentTurns), List.copyOf(delegations.values()),
-                artifacts.values().stream().map(ArtifactMetadata::project).toList());
+                artifacts.values().stream().map(ArtifactMetadata::project).toList(),
+                List.copyOf(contradictions.values()), List.copyOf(decisions.values()),
+                List.copyOf(humanActions.values()));
     }
 
     public synchronized void bindExecution(String mode, String runId, String version,
@@ -128,6 +133,47 @@ public class TaskState {
         artifacts.put(artifactId, new ArtifactMetadata(artifactId, type, status, classification, uri,
                 digest, sizeBytes, uriAuthorized));
         updatedAt = Instant.now();
+    }
+
+    public synchronized void recordContradiction(String id, String subject, String type,
+                                                 String severity, String status) {
+        if (!validProjectionId(id) || subject == null || subject.isBlank() || subject.length() > 1_000
+                || !List.of("FACT", "SCOPE", "RISK", "TEST", "RECOMMENDATION").contains(type)
+                || !List.of("LOW", "MEDIUM", "HIGH", "CRITICAL").contains(severity)
+                || !List.of("OPEN", "RESOLVED", "ESCALATED").contains(status)) {
+            throw new IllegalArgumentException("Task contradiction view is invalid");
+        }
+        contradictions.put(id, new TaskView.ContradictionView(id, subject, type, severity, status));
+        updatedAt = Instant.now();
+    }
+
+    public synchronized void recordDecision(String id, String contradictionId, String ruleId,
+                                            String decision, String author) {
+        if (!validProjectionId(id) || !validProjectionId(contradictionId) || !validProjectionId(ruleId)
+                || decision == null || decision.isBlank() || decision.length() > 128
+                || author == null || author.isBlank() || author.length() > 256) {
+            throw new IllegalArgumentException("Task decision view is invalid");
+        }
+        decisions.put(id, new TaskView.DecisionView(id, contradictionId, ruleId, decision, author));
+        updatedAt = Instant.now();
+    }
+
+    public synchronized void recordHumanAction(String requestId, String contradictionId, String domain,
+                                               String question, String objectDigest, String status) {
+        if (!validProjectionId(requestId) || !validProjectionId(contradictionId)
+                || !List.of("PRODUCT", "ARCHITECTURE", "SECURITY", "DATA").contains(domain)
+                || question == null || question.isBlank() || question.length() > 1_000
+                || objectDigest == null || !objectDigest.matches("[0-9a-f]{64}")
+                || !List.of("PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED").contains(status)) {
+            throw new IllegalArgumentException("Task human action view is invalid");
+        }
+        humanActions.put(requestId, new TaskView.HumanActionView(requestId, contradictionId, domain,
+                question, objectDigest, status));
+        updatedAt = Instant.now();
+    }
+
+    private static boolean validProjectionId(String value) {
+        return value != null && value.matches("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}");
     }
 
     private record ArtifactMetadata(String artifactId, String type, String status, String classification,

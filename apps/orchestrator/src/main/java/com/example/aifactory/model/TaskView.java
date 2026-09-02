@@ -34,7 +34,10 @@ public record TaskView(
         String dagVersion,
         GlobalBudget globalBudget,
         List<DelegationView> delegations,
-        List<ArtifactView> artifacts) {
+        List<ArtifactView> artifacts,
+        List<ContradictionView> contradictions,
+        List<DecisionView> decisions,
+        List<HumanActionView> humanActions) {
 
     public record GlobalBudget(Long maxTokens, Long maxCostMicros, Integer maxTurns,
                                long usedTokens, long usedCostMicros, int usedTurns) {}
@@ -46,4 +49,13 @@ public record TaskView(
 
     public record ArtifactView(String artifactId, String type, String status, String classification,
                                String uri, String digest, long sizeBytes) {}
+
+    public record ContradictionView(String contradictionId, String subject, String type,
+                                    String severity, String status) {}
+
+    public record DecisionView(String decisionId, String contradictionId, String ruleId,
+                               String decision, String author) {}
+
+    public record HumanActionView(String requestId, String contradictionId, String domain,
+                                  String question, String objectDigest, String status) {}
 }
