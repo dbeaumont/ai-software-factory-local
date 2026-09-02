@@ -33,6 +33,25 @@ class OperationalKillSwitchTest {
     }
 
     @Test
+    void disablesHierarchicalModesAndRoleModePairs() throws Exception {
+        Path file = temp.resolve("kill-switch.properties");
+        OperationalKillSwitch switches = new OperationalKillSwitch(file);
+
+        Files.writeString(file, "revision=1\nmodes.disabled=HIERARCHICAL_CANARY\n");
+        assertEquals("mode_kill_switch", switches.decision(
+                "context", "context.read_file", "developer", "HIERARCHICAL_CANARY").reason());
+        assertTrue(switches.decision(
+                "context", "context.read_file", "developer", "HIERARCHICAL_ACTIVE").allowed());
+
+        Files.writeString(file,
+                "revision=2\nrole-modes.disabled=developer@HIERARCHICAL_ACTIVE\n");
+        assertEquals("role_mode_kill_switch", switches.decision(
+                "context", "context.read_file", "developer", "HIERARCHICAL_ACTIVE").reason());
+        assertEquals("unknown_execution_mode", switches.decision(
+                "context", "context.read_file", "developer", "MODEL_SELECTED").reason());
+    }
+
+    @Test
     void failsClosedWhenOperationalFileIsMalformed() throws Exception {
         Path file = temp.resolve("kill-switch.properties");
         Files.writeString(file, "global.disabled=false\n");

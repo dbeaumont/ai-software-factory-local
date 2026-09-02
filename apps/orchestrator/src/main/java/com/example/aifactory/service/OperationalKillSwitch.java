@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 /** Read-through operational control. There is deliberately no application write API. */
 @Component
 public final class OperationalKillSwitch {
+    public static final Set<String> EXECUTION_MODES = Set.of(
+            "PIPELINE", "HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY", "HIERARCHICAL_ACTIVE");
     private final Path controlFile;
 
     @Autowired
@@ -28,12 +30,20 @@ public final class OperationalKillSwitch {
     }
 
     public Decision decision(String server, String tool, String role) {
+        return decision(server, tool, role, "PIPELINE");
+    }
+
+    public Decision decision(String server, String tool, String role, String mode) {
         State state = load();
         if (!state.valid()) return new Decision(false, "invalid_control_file", state.revision());
+        if (!EXECUTION_MODES.contains(mode)) return new Decision(false, "unknown_execution_mode", state.revision());
         if (state.globalDisabled()) return new Decision(false, "global_kill_switch", state.revision());
         if (state.servers().contains(server)) return new Decision(false, "server_kill_switch", state.revision());
         if (state.tools().contains(tool)) return new Decision(false, "tool_kill_switch", state.revision());
         if (state.roles().contains(role)) return new Decision(false, "role_kill_switch", state.revision());
+        if (state.modes().contains(mode)) return new Decision(false, "mode_kill_switch", state.revision());
+        if (state.roleModes().contains(role + '@' + mode))
+            return new Decision(false, "role_mode_kill_switch", state.revision());
         return new Decision(true, "enabled", state.revision());
     }
 
@@ -48,7 +58,9 @@ public final class OperationalKillSwitch {
                     Boolean.parseBoolean(values.getProperty("global.disabled", "false")),
                     csv(values.getProperty("servers.disabled", "")),
                     csv(values.getProperty("tools.disabled", "")),
-                    csv(values.getProperty("roles.disabled", "")));
+                    csv(values.getProperty("roles.disabled", "")),
+                    csv(values.getProperty("modes.disabled", "")),
+                    csv(values.getProperty("role-modes.disabled", "")));
         } catch (Exception exception) {
             return State.invalid("unreadable");
         }
@@ -63,8 +75,13 @@ public final class OperationalKillSwitch {
     }
 
     private record State(boolean valid, String revision, boolean globalDisabled,
-                         Set<String> servers, Set<String> tools, Set<String> roles) {
-        static State enabledByDefault() { return new State(true, "default", false, Set.of(), Set.of(), Set.of()); }
-        static State invalid(String revision) { return new State(false, revision, true, Set.of(), Set.of(), Set.of()); }
+                         Set<String> servers, Set<String> tools, Set<String> roles,
+                         Set<String> modes, Set<String> roleModes) {
+        static State enabledByDefault() {
+            return new State(true, "default", false, Set.of(), Set.of(), Set.of(), Set.of(), Set.of());
+        }
+        static State invalid(String revision) {
+            return new State(false, revision, true, Set.of(), Set.of(), Set.of(), Set.of(), Set.of());
+        }
     }
 }

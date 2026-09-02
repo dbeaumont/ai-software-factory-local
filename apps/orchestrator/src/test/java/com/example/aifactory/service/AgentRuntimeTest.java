@@ -1,9 +1,12 @@
 package com.example.aifactory.service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,6 +78,27 @@ class AgentRuntimeTest {
 
         assertThatThrownBy(() -> runtime.execute(excessive))
                 .hasMessageContaining("agent budget exceeded").hasMessageContaining("developer");
+    }
+
+    @Test
+    void killSwitchStopsTheRoleBeforeAnyModelOrToolCall(@TempDir Path temp) throws Exception {
+        Path control = temp.resolve("kill-switch.properties");
+        Files.writeString(control,
+                "revision=1\nrole-modes.disabled=developer@HIERARCHICAL_CANARY\n");
+        HierarchicalBudgetPolicy budgets = new HierarchicalBudgetPolicy();
+        AgentRuntime runtime = new AgentRuntime(mock(PromptService.class), mock(LlmGatewayClient.class),
+                mock(AgentContextToolHost.class), new MultiAgentContractValidator(new ObjectMapper()), budgets,
+                new TaskUsageLedger(budgets), new OperationalKillSwitch(control));
+        AgentRuntime.Invocation candidate = new AgentRuntime.Invocation(
+                "task-1", "attempt-1", "a".repeat(40), "developer", "developer-v1",
+                "agent-run-event-v1", Set.of(), Set.of(), "untrusted input",
+                new AgentToolLoop.Budget(2, Duration.ofSeconds(30), 1000, 1000),
+                "HIERARCHICAL_CANARY");
+
+        assertThatThrownBy(() -> runtime.execute(candidate))
+                .isInstanceOf(AgentToolLoop.AgentLoopException.class)
+                .extracting(error -> ((AgentToolLoop.AgentLoopException) error).stopCondition())
+                .isEqualTo(AgentToolLoop.StopCondition.POLICY_DENIED);
     }
 
     private static AgentRuntime.Invocation invocation(Set<String> tools) {

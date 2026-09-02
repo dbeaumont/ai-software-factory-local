@@ -18,27 +18,37 @@ public final class DelegationValidator {
     private final DelegationPlanValidator graphs;
     private final DelegationPolicyProperties ceilings;
     private final HierarchicalBudgetPolicy budgets;
+    private final OperationalKillSwitch killSwitch;
 
     public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs) {
-        this(catalog, graphs, DelegationPolicyProperties.defaults(), new HierarchicalBudgetPolicy());
+        this(catalog, graphs, DelegationPolicyProperties.defaults(), new HierarchicalBudgetPolicy(), null);
     }
 
     public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs,
                                DelegationPolicyProperties ceilings) {
-        this(catalog, graphs, ceilings, new HierarchicalBudgetPolicy());
+        this(catalog, graphs, ceilings, new HierarchicalBudgetPolicy(), null);
+    }
+
+    public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs,
+                               DelegationPolicyProperties ceilings, HierarchicalBudgetPolicy budgets) {
+        this(catalog, graphs, ceilings, budgets, null);
     }
 
     @Autowired
     public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs,
-                               DelegationPolicyProperties ceilings, HierarchicalBudgetPolicy budgets) {
+                               DelegationPolicyProperties ceilings, HierarchicalBudgetPolicy budgets,
+                               OperationalKillSwitch killSwitch) {
         this.catalog = catalog;
         this.graphs = graphs;
         this.ceilings = ceilings;
         this.budgets = budgets;
+        this.killSwitch = killSwitch;
     }
 
     public JsonNode validate(JsonNode plan, Limits limits) {
         graphs.validate(plan);
+        String executionMode = plan.path("mode").asText();
+        requireEnabled("supervisor", executionMode);
         Map<String, JsonNode> nodes = new LinkedHashMap<>();
         for (JsonNode node : plan.path("nodes")) nodes.put(node.path("node_id").asText(), node);
         long tokens = 0;
@@ -51,6 +61,7 @@ public final class DelegationValidator {
             String id = entry.getKey();
             JsonNode node = entry.getValue();
             String roleName = node.path("role").asText();
+            requireEnabled(roleName, executionMode);
             AgentCatalog.Role role = catalog.require(roleName);
             if (!limits.allowedRoles().contains(roleName)) throw invalid("role is outside host allow-list: " + roleName);
 
@@ -87,6 +98,13 @@ public final class DelegationValidator {
         if (tokens > limits.maxTotalTokens()) throw invalid("total token budget exceeded");
         if (cost > limits.maxTotalCostMicros()) throw invalid("total cost budget exceeded");
         return plan;
+    }
+
+    private void requireEnabled(String role, String executionMode) {
+        if (killSwitch == null) return;
+        OperationalKillSwitch.Decision decision = killSwitch.decision(
+                "agent-runtime", "agent.execute", role, executionMode);
+        if (!decision.allowed()) throw invalid("kill switch denied " + role + ": " + decision.reason());
     }
 
     private static String perimeter(String id, Map<String, JsonNode> nodes) {

@@ -7,6 +7,8 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Set;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -79,6 +81,24 @@ class DelegationValidatorTest {
 
             assertThatThrownBy(() -> validator.validate(candidate, limits()))
                     .as(field).hasMessageContaining("child delegation budget exceeded");
+        }
+    }
+
+    @Test
+    void refusesADagWhoseModeWasDisabledAfterPlanning() throws Exception {
+        Path control = Files.createTempFile("delegation-kill-switch", ".properties");
+        try {
+            Files.writeString(control, "revision=1\nmodes.disabled=HIERARCHICAL_CANARY\n");
+            DelegationValidator guarded = new DelegationValidator(new AgentCatalog(), new DelegationPlanValidator(),
+                    new com.example.aifactory.config.DelegationPolicyProperties(2, 4),
+                    new HierarchicalBudgetPolicy(), new OperationalKillSwitch(control));
+            JsonNode candidate = plan("src/main", 1000, "developer", "code-agent");
+            ((tools.jackson.databind.node.ObjectNode) candidate).put("mode", "HIERARCHICAL_CANARY");
+
+            assertThatThrownBy(() -> guarded.validate(candidate, limits()))
+                    .hasMessageContaining("mode_kill_switch");
+        } finally {
+            Files.deleteIfExists(control);
         }
     }
 

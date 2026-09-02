@@ -181,10 +181,15 @@ public final class AgentToolLoop {
         BLOCKED, CANCELLED, CONTRACT_ERROR, TOOL_ERROR, POLICY_DENIED
     }
 
-    public record Actor(String subject, String role) {
+    public record Actor(String subject, String role, String executionMode) {
+        public Actor(String subject, String role) {
+            this(subject, role, "PIPELINE");
+        }
+
         public Actor {
-            if (subject == null || subject.isBlank() || role == null || role.isBlank()) {
-                throw new IllegalArgumentException("Host actor subject and role are required");
+            if (subject == null || subject.isBlank() || role == null || role.isBlank()
+                    || !OperationalKillSwitch.EXECUTION_MODES.contains(executionMode)) {
+                throw new IllegalArgumentException("Host actor subject, role and execution mode are required");
             }
         }
     }

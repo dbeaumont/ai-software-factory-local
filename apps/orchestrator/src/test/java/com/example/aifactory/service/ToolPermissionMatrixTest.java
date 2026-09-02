@@ -1,7 +1,10 @@
 package com.example.aifactory.service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,5 +62,18 @@ class ToolPermissionMatrixTest {
             }
         }
         assertFalse(matrix.isAllowed(new AgentToolLoop.Actor("task", "invented-agent"), "context.read_file"));
+    }
+
+    @Test
+    void appliesTheRoleModeKillSwitchToEveryAgentToolCall(@TempDir Path temp) throws Exception {
+        Path file = temp.resolve("kill-switch.properties");
+        Files.writeString(file,
+                "revision=1\nrole-modes.disabled=developer@HIERARCHICAL_CANARY\n");
+        ToolPermissionMatrix guarded = ToolPermissionMatrix.readOnlyAgents(new OperationalKillSwitch(file));
+
+        assertFalse(guarded.isAllowed(new AgentToolLoop.Actor(
+                "task", "developer", "HIERARCHICAL_CANARY"), "context.read_file"));
+        assertTrue(guarded.isAllowed(new AgentToolLoop.Actor(
+                "task", "developer", "HIERARCHICAL_ACTIVE"), "context.read_file"));
     }
 }

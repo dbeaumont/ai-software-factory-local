@@ -16,6 +16,7 @@ public final class AgentRuntime implements AgentExecutor {
     private final MultiAgentContractValidator contracts;
     private final HierarchicalBudgetPolicy budgets;
     private final TaskUsageLedger usage;
+    private final OperationalKillSwitch killSwitch;
 
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts) {
@@ -27,20 +28,36 @@ public final class AgentRuntime implements AgentExecutor {
         this(prompts, llm, toolHost, contracts, budgets, new TaskUsageLedger(budgets));
     }
 
-    @Autowired
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
                         TaskUsageLedger usage) {
+        this(prompts, llm, toolHost, contracts, budgets, usage, null);
+    }
+
+    @Autowired
+    public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
+                        MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
+                        TaskUsageLedger usage, OperationalKillSwitch killSwitch) {
         this.prompts = prompts;
         this.llm = llm;
         this.toolHost = toolHost;
         this.contracts = contracts;
         this.budgets = budgets;
         this.usage = usage;
+        this.killSwitch = killSwitch;
     }
 
     @Override
     public Result execute(Invocation invocation) {
+        if (killSwitch != null) {
+            OperationalKillSwitch.Decision decision = killSwitch.decision(
+                    "agent-runtime", "agent.execute", invocation.role(), invocation.executionMode());
+            if (!decision.allowed()) {
+                throw new AgentToolLoop.AgentLoopException("kill_switch",
+                        "Agent invocation disabled by operations: " + decision.reason(),
+                        AgentToolLoop.StopCondition.POLICY_DENIED);
+            }
+        }
         budgets.validateInvocation(invocation.role(), invocation.budget());
         if (invocation.allowedTools().stream().anyMatch(AgentRuntime::effectfulTool)) {
             throw new IllegalArgumentException("Effectful sandbox, assurance and SCM tools cannot be injected into AgentRuntime");
@@ -64,7 +81,8 @@ public final class AgentRuntime implements AgentExecutor {
                 invocation.taskId(), invocation.attemptId(), usageLane(invocation.role()),
                 new TaskUsageLedger.Delta(delta.inputTokens(), delta.outputTokens(), delta.costMicros(),
                         delta.turns(), 0)));
-        AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(invocation.taskId(), invocation.role()),
+        AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(
+                        invocation.taskId(), invocation.role(), invocation.executionMode()),
                 prompt, invocation.untrustedInput(), invocation.budget());
         JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),
                 new MultiAgentContractValidator.ContractContext(invocation.taskId(), invocation.attemptId(),
@@ -84,12 +102,21 @@ public final class AgentRuntime implements AgentExecutor {
 
     public record Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,
                              String outputContract, Set<String> allowedTools, Set<String> allowedReferenceIds,
-                             String untrustedInput, AgentToolLoop.Budget budget) {
+                             String untrustedInput, AgentToolLoop.Budget budget, String executionMode) {
+        public Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,
+                          String outputContract, Set<String> allowedTools, Set<String> allowedReferenceIds,
+                          String untrustedInput, AgentToolLoop.Budget budget) {
+            this(taskId, attemptId, sourceCommit, role, promptName, outputContract, allowedTools,
+                    allowedReferenceIds, untrustedInput, budget, "HIERARCHICAL_ACTIVE");
+        }
+
         public Invocation {
             if (taskId == null || taskId.isBlank() || attemptId == null || attemptId.isBlank()
                     || sourceCommit == null || !sourceCommit.matches("[0-9a-f]{40}")
                     || role == null || role.isBlank() || promptName == null || promptName.isBlank()
-                    || outputContract == null || outputContract.isBlank() || untrustedInput == null || budget == null) {
+                    || outputContract == null || outputContract.isBlank() || untrustedInput == null || budget == null
+                    || !OperationalKillSwitch.EXECUTION_MODES.contains(executionMode)
+                    || "PIPELINE".equals(executionMode)) {
                 throw new IllegalArgumentException("Agent invocation requires explicit identity, prompt, contract and budget");
             }
             allowedTools = Set.copyOf(allowedTools);

@@ -30,7 +30,7 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
         }
         if (!permissions.getOrDefault(actor.role(), Set.of()).contains(toolName)) return false;
         String server = toolName.contains(".") ? toolName.substring(0, toolName.indexOf('.')) : "unknown";
-        return killSwitch == null || killSwitch.decision(server, toolName, actor.role()).allowed();
+        return killSwitch == null || killSwitch.decision(server, toolName, actor.role(), actor.executionMode()).allowed();
     }
 
     public static ToolPermissionMatrix readOnlyAgents() {
