@@ -367,7 +367,7 @@
 - [x] **MAH-228** — Afficher état, durée, tours, tokens, coût et outils utilisés par délégation. _(La projection enrichie expose ces métriques et outils avec valeurs anciennes normalisées à zéro ; chaque nœud du DAG les rend sans masquer son état.)_
 - [x] **MAH-229** — Afficher scopes Code, fichiers touchés et collisions éventuelles. _(Un `codeImpact` validé et stable porte scopes, chemins touchés et collisions ; le DAG les affiche et signale explicitement toute collision.)_
 - [x] **MAH-230** — Afficher les preuves, leur statut et les digests sans contenu sensible par défaut. _(La section Preuves rend uniquement type, statut, classification, taille, SHA-256 et URI autorisée ; elle ne lit ni n'affiche aucun contenu.)_
-- [ ] **MAH-231** — Présenter les contradictions et alternatives avant toute décision humaine.
+- [x] **MAH-231** — Présenter les contradictions et alternatives avant toute décision humaine. _(Chaque demande relie contradiction, sévérité et alternatives ordonnées avec conséquences/recommandation ; API et UI bloquent l'approbation tant qu'un choix reste en attente.)_
 - [ ] **MAH-232** — Lier l'approbation au manifeste final et invalider l'écran si celui-ci change.
 - [ ] **MAH-233** — Ajouter les actions annuler, relancer un nœud autorisé et basculer vers le chemin de repli.
 

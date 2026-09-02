@@ -205,17 +205,34 @@ public class TaskState {
 
     public synchronized void recordHumanAction(String requestId, String contradictionId, String domain,
                                                String question, String objectDigest, String status) {
+        recordHumanAction(requestId, contradictionId, domain, question, objectDigest, status, List.of());
+    }
+
+    public synchronized void recordHumanAction(String requestId, String contradictionId, String domain,
+                                               String question, String objectDigest, String status,
+                                               List<TaskView.DecisionOptionView> alternatives) {
         if (!validProjectionId(requestId) || !validProjectionId(contradictionId)
                 || !List.of("PRODUCT", "ARCHITECTURE", "SECURITY", "DATA").contains(domain)
                 || question == null || question.isBlank() || question.length() > 1_000
                 || objectDigest == null || !objectDigest.matches("[0-9a-f]{64}")
                 || !List.of("PENDING", "ANSWERED", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED")
-                .contains(status)) {
+                .contains(status) || !validAlternatives(alternatives)) {
             throw new IllegalArgumentException("Task human action view is invalid");
         }
         humanActions.put(requestId, new TaskView.HumanActionView(requestId, contradictionId, domain,
-                question, objectDigest, status));
+                question, objectDigest, status, alternatives.stream()
+                .sorted(java.util.Comparator.comparing(TaskView.DecisionOptionView::optionId)).toList()));
         updatedAt = Instant.now();
+    }
+
+    private static boolean validAlternatives(List<TaskView.DecisionOptionView> alternatives) {
+        return alternatives != null && alternatives.size() <= 16
+                && alternatives.stream().map(TaskView.DecisionOptionView::optionId).distinct().count()
+                == alternatives.size() && alternatives.stream().allMatch(option -> option != null
+                && option.optionId() != null && option.optionId().matches("[A-Z][A-Z0-9_-]{0,127}")
+                && option.label() != null && !option.label().isBlank() && option.label().length() <= 256
+                && option.consequence() != null && !option.consequence().isBlank()
+                && option.consequence().length() <= 1_000);
     }
 
     public synchronized void answerHumanAction(String requestId, String decision, String objectDigest,
@@ -236,8 +253,12 @@ public class TaskState {
             throw new IllegalArgumentException("Human decision response is invalid");
         }
         humanActions.put(requestId, new TaskView.HumanActionView(action.requestId(), action.contradictionId(),
-                action.domain(), action.question(), action.objectDigest(), "ANSWERED"));
+                action.domain(), action.question(), action.objectDigest(), "ANSWERED", action.alternatives()));
         recordDecision("human-" + requestId, action.contradictionId(), "human-decision", decision, actor);
+    }
+
+    public synchronized boolean hasPendingHumanActions() {
+        return humanActions.values().stream().anyMatch(action -> "PENDING".equals(action.status()));
     }
 
     public synchronized void cancel(String reason, String actor) {
@@ -251,7 +272,7 @@ public class TaskState {
         }
         humanActions.replaceAll((id, action) -> "PENDING".equals(action.status())
                 ? new TaskView.HumanActionView(action.requestId(), action.contradictionId(), action.domain(),
-                action.question(), action.objectDigest(), "CANCELLED") : action);
+                action.question(), action.objectDigest(), "CANCELLED", action.alternatives()) : action);
         transition(TaskStatus.CANCELLED, "Cancelled by " + actor + ": " + reason);
     }
 

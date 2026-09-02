@@ -80,5 +80,17 @@ public record TaskView(
                                String decision, String author) {}
 
     public record HumanActionView(String requestId, String contradictionId, String domain,
-                                  String question, String objectDigest, String status) {}
+                                  String question, String objectDigest, String status,
+                                  List<DecisionOptionView> alternatives) {
+        public HumanActionView {
+            alternatives = alternatives == null ? List.of() : List.copyOf(alternatives);
+        }
+
+        public HumanActionView(String requestId, String contradictionId, String domain,
+                               String question, String objectDigest, String status) {
+            this(requestId, contradictionId, domain, question, objectDigest, status, List.of());
+        }
+    }
+
+    public record DecisionOptionView(String optionId, String label, String consequence, boolean recommended) {}
 }

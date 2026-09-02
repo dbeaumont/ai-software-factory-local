@@ -67,4 +67,16 @@ class MultiAgentUiContractTest {
                 .doesNotContain("artifact.content");
         assertThat(css).contains(".evidence-item", ".evidence-header");
     }
+
+    @Test
+    void presentsContradictionsAndAlternativesBeforeHumanApproval() throws Exception {
+        String html = Files.readString(WEB.resolve("index.html"));
+        String javascript = Files.readString(WEB.resolve("app.js"));
+        String css = Files.readString(WEB.resolve("pipeline.css"));
+
+        assertThat(html).contains("id=\"human-decision-panel\"", "id=\"human-decision-list\"");
+        assertThat(javascript).contains("function renderHumanDecisions(task)", "task.contradictions",
+                "action.alternatives", "option.consequence", "hasPendingHumanDecision");
+        assertThat(css).contains(".human-contradiction", ".decision-alternatives");
+    }
 }

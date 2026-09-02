@@ -149,6 +149,22 @@ class TaskServiceTest {
         assertEquals(TaskStatus.WAITING_APPROVAL, state.status);
     }
 
+    @Test
+    void rejectsApprovalWhileAHumanDecisionIsPending() {
+        TestableTaskService service = new TestableTaskService();
+        TaskState state = new TaskState("task-176", "AF-0176", new TaskRequest(
+                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
+        state.status = TaskStatus.WAITING_APPROVAL;
+        state.recordHumanAction("decision-1", "contradiction-1", "ARCHITECTURE", "Choose contract",
+                "d".repeat(64), "PENDING");
+        service.memory.save(state);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> service.approve(state.id));
+
+        assertEquals("Human decisions must be answered before approval", error.getMessage());
+        assertEquals(TaskStatus.WAITING_APPROVAL, state.status);
+    }
+
     private static final class TestableTaskService extends TaskService {
         private final InMemoryTaskMemory memory;
 

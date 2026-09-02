@@ -134,6 +134,20 @@ class TaskExecutionViewTest {
     }
 
     @Test
+    void exposesOrderedAlternativesBeforeAHumanDecision() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.recordHumanAction("decision-1", "contradiction-1", "ARCHITECTURE", "Choose contract",
+                "d".repeat(64), "PENDING", java.util.List.of(
+                        new TaskView.DecisionOptionView("OPTION_B", "Break API", "Requires migration", false),
+                        new TaskView.DecisionOptionView("OPTION_A", "Keep API", "Adds adapter", true)));
+
+        assertThat(state.view().humanActions().getFirst().alternatives()).containsExactly(
+                new TaskView.DecisionOptionView("OPTION_A", "Keep API", "Adds adapter", true),
+                new TaskView.DecisionOptionView("OPTION_B", "Break API", "Requires migration", false));
+    }
+
+    @Test
     void bindsHumanResponsesToThePendingObjectAndAuthorizedDomain() {
         TaskState state = new TaskState("task-1", "AF-0001",
                 new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));

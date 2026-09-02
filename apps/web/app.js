@@ -19,6 +19,9 @@ const delegationCount = document.querySelector('#delegation-count');
 const evidencePanel = document.querySelector('#evidence-panel');
 const evidenceList = document.querySelector('#evidence-list');
 const evidenceCount = document.querySelector('#evidence-count');
+const humanDecisionPanel = document.querySelector('#human-decision-panel');
+const humanDecisionList = document.querySelector('#human-decision-list');
+const humanDecisionCount = document.querySelector('#human-decision-count');
 const prLink = document.querySelector('#pr-link');
 const approveButton = document.querySelector('#approve-button');
 const effectConfirmation = document.querySelector('#effect-confirmation');
@@ -165,6 +168,8 @@ function resetTicketDraft() {
   delegationTree.replaceChildren();
   evidencePanel.hidden = true;
   evidenceList.replaceChildren();
+  humanDecisionPanel.hidden = true;
+  humanDecisionList.replaceChildren();
   prLink.hidden = true;
   prLink.removeAttribute('href');
   approveButton.hidden = true;
@@ -569,6 +574,53 @@ function formatBytes(value) {
   return `${(bytes / 1_048_576).toFixed(1)} Mio`;
 }
 
+function renderHumanDecisions(task) {
+  const actions = Array.isArray(task.humanActions) ? task.humanActions : [];
+  const contradictions = new Map((task.contradictions || []).map((item) => [item.contradictionId, item]));
+  humanDecisionList.replaceChildren();
+  humanDecisionPanel.hidden = actions.length === 0;
+  if (actions.length === 0) return;
+
+  humanDecisionList.append(...actions.map((action) => {
+    const contradiction = contradictions.get(action.contradictionId);
+    const item = document.createElement('article');
+    item.className = `human-decision status-${String(action.status || 'unknown').toLowerCase()}`;
+    const status = document.createElement('span');
+    status.className = 'human-decision-status';
+    status.textContent = `${action.domain || 'DOMAINE'} · ${action.status || 'UNKNOWN'}`;
+    const question = document.createElement('strong');
+    question.textContent = action.question || 'Décision requise';
+    item.append(status, question);
+    if (contradiction) {
+      const conflict = document.createElement('p');
+      conflict.className = `human-contradiction severity-${String(contradiction.severity || 'unknown').toLowerCase()}`;
+      conflict.textContent = `${contradiction.type || 'CONTRADICTION'} · ${contradiction.severity || 'UNKNOWN'} — ${contradiction.subject}`;
+      item.append(conflict);
+    }
+    const alternatives = document.createElement('ol');
+    alternatives.className = 'decision-alternatives';
+    const options = Array.isArray(action.alternatives) ? action.alternatives : [];
+    if (options.length === 0) {
+      const missing = document.createElement('li');
+      missing.textContent = 'Aucune alternative structurée disponible.';
+      alternatives.append(missing);
+    } else {
+      options.forEach((option) => {
+        const choice = document.createElement('li');
+        const label = document.createElement('strong');
+        label.textContent = `${option.label}${option.recommended ? ' · recommandée' : ''}`;
+        const consequence = document.createElement('small');
+        consequence.textContent = option.consequence;
+        choice.append(label, consequence);
+        alternatives.append(choice);
+      });
+    }
+    item.append(alternatives);
+    return item;
+  }));
+  humanDecisionCount.textContent = `${actions.filter((action) => action.status === 'PENDING').length} en attente`;
+}
+
 function renderTask(task) {
   activeTask = task;
   restoreTicketFields(task);
@@ -586,9 +638,11 @@ function renderTask(task) {
   renderPipeline(task);
   renderDelegationDag(task);
   renderEvidence(task);
+  renderHumanDecisions(task);
   proposalButton.hidden = !task.patch || task.status === 'PR_CREATED';
   reviewButton.hidden = !task.review;
-  approveButton.hidden = task.status !== 'WAITING_APPROVAL';
+  const hasPendingHumanDecision = (task.humanActions || []).some((action) => action.status === 'PENDING');
+  approveButton.hidden = task.status !== 'WAITING_APPROVAL' || hasPendingHumanDecision;
   renderPendingEffect(task.pendingEffect, task.status === 'WAITING_APPROVAL');
   prLink.hidden = !task.pullRequestUrl;
   if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);

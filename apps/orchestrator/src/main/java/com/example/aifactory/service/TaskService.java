@@ -72,6 +72,8 @@ public class TaskService {
         TaskState state = requireTask(id);
         if (state.status != TaskStatus.WAITING_APPROVAL)
             throw new IllegalStateException("Task is not waiting for approval");
+        if (state.hasPendingHumanActions())
+            throw new IllegalStateException("Human decisions must be answered before approval");
         if (state.pendingEffect == null || !state.pendingEffect.confirmationRequired()
                 || !"ALLOW".equals(state.pendingEffect.policyDecision())) {
             throw new IllegalStateException("No policy-approved effect is awaiting confirmation");
