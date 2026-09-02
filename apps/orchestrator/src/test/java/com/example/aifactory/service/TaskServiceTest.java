@@ -6,6 +6,7 @@ import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.model.PendingEffect;
 import com.example.aifactory.model.ManifestApprovalRequest;
+import com.example.aifactory.model.OperatorActionRequest;
 import com.example.aifactory.workflow.WorkflowCoordinator;
 import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class TaskServiceTest {
     @Test
@@ -188,6 +190,29 @@ class TaskServiceTest {
         assertEquals(TaskStatus.APPROVED, state.status);
     }
 
+    @Test
+    void auditsApprovalAndExecutionModeChange() {
+        HashChainedSecurityAuditJournal journal = new HashChainedSecurityAuditJournal(new byte[32]);
+        TestableTaskService service = new TestableTaskService(new InMemoryTaskMemory(), journal);
+        TaskState approval = new TaskState("task-approval", "AF-0200", new TaskRequest(
+                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
+        approval.status = TaskStatus.WAITING_APPROVAL;
+        approval.pendingEffect = new PendingEffect("scm.create_draft_pull_request", java.util.Map.of(),
+                "Create PR", "ALLOW", true);
+        service.memory.save(approval);
+        TaskState fallback = new TaskState("task-fallback", "AF-0201", new TaskRequest(
+                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
+        fallback.bindExecution("HIERARCHICAL_ACTIVE", "run-1", "dag-v4", 10_000, 1_000_000, 20);
+        service.memory.save(fallback);
+
+        service.approve(approval.id);
+        service.fallback(fallback.id, new OperatorActionRequest("dependency unavailable", "operator"));
+
+        assertThat(journal.list()).extracting(SecurityAuditJournal.Entry::type).containsExactly(
+                SecurityAuditJournal.EventType.APPROVAL, SecurityAuditJournal.EventType.MODE_CHANGE);
+        assertThat(journal.verifyIntegrity()).isTrue();
+    }
+
     private static final class TestableTaskService extends TaskService {
         private final InMemoryTaskMemory memory;
 
@@ -200,6 +225,14 @@ class TaskServiceTest {
                 @Override public void start(TaskState task) {}
                 @Override public void resumeAfterApproval(TaskState task) {}
             }, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            this.memory = memory;
+        }
+
+        private TestableTaskService(InMemoryTaskMemory memory, SecurityAuditJournal audit) {
+            super(null, null, new WorkflowCoordinator() {
+                @Override public void start(TaskState task) {}
+                @Override public void resumeAfterApproval(TaskState task) {}
+            }, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), audit);
             this.memory = memory;
         }
     }

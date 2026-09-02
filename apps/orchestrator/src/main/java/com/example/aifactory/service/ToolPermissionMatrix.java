@@ -12,15 +12,22 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
             "evidence.store", "evidence.create_manifest", "scm.create_draft_pull_request");
     private final Map<String, Set<String>> permissions;
     private final OperationalKillSwitch killSwitch;
+    private final SecurityAuditJournal audit;
 
     public ToolPermissionMatrix(Map<String, Set<String>> permissions) {
-        this(permissions, null);
+        this(permissions, null, null);
     }
 
     public ToolPermissionMatrix(Map<String, Set<String>> permissions, OperationalKillSwitch killSwitch) {
+        this(permissions, killSwitch, null);
+    }
+
+    public ToolPermissionMatrix(Map<String, Set<String>> permissions, OperationalKillSwitch killSwitch,
+                                SecurityAuditJournal audit) {
         this.permissions = permissions.entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
                 Map.Entry::getKey, entry -> Set.copyOf(entry.getValue())));
         this.killSwitch = killSwitch;
+        this.audit = audit;
     }
 
     @Override
@@ -28,9 +35,14 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
         if (actor == null || toolName == null || toolName.isBlank()) {
             return false;
         }
-        if (!permissions.getOrDefault(actor.role(), Set.of()).contains(toolName)) return false;
+        boolean allowed = permissions.getOrDefault(actor.role(), Set.of()).contains(toolName);
         String server = toolName.contains(".") ? toolName.substring(0, toolName.indexOf('.')) : "unknown";
-        return killSwitch == null || killSwitch.decision(server, toolName, actor.role(), actor.executionMode()).allowed();
+        allowed = allowed && (killSwitch == null
+                || killSwitch.decision(server, toolName, actor.role(), actor.executionMode()).allowed());
+        if (audit != null) audit.append(allowed ? SecurityAuditJournal.EventType.AUTHORIZATION
+                        : SecurityAuditJournal.EventType.REFUSAL,
+                actor.subject(), actor.role(), toolName, allowed ? "ALLOW" : "DENY");
+        return allowed;
     }
 
     public static ToolPermissionMatrix readOnlyAgents() {
@@ -38,6 +50,10 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
     }
 
     public static ToolPermissionMatrix readOnlyAgents(OperationalKillSwitch killSwitch) {
+        return readOnlyAgents(killSwitch, null);
+    }
+
+    public static ToolPermissionMatrix readOnlyAgents(OperationalKillSwitch killSwitch, SecurityAuditJournal audit) {
         Set<String> context = Set.of(
                 "context.list_tree", "context.search_code", "context.read_file",
                 "context.get_repository_rules", "context.get_dependencies", "context.get_symbols");
@@ -69,7 +85,7 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
                 Map.entry("planner", union(context, Set.of("evidence.get_summary"))),
                 Map.entry("reviewer", union(context, Set.of("evidence.get_summary", "evidence.read"))),
                 Map.entry("tester", Set.of("context.search_code", "context.read_file",
-                        "context.get_dependencies", "context.get_symbols"))), killSwitch);
+                        "context.get_dependencies", "context.get_symbols"))), killSwitch, audit);
     }
 
     private static Set<String> union(Set<String> left, Set<String> right) {

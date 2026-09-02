@@ -17,6 +17,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,15 +33,23 @@ public class TaskService {
     private final WorkflowCoordinator coordinator;
     private final TaskMemory memory;
     private final Counter submittedTasks;
+    private final SecurityAuditJournal audit;
 
     public TaskService(AiFactoryProperties props, LlmGatewayClient llm, WorkflowCoordinator coordinator, TaskMemory memory,
                        MeterRegistry metrics) {
+        this(props, llm, coordinator, memory, metrics, null);
+    }
+
+    @Autowired
+    public TaskService(AiFactoryProperties props, LlmGatewayClient llm, WorkflowCoordinator coordinator, TaskMemory memory,
+                       MeterRegistry metrics, SecurityAuditJournal audit) {
         this.props = props;
         this.llm = llm;
         this.coordinator = coordinator;
         this.memory = memory;
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted")
                 .description("Tasks submitted to the factory").register(metrics);
+        this.audit = audit;
     }
 
     public TaskView create(TaskRequest request) {
@@ -105,6 +114,9 @@ public class TaskService {
         }
         state.humanApproved = true;
         state.transition(TaskStatus.APPROVED, "Human approval recorded");
+        if (audit != null) audit.append(SecurityAuditJournal.EventType.APPROVAL, state.id,
+                "human-approver", state.pendingEffect.manifestId() == null
+                        ? state.pendingEffect.tool() : state.pendingEffect.manifestId(), "APPROVE");
         coordinator.resumeAfterApproval(state);
         return state.view();
     }
@@ -135,6 +147,8 @@ public class TaskService {
         if (request == null) throw new IllegalArgumentException("Operator action request is required");
         TaskState state = requireTask(id);
         state.switchToPipelineFallback(request.reason(), request.actor());
+        if (audit != null) audit.append(SecurityAuditJournal.EventType.MODE_CHANGE, state.id,
+                request.actor(), "execution-mode", "PIPELINE");
         return state.view();
     }
 

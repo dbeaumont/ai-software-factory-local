@@ -30,19 +30,27 @@ public final class AgentContextToolHost {
     private final McpFactoryProperties properties;
     private final OperationalKillSwitch killSwitch;
     private final EvidenceRepository evidence;
+    private final SecurityAuditJournal audit;
 
     @Autowired
     public AgentContextToolHost(McpToolInvoker invoker, McpFactoryProperties properties,
-                                OperationalKillSwitch killSwitch, EvidenceRepository evidence) {
+                                OperationalKillSwitch killSwitch, EvidenceRepository evidence,
+                                SecurityAuditJournal audit) {
         this.invoker = invoker;
         this.properties = properties;
         this.killSwitch = killSwitch;
         this.evidence = evidence;
+        this.audit = audit;
     }
 
     AgentContextToolHost(McpToolInvoker invoker, McpFactoryProperties properties,
                          OperationalKillSwitch killSwitch) {
-        this(invoker, properties, killSwitch, null);
+        this(invoker, properties, killSwitch, null, null);
+    }
+
+    AgentContextToolHost(McpToolInvoker invoker, McpFactoryProperties properties,
+                         OperationalKillSwitch killSwitch, EvidenceRepository evidence) {
+        this(invoker, properties, killSwitch, evidence, null);
     }
 
     public List<LlmGatewayClient.ToolDefinition> definitions() {
@@ -102,7 +110,7 @@ public final class AgentContextToolHost {
     }
 
     public AgentToolLoop.ToolAuthorization authorization() {
-        return ToolPermissionMatrix.readOnlyAgents(killSwitch);
+        return ToolPermissionMatrix.readOnlyAgents(killSwitch, audit);
     }
 
     private static LlmGatewayClient.ToolDefinition definition(String name, String description,
