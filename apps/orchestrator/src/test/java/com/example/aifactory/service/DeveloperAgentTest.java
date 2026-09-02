@@ -62,6 +62,20 @@ class DeveloperAgentTest {
     }
 
     @Test
+    void rejectsAProposalProducedFromAnotherDelegationsWorktree() throws Exception {
+        JsonNode fixtures = mapper.readTree(Files.readString(
+                RESOURCES.resolve("multiagents/fixtures/golden-contracts-v1.json"))).path("documents");
+        var divergent = fixtures.path("patch-proposal-v1").deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) divergent).put(
+                "worktree_id", "worktree-other-0000000000000000");
+        DeveloperAgent developer = new DeveloperAgent(
+                new RecordingExecutor(divergent), new AgentCatalog(), contracts, new PatchScopeValidator());
+
+        assertThatThrownBy(() -> developer.execute(request(fixtures.path("code-task-v1").toString())))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("not bound");
+    }
+
+    @Test
     void rejectsEveryFileOutsideTheAssignedWriteScopeBeforeSandbox() throws Exception {
         JsonNode fixtures = mapper.readTree(Files.readString(
                 RESOURCES.resolve("multiagents/fixtures/golden-contracts-v1.json"))).path("documents");

@@ -4,7 +4,7 @@
   "title": "CodeTask v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "code_task_id", "task_id", "attempt_id", "delegation_plan_id", "node_id", "source_commit", "architecture_assessment_id", "objective", "risk_class", "scope", "scope_digest", "dependencies", "acceptance_criteria", "budget", "required_approval_ids", "issued_at", "deadline"],
+  "required": ["schema_version", "code_task_id", "task_id", "attempt_id", "delegation_plan_id", "node_id", "source_commit", "worktree_id", "architecture_assessment_id", "objective", "risk_class", "scope", "scope_digest", "dependencies", "acceptance_criteria", "budget", "required_approval_ids", "issued_at", "deadline"],
   "properties": {
     "schema_version": {"const": "1"},
     "code_task_id": {"$ref": "#/$defs/id"},
@@ -13,6 +13,7 @@
     "delegation_plan_id": {"$ref": "#/$defs/id"},
     "node_id": {"$ref": "#/$defs/id"},
     "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "worktree_id": {"type": "string", "pattern": "^worktree-[A-Za-z0-9_-]{1,64}-[0-9a-f]{16}$"},
     "architecture_assessment_id": {"$ref": "#/$defs/id"},
     "objective": {"type": "string", "minLength": 1, "maxLength": 2000},
     "risk_class": {"enum": ["R0", "R1", "R2", "R3"]},

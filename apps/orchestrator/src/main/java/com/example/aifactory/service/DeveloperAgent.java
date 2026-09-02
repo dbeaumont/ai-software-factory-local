@@ -44,6 +44,7 @@ public final class DeveloperAgent {
         if (!task.path("code_task_id").asText().equals(proposal.path("code_task_id").asText())
                 || !task.path("node_id").asText().equals(proposal.path("node_id").asText())
                 || !task.path("source_commit").asText().equals(proposal.path("source_commit").asText())
+                || !task.path("worktree_id").asText().equals(proposal.path("worktree_id").asText())
                 || !task.path("scope_digest").asText().equals(proposal.path("scope_digest").asText())) {
             throw new SecurityException("Patch proposal is not bound to the assigned code task and scope");
         }

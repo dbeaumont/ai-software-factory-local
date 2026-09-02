@@ -312,7 +312,7 @@
 
 ## 12. Lot 8 — Worktrees, patches parallèles et intégration
 
-- [ ] **MAH-180** — Créer un worktree ou snapshot isolé par délégation Code.
+- [x] **MAH-180** — Créer un worktree ou snapshot isolé par délégation Code. _(`CodeWorkspaceManager` alloue hors du workspace source un worktree Git détaché à identifiant déterministe par tâche/tentative/nœud ; les contrats Code et Patch portent ce `worktree_id`, et `DeveloperAgent` refuse toute proposition issue d'une autre allocation.)_
 - [ ] **MAH-181** — Épingler chaque worktree au même commit source vérifié.
 - [ ] **MAH-182** — Définir les scopes par fichiers, répertoires ou modules avec règles de chevauchement.
 - [ ] **MAH-183** — Refuser le parallélisme si les scopes ne peuvent pas être prouvés disjoints.
