@@ -425,7 +425,7 @@
 ### Tests de résilience et charge
 
 - [ ] **MAH-278** — Tuer et redémarrer workers, orchestrateur, Temporal et serveurs MCP à chaque phase critique.
-- [ ] **MAH-279** — Tester latence, partition réseau, réponse tardive, doublon et saturation des queues.
+- [x] **MAH-279** — Tester latence, partition réseau, réponse tardive, doublon et saturation des queues. _(`TemporalFailureModesTest` couvre timeout, réponse tardive ignorée, livraison dupliquée idempotente et queue indisponible ; `ResilientMcpToolInvokerTest` couvre partition MCP, latence, circuit breaker et saturation globale/par serveur/par tâche/par rôle.)_
 - [ ] **MAH-280** — Tester la capacité maximale et vérifier la backpressure plutôt qu'un fan-out incontrôlé.
 - [ ] **MAH-281** — Vérifier nettoyage, rétention et reprise des preuves après tous les états terminaux.
 
