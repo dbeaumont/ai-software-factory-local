@@ -23,6 +23,9 @@ public final class AgentRuntime {
     }
 
     public Result execute(Invocation invocation) {
+        if (invocation.allowedTools().stream().anyMatch(AgentRuntime::effectfulTool)) {
+            throw new IllegalArgumentException("Effectful sandbox, assurance and SCM tools cannot be injected into AgentRuntime");
+        }
         List<LlmGatewayClient.ToolDefinition> tools = toolHost.definitions().stream()
                 .filter(definition -> invocation.allowedTools().contains(definition.name()))
                 .toList();
@@ -44,6 +47,10 @@ public final class AgentRuntime {
                 new MultiAgentContractValidator.ContractContext(invocation.taskId(), invocation.attemptId(),
                         invocation.allowedReferenceIds()));
         return new Result(document, fingerprint, result.turns(), result.tokens(), result.costMicros());
+    }
+
+    private static boolean effectfulTool(String name) {
+        return name.startsWith("sandbox.") || name.startsWith("assurance.") || name.startsWith("scm.");
     }
 
     public record Invocation(String taskId, String attemptId, String sourceCommit, String role, String promptName,

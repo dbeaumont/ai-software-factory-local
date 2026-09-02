@@ -47,8 +47,20 @@ class AgentRuntimeTest {
         when(host.definitions()).thenReturn(List.of());
         AgentRuntime runtime = new AgentRuntime(prompts, mock(LlmGatewayClient.class), host,
                 new MultiAgentContractValidator(new ObjectMapper()));
-        assertThatThrownBy(() -> runtime.execute(invocation(Set.of("scm.create_draft_pull_request"))))
+        assertThatThrownBy(() -> runtime.execute(invocation(Set.of("context.unknown"))))
                 .hasMessageContaining("unknown or unavailable tool");
+    }
+
+    @Test
+    void rejectsEffectfulToolsEvenIfAHostAccidentallyAdvertisesThem() {
+        AgentContextToolHost host = mock(AgentContextToolHost.class);
+        when(host.definitions()).thenReturn(List.of(new LlmGatewayClient.ToolDefinition(
+                "sandbox.apply_patch", "effect", Map.of("type", "object"))));
+        AgentRuntime runtime = new AgentRuntime(mock(PromptService.class), mock(LlmGatewayClient.class), host,
+                new MultiAgentContractValidator(new ObjectMapper()));
+
+        assertThatThrownBy(() -> runtime.execute(invocation(Set.of("sandbox.apply_patch"))))
+                .hasMessageContaining("cannot be injected");
     }
 
     private static AgentRuntime.Invocation invocation(Set<String> tools) {
