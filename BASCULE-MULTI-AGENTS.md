@@ -206,7 +206,7 @@
 
 - [x] **MAH-096** — Brancher `evidence-mcp` dans la configuration et le registre client de l'orchestrateur. _(Connexion Spring AI, contrat client épinglé, variables Compose et dépendance de readiness.)_
 - [x] **MAH-097** — Stocker plans, évaluations, patches, résultats d'intégration et reviews par `evidence.store`. _(Adaptateur EvidenceRepository MCP avec contenu Base64, liaison stricte et cinq familles d'artefacts testées.)_
-- [ ] **MAH-098** — Créer le manifeste final avec `evidence.create_manifest` avant l'approbation humaine.
+- [x] **MAH-098** — Créer le manifeste final avec `evidence.create_manifest` avant l'approbation humaine. _(Gate applicatif ne construisant l'ApprovalRequest qu'après validation du manifeste MCP `COMPLETE`.)_
 - [ ] **MAH-099** — Réserver `evidence.read` au Reviewer, au workflow et aux usages humains audités.
 - [ ] **MAH-100** — Fournir aux autres agents des résumés ou extraits bornés, jamais les preuves brutes par défaut.
 - [ ] **MAH-101** — Vérifier URI, digest, tâche, tentative, classification et statut à chaque lecture.

@@ -54,7 +54,47 @@ public final class McpEvidenceRepository implements EvidenceRepository {
 
     @Override
     public StoredManifest createManifest(ManifestRequest request) {
-        throw new UnsupportedOperationException("manifest migration is pending");
+        if (!server.enabled()) throw new IllegalStateException("evidence MCP server is disabled");
+        if (request == null || !"workflow".equals(request.actor())) {
+            throw new SecurityException("only the workflow may create an evidence manifest");
+        }
+        Map<String, Object> artifacts = new LinkedHashMap<>();
+        request.artifacts().forEach((name, reference) -> artifacts.put(name, Map.of(
+                "uri", reference.uri(), "digest", reference.digest(), "status", reference.status())));
+        PolicyDecision decision = request.policyDecision();
+        Map<String, Object> policy = new LinkedHashMap<>();
+        policy.put("schema_version", decision.schemaVersion());
+        policy.put("task_id", decision.taskId());
+        policy.put("attempt_id", decision.attemptId());
+        policy.put("policy_id", decision.policyId());
+        policy.put("policy_version", decision.policyVersion());
+        policy.put("decision", decision.decision());
+        policy.put("reasons", decision.reasons());
+        policy.put("input_digests", decision.inputDigests());
+        policy.put("decided_at", decision.decidedAt().toString());
+        Map<String, Object> arguments = new LinkedHashMap<>();
+        arguments.put("schema_version", "1");
+        arguments.put("task_id", request.taskId());
+        arguments.put("attempt_id", request.attemptId());
+        arguments.put("repository_id", request.repositoryId());
+        arguments.put("source_commit", request.sourceCommit());
+        arguments.put("patch_digest", request.patchDigest());
+        arguments.put("artifacts", Map.copyOf(artifacts));
+        arguments.put("policy_decision", Map.copyOf(policy));
+        arguments.put("actor", request.actor());
+        JsonNode response = mcp.call(server.expectedName(), "evidence.create_manifest", Map.copyOf(arguments));
+        StoredManifest manifest = new StoredManifest(requiredText(response, "manifest_id"),
+                requiredText(response, "uri"), requiredText(response, "digest"), requiredText(response, "status"),
+                requiredText(response, "classification"), Instant.parse(requiredText(response, "retain_until")),
+                Instant.parse(requiredText(response, "created_at")));
+        String expectedUri = "evidence://" + request.taskId() + '/' + request.attemptId()
+                + "/manifest/" + manifest.manifestId();
+        if (!expectedUri.equals(manifest.uri()) || !"COMPLETE".equals(manifest.status())
+                || !manifest.manifestId().matches("[0-9a-f]{64}")
+                || !manifest.digest().matches("[0-9a-f]{64}")) {
+            throw new SecurityException("evidence MCP returned an invalid manifest binding");
+        }
+        return manifest;
     }
 
     @Override
