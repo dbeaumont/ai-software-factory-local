@@ -339,7 +339,7 @@
 - [x] **MAH-203** — Résoudre automatiquement uniquement les contradictions couvertes par une règle déterministe. _(`DeterministicContradictionResolver` applique une matrice versionnée classification/autorité, reste ouvert par défaut et escalade les conflits de même autorité.)_
 - [x] **MAH-204** — Déclencher une délégation ciblée lorsque de nouvelles preuves peuvent résoudre la contradiction. _(`ContradictionEvidenceDelegator` planifie et lance un Child Workflow borné selon une matrice catégorie/preuve/rôle et refuse toute contradiction non ouverte ou hors tentative.)_
 - [x] **MAH-205** — Escalader à l'humain lorsqu'un choix produit, architecture, sécurité ou données reste ouvert. _(`HumanDecisionEscalator` matérialise les options et le rôle propriétaire ; le workflow exige un Signal lié au digest exact et au bon rôle d'approbateur.)_
-- [ ] **MAH-206** — Empêcher le Supervisor d'annuler un échec de tests, qualité, sécurité ou politique.
+- [x] **MAH-206** — Empêcher le Supervisor d'annuler un échec de tests, qualité, sécurité ou politique. _(`SupervisorConsolidationGuard` impose les quatre gates déterministes et interdit `CONSOLIDATE` dès qu'un statut n'est pas `PASSED`.)_
 - [ ] **MAH-207** — Enregistrer chaque arbitrage avec entrées, règle, décision, auteur et preuves.
 - [ ] **MAH-208** — Produire une synthèse finale stable contenant décisions, risques résiduels et points humains.
 - [ ] **MAH-209** — Faire exécuter l'Independent Reviewer après consolidation et avant création de l'effet en attente.

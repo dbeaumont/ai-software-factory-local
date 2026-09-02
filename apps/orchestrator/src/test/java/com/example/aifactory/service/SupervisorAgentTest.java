@@ -65,6 +65,19 @@ class SupervisorAgentTest {
     }
 
     @Test
+    void cannotConsolidateOverTestsQualitySecurityOrPolicyFailure() throws Exception {
+        for (SupervisorConsolidationGuard.Gate failed : SupervisorConsolidationGuard.Gate.values()) {
+            RecordingExecutor runtime = new RecordingExecutor(validPlan());
+            SupervisorAgent supervisor = supervisor(runtime);
+
+            assertThatThrownBy(() -> supervisor.execute(request("CONSOLIDATE", gates(failed))))
+                    .isInstanceOf(SecurityException.class)
+                    .hasMessageContaining(failed.name());
+            assertThat(runtime.invocations).hasSize(1);
+        }
+    }
+
+    @Test
     void validatesTheDagBeforeReturningADecompositionToTheCoordinator() throws Exception {
         tools.jackson.databind.JsonNode cyclic = new ObjectMapper().readTree("""
                 {"nodes":[
@@ -85,17 +98,35 @@ class SupervisorAgentTest {
     }
 
     private static SupervisorAgent.Request request(String operation) {
+        return request(operation, "CONSOLIDATE".equals(operation) ? gates(null) : null);
+    }
+
+    private static SupervisorAgent.Request request(String operation,
+                                                   SupervisorConsolidationGuard.GateBundle gates) {
         return new SupervisorAgent.Request("task-1", "attempt-1", "a".repeat(40), operation,
                 Set.of("result-1"), "untrusted request", new AgentToolLoop.Budget(
                 4, Duration.ofMinutes(2), 4_000, 2_000_000), new DelegationValidator.Limits(
                 Set.of("architecture-agent", "code-agent", "test-agent", "security-agent"),
-                List.of("src"), List.of("src"), 2, 4, 10_000, 10_000_000));
+                List.of("src"), List.of("src"), 2, 4, 10_000, 10_000_000), gates);
+    }
+
+    private static SupervisorConsolidationGuard.GateBundle gates(SupervisorConsolidationGuard.Gate failed) {
+        List<SupervisorConsolidationGuard.GateResult> results = new ArrayList<>();
+        int digest = 1;
+        for (SupervisorConsolidationGuard.Gate gate : SupervisorConsolidationGuard.Gate.values()) {
+            results.add(new SupervisorConsolidationGuard.GateResult(gate,
+                    gate == failed ? SupervisorConsolidationGuard.Status.FAILED
+                            : SupervisorConsolidationGuard.Status.PASSED,
+                    Integer.toHexString(digest++).repeat(64)));
+        }
+        return new SupervisorConsolidationGuard.GateBundle(results);
     }
 
     private static SupervisorAgent supervisor(AgentExecutor runtime) {
         AgentCatalog catalog = new AgentCatalog();
         return new SupervisorAgent(runtime, catalog,
-                new DelegationValidator(catalog, new DelegationPlanValidator()));
+                new DelegationValidator(catalog, new DelegationPlanValidator()),
+                new SupervisorConsolidationGuard());
     }
 
     private static tools.jackson.databind.JsonNode validPlan() throws Exception {
@@ -117,7 +148,9 @@ class SupervisorAgentTest {
 
         @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(document, "f".repeat(64), 1, 100, 10);
+            tools.jackson.databind.JsonNode output = "supervisor-decision-v1".equals(invocation.outputContract())
+                    ? new ObjectMapper().createObjectNode().put("action", "CONSOLIDATE") : document;
+            return new AgentRuntime.Result(output, "f".repeat(64), 1, 100, 10);
         }
     }
 }

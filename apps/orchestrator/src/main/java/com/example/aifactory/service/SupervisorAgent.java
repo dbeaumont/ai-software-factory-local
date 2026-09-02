@@ -10,11 +10,14 @@ public final class SupervisorAgent {
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;
     private final DelegationValidator delegations;
+    private final SupervisorConsolidationGuard consolidationGuard;
 
-    public SupervisorAgent(AgentExecutor runtime, AgentCatalog catalog, DelegationValidator delegations) {
+    public SupervisorAgent(AgentExecutor runtime, AgentCatalog catalog, DelegationValidator delegations,
+                           SupervisorConsolidationGuard consolidationGuard) {
         this.runtime = runtime;
         this.catalog = catalog;
         this.delegations = delegations;
+        this.consolidationGuard = consolidationGuard;
     }
 
     public AgentRuntime.Result execute(Request request) {
@@ -38,6 +41,9 @@ public final class SupervisorAgent {
             }
             delegations.validate(result.document(), request.delegationLimits());
         }
+        if (operation == Operation.CONSOLIDATE) {
+            consolidationGuard.enforce(result.document(), request.consolidationGates());
+        }
         return result;
     }
 
@@ -45,12 +51,20 @@ public final class SupervisorAgent {
 
     public record Request(String taskId, String attemptId, String sourceCommit, String operation,
                           Set<String> allowedReferenceIds, String untrustedInput, AgentToolLoop.Budget budget,
-                          DelegationValidator.Limits delegationLimits) {
+                          DelegationValidator.Limits delegationLimits,
+                          SupervisorConsolidationGuard.GateBundle consolidationGates) {
         public Request {
             if (operation == null || operation.isBlank()) {
                 throw new IllegalArgumentException("Supervisor operation is required");
             }
             allowedReferenceIds = Set.copyOf(allowedReferenceIds);
+        }
+
+        public Request(String taskId, String attemptId, String sourceCommit, String operation,
+                       Set<String> allowedReferenceIds, String untrustedInput, AgentToolLoop.Budget budget,
+                       DelegationValidator.Limits delegationLimits) {
+            this(taskId, attemptId, sourceCommit, operation, allowedReferenceIds, untrustedInput, budget,
+                    delegationLimits, null);
         }
     }
 }
