@@ -1,0 +1,13 @@
+{
+  "suite_id": "recovery-and-retry-v1",
+  "cases": [
+    {"id":"REC-001","ecosystem":"MAVEN","failure":"LLM_WORKER_RESTART","phase":"SPECIALIST_EXECUTION","expected":{"terminal":true,"recovered":true,"duplicate_effects":0}},
+    {"id":"REC-002","ecosystem":"GRADLE","failure":"TEMPORAL_UNAVAILABLE","phase":"WORKFLOW_TASK","expected":{"terminal":true,"recovered":true,"duplicate_effects":0}},
+    {"id":"REC-003","ecosystem":"NPM","failure":"MCP_NETWORK_PARTITION","phase":"CONTEXT_READ","expected":{"terminal":true,"recovered":true,"duplicate_effects":0}},
+    {"id":"REC-004","ecosystem":"MAVEN","failure":"SANDBOX_WORKER_RESTART","phase":"TEST_EXECUTION","expected":{"terminal":true,"recovered":true,"duplicate_effects":0}},
+    {"id":"REC-005","ecosystem":"GRADLE","failure":"EVIDENCE_SERVER_RESTART","phase":"EVIDENCE_READ","expected":{"terminal":true,"recovered":true,"duplicate_effects":0}},
+    {"id":"REC-006","ecosystem":"NPM","failure":"ORCHESTRATOR_RESTART","phase":"WAITING_APPROVAL","expected":{"terminal":true,"recovered":true,"duplicate_effects":0}},
+    {"id":"REC-007","ecosystem":"MAVEN","failure":"LATE_ACTIVITY_RESPONSE","phase":"PATCH_INTEGRATION","expected":{"terminal":true,"recovered":true,"duplicate_effects":0}},
+    {"id":"REC-008","ecosystem":"GRADLE","failure":"DELIVERY_ACK_LOSS","phase":"DRAFT_PR","expected":{"terminal":true,"recovered":true,"duplicate_effects":0}}
+  ]
+}
