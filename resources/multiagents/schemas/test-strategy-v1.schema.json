@@ -4,10 +4,11 @@
   "title": "TestStrategy v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "strategy_id", "task_id", "attempt_id", "source_commit", "objectives", "test_cases", "execution_profiles", "coverage_targets", "evidence", "created_at"],
+  "required": ["schema_version", "strategy_id", "task_id", "attempt_id", "source_commit", "acceptance_criteria", "objectives", "test_cases", "execution_profiles", "coverage_targets", "evidence", "created_at"],
   "properties": {
     "schema_version": {"const": "1"}, "strategy_id": {"$ref": "#/$defs/id"}, "task_id": {"$ref": "#/$defs/id"}, "attempt_id": {"$ref": "#/$defs/id"},
     "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "acceptance_criteria": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"$ref": "#/$defs/acceptanceCriterion"}},
     "objectives": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 1000}},
     "test_cases": {"type": "array", "minItems": 1, "maxItems": 128, "items": {"$ref": "#/$defs/testCase"}},
     "execution_profiles": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"enum": ["maven-test", "gradle-test", "npm-test", "maven-integration", "gradle-integration", "npm-integration"]}},
@@ -17,7 +18,8 @@
   },
   "$defs": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
-    "testCase": {"type": "object", "additionalProperties": false, "required": ["case_id", "level", "objective", "priority", "expected_result"], "properties": {"case_id": {"$ref": "#/$defs/id"}, "level": {"enum": ["UNIT", "COMPONENT", "INTEGRATION", "CONTRACT", "SECURITY", "REGRESSION"]}, "objective": {"type": "string", "minLength": 1, "maxLength": 1000}, "priority": {"enum": ["MUST", "SHOULD", "MAY"]}, "expected_result": {"type": "string", "minLength": 1, "maxLength": 1000}}},
+    "acceptanceCriterion": {"type": "object", "additionalProperties": false, "required": ["criterion_id", "description", "source_reference_id"], "properties": {"criterion_id": {"$ref": "#/$defs/id"}, "description": {"type": "string", "minLength": 1, "maxLength": 1000}, "source_reference_id": {"$ref": "#/$defs/id"}}},
+    "testCase": {"type": "object", "additionalProperties": false, "required": ["case_id", "level", "objective", "priority", "expected_result", "covers_criteria"], "properties": {"case_id": {"$ref": "#/$defs/id"}, "level": {"enum": ["UNIT", "COMPONENT", "INTEGRATION", "CONTRACT", "SECURITY", "REGRESSION"]}, "objective": {"type": "string", "minLength": 1, "maxLength": 1000}, "priority": {"enum": ["MUST", "SHOULD", "MAY"]}, "expected_result": {"type": "string", "minLength": 1, "maxLength": 1000}, "covers_criteria": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}}},
     "coverage": {"type": "object", "additionalProperties": false, "required": ["metric", "minimum"], "properties": {"metric": {"enum": ["LINE", "BRANCH", "REQUIREMENT", "MUTATION"]}, "minimum": {"type": "number", "minimum": 0, "maximum": 1}}},
     "evidence": {"type": "object", "additionalProperties": false, "required": ["uri", "digest"], "properties": {"uri": {"type": "string", "pattern": "^evidence://", "maxLength": 1024}, "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}
   }

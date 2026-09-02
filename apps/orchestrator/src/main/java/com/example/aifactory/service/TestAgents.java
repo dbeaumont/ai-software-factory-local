@@ -14,19 +14,23 @@ public final class TestAgents {
             "test-evidence", "test-assessment-v1");
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;
+    private final TestStrategyValidator strategies;
 
-    public TestAgents(AgentExecutor runtime, AgentCatalog catalog) {
+    public TestAgents(AgentExecutor runtime, AgentCatalog catalog, TestStrategyValidator strategies) {
         this.runtime = runtime;
         this.catalog = catalog;
+        this.strategies = strategies;
     }
 
     public AgentRuntime.Result execute(Request request) {
         String contract = OUTPUT_CONTRACTS.get(request.role());
         if (contract == null) throw new IllegalArgumentException("Role is outside the Tests perimeter");
         AgentCatalog.Role role = catalog.require(request.role());
-        return runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
+        AgentRuntime.Result result = runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
                 request.sourceCommit(), role.name(), role.name(), contract, Set.copyOf(role.tools()),
                 request.allowedReferenceIds(), request.untrustedInput(), request.budget()));
+        if ("test-design".equals(request.role())) strategies.validate(result.document());
+        return result;
     }
 
     public record Request(String taskId, String attemptId, String sourceCommit, String role,

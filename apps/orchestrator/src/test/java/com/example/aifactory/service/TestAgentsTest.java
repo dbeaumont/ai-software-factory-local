@@ -22,9 +22,12 @@ class TestAgentsTest {
     @Test
     @SuppressWarnings("unchecked")
     void separatesCoordinatorDesignAndEvidenceRolesWithDistinctContracts() throws Exception {
-        RecordingExecutor runtime = new RecordingExecutor();
+        tools.jackson.databind.JsonNode strategy = new tools.jackson.databind.ObjectMapper().readTree(
+                Files.readString(RESOURCES.resolve("multiagents/fixtures/golden-contracts-v1.json")))
+                .path("documents").path("test-strategy-v1");
+        RecordingExecutor runtime = new RecordingExecutor(strategy);
         AgentCatalog catalog = new AgentCatalog();
-        TestAgents agents = new TestAgents(runtime, catalog);
+        TestAgents agents = new TestAgents(runtime, catalog, new TestStrategyValidator());
         Map<String, String> contracts = Map.of(
                 "test-agent", "test-assessment-v1",
                 "test-design", "test-strategy-v1",
@@ -54,10 +57,13 @@ class TestAgentsTest {
 
     private static final class RecordingExecutor implements AgentExecutor {
         private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final tools.jackson.databind.JsonNode result;
+
+        private RecordingExecutor(tools.jackson.databind.JsonNode result) { this.result = result; }
 
         @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(null, "f".repeat(64), 1, 10, 1);
+            return new AgentRuntime.Result(result, "f".repeat(64), 1, 10, 1);
         }
     }
 }
