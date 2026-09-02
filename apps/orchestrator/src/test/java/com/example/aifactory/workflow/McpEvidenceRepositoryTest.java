@@ -69,9 +69,9 @@ class McpEvidenceRepositoryTest {
         McpEvidenceRepository repository = new McpEvidenceRepository(mcp, properties());
 
         assertThat(repository.read(new EvidenceRepository.ReadRequest(
-                "task-1", uri, "reviewer", "human-review")).content()).isEqualTo(content);
+                "task-1", "attempt-1", uri, "reviewer", "human-review")).content()).isEqualTo(content);
         assertThatThrownBy(() -> repository.read(new EvidenceRepository.ReadRequest(
-                "task-1", uri, "developer", "human-review"))).isInstanceOf(SecurityException.class);
+                "task-1", "attempt-1", uri, "developer", "human-review"))).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -92,7 +92,7 @@ class McpEvidenceRepositoryTest {
         };
 
         EvidenceRepository.EvidenceSummary summary = new McpEvidenceRepository(mcp, properties())
-                .getSummary("task-1", uri, "architecture-agent");
+                .getSummary("task-1", "attempt-1", uri, "architecture-agent");
 
         assertThat(summary.sizeBytes()).isEqualTo(123);
         assertThat(summary.digest()).isEqualTo(digest);

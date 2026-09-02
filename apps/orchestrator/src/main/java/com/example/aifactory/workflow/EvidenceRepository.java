@@ -10,7 +10,7 @@ public interface EvidenceRepository {
 
     StoredManifest createManifest(ManifestRequest request);
 
-    EvidenceSummary getSummary(String taskId, String uri, String actor);
+    EvidenceSummary getSummary(String taskId, String attemptId, String uri, String actor);
 
     RawEvidence read(ReadRequest request);
 
@@ -44,7 +44,7 @@ public interface EvidenceRepository {
         }
     }
 
-    record ReadRequest(String taskId, String uri, String actor, String purpose) {}
+    record ReadRequest(String taskId, String attemptId, String uri, String actor, String purpose) {}
 
     record StoredEvidence(String uri, String digest, String status, String mediaType, long sizeBytes,
                           String classification, Instant retainUntil, Instant storedAt) {}

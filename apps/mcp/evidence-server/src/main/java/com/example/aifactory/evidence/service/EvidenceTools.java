@@ -52,22 +52,24 @@ public class EvidenceTools {
     @Tool(name = "evidence.get_summary", description = "Return authorized evidence metadata without raw content")
     public EvidenceSummary getSummary(@ToolParam(description = "Contract version") String schema_version,
                                       @ToolParam(description = "Task identifier") String task_id,
+                                      @ToolParam(description = "Attempt identifier") String attempt_id,
                                       @ToolParam(description = "Evidence URI") String uri,
                                       @ToolParam(description = "Allowlisted workflow or agent role") String actor) throws Exception {
         if (!"1".equals(schema_version)) throw new IllegalArgumentException("unsupported schema version");
-        EvidenceStore.ReadEvidence value = store.read(task_id, uri, actor, "summary", false);
+        EvidenceStore.ReadEvidence value = store.read(task_id, attempt_id, uri, actor, "summary", false);
         return new EvidenceSummary(value.uri(), value.type(), value.digest(), value.status(), value.classification(), value.sizeBytes());
     }
 
     @Tool(name = "evidence.read", description = "Explicitly read authorized raw evidence and emit an immutable audit event")
     public RawEvidence read(@ToolParam(description = "Contract version") String schema_version,
                             @ToolParam(description = "Task identifier") String task_id,
+                            @ToolParam(description = "Attempt identifier") String attempt_id,
                             @ToolParam(description = "Evidence URI") String uri,
                             @ToolParam(description = "workflow or reviewer") String actor,
                             @ToolParam(description = "human-review or incident-investigation") String purpose) throws Exception {
         if (!"1".equals(schema_version)) throw new IllegalArgumentException("unsupported schema version");
         try {
-            EvidenceStore.ReadEvidence value = store.read(task_id, uri, actor, purpose, true);
+            EvidenceStore.ReadEvidence value = store.read(task_id, attempt_id, uri, actor, purpose, true);
             audit.record(task_id, actor, purpose, uri, "ALLOWED");
             return new RawEvidence(value.uri(), value.type(), value.digest(), value.status(), value.classification(),
                     value.sizeBytes(), value.contentBase64());

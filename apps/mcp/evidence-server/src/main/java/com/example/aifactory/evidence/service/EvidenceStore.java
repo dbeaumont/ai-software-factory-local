@@ -123,7 +123,8 @@ public class EvidenceStore {
         catch (Exception exception) { throw new SecurityException("stored evidence cannot be verified: " + type); }
     }
 
-    public ReadEvidence read(String taskId, String uri, String actor, String purpose, boolean raw) throws Exception {
+    public ReadEvidence read(String taskId, String expectedAttemptId, String uri, String actor,
+                             String purpose, boolean raw) throws Exception {
         java.net.URI parsed = java.net.URI.create(uri);
         String[] parts = parsed.getPath() == null ? new String[0] : parsed.getPath().split("/");
         if (!"evidence".equals(parsed.getScheme()) || !taskId.equals(parsed.getHost()) || parts.length != 4
@@ -131,7 +132,8 @@ public class EvidenceStore {
             throw new SecurityException("evidence URI is outside task scope");
         }
         String attemptId = parts[1], type = parts[2], identifier = parts[3];
-        if (!attemptId.matches("[A-Za-z0-9_-]{1,128}") || !identifier.matches("[0-9a-f]{64}")) {
+        if (!attemptId.equals(expectedAttemptId) || !attemptId.matches("[A-Za-z0-9_-]{1,128}")
+                || !identifier.matches("[0-9a-f]{64}")) {
             throw new SecurityException("invalid evidence URI");
         }
         EvidencePolicy.Rule rule = raw ? policy.requireRead(type, actor, purpose) : policy.requireSummary(type, actor);
@@ -139,6 +141,9 @@ public class EvidenceStore {
                 "manifest".equals(type) ? "manifest-" + identifier + ".json" : type + '-' + identifier + ".bin");
         if (!Files.isRegularFile(file)) throw new SecurityException("evidence is unavailable");
         byte[] clear = decrypt(Files.readAllBytes(file), aad(taskId, attemptId, type, identifier));
+        if (!"manifest".equals(type) && !constantDigest(identifier, digest(clear))) {
+            throw new SecurityException("evidence digest mismatch at read");
+        }
         return new ReadEvidence(uri, type, identifier, "COMPLETE", rule.classification(), clear.length,
                 raw ? Base64.getEncoder().encodeToString(clear) : null);
     }

@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 
@@ -100,10 +101,11 @@ public final class McpEvidenceRepository implements EvidenceRepository {
     }
 
     @Override
-    public EvidenceSummary getSummary(String taskId, String uri, String actor) {
+    public EvidenceSummary getSummary(String taskId, String attemptId, String uri, String actor) {
         if (!server.enabled()) throw new IllegalStateException("evidence MCP server is disabled");
         JsonNode response = mcp.call(server.expectedName(), "evidence.get_summary", Map.of(
-                "schema_version", "1", "task_id", taskId, "uri", uri, "actor", actor));
+                "schema_version", "1", "task_id", taskId, "attempt_id", attemptId,
+                "uri", uri, "actor", actor));
         if (response.has("content_base64") || response.has("content")) {
             throw new SecurityException("evidence summary must never expose raw content");
         }
@@ -111,8 +113,10 @@ public final class McpEvidenceRepository implements EvidenceRepository {
                 requiredText(response, "type"), requiredText(response, "digest"),
                 requiredText(response, "status"), requiredText(response, "classification"),
                 response.path("size_bytes").asLong(-1));
-        if (!uri.equals(summary.uri()) || !summary.uri().startsWith("evidence://" + taskId + '/')
-                || !summary.digest().matches("[0-9a-f]{64}") || summary.sizeBytes() < 0) {
+        if (!uri.equals(summary.uri()) || !boundUri(summary.uri(), taskId, attemptId)
+                || !summary.digest().matches("[0-9a-f]{64}") || summary.sizeBytes() < 0
+                || !Set.of("INTERNAL", "CONFIDENTIAL", "RESTRICTED").contains(summary.classification())
+                || !"COMPLETE".equals(summary.status())) {
             throw new SecurityException("evidence summary failed task, URI, digest or size binding");
         }
         return summary;
@@ -126,8 +130,8 @@ public final class McpEvidenceRepository implements EvidenceRepository {
             throw new SecurityException("raw evidence read is not authorized");
         }
         JsonNode response = mcp.call(server.expectedName(), "evidence.read", Map.of(
-                "schema_version", "1", "task_id", request.taskId(), "uri", request.uri(),
-                "actor", request.actor(), "purpose", request.purpose()));
+                "schema_version", "1", "task_id", request.taskId(), "attempt_id", request.attemptId(),
+                "uri", request.uri(), "actor", request.actor(), "purpose", request.purpose()));
         byte[] content;
         try {
             content = Base64.getDecoder().decode(requiredText(response, "content_base64"));
@@ -138,9 +142,10 @@ public final class McpEvidenceRepository implements EvidenceRepository {
         String actualDigest = sha256(content);
         RawEvidence evidence = new RawEvidence(requiredText(response, "uri"), requiredText(response, "type"),
                 digest, requiredText(response, "status"), requiredText(response, "classification"), content);
-        if (!request.uri().equals(evidence.uri()) || !evidence.uri().startsWith("evidence://" + request.taskId() + '/')
+        if (!request.uri().equals(evidence.uri()) || !boundUri(evidence.uri(), request.taskId(), request.attemptId())
                 || !MessageDigest.isEqual(HexFormat.of().parseHex(digest), HexFormat.of().parseHex(actualDigest))
-                || !"COMPLETE".equals(evidence.status())) {
+                || !"COMPLETE".equals(evidence.status())
+                || !Set.of("INTERNAL", "CONFIDENTIAL", "RESTRICTED").contains(evidence.classification())) {
             throw new SecurityException("raw evidence response failed task, URI, digest or status binding");
         }
         return evidence;
@@ -158,5 +163,9 @@ public final class McpEvidenceRepository implements EvidenceRepository {
         } catch (Exception exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
+    }
+
+    private static boolean boundUri(String uri, String taskId, String attemptId) {
+        return uri != null && uri.startsWith("evidence://" + taskId + '/' + attemptId + '/');
     }
 }
