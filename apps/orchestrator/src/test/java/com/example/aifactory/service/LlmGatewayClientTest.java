@@ -70,22 +70,54 @@ class LlmGatewayClientTest {
                 512);
 
         Map<?, ?> function = (Map<?, ?>) ((Map<?, ?>) ((List<?>) request.get("tools")).getFirst()).get("function");
-        assertEquals("context.read_file", function.get("name"));
+        assertEquals("mcp_0_context_read_file", function.get("name"));
         assertEquals(schema, function.get("parameters"));
 
         LlmGatewayClient.ToolTurn turn = LlmGatewayClient.parseToolTurn(mapper.readTree("""
                 {"choices":[{"finish_reason":"tool_calls","message":{"content":null,"tool_calls":[
                   {"id":"call_mcp_170","type":"function","function":{
-                    "name":"context.read_file","arguments":"{\\"path\\":\\"README.md\\"}"}}
+                    "name":"mcp_0_context_read_file","arguments":"{\\"path\\":\\"README.md\\"}"}}
                 ]}}],"usage":{"prompt_tokens":41,"completion_tokens":17}}
                 """));
 
         assertEquals("tool_calls", turn.finishReason());
         assertEquals("call_mcp_170", turn.toolCalls().getFirst().id());
-        assertEquals("context.read_file", turn.toolCalls().getFirst().name());
+        assertEquals("mcp_0_context_read_file", turn.toolCalls().getFirst().name());
+        assertEquals("context.read_file", LlmGatewayClient.canonicalToolName(
+                List.of(new LlmGatewayClient.ToolDefinition(
+                        "context.read_file", "Read one repository file", schema)),
+                turn.toolCalls().getFirst().name()));
         assertEquals("{\"path\":\"README.md\"}", turn.toolCalls().getFirst().arguments());
         assertEquals(Map.of("role", "tool", "tool_call_id", "call_mcp_170", "content", "result-digest-170"),
                 LlmGatewayClient.toolResultMessage(turn.toolCalls().getFirst().id(), "result-digest-170"));
+    }
+
+    @Test
+    void assignsUniqueProviderSafeAliasesToNamespacedTools() {
+        Map<String, Object> request = LlmGatewayClient.toolRequestBody(
+                "factory-code-cloud",
+                List.of(Map.of("role", "system", "content", "Use declared tools.")),
+                List.of(
+                        new LlmGatewayClient.ToolDefinition("context.read_file", "read", Map.of("type", "object")),
+                        new LlmGatewayClient.ToolDefinition("context_read.file", "read", Map.of("type", "object"))),
+                128);
+
+        List<?> tools = (List<?>) request.get("tools");
+        Map<?, ?> first = (Map<?, ?>) ((Map<?, ?>) tools.get(0)).get("function");
+        Map<?, ?> second = (Map<?, ?>) ((Map<?, ?>) tools.get(1)).get("function");
+        assertEquals("mcp_0_context_read_file", first.get("name"));
+        assertEquals("mcp_1_context_read_file", second.get("name"));
+    }
+
+    @Test
+    void rejectsAnUndeclaredProviderToolAlias() {
+        LlmCompletionException exception = assertThrows(LlmCompletionException.class,
+                () -> LlmGatewayClient.canonicalToolName(
+                        List.of(new LlmGatewayClient.ToolDefinition(
+                                "context.read_file", "read", Map.of("type", "object"))),
+                        "mcp_9_context_exfiltrate"));
+
+        assertEquals("unknown_tool", exception.reason());
     }
 
     @Test

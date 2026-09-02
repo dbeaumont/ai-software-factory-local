@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,7 +92,10 @@ public class LlmGatewayClient {
 
     AgentToolLoop.Turn nextToolTurn(List<AgentToolLoop.Message> messages,
                                     List<ToolDefinition> tools, int maxTokens) {
-        List<Map<String, Object>> wireMessages = messages.stream().map(this::wireMessage).toList();
+        ToolNameMappings toolNames = toolNameMappings(tools);
+        List<Map<String, Object>> wireMessages = messages.stream()
+                .map(message -> wireMessage(message, toolNames.canonicalToWire()))
+                .toList();
         JsonNode response = client.post()
                 .uri("/chat/completions")
                 .headers(this::addAuthorization)
@@ -104,8 +108,12 @@ public class LlmGatewayClient {
             try {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> arguments = objectMapper.readValue(call.arguments(), Map.class);
-                return new AgentToolLoop.ToolCall(call.id(), call.name(), arguments);
+                String canonicalName = canonicalToolName(tools, call.name());
+                return new AgentToolLoop.ToolCall(call.id(), canonicalName, arguments);
             } catch (Exception exception) {
+                if (exception instanceof LlmCompletionException completionException) {
+                    throw completionException;
+                }
                 throw new LlmCompletionException("invalid_tool_arguments", false,
                         "LLM returned invalid JSON tool arguments");
             }
@@ -118,11 +126,13 @@ public class LlmGatewayClient {
                 Math.max(0, turn.promptTokens()), Math.max(0, turn.completionTokens()), costMicros);
     }
 
-    private Map<String, Object> wireMessage(AgentToolLoop.Message message) {
+    private Map<String, Object> wireMessage(AgentToolLoop.Message message,
+                                            Map<String, String> canonicalToWire) {
         if ("assistant".equals(message.role()) && message.toolCalls() != null && !message.toolCalls().isEmpty()) {
             return Map.of("role", "assistant", "content", "", "tool_calls", message.toolCalls().stream().map(call -> Map.of(
                     "id", call.id(), "type", "function", "function", Map.of(
-                            "name", call.name(), "arguments", writeArguments(call.arguments())))).toList());
+                            "name", requiredWireName(call.name(), canonicalToWire),
+                            "arguments", writeArguments(call.arguments())))).toList());
         }
         if ("tool".equals(message.role()) && message.toolCalls() != null && !message.toolCalls().isEmpty()) {
             return Map.of("role", "tool", "tool_call_id", message.toolCalls().getFirst().id(),
@@ -226,6 +236,7 @@ public class LlmGatewayClient {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", model);
         body.put("messages", List.copyOf(messages));
+        ToolNameMappings toolNames = toolNameMappings(tools);
         body.put("tools", tools.stream().map(tool -> {
             if (tool.name() == null || !tool.name().matches("[a-z][a-z0-9_-]{0,63}\\.[a-z][a-z0-9_-]{0,63}")) {
                 throw new IllegalArgumentException("Invalid namespaced tool name");
@@ -236,13 +247,53 @@ public class LlmGatewayClient {
             return Map.of(
                 "type", "function",
                 "function", Map.of(
-                        "name", tool.name(),
+                        "name", toolNames.canonicalToWire().get(tool.name()),
                         "description", "UNTRUSTED TOOL METADATA: " + description,
                         "parameters", tool.inputSchema()));
         }).toList());
         body.put("tool_choice", "auto");
         body.put("max_tokens", maxTokens);
         return Map.copyOf(body);
+    }
+
+    private static ToolNameMappings toolNameMappings(List<ToolDefinition> tools) {
+        Map<String, String> canonicalToWire = new LinkedHashMap<>();
+        Map<String, String> wireToCanonical = new HashMap<>();
+        for (int index = 0; index < tools.size(); index++) {
+            ToolDefinition tool = tools.get(index);
+            if (tool.name() == null || !tool.name().matches("[a-z][a-z0-9_-]{0,63}\\.[a-z][a-z0-9_-]{0,63}")) {
+                throw new IllegalArgumentException("Invalid namespaced tool name");
+            }
+            if (canonicalToWire.containsKey(tool.name())) {
+                throw new IllegalArgumentException("Duplicate tool name");
+            }
+            String readableName = tool.name().replace('.', '_');
+            String wireName = "mcp_" + index + "_" + readableName;
+            if (wireName.length() > 64) {
+                wireName = wireName.substring(0, 64);
+            }
+            canonicalToWire.put(tool.name(), wireName);
+            wireToCanonical.put(wireName, tool.name());
+        }
+        return new ToolNameMappings(Map.copyOf(canonicalToWire), Map.copyOf(wireToCanonical));
+    }
+
+    private static String requiredWireName(String canonicalName, Map<String, String> canonicalToWire) {
+        String wireName = canonicalToWire.get(canonicalName);
+        if (wireName == null) {
+            throw new LlmCompletionException("unknown_tool", false,
+                    "Tool conversation contains an undeclared tool name");
+        }
+        return wireName;
+    }
+
+    static String canonicalToolName(List<ToolDefinition> tools, String wireName) {
+        String canonicalName = toolNameMappings(tools).wireToCanonical().get(wireName);
+        if (canonicalName == null) {
+            throw new LlmCompletionException("unknown_tool", false,
+                    "LLM returned an undeclared tool name");
+        }
+        return canonicalName;
     }
 
     static ToolTurn parseToolTurn(JsonNode response) {
@@ -285,6 +336,10 @@ public class LlmGatewayClient {
     }
 
     record ToolDefinition(String name, String description, Map<String, Object> inputSchema) {
+    }
+
+    private record ToolNameMappings(Map<String, String> canonicalToWire,
+                                    Map<String, String> wireToCanonical) {
     }
 
     record ToolCall(String id, String name, String arguments) {
