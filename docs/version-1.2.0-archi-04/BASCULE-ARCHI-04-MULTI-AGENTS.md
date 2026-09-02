@@ -401,7 +401,7 @@
 - [x] **MAH-261** — Tester tous les contrats d'agents avec sorties valides, invalides et surdimensionnées. _(`MultiAgentContractValidatorTest` parcourt les 18 contrats épinglés avec fixtures golden, champs supplémentaires/manquants, fuzzing et charge supérieure à 1 Mio.)_
 - [x] **MAH-262** — Tester routage chemin court versus hiérarchique. _(`WorkflowRoutingServiceTest` et les tests des deux planificateurs couvrent fixtures simples/multi-domaines, risques, impacts, shadow, fallback conservateur et décision idempotente.)_
 - [x] **MAH-263** — Tester règles d'arbitrage et impossibilité de contourner une gate. _(Les tests d'autorité, d'arbitrage, de consolidation et d'approbation imposent la priorité des gates déterministes, l'escalade des conflits et la liaison au manifeste courant.)_
-- [ ] **MAH-264** — Tester déterminisme du code Workflow Temporal.
+- [x] **MAH-264** — Tester déterminisme du code Workflow Temporal. _(`WorkflowDeterminismArchitectureTest` interdit les effets non déterministes dans les implémentations et rejoue avec `WorkflowReplayer` un historique racine réellement produit.)_
 
 ### Tests d'intégration
 

@@ -1,6 +1,9 @@
 package com.example.aifactory.workflow.temporal;
 
+import io.temporal.client.WorkflowOptions;
 import org.junit.jupiter.api.Test;
+import io.temporal.testing.TestWorkflowEnvironment;
+import io.temporal.testing.WorkflowReplayer;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,6 +37,28 @@ class WorkflowDeterminismArchitectureTest {
                     .as("%s must not contain %s (%s)", implementation, pattern, rationale)
                     .doesNotContain(pattern));
         }
+    }
+
+    @Test
+    void completedRootHistoryReplaysWithoutANondeterminismFailure() throws Exception {
+        String workflowId = TemporalIds.workflow("determinism-task", "attempt-1");
+        io.temporal.common.WorkflowExecutionHistory history;
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            var worker = environment.newWorker("determinism-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
+                    SoftwareFactoryWorkflow.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId(workflowId).setTaskQueue("determinism-test").build());
+
+            workflow.run(new SoftwareFactoryWorkflow.Request(
+                    "determinism-task", "attempt-1", "a".repeat(40), "deterministic change"));
+            history = environment.getWorkflowClient().fetchHistory(workflowId);
+        }
+
+        WorkflowReplayer.replayWorkflowExecution(history, SoftwareFactoryWorkflowImpl.class);
     }
 
     private static Map<String, String> forbiddenPatterns() {
