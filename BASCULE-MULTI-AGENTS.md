@@ -181,7 +181,7 @@
 
 ### Reprise et résilience
 
-- [ ] **MAH-076** — Tester redémarrage d'un worker pendant une délégation LLM.
+- [x] **MAH-076** — Tester redémarrage d'un worker pendant une délégation LLM. _(Arrêt/reprise du polling entre deux tentatives et achèvement durable de la délégation.)_
 - [ ] **MAH-077** — Tester redémarrage pendant un job sandbox et reprise par `execution_id`.
 - [ ] **MAH-078** — Tester une attente d'approbation sur plusieurs jours puis reprise.
 - [ ] **MAH-079** — Tester timeout, retry, doublon, réponse tardive et indisponibilité d'une task queue.
