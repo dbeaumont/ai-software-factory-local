@@ -21,4 +21,17 @@ class MultiAgentUiContractTest {
                 "node.dependsOn", "renderDelegationDag(task)");
         assertThat(css).contains(".delegation-node", ".delegation-children", ".delegation-status");
     }
+
+    @Test
+    void distinguishesEverySpecialistPerimeterAndIndependentReview() throws Exception {
+        String html = Files.readString(WEB.resolve("index.html"));
+        String javascript = Files.readString(WEB.resolve("app.js"));
+        String css = Files.readString(WEB.resolve("pipeline.css"));
+
+        assertThat(html).contains("Architecture", "Code", "Tests", "Sécurité", "Revue indépendante");
+        assertThat(javascript).contains("function delegationPerimeter(role)", "perimeter-${perimeter.id}",
+                "delegation-perimeter");
+        assertThat(css).contains(".perimeter-architecture", ".perimeter-code", ".perimeter-tests",
+                ".perimeter-security", ".perimeter-review");
+    }
 }

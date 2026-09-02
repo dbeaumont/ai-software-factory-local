@@ -78,6 +78,13 @@
 .delegation-graph-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .delegation-graph-heading h3 { margin: 0; color: #44546f; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 .delegation-graph-heading span { color: var(--muted); font-size: 10px; }
+.delegation-legend { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.delegation-legend span,.delegation-perimeter { padding: 2px 5px; border-radius: 3px; font-size: 8px; font-weight: 700; }
+.delegation-legend .perimeter-architecture,.perimeter-architecture .delegation-perimeter { color: #5e4db2; background: #f0edff; }
+.delegation-legend .perimeter-code,.perimeter-code .delegation-perimeter { color: #0055cc; background: #e9f2ff; }
+.delegation-legend .perimeter-tests,.perimeter-tests .delegation-perimeter { color: #216e4e; background: #dcfff1; }
+.delegation-legend .perimeter-security,.perimeter-security .delegation-perimeter { color: #ae2e24; background: #ffeceb; }
+.delegation-legend .perimeter-review,.perimeter-review .delegation-perimeter { color: #974f0c; background: #fff7d6; }
 .delegation-tree { display: grid; gap: 8px; margin-top: 10px; }
 .delegation-node { position: relative; min-width: 0; padding: 9px; border: 1px solid var(--line); border-left: 3px solid #8993a4; border-radius: 4px; background: #fff; }
 .delegation-node-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
@@ -85,9 +92,15 @@
 .delegation-identity strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; text-transform: capitalize; }
 .delegation-identity small { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; }
 .delegation-status { flex: none; padding: 2px 5px; border-radius: 3px; color: #44546f; background: #ebecf0; font-size: 8px; font-weight: 700; }
+.delegation-badges { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
 .delegation-dependencies,.delegation-stop-reason { display: block; margin-top: 6px; color: var(--muted); font-size: 9px; line-height: 1.35; }
 .delegation-stop-reason { color: var(--red); }
 .delegation-children { display: grid; gap: 7px; margin: 9px 0 0 8px; padding-left: 10px; border-left: 1px solid #b6c2cf; }
 .delegation-node.status-completed,.delegation-node.status-succeeded { border-left-color: #22a06b; }
 .delegation-node.status-running { border-left-color: var(--blue); background: var(--blue-soft); }
 .delegation-node.status-failed,.delegation-node.status-cancelled { border-left-color: var(--red); }
+.delegation-node.perimeter-architecture { box-shadow: inset 2px 0 #8777d9; }
+.delegation-node.perimeter-code { box-shadow: inset 2px 0 #0c66e4; }
+.delegation-node.perimeter-tests { box-shadow: inset 2px 0 #22a06b; }
+.delegation-node.perimeter-security { box-shadow: inset 2px 0 #c9372c; }
+.delegation-node.perimeter-review { box-shadow: inset 2px 0 #f5a623; }

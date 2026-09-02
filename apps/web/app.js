@@ -416,9 +416,11 @@ function renderDelegationDag(task) {
 
   const visited = new Set();
   const renderBranch = (node) => {
+    const perimeter = delegationPerimeter(node.role);
     const branch = document.createElement('article');
-    branch.className = `delegation-node status-${String(node.status || 'unknown').toLowerCase()}`;
+    branch.className = `delegation-node perimeter-${perimeter.id} status-${String(node.status || 'unknown').toLowerCase()}`;
     branch.dataset.delegationId = node.delegationId;
+    branch.dataset.perimeter = perimeter.id;
     const header = document.createElement('div');
     header.className = 'delegation-node-header';
     const identity = document.createElement('span');
@@ -431,7 +433,13 @@ function renderDelegationDag(task) {
     const status = document.createElement('span');
     status.className = 'delegation-status';
     status.textContent = node.status || 'UNKNOWN';
-    header.append(identity, status);
+    const badges = document.createElement('span');
+    badges.className = 'delegation-badges';
+    const perimeterBadge = document.createElement('span');
+    perimeterBadge.className = 'delegation-perimeter';
+    perimeterBadge.textContent = perimeter.label;
+    badges.append(perimeterBadge, status);
+    header.append(identity, badges);
     branch.append(header);
 
     if (Array.isArray(node.dependsOn) && node.dependsOn.length > 0) {
@@ -461,6 +469,17 @@ function renderDelegationDag(task) {
   delegationTree.append(...roots.map(renderBranch));
   delegationTree.append(...delegations.filter((node) => !visited.has(node.delegationId)).map(renderBranch));
   delegationCount.textContent = `${delegations.length} délégation${delegations.length > 1 ? 's' : ''}`;
+}
+
+function delegationPerimeter(role) {
+  const normalized = String(role || '').toLowerCase();
+  if (normalized.includes('independent') || normalized === 'reviewer') return { id: 'review', label: 'Revue indépendante' };
+  if (normalized.includes('security') || normalized.includes('threat')) return { id: 'security', label: 'Sécurité' };
+  if (normalized.includes('test') || normalized.includes('quality')) return { id: 'tests', label: 'Tests' };
+  if (normalized.includes('architect') || normalized.includes('impact') || normalized.includes('contract')) {
+    return { id: 'architecture', label: 'Architecture' };
+  }
+  return { id: 'code', label: 'Code' };
 }
 
 function renderTask(task) {

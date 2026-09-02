@@ -363,7 +363,7 @@
 ### Interface
 
 - [x] **MAH-226** — Remplacer ou compléter le stepper linéaire par une vue DAG parent/enfant. _(L'interface construit un arbre de délégations depuis `parentDelegationId`, affiche les dépendances et conserve le stepper pour la compatibilité pipeline.)_
-- [ ] **MAH-227** — Distinguer visuellement Architecture, Code, Tests, Sécurité et Revue indépendante.
+- [x] **MAH-227** — Distinguer visuellement Architecture, Code, Tests, Sécurité et Revue indépendante. _(Le DAG classe chaque rôle dans un périmètre nommé, matérialisé par un badge, une couleur et une légende accessible.)_
 - [ ] **MAH-228** — Afficher état, durée, tours, tokens, coût et outils utilisés par délégation.
 - [ ] **MAH-229** — Afficher scopes Code, fichiers touchés et collisions éventuelles.
 - [ ] **MAH-230** — Afficher les preuves, leur statut et les digests sans contenu sensible par défaut.
