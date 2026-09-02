@@ -108,8 +108,16 @@ class PatchRepairAgentTest {
     }
 
     private static PatchRepairAgent.Request request(String task, Set<String> references) {
+        String proposalId;
+        try {
+            proposalId = new ObjectMapper().readTree(task).path("original_proposal_id").asText();
+        } catch (Exception exception) {
+            throw new IllegalArgumentException(exception);
+        }
+        PatchAttemptPolicy policy = new PatchAttemptPolicy();
         return new PatchRepairAgent.Request("task-1", "attempt-1", "a".repeat(40), task, references,
-                new AgentToolLoop.Budget(2, Duration.ofMinutes(2), 2_000, 1_000_000));
+                new AgentToolLoop.Budget(2, Duration.ofMinutes(2), 2_000, 1_000_000),
+                policy.authorizeRepair(policy.initial(), proposalId));
     }
 
     private static final class RecordingExecutor implements AgentExecutor {

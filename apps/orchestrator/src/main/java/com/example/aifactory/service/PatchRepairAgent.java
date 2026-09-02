@@ -35,6 +35,8 @@ public final class PatchRepairAgent {
             throw new IllegalArgumentException("Patch Repair source commit differs from repair task");
         }
         requireTargetedFailure(task, request.allowedReferenceIds());
+        PatchAttemptPolicy.requireAllowed(request.authorization(), PatchAttemptPolicy.Operation.REPAIR,
+                task.path("original_proposal_id").asText(), task.path("repair_attempt").asInt());
         Set<String> outputReferences = new LinkedHashSet<>(request.allowedReferenceIds());
         for (String field : List.of("repair_task_id", "node_id", "code_task_id", "original_proposal_id")) {
             outputReferences.add(task.path(field).asText());
@@ -83,7 +85,8 @@ public final class PatchRepairAgent {
     }
 
     public record Request(String taskId, String attemptId, String sourceCommit, String repairTask,
-                          Set<String> allowedReferenceIds, AgentToolLoop.Budget budget) {
+                          Set<String> allowedReferenceIds, AgentToolLoop.Budget budget,
+                          PatchAttemptPolicy.Decision authorization) {
         public Request {
             allowedReferenceIds = Set.copyOf(allowedReferenceIds);
         }

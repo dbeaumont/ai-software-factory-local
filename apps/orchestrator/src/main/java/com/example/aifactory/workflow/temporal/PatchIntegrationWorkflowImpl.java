@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.service.PatchIntegrationPlanner;
+import com.example.aifactory.service.PatchAttemptPolicy;
 import io.temporal.common.VersioningBehavior;
 import io.temporal.workflow.Workflow;
 import io.temporal.workflow.WorkflowVersioningBehavior;
@@ -19,8 +20,12 @@ public final class PatchIntegrationWorkflowImpl implements PatchIntegrationWorkf
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
     public Result run(Request request) {
         requireValid(request);
+        PatchAttemptPolicy.requireAllowed(request.authorization(), PatchAttemptPolicy.Operation.INTEGRATION,
+                request.planDigest(), request.authorization().attempt());
+        int sequenceBase = (request.authorization().attempt() - 1) * 4;
         DurableExecutionActivities.Metadata metadata = DurableExecutionActivities.Metadata.deterministic(
-                request.taskId(), request.attemptId(), request.sourceCommit(), "integration", "apply-patches", 1);
+                request.taskId(), request.attemptId(), request.sourceCommit(), "integration", "apply-patches",
+                sequenceBase + 1);
         PatchIntegrationActivities.ApplicationResult applied = activities.apply(
                 new PatchIntegrationActivities.Request(metadata, request.workspace(),
                 request.planDigest(), PATCH_CHECK_PROFILE, PATCH_APPLY_PROFILE, request.patches()));
@@ -30,7 +35,7 @@ public final class PatchIntegrationWorkflowImpl implements PatchIntegrationWorkf
             PatchIntegrationActivities.VerificationKind kind = kinds[index];
             DurableExecutionActivities.Metadata verificationMetadata = DurableExecutionActivities.Metadata.deterministic(
                     request.taskId(), request.attemptId(), request.sourceCommit(), "integration",
-                    "verify-" + kind.name().toLowerCase(java.util.Locale.ROOT), index + 2);
+                    "verify-" + kind.name().toLowerCase(java.util.Locale.ROOT), sequenceBase + index + 2);
             verifications.add(activities.verify(new PatchIntegrationActivities.VerificationRequest(
                     verificationMetadata, request.workspace(), applied.integratedPatchDigest(), kind)));
         }

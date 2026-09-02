@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.service.PatchIntegrationPlanner;
+import com.example.aifactory.service.PatchAttemptPolicy;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
@@ -43,7 +44,9 @@ class PatchIntegrationWorkflowTest {
                             .setTaskQueue("patch-integration-test").build());
 
             PatchIntegrationWorkflow.Result result = workflow.run(new PatchIntegrationWorkflow.Request(
-                    "task-1", "attempt-1", "a".repeat(40), "/tmp/integration", planDigest, List.of(artifact)));
+                    "task-1", "attempt-1", "a".repeat(40), "/tmp/integration", planDigest, List.of(artifact),
+                    new PatchAttemptPolicy().authorizeIntegration(
+                            new PatchAttemptPolicy().initial(), planDigest)));
 
             assertThat(result.status()).isEqualTo("VERIFIED");
             assertThat(result.verifications()).extracting(PatchIntegrationActivities.VerificationResult::kind)
