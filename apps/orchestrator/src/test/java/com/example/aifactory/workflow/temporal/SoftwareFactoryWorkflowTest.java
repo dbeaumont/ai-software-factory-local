@@ -13,7 +13,8 @@ class SoftwareFactoryWorkflowTest {
     void executesAsATemporalRootWorkflow() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
-            worker.registerWorkflowImplementationTypes(SoftwareFactoryWorkflowImpl.class);
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
             environment.start();
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class,
@@ -25,8 +26,34 @@ class SoftwareFactoryWorkflowTest {
 
             assertThat(result.status()).isEqualTo("READY_FOR_DELEGATION");
             assertThat(result.chronology()).containsExactly("WORKFLOW_STARTED");
+            assertThat(result.delegations()).isEmpty();
             assertThat(WorkflowStub.fromTyped(workflow).getExecution().getWorkflowId())
                     .isEqualTo("task-task-1-attempt-attempt-1");
+        }
+    }
+
+    @Test
+    void executesAGenericDelegationAsAChildWorkflow() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
+                    SoftwareFactoryWorkflow.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId("task-task-2-attempt-attempt-1")
+                            .setTaskQueue("software-factory-test").build());
+            DelegationWorkflow.Request child = new DelegationWorkflow.Request(
+                    "task-2", "attempt-1", "code-1", "supervisor", "code-agent",
+                    "a".repeat(40), "produce a patch proposal");
+
+            SoftwareFactoryWorkflow.Result result = workflow.run(new SoftwareFactoryWorkflow.Request(
+                    "task-2", "attempt-1", "a".repeat(40), "change", java.util.List.of(child)));
+
+            assertThat(result.status()).isEqualTo("DELEGATIONS_COMPLETED");
+            assertThat(result.delegations()).containsExactly(
+                    new DelegationWorkflow.Result("code-1", "code-agent", "READY_FOR_ACTIVITIES"));
+            assertThat(result.chronology()).containsExactly("WORKFLOW_STARTED", "DELEGATION_COMPLETED:code-1");
         }
     }
 }

@@ -1,14 +1,28 @@
 package com.example.aifactory.workflow.temporal;
 
 import java.util.List;
+import java.util.ArrayList;
+
+import io.temporal.workflow.ChildWorkflowOptions;
+import io.temporal.workflow.Workflow;
 
 /** Root durable workflow; subsequent migration steps add child workflows and activities. */
 public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflow {
     @Override
     public Result run(Request request) {
         requireValid(request);
+        List<String> chronology = new ArrayList<>();
+        chronology.add("WORKFLOW_STARTED");
+        List<DelegationWorkflow.Result> results = new ArrayList<>();
+        for (DelegationWorkflow.Request delegation : request.delegations()) {
+            DelegationWorkflow child = Workflow.newChildWorkflowStub(DelegationWorkflow.class,
+                    ChildWorkflowOptions.newBuilder().setWorkflowId(delegationId(request, delegation)).build());
+            DelegationWorkflow.Result result = child.run(delegation);
+            results.add(result);
+            chronology.add("DELEGATION_COMPLETED:" + result.nodeId());
+        }
         return new Result(request.taskId(), request.attemptId(), request.sourceCommit(),
-                "READY_FOR_DELEGATION", List.of("WORKFLOW_STARTED"));
+                results.isEmpty() ? "READY_FOR_DELEGATION" : "DELEGATIONS_COMPLETED", chronology, results);
     }
 
     private static void requireValid(Request request) {
@@ -18,5 +32,9 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                 || request.requirement() == null || request.requirement().isBlank()) {
             throw new IllegalArgumentException("Software factory workflow request is invalid");
         }
+    }
+
+    private static String delegationId(Request root, DelegationWorkflow.Request child) {
+        return "task-" + root.taskId() + "-attempt-" + root.attemptId() + "-node-" + child.nodeId();
     }
 }

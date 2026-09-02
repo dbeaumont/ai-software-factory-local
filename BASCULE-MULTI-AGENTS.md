@@ -168,7 +168,7 @@
 ### Modèle de workflow
 
 - [x] **MAH-065** — Créer `SoftwareFactoryWorkflow` comme workflow racine d'une tâche. _(Interface Temporal typée, implémentation déterministe et exécution vérifiée sur serveur de test.)_
-- [ ] **MAH-066** — Créer un Child Workflow générique de délégation ou des workflows typés par périmètre.
+- [x] **MAH-066** — Créer un Child Workflow générique de délégation ou des workflows typés par périmètre. _(Child Workflow générique par nœud/rôle, identifiant déterministe et invocation depuis la racine.)_
 - [ ] **MAH-067** — Mapper les appels LLM, MCP et stockage vers des Activities idempotentes.
 - [ ] **MAH-068** — Définir timeouts et Retry Policies distincts pour lecture, LLM, sandbox, assurance et SCM.
 - [ ] **MAH-069** — Utiliser des identifiants déterministes pour les workflows, délégations et Activities à effet.
