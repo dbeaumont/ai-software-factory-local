@@ -9,7 +9,11 @@ import java.util.Set;
 public record AgentToolingProperties(Set<String> enabledRoles, String qualificationVerdict,
                                      int pairedCases, boolean securityPassed,
                                      boolean evaluationEnabled, Set<String> evaluationRoles) {
-    private static final Set<String> KNOWN_ROLES = Set.of("planner", "reviewer");
+    private static final int MINIMUM_PAIRED_CASES = 36;
+    private static final Set<String> KNOWN_ROLES = Set.of("planner", "reviewer", "tester",
+            "supervisor", "architecture-agent", "impact-analysis", "dependencies-contracts",
+            "code-agent", "developer", "patch-repair", "test-agent", "test-design", "test-evidence",
+            "security-agent", "threat-model", "security-findings", "independent-reviewer");
 
     @ConstructorBinding
     public AgentToolingProperties {
@@ -23,7 +27,8 @@ public record AgentToolingProperties(Set<String> enabledRoles, String qualificat
             throw new IllegalArgumentException("Invalid agent tool evaluation roles");
         }
         if (!enabledRoles.isEmpty()
-                && (!"QUALIFIED".equals(qualificationVerdict) || pairedCases < 20 || !securityPassed)) {
+                && (!"QUALIFIED".equals(qualificationVerdict)
+                || pairedCases < MINIMUM_PAIRED_CASES || !securityPassed)) {
             throw new IllegalArgumentException("Agent tool roles require a qualified A/B and security campaign");
         }
     }

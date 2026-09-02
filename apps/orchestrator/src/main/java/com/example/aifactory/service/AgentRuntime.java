@@ -19,6 +19,7 @@ public final class AgentRuntime implements AgentExecutor {
     private final OperationalKillSwitch killSwitch;
     private final ExecutionTracer tracer;
     private final AgentMetrics metrics;
+    private final AgentActivationGuard activation;
 
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts) {
@@ -40,20 +41,21 @@ public final class AgentRuntime implements AgentExecutor {
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
                         TaskUsageLedger usage, OperationalKillSwitch killSwitch) {
         this(prompts, llm, toolHost, contracts, budgets, usage, killSwitch, ExecutionTracer.noop(),
-                AgentMetrics.noop());
+                AgentMetrics.noop(), AgentActivationGuard.allowAllForTests());
     }
 
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
                         TaskUsageLedger usage, OperationalKillSwitch killSwitch, ExecutionTracer tracer) {
-        this(prompts, llm, toolHost, contracts, budgets, usage, killSwitch, tracer, AgentMetrics.noop());
+        this(prompts, llm, toolHost, contracts, budgets, usage, killSwitch, tracer, AgentMetrics.noop(),
+                AgentActivationGuard.allowAllForTests());
     }
 
     @Autowired
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
                         TaskUsageLedger usage, OperationalKillSwitch killSwitch, ExecutionTracer tracer,
-                        AgentMetrics metrics) {
+                        AgentMetrics metrics, AgentActivationGuard activation) {
         this.prompts = prompts;
         this.llm = llm;
         this.toolHost = toolHost;
@@ -63,10 +65,12 @@ public final class AgentRuntime implements AgentExecutor {
         this.killSwitch = killSwitch;
         this.tracer = tracer;
         this.metrics = metrics;
+        this.activation = activation;
     }
 
     @Override
     public Result execute(Invocation invocation) {
+        activation.requireAllowed(invocation.role(), invocation.executionMode());
         if (killSwitch != null) {
             OperationalKillSwitch.Decision decision = killSwitch.decision(
                     "agent-runtime", "agent.execute", invocation.role(), invocation.executionMode());

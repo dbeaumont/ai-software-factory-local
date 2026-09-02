@@ -446,7 +446,7 @@
 - [x] **MAH-298** — Rejeter la qualification si le chemin hiérarchique est utilisé inutilement sur les tâches simples. _(`RoutingEvaluation` calcule ce taux sur le seul cohort simple et rend `REJECTED` dès qu'il dépasse le maximum de politique de 5 %.)_
 - [x] **MAH-299** — Exiger une télémétrie de coût exploitable avant verdict. _(`AgentAbEvaluator` exige `AVAILABLE` sur 100 % des observations avec devise, source, version de prix et modèles demandé/résolu identiques ; sinon le verdict reste `INCOMPLETE`.)_
 - [ ] **MAH-300** — Faire approuver le rapport de qualification par Produit, Architecture, Sécurité et Exploitation.
-- [ ] **MAH-301** — Maintenir tous les rôles hiérarchiques désactivés si le verdict n'est pas `QUALIFIED`.
+- [x] **MAH-301** — Maintenir tous les rôles hiérarchiques désactivés si le verdict n'est pas `QUALIFIED`. _(`AgentActivationGuard`, appelé par `AgentRuntime`, refuse tout rôle canary/actif sans verdict qualifié et activation explicite ; le shadow reste limité aux rôles d'évaluation déclarés.)_
 
 ### Gate du lot 13
 
