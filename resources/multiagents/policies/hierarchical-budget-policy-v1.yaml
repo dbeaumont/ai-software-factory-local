@@ -36,3 +36,10 @@ task:
   max_tokens: 80000
   max_cost_micros: 80000000
   max_tool_calls: 208
+
+actual_usage:
+  max_input_tokens: 120000
+  max_output_tokens: 40000
+  max_cost_micros: 80000000
+  max_turns: 60
+  max_mcp_calls: 208

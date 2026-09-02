@@ -280,7 +280,7 @@
 - [x] **MAH-143** — Conserver tous les outils à effet exclusivement au rôle `workflow`. _(Inventaire unifié sandbox/assurance/stockage Evidence/livraison SCM ; matrice hôte et quatre serveurs MCP exigent l'identité `workflow`, y compris pour la création de draft PR.)_
 - [x] **MAH-144** — Ajouter limites maximales de profondeur et de fan-out du DAG. _(Plafonds hôte profondeur 2 et fan-out 4, configurables uniquement à la baisse ; chaque plan applique le minimum entre politique et requête, avec tests de non-contournement.)_
 - [x] **MAH-145** — Ajouter budgets par agent, délégation, périmètre et tâche complète. _(Politique hôte versionnée pour les 14 rôles, plafond unitaire de délégation, agrégats Architecture/Code/Tests/Sécurité et plafond global ; validation branchée sur AgentRuntime et DelegationValidator.)_
-- [ ] **MAH-146** — Ajouter quotas cumulés de tokens d'entrée, sortie, coût, tours et appels MCP.
+- [x] **MAH-146** — Ajouter quotas cumulés de tokens d'entrée, sortie, coût, tours et appels MCP. _(Ledger atomique par tâche, cumulant toutes les tentatives ; chaque tour LLM et appel MCP réserve sa consommation réelle, avec refus sans écriture partielle pour chacun des cinq quotas.)_
 - [ ] **MAH-147** — Ajouter concurrence globale, par tâche, par rôle et par serveur MCP.
 - [ ] **MAH-148** — Interdire à une délégation enfant d'augmenter le budget reçu de son parent.
 - [ ] **MAH-149** — Réserver une part du budget au Reviewer et aux gates finaux.

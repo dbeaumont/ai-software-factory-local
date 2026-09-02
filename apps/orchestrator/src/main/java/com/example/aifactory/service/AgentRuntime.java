@@ -15,20 +15,28 @@ public final class AgentRuntime implements AgentExecutor {
     private final AgentContextToolHost toolHost;
     private final MultiAgentContractValidator contracts;
     private final HierarchicalBudgetPolicy budgets;
+    private final TaskUsageLedger usage;
 
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts) {
         this(prompts, llm, toolHost, contracts, new HierarchicalBudgetPolicy());
     }
 
-    @Autowired
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets) {
+        this(prompts, llm, toolHost, contracts, budgets, new TaskUsageLedger(budgets));
+    }
+
+    @Autowired
+    public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
+                        MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
+                        TaskUsageLedger usage) {
         this.prompts = prompts;
         this.llm = llm;
         this.toolHost = toolHost;
         this.contracts = contracts;
         this.budgets = budgets;
+        this.usage = usage;
     }
 
     @Override
@@ -52,7 +60,9 @@ public final class AgentRuntime implements AgentExecutor {
                 messages -> llm.nextToolTurn(messages, tools, Math.min(invocation.budget().maxTokens(), 8_192)),
                 toolHost.executor(invocation.taskId(), invocation.attemptId(),
                         invocation.sourceCommit(), invocation.role()),
-                toolHost.authorization());
+                toolHost.authorization(), AgentToolLoop.SafetyLimits.defaults(), delta -> usage.consume(
+                invocation.taskId(), invocation.attemptId(), new TaskUsageLedger.Delta(delta.inputTokens(),
+                        delta.outputTokens(), delta.costMicros(), delta.turns(), delta.mcpCalls())));
         AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(invocation.taskId(), invocation.role()),
                 prompt, invocation.untrustedInput(), invocation.budget());
         JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),

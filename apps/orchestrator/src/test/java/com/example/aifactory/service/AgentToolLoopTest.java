@@ -37,6 +37,31 @@ class AgentToolLoopTest {
     }
 
     @Test
+    void accountsInputOutputCostTurnsAndMcpCallsAsTheyOccur() {
+        var turns = new ArrayDeque<>(List.of(
+                new AgentToolLoop.Turn(AgentToolLoop.Stop.TOOL_CALLS, null,
+                        List.of(tool("1", "README.md")), 10, 3, 20),
+                new AgentToolLoop.Turn(AgentToolLoop.Stop.FINAL, "done", List.of(), 12, 4, 30)));
+        long[] actual = new long[5];
+        AgentToolLoop loop = new AgentToolLoop(messages -> turns.removeFirst(), call -> "safe-result",
+                (actor, tool) -> true, AgentToolLoop.SafetyLimits.defaults(), delta -> {
+            actual[0] += delta.inputTokens();
+            actual[1] += delta.outputTokens();
+            actual[2] += delta.costMicros();
+            actual[3] += delta.turns();
+            actual[4] += delta.mcpCalls();
+        });
+
+        loop.run(new AgentToolLoop.Actor("task-1", "developer"), "system", "user", BUDGET);
+
+        assertEquals(22, actual[0]);
+        assertEquals(7, actual[1]);
+        assertEquals(50, actual[2]);
+        assertEquals(2, actual[3]);
+        assertEquals(1, actual[4]);
+    }
+
+    @Test
     void failsClosedOnTurnsTokensCostDeadlineAndMissingFinal() {
         AgentToolLoop loop = new AgentToolLoop(messages -> toolTurn(), call -> "ok");
         assertEquals("max_turns", exceptionFor(loop,

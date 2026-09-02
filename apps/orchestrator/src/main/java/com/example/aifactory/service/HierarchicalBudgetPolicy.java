@@ -20,6 +20,7 @@ public final class HierarchicalBudgetPolicy {
     private final Map<String, Budget> agents;
     private final Map<String, AggregateBudget> perimeters;
     private final AggregateBudget task;
+    private final UsageQuota actualUsage;
 
     public HierarchicalBudgetPolicy() {
         Map<String, Object> root = load();
@@ -29,12 +30,17 @@ public final class HierarchicalBudgetPolicy {
         agents = Map.copyOf(budgets(map(root.get("agents"), "agents")));
         perimeters = Map.copyOf(aggregateBudgets(map(root.get("perimeters"), "perimeters")));
         task = aggregateBudget(map(root.get("task"), "task"));
+        Map<String, Object> usage = map(root.get("actual_usage"), "actual_usage");
+        actualUsage = new UsageQuota(number(usage, "max_input_tokens"), number(usage, "max_output_tokens"),
+                number(usage, "max_cost_micros"), number(usage, "max_turns"),
+                number(usage, "max_mcp_calls"));
     }
 
     public String policyId() { return policyId; }
     public Map<String, Budget> agents() { return agents; }
     public Map<String, AggregateBudget> perimeters() { return perimeters; }
     public AggregateBudget task() { return task; }
+    public UsageQuota actualUsage() { return actualUsage; }
 
     public void validateInvocation(String role, AgentToolLoop.Budget requested) {
         Budget ceiling = agents.get(role);
@@ -164,5 +170,15 @@ public final class HierarchicalBudgetPolicy {
         }
 
         public static Usage zero() { return new Usage(0, 0, 0, 0); }
+    }
+
+    public record UsageQuota(long maxInputTokens, long maxOutputTokens, long maxCostMicros,
+                             long maxTurns, long maxMcpCalls) {
+        public UsageQuota {
+            if (maxInputTokens < 1 || maxOutputTokens < 1 || maxCostMicros < 0
+                    || maxTurns < 1 || maxMcpCalls < 0) {
+                throw new IllegalArgumentException("Actual usage quotas must be positive");
+            }
+        }
     }
 }

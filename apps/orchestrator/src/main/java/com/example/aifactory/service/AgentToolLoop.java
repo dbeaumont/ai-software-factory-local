@@ -17,6 +17,7 @@ public final class AgentToolLoop {
     private final ToolAuthorization authorization;
     private final SafetyLimits safety;
     private final LongSupplier nanoTime;
+    private final UsageSink usage;
 
     public AgentToolLoop(Model model, ToolExecutor tools) {
         this(model, tools, (actor, tool) -> true, SafetyLimits.defaults(), System::nanoTime);
@@ -36,12 +37,23 @@ public final class AgentToolLoop {
 
     AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization,
                   SafetyLimits safety, LongSupplier nanoTime) {
+        this(model, tools, authorization, safety, nanoTime, ignored -> { });
+    }
+
+    public AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization,
+                         SafetyLimits safety, UsageSink usage) {
+        this(model, tools, authorization, safety, System::nanoTime, usage);
+    }
+
+    AgentToolLoop(Model model, ToolExecutor tools, ToolAuthorization authorization,
+                  SafetyLimits safety, LongSupplier nanoTime, UsageSink usage) {
         this.model = Objects.requireNonNull(model);
         this.tools = Objects.requireNonNull(tools);
         this.authorization = Objects.requireNonNull(authorization);
         this.safety = Objects.requireNonNull(safety);
         this.safety.validate();
         this.nanoTime = Objects.requireNonNull(nanoTime);
+        this.usage = Objects.requireNonNull(usage);
     }
 
     public Result run(String systemPrompt, String userPrompt, Budget budget) {
@@ -64,6 +76,7 @@ public final class AgentToolLoop {
             requireWithinDeadline(deadline);
             requireContextWithinLimit(messages);
             Turn turn = Objects.requireNonNull(model.next(List.copyOf(messages)), "Model returned no turn");
+            usage.consume(new UsageDelta(turn.promptTokens(), turn.completionTokens(), turn.costMicros(), 1, 0));
             tokens = Math.addExact(tokens, Math.addExact(turn.promptTokens(), turn.completionTokens()));
             costMicros = Math.addExact(costMicros, turn.costMicros());
             requireWithinBudget(tokens, costMicros, budget);
@@ -93,6 +106,7 @@ public final class AgentToolLoop {
                     throw new AgentLoopException("tool_denied",
                             "Host policy denied tool " + call.name() + " for role " + actor.role());
                 }
+                usage.consume(new UsageDelta(0, 0, 0, 0, 1));
                 String output = tools.execute(call);
                 messages.add(new Message("tool", untrustedToolData(call, output), List.of(call)));
                 requireContextWithinLimit(messages);
@@ -144,6 +158,10 @@ public final class AgentToolLoop {
         boolean isAllowed(Actor actor, String toolName);
     }
 
+    public interface UsageSink {
+        void consume(UsageDelta delta);
+    }
+
     public enum Stop { TOOL_CALLS, FINAL }
 
     public record Actor(String subject, String role) {
@@ -187,6 +205,14 @@ public final class AgentToolLoop {
             toolCalls = toolCalls == null ? List.of() : List.copyOf(toolCalls);
             if (promptTokens < 0 || completionTokens < 0 || costMicros < 0) {
                 throw new IllegalArgumentException("Usage values cannot be negative");
+            }
+        }
+    }
+
+    public record UsageDelta(long inputTokens, long outputTokens, long costMicros, long turns, long mcpCalls) {
+        public UsageDelta {
+            if (inputTokens < 0 || outputTokens < 0 || costMicros < 0 || turns < 0 || mcpCalls < 0) {
+                throw new IllegalArgumentException("Usage deltas cannot be negative");
             }
         }
     }

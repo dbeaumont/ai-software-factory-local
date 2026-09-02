@@ -23,6 +23,8 @@ class HierarchicalBudgetPolicyTest {
         assertThat(policy.agents().keySet()).isEqualTo(expected);
         assertThat(policy.perimeters().keySet()).containsExactlyInAnyOrder(
                 "architecture-agent", "code-agent", "test-agent", "security-agent");
+        assertThat(policy.actualUsage()).isEqualTo(
+                new HierarchicalBudgetPolicy.UsageQuota(120_000, 40_000, 80_000_000, 60, 208));
     }
 
     @Test
