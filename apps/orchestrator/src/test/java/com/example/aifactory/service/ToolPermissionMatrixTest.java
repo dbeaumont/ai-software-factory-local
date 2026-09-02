@@ -2,6 +2,8 @@ package com.example.aifactory.service;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,5 +41,19 @@ class ToolPermissionMatrixTest {
                 assertFalse(matrix.isAllowed(new AgentToolLoop.Actor("agent", role), tool), role + " / " + tool);
             }
         }
+    }
+
+    @Test
+    void registersEveryHierarchicalAgentAndStillDeniesUnknownRoles() {
+        AgentCatalog catalog = new AgentCatalog();
+        Set<String> agents = catalog.roles().keySet().stream()
+                .filter(role -> !"workflow".equals(role)).collect(java.util.stream.Collectors.toSet());
+
+        for (String role : agents) {
+            for (String tool : catalog.require(role).tools()) {
+                assertTrue(matrix.isAllowed(new AgentToolLoop.Actor("task", role), tool), role + " / " + tool);
+            }
+        }
+        assertFalse(matrix.isAllowed(new AgentToolLoop.Actor("task", "invented-agent"), "context.read_file"));
     }
 }

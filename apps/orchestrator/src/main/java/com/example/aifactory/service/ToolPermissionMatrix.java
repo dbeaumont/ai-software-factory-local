@@ -40,14 +40,35 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
         Set<String> context = Set.of(
                 "context.list_tree", "context.search_code", "context.read_file",
                 "context.get_repository_rules", "context.get_dependencies", "context.get_symbols");
-        return new ToolPermissionMatrix(Map.of(
-                "workflow", union(context, WORKFLOW_EFFECTS),
-                "planner", union(context, Set.of("evidence.get_summary")),
-                "reviewer", union(context, Set.of("evidence.get_summary", "evidence.read")),
-                "developer", context,
-                "patch-repair", Set.of("context.read_file", "context.get_symbols"),
-                "tester", Set.of("context.search_code", "context.read_file",
-                        "context.get_dependencies", "context.get_symbols")), killSwitch);
+        return new ToolPermissionMatrix(Map.ofEntries(
+                Map.entry("workflow", union(context, WORKFLOW_EFFECTS)),
+                Map.entry("supervisor", Set.of("context.list_tree", "context.search_code",
+                        "context.get_repository_rules", "context.get_dependencies", "evidence.get_summary")),
+                Map.entry("architecture-agent", context),
+                Map.entry("impact-analysis", Set.of("context.search_code", "context.read_file",
+                        "context.get_repository_rules", "context.get_symbols")),
+                Map.entry("dependencies-contracts", Set.of("context.list_tree", "context.read_file",
+                        "context.get_dependencies")),
+                Map.entry("code-agent", Set.of("context.list_tree", "context.search_code",
+                        "context.get_repository_rules")),
+                Map.entry("developer", context),
+                Map.entry("patch-repair", Set.of("context.read_file", "context.get_symbols")),
+                Map.entry("test-agent", Set.of("context.search_code", "context.read_file",
+                        "context.get_dependencies", "context.get_symbols", "evidence.get_summary")),
+                Map.entry("test-design", Set.of("context.search_code", "context.read_file",
+                        "context.get_dependencies", "context.get_symbols")),
+                Map.entry("test-evidence", Set.of("evidence.get_summary")),
+                Map.entry("security-agent", Set.of("context.search_code", "context.read_file",
+                        "context.get_dependencies", "context.get_symbols", "evidence.get_summary")),
+                Map.entry("threat-model", Set.of("context.search_code", "context.read_file",
+                        "context.get_dependencies", "context.get_symbols")),
+                Map.entry("security-findings", Set.of("evidence.get_summary")),
+                Map.entry("independent-reviewer", Set.of("context.search_code", "context.read_file",
+                        "context.get_dependencies", "context.get_symbols", "evidence.get_summary", "evidence.read")),
+                Map.entry("planner", union(context, Set.of("evidence.get_summary"))),
+                Map.entry("reviewer", union(context, Set.of("evidence.get_summary", "evidence.read"))),
+                Map.entry("tester", Set.of("context.search_code", "context.read_file",
+                        "context.get_dependencies", "context.get_symbols"))), killSwitch);
     }
 
     private static Set<String> union(Set<String> left, Set<String> right) {

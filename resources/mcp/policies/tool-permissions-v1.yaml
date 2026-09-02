@@ -17,6 +17,37 @@ roles:
       - sandbox.get_execution
       - sandbox.cancel_execution
       - scm.create_draft_pull_request
+  supervisor:
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.get_repository_rules
+      - context.get_dependencies
+      - evidence.get_summary
+  architecture-agent:
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+      - context.get_dependencies
+      - context.get_symbols
+  impact-analysis:
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_repository_rules
+      - context.get_symbols
+  dependencies-contracts:
+    tools:
+      - context.list_tree
+      - context.read_file
+      - context.get_dependencies
+  code-agent:
+    tools:
+      - context.list_tree
+      - context.search_code
+      - context.get_repository_rules
   planner:
     tools:
       - context.list_tree
@@ -38,6 +69,46 @@ roles:
     tools:
       - context.read_file
       - context.get_symbols
+  test-agent:
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+      - evidence.get_summary
+  test-design:
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+  test-evidence:
+    tools:
+      - evidence.get_summary
+  security-agent:
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+      - evidence.get_summary
+  threat-model:
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+  security-findings:
+    tools:
+      - evidence.get_summary
+  independent-reviewer:
+    tools:
+      - context.search_code
+      - context.read_file
+      - context.get_dependencies
+      - context.get_symbols
+      - evidence.get_summary
+      - evidence.read
   tester:
     tools:
       - context.search_code

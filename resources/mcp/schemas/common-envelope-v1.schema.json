@@ -9,7 +9,7 @@
     "task_id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" },
     "attempt_id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" },
     "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "actor": { "type": "string", "enum": ["workflow", "planner", "developer", "patch-repair", "tester", "reviewer", "delivery"] },
+    "actor": { "type": "string", "enum": ["workflow", "supervisor", "architecture-agent", "impact-analysis", "dependencies-contracts", "code-agent", "developer", "patch-repair", "test-agent", "test-design", "test-evidence", "security-agent", "threat-model", "security-findings", "independent-reviewer", "planner", "tester", "reviewer", "delivery"] },
     "trace_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
     "traceparent": { "type": "string", "pattern": "^00-[0-9a-f]{32}-[0-9a-f]{16}-0[01]$" },
     "deadline": { "type": "string", "format": "date-time" },
