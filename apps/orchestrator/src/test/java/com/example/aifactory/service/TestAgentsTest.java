@@ -22,12 +22,13 @@ class TestAgentsTest {
     @Test
     @SuppressWarnings("unchecked")
     void separatesCoordinatorDesignAndEvidenceRolesWithDistinctContracts() throws Exception {
-        tools.jackson.databind.JsonNode strategy = new tools.jackson.databind.ObjectMapper().readTree(
+        tools.jackson.databind.JsonNode documents = new tools.jackson.databind.ObjectMapper().readTree(
                 Files.readString(RESOURCES.resolve("multiagents/fixtures/golden-contracts-v1.json")))
-                .path("documents").path("test-strategy-v1");
-        RecordingExecutor runtime = new RecordingExecutor(strategy);
+                .path("documents");
+        RecordingExecutor runtime = new RecordingExecutor(documents);
         AgentCatalog catalog = new AgentCatalog();
-        TestAgents agents = new TestAgents(runtime, catalog, new TestStrategyValidator());
+        TestAgents agents = new TestAgents(runtime, catalog, new TestStrategyValidator(),
+                new TestEvidenceValidator());
         Map<String, String> contracts = Map.of(
                 "test-agent", "test-assessment-v1",
                 "test-design", "test-strategy-v1",
@@ -36,7 +37,9 @@ class TestAgentsTest {
         for (String role : contracts.keySet()) {
             agents.execute(new TestAgents.Request("task-1", "attempt-1", "a".repeat(40), role,
                     Set.of("strategy-1"), "untrusted input",
-                    new AgentToolLoop.Budget(3, Duration.ofMinutes(2), 3000, 1000000)));
+                    new AgentToolLoop.Budget(3, Duration.ofMinutes(2), 3000, 1000000),
+                    "c".repeat(64), Set.of(new TestEvidenceValidator.ExecutionEvidence(
+                    "execution-1", "evidence://task-1/tests", "b".repeat(64)))));
             Map<String, Object> manifest = new Yaml(new SafeConstructor(new LoaderOptions())).load(
                     Files.readString(RESOURCES.resolve("agents/" + role + ".yaml")));
             assertThat((List<String>) manifest.get("output_contracts")).containsExactly(contracts.get(role));
@@ -57,13 +60,14 @@ class TestAgentsTest {
 
     private static final class RecordingExecutor implements AgentExecutor {
         private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
-        private final tools.jackson.databind.JsonNode result;
+        private final tools.jackson.databind.JsonNode documents;
 
-        private RecordingExecutor(tools.jackson.databind.JsonNode result) { this.result = result; }
+        private RecordingExecutor(tools.jackson.databind.JsonNode documents) { this.documents = documents; }
 
         @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(result, "f".repeat(64), 1, 10, 1);
+            String contract = invocation.outputContract();
+            return new AgentRuntime.Result(documents.path(contract), "f".repeat(64), 1, 10, 1);
         }
     }
 }
