@@ -185,7 +185,7 @@
 - [x] **MAH-077** — Tester redémarrage pendant un job sandbox et reprise par `execution_id`. _(Heartbeat de l'identifiant, récupération au retry et preuve d'une unique soumission externe.)_
 - [x] **MAH-078** — Tester une attente d'approbation sur plusieurs jours puis reprise. _(Sept jours d'horloge Temporal, Query toujours disponible, puis reprise et achèvement par Signal.)_
 - [x] **MAH-079** — Tester timeout, retry, doublon, réponse tardive et indisponibilité d'une task queue. _(Trois scénarios couvrent retry sur timeout, réponse obsolète, idempotence et Schedule-To-Start expiré.)_
-- [ ] **MAH-080** — Tester l'annulation en cascade des Child Workflows et jobs sandbox.
+- [x] **MAH-080** — Tester l'annulation en cascade des Child Workflows et jobs sandbox. _(Propagation confirmée du parent au Child Workflow puis à l'Activity sandbox avec heartbeat.)_
 
 ### Gate du lot 3
 
