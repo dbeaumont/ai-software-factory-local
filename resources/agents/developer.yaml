@@ -1,5 +1,31 @@
+schema_version: "1"
+manifest_id: developer-v1
 name: Developer
 role: developer
-prompt: prompts/developer.md
+version: "1.0.0"
+owner: engineering
+parent: code-agent
+kind: sub-agent
 autonomy: A1
-human_gate: true
+effectful: false
+prompt: prompts/developer-hierarchical.md
+input_contracts:
+  - code-task-v1
+output_contracts:
+  - patch-proposal-v1
+may_delegate_to: []
+allowed_tools:
+  - context.list_tree
+  - context.search_code
+  - context.read_file
+  - context.get_repository_rules
+  - context.get_dependencies
+  - context.get_symbols
+default_budget:
+  max_turns: 6
+  max_tokens: 12000
+  max_cost_micros: 12000000
+  timeout_seconds: 900
+  max_tool_calls: 24
+human_gate: none
+compatibility_prompt: prompts/developer.md
