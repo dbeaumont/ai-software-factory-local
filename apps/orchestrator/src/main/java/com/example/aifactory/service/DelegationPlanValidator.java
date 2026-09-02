@@ -12,6 +12,9 @@ import java.util.Set;
 /** Applies graph invariants that JSON Schema cannot express for a delegation plan. */
 @Component
 public final class DelegationPlanValidator {
+    private static final Set<String> EXECUTABLE_STOP_CONDITIONS = Set.of("SUCCESS_CRITERIA_MET",
+            "BUDGET_EXHAUSTED", "DEADLINE_REACHED", "BLOCKED_OR_ESCALATE");
+
     public JsonNode validate(JsonNode plan) {
         Map<String, JsonNode> nodes = new LinkedHashMap<>();
         for (JsonNode node : plan.path("nodes")) {
@@ -24,6 +27,19 @@ public final class DelegationPlanValidator {
 
         Map<String, Set<String>> edges = new HashMap<>();
         nodes.forEach((id, node) -> {
+            JsonNode criteria = node.path("success_criteria");
+            if (!criteria.isArray() || criteria.isEmpty()) {
+                throw invalid("missing success criteria for " + id);
+            }
+            for (JsonNode criterion : criteria) {
+                if (!criterion.isTextual() || criterion.asText().isBlank()) {
+                    throw invalid("non executable success criterion for " + id);
+                }
+            }
+            String stopCondition = node.path("stop_condition").asText();
+            if (!EXECUTABLE_STOP_CONDITIONS.contains(stopCondition)) {
+                throw invalid("non executable stop condition for " + id);
+            }
             Set<String> dependencies = new HashSet<>();
             JsonNode parent = node.path("parent_node_id");
             if (parent.isTextual()) dependencies.add(parent.asText());
