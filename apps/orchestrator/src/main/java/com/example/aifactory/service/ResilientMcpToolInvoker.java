@@ -43,6 +43,7 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
     private final MeterRegistry metrics;
     private final ObjectMapper objectMapper;
     private final TaskUsageLedger usage;
+    private final ExecutionTracer tracer;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final Semaphore globalLimit;
     private final ConcurrentMap<String, Semaphore> serverLimits = new ConcurrentHashMap<>();
@@ -60,18 +61,29 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
                 new TaskUsageLedger(new HierarchicalBudgetPolicy()));
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
     public ResilientMcpToolInvoker(
             @Qualifier("validatedMcpToolInvoker") McpToolInvoker delegate,
             McpClientProperties properties,
             MeterRegistry metrics,
             ObjectMapper objectMapper,
             TaskUsageLedger usage) {
+        this(delegate, properties, metrics, objectMapper, usage, ExecutionTracer.noop());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ResilientMcpToolInvoker(
+            @Qualifier("validatedMcpToolInvoker") McpToolInvoker delegate,
+            McpClientProperties properties,
+            MeterRegistry metrics,
+            ObjectMapper objectMapper,
+            TaskUsageLedger usage,
+            ExecutionTracer tracer) {
         this.delegate = delegate;
         this.properties = properties;
         this.metrics = metrics;
         this.objectMapper = objectMapper;
         this.usage = usage;
+        this.tracer = tracer;
         this.globalLimit = new Semaphore(properties.maxInflightGlobal(), true);
         properties.servers().values().forEach(server -> {
             serverLimits.put(server.expectedName(), new Semaphore(properties.maxInflightPerServer(), true));
@@ -85,6 +97,12 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
 
     @Override
     public JsonNode call(String serverName, String toolName, Map<String, Object> arguments) {
+        ExecutionIdentity identity = identity(arguments);
+        return tracer.trace(ExecutionTracer.SpanKind.MCP, identity, serverName + '.' + toolName,
+                () -> callObserved(serverName, toolName, arguments));
+    }
+
+    private JsonNode callObserved(String serverName, String toolName, Map<String, Object> arguments) {
         Circuit circuit = circuit(serverName);
         if (!circuit.allow()) {
             recordError(serverName, toolName, "CIRCUIT_OPEN");
@@ -118,6 +136,26 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
             }
         }
         throw last == null ? new IllegalStateException("MCP call failed") : last;
+    }
+
+    private ExecutionIdentity identity(Map<String, Object> arguments) {
+        Object trace = arguments.get("trace_id");
+        Object run = arguments.get("run_id");
+        Object delegation = arguments.get("delegation_id");
+        Object agentRun = arguments.get("agent_run_id");
+        if (trace != null && run != null && delegation != null && agentRun != null) {
+            return new ExecutionIdentity(trace.toString(), run.toString(), delegation.toString(), agentRun.toString());
+        }
+        String taskId = safe(arguments.get("task_id"));
+        String attemptId = safe(arguments.get("attempt_id"));
+        String actor = safe(arguments.get("actor"));
+        return ExecutionIdentity.deterministic(validSeed(taskId) ? taskId : "unknown",
+                validSeed(attemptId) ? attemptId : "unknown", validSeed(actor) ? actor : "unknown",
+                validSeed(actor) ? actor : "unknown");
+    }
+
+    private static boolean validSeed(String value) {
+        return value != null && value.matches("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}");
     }
 
     private void accountMcp(String toolName, Map<String, Object> arguments) {

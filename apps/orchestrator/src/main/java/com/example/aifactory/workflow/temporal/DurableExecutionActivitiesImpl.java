@@ -2,6 +2,7 @@ package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.service.AgentRuntime;
 import com.example.aifactory.service.McpToolInvoker;
+import com.example.aifactory.service.ExecutionTracer;
 import com.example.aifactory.workflow.EvidenceRepository;
 
 import java.util.LinkedHashMap;
@@ -12,15 +13,27 @@ public final class DurableExecutionActivitiesImpl implements DurableExecutionAct
     private final AgentRuntime agents;
     private final McpToolInvoker mcp;
     private final EvidenceRepository evidence;
+    private final ExecutionTracer tracer;
 
     public DurableExecutionActivitiesImpl(AgentRuntime agents, McpToolInvoker mcp, EvidenceRepository evidence) {
+        this(agents, mcp, evidence, ExecutionTracer.noop());
+    }
+
+    public DurableExecutionActivitiesImpl(AgentRuntime agents, McpToolInvoker mcp, EvidenceRepository evidence,
+                                          ExecutionTracer tracer) {
         this.agents = agents;
         this.mcp = mcp;
         this.evidence = evidence;
+        this.tracer = tracer;
     }
 
     @Override
     public AgentResult invokeAgent(AgentCall call) {
+        return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
+                "InvokeAgent", () -> invokeAgentObserved(call));
+    }
+
+    private AgentResult invokeAgentObserved(AgentCall call) {
         requireBound(call.metadata(), call.invocation().taskId(), call.invocation().attemptId(),
                 call.invocation().sourceCommit());
         if (!call.metadata().executionIdentity().equals(call.invocation().executionIdentity())) {
@@ -33,6 +46,11 @@ public final class DurableExecutionActivitiesImpl implements DurableExecutionAct
 
     @Override
     public McpResult invokeMcp(McpCall call) {
+        return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
+                "InvokeMcpTool", () -> invokeMcpObserved(call));
+    }
+
+    private McpResult invokeMcpObserved(McpCall call) {
         Map<String, Object> arguments = new LinkedHashMap<>(call.arguments());
         arguments.put("task_id", call.metadata().taskId());
         arguments.put("attempt_id", call.metadata().attemptId());
@@ -48,6 +66,11 @@ public final class DurableExecutionActivitiesImpl implements DurableExecutionAct
 
     @Override
     public EvidenceRepository.StoredEvidence storeEvidence(EvidenceCall call) {
+        return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
+                "StoreEvidence", () -> storeEvidenceObserved(call));
+    }
+
+    private EvidenceRepository.StoredEvidence storeEvidenceObserved(EvidenceCall call) {
         EvidenceRepository.StoreRequest request = call.request();
         requireBound(call.metadata(), request.taskId(), request.attemptId(), call.metadata().sourceCommit());
         return evidence.store(request);

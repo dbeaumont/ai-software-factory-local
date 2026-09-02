@@ -17,6 +17,7 @@ public final class AgentRuntime implements AgentExecutor {
     private final HierarchicalBudgetPolicy budgets;
     private final TaskUsageLedger usage;
     private final OperationalKillSwitch killSwitch;
+    private final ExecutionTracer tracer;
 
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts) {
@@ -34,10 +35,16 @@ public final class AgentRuntime implements AgentExecutor {
         this(prompts, llm, toolHost, contracts, budgets, usage, null);
     }
 
-    @Autowired
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
                         TaskUsageLedger usage, OperationalKillSwitch killSwitch) {
+        this(prompts, llm, toolHost, contracts, budgets, usage, killSwitch, ExecutionTracer.noop());
+    }
+
+    @Autowired
+    public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
+                        MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
+                        TaskUsageLedger usage, OperationalKillSwitch killSwitch, ExecutionTracer tracer) {
         this.prompts = prompts;
         this.llm = llm;
         this.toolHost = toolHost;
@@ -45,6 +52,7 @@ public final class AgentRuntime implements AgentExecutor {
         this.budgets = budgets;
         this.usage = usage;
         this.killSwitch = killSwitch;
+        this.tracer = tracer;
     }
 
     @Override
@@ -74,16 +82,19 @@ public final class AgentRuntime implements AgentExecutor {
         String prompt = prompts.load(invocation.promptName());
         String fingerprint = prompts.fingerprint(invocation.promptName());
         AgentToolLoop loop = new AgentToolLoop(
-                messages -> llm.nextToolTurn(messages, tools, Math.min(invocation.budget().maxTokens(), 8_192)),
+                messages -> tracer.trace(ExecutionTracer.SpanKind.LLM, invocation.executionIdentity(),
+                        invocation.role() + ".completion", () -> llm.nextToolTurn(
+                        messages, tools, Math.min(invocation.budget().maxTokens(), 8_192))),
                 toolHost.executor(invocation.taskId(), invocation.attemptId(),
                         invocation.sourceCommit(), invocation.role(), invocation.executionIdentity()),
                 toolHost.authorization(), AgentToolLoop.SafetyLimits.defaults(), delta -> usage.consume(
                 invocation.taskId(), invocation.attemptId(), usageLane(invocation.role()),
                 new TaskUsageLedger.Delta(delta.inputTokens(), delta.outputTokens(), delta.costMicros(),
                         delta.turns(), 0)));
-        AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(
-                        invocation.taskId(), invocation.role(), invocation.executionMode()),
-                prompt, invocation.untrustedInput(), invocation.budget());
+        AgentToolLoop.Result result = tracer.trace(ExecutionTracer.SpanKind.ACTIVITY,
+                invocation.executionIdentity(), invocation.role() + ".agent", () -> loop.run(new AgentToolLoop.Actor(
+                                invocation.taskId(), invocation.role(), invocation.executionMode()),
+                        prompt, invocation.untrustedInput(), invocation.budget()));
         JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),
                 new MultiAgentContractValidator.ContractContext(invocation.taskId(), invocation.attemptId(),
                         invocation.allowedReferenceIds()));

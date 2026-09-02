@@ -378,7 +378,7 @@
 ## 15. Lot 11 — Observabilité, audit et exploitation
 
 - [x] **MAH-240** — Propager `trace_id`, `task_id`, `run_id`, `delegation_id` et `agent_run_id` de bout en bout. _(`ExecutionIdentity` lie des identifiants stables aux métadonnées Workflow/Activity, aux invocations d'agents et aux enveloppes MCP ; toute divergence Activity/agent est refusée.)_
-- [ ] **MAH-241** — Créer un span pour workflow, Child Workflow, Activity, appel LLM et appel MCP.
+- [x] **MAH-241** — Créer un span pour workflow, Child Workflow, Activity, appel LLM et appel MCP. _(`ExecutionTracer` normalise les cinq familles de spans et leur corrélation ; l'intercepteur worker couvre workflows racine/enfant et Activities, les frontières runtime couvrent LLM et MCP.)_
 - [ ] **MAH-242** — Désactiver la collecte du contenu des prompts, résultats et preuves par défaut.
 - [ ] **MAH-243** — Mesurer tokens, coût, durée, tours, fan-out et profondeur par rôle.
 - [ ] **MAH-244** — Mesurer temps d'attente des task queues et taux de saturation par périmètre.
