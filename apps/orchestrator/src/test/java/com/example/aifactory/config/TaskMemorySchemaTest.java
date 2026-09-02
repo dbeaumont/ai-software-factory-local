@@ -63,4 +63,19 @@ class TaskMemorySchemaTest {
         assertThat(lineage.split("FOREIGN KEY \\(.*task_id, attempt_id, source_commit\\)", -1).length - 1)
                 .isGreaterThanOrEqualTo(10);
     }
+
+    @Test
+    void trustMigrationSeparatesEvidenceInputAgentConclusionsAndPolicyDecisions() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V004__separate_information_trust_domains.sql"));
+
+        assertThat(sql).contains("'VERIFIED_EVIDENCE'")
+                .contains("'UNTRUSTED_INPUT'")
+                .contains("'AGENT_CONCLUSION'")
+                .contains("'POLICY_DECISION'")
+                .contains("artifacts_verified_status_ck")
+                .contains("evidence_refs_verified_status_ck")
+                .contains("decisions_policy_actor_ck");
+        assertThat(sql.split("ADD COLUMN information_kind information_kind NOT NULL", -1).length - 1)
+                .isEqualTo(3);
+    }
 }
