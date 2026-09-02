@@ -26,4 +26,20 @@ class TaskMemorySchemaTest {
                 .contains("UNIQUE (task_id, attempt_id)")
                 .contains("UNIQUE (task_id, attempt_id, manifest_id, approver)");
     }
+
+    @Test
+    void evidenceMigrationModelsReferencesContradictionsBudgetsAndToolsWithoutRawContent() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V002__task_memory_evidence_and_usage.sql"));
+
+        for (String table : List.of("artifacts", "evidence_refs", "contradictions", "budget_usage",
+                "tool_invocations")) {
+            assertThat(sql).contains("CREATE TABLE " + table + " (");
+        }
+        assertThat(sql).contains("evidence_uri")
+                .contains("REFERENCES artifacts(artifact_id)")
+                .contains("REFERENCES evidence_refs(evidence_ref_id)")
+                .contains("UNIQUE (delegation_id, sequence_number)")
+                .contains("UNIQUE (task_id, attempt_id, operation_id)")
+                .doesNotContain("content_base64", "raw_content", "artifact_bytes");
+    }
 }
