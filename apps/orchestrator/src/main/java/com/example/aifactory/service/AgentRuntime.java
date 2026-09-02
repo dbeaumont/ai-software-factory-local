@@ -18,6 +18,7 @@ public final class AgentRuntime implements AgentExecutor {
     private final TaskUsageLedger usage;
     private final OperationalKillSwitch killSwitch;
     private final ExecutionTracer tracer;
+    private final AgentMetrics metrics;
 
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts) {
@@ -38,13 +39,21 @@ public final class AgentRuntime implements AgentExecutor {
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
                         TaskUsageLedger usage, OperationalKillSwitch killSwitch) {
-        this(prompts, llm, toolHost, contracts, budgets, usage, killSwitch, ExecutionTracer.noop());
+        this(prompts, llm, toolHost, contracts, budgets, usage, killSwitch, ExecutionTracer.noop(),
+                AgentMetrics.noop());
+    }
+
+    public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
+                        MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
+                        TaskUsageLedger usage, OperationalKillSwitch killSwitch, ExecutionTracer tracer) {
+        this(prompts, llm, toolHost, contracts, budgets, usage, killSwitch, tracer, AgentMetrics.noop());
     }
 
     @Autowired
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
-                        TaskUsageLedger usage, OperationalKillSwitch killSwitch, ExecutionTracer tracer) {
+                        TaskUsageLedger usage, OperationalKillSwitch killSwitch, ExecutionTracer tracer,
+                        AgentMetrics metrics) {
         this.prompts = prompts;
         this.llm = llm;
         this.toolHost = toolHost;
@@ -53,6 +62,7 @@ public final class AgentRuntime implements AgentExecutor {
         this.usage = usage;
         this.killSwitch = killSwitch;
         this.tracer = tracer;
+        this.metrics = metrics;
     }
 
     @Override
@@ -87,18 +97,27 @@ public final class AgentRuntime implements AgentExecutor {
                         messages, tools, Math.min(invocation.budget().maxTokens(), 8_192))),
                 toolHost.executor(invocation.taskId(), invocation.attemptId(),
                         invocation.sourceCommit(), invocation.role(), invocation.executionIdentity()),
-                toolHost.authorization(), AgentToolLoop.SafetyLimits.defaults(), delta -> usage.consume(
-                invocation.taskId(), invocation.attemptId(), usageLane(invocation.role()),
-                new TaskUsageLedger.Delta(delta.inputTokens(), delta.outputTokens(), delta.costMicros(),
-                        delta.turns(), 0)));
-        AgentToolLoop.Result result = tracer.trace(ExecutionTracer.SpanKind.ACTIVITY,
-                invocation.executionIdentity(), invocation.role() + ".agent", () -> loop.run(new AgentToolLoop.Actor(
-                                invocation.taskId(), invocation.role(), invocation.executionMode()),
-                        prompt, invocation.untrustedInput(), invocation.budget()));
-        JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),
-                new MultiAgentContractValidator.ContractContext(invocation.taskId(), invocation.attemptId(),
-                        invocation.allowedReferenceIds()));
-        return new Result(document, fingerprint, result.turns(), result.tokens(), result.costMicros());
+                toolHost.authorization(), AgentToolLoop.SafetyLimits.defaults(), delta -> {
+                    metrics.recordUsage(invocation.role(), delta);
+                    usage.consume(invocation.taskId(), invocation.attemptId(), usageLane(invocation.role()),
+                            new TaskUsageLedger.Delta(delta.inputTokens(), delta.outputTokens(), delta.costMicros(),
+                                    delta.turns(), 0));
+                });
+        long started = System.nanoTime();
+        try {
+            AgentToolLoop.Result result = tracer.trace(ExecutionTracer.SpanKind.ACTIVITY,
+                    invocation.executionIdentity(), invocation.role() + ".agent", () -> loop.run(new AgentToolLoop.Actor(
+                                    invocation.taskId(), invocation.role(), invocation.executionMode()),
+                            prompt, invocation.untrustedInput(), invocation.budget()));
+            JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),
+                    new MultiAgentContractValidator.ContractContext(invocation.taskId(), invocation.attemptId(),
+                            invocation.allowedReferenceIds()));
+            metrics.recordDuration(invocation.role(), "success", System.nanoTime() - started);
+            return new Result(document, fingerprint, result.turns(), result.tokens(), result.costMicros());
+        } catch (RuntimeException failure) {
+            metrics.recordDuration(invocation.role(), "error", System.nanoTime() - started);
+            throw failure;
+        }
     }
 
     static boolean effectfulTool(String name) {

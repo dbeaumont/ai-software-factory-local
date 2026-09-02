@@ -19,6 +19,7 @@ public final class DelegationValidator {
     private final DelegationPolicyProperties ceilings;
     private final HierarchicalBudgetPolicy budgets;
     private final OperationalKillSwitch killSwitch;
+    private final AgentMetrics metrics;
 
     public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs) {
         this(catalog, graphs, DelegationPolicyProperties.defaults(), new HierarchicalBudgetPolicy(), null);
@@ -34,15 +35,22 @@ public final class DelegationValidator {
         this(catalog, graphs, ceilings, budgets, null);
     }
 
-    @Autowired
     public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs,
                                DelegationPolicyProperties ceilings, HierarchicalBudgetPolicy budgets,
                                OperationalKillSwitch killSwitch) {
+        this(catalog, graphs, ceilings, budgets, killSwitch, AgentMetrics.noop());
+    }
+
+    @Autowired
+    public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs,
+                               DelegationPolicyProperties ceilings, HierarchicalBudgetPolicy budgets,
+                               OperationalKillSwitch killSwitch, AgentMetrics metrics) {
         this.catalog = catalog;
         this.graphs = graphs;
         this.ceilings = ceilings;
         this.budgets = budgets;
         this.killSwitch = killSwitch;
+        this.metrics = metrics;
     }
 
     public JsonNode validate(JsonNode plan, Limits limits) {
@@ -97,6 +105,7 @@ public final class DelegationValidator {
         budgets.validateTask(taskUsage);
         if (tokens > limits.maxTotalTokens()) throw invalid("total token budget exceeded");
         if (cost > limits.maxTotalCostMicros()) throw invalid("total cost budget exceeded");
+        metrics.recordPlan(nodes);
         return plan;
     }
 
