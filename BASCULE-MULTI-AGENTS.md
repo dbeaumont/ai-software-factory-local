@@ -189,7 +189,7 @@
 
 ### Gate du lot 3
 
-- [ ] Une tâche complète survit aux redémarrages et conserve une chronologie déterministe et consultable.
+- [x] Une tâche complète survit aux redémarrages et conserve une chronologie déterministe et consultable. _(Preuves : `docs/multiagents/GATE-LOT-3-TEMPORAL.md`.)_
 
 ## 8. Lot 4 — Mémoire de tâche et preuves partagées
 
