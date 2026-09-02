@@ -30,4 +30,26 @@ class TaskExecutionViewTest {
         assertThatThrownBy(() -> state.bindExecution("HIERARCHICAL_ACTIVE", "", "dag-v4",
                 80_000, 80_000_000, 60)).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void exposesDelegationHierarchyDependenciesStatusAndStopReason() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.recordDelegation("architecture-1", "supervisor", "architecture-agent", java.util.List.of(),
+                "SUCCESS", "SUCCESS_CRITERIA_MET");
+        state.recordDelegation("code-1", "supervisor", "code-agent", java.util.List.of("architecture-1"),
+                "RUNNING", null);
+
+        assertThat(state.view().delegations()).containsExactly(
+                new TaskView.DelegationView("architecture-1", "supervisor", "architecture-agent",
+                        java.util.List.of(), "SUCCESS", "SUCCESS_CRITERIA_MET"),
+                new TaskView.DelegationView("code-1", "supervisor", "code-agent",
+                        java.util.List.of("architecture-1"), "RUNNING", null));
+
+        state.recordDelegation("code-1", "supervisor", "code-agent", java.util.List.of("architecture-1"),
+                "FAILED", "BUDGET_EXHAUSTED");
+        assertThat(state.view().delegations()).filteredOn(value -> value.delegationId().equals("code-1"))
+                .singleElement().extracting(TaskView.DelegationView::stopReason)
+                .isEqualTo("BUDGET_EXHAUSTED");
+    }
 }

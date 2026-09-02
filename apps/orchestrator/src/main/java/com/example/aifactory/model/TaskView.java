@@ -32,8 +32,14 @@ public record TaskView(
         String executionMode,
         String workflowRunId,
         String dagVersion,
-        GlobalBudget globalBudget) {
+        GlobalBudget globalBudget,
+        List<DelegationView> delegations) {
 
     public record GlobalBudget(Long maxTokens, Long maxCostMicros, Integer maxTurns,
                                long usedTokens, long usedCostMicros, int usedTurns) {}
+
+    public record DelegationView(String delegationId, String parentDelegationId, String role,
+                                 List<String> dependsOn, String status, String stopReason) {
+        public DelegationView { dependsOn = List.copyOf(dependsOn); }
+    }
 }
