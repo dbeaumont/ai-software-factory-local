@@ -43,6 +43,9 @@ management:
         enabled: true
 
 ai-factory:
+  delegation:
+    max-depth: ${AI_FACTORY_DELEGATION_MAX_DEPTH:2}
+    max-fan-out: ${AI_FACTORY_DELEGATION_MAX_FAN_OUT:4}
   temporal:
     enabled: ${AI_FACTORY_TEMPORAL_ENABLED:false}
     target: ${AI_FACTORY_TEMPORAL_TARGET:temporal:7233}

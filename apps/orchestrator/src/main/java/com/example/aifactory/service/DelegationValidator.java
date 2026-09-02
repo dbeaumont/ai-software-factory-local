@@ -1,5 +1,7 @@
 package com.example.aifactory.service;
 
+import com.example.aifactory.config.DelegationPolicyProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
@@ -14,10 +16,18 @@ import java.util.Set;
 public final class DelegationValidator {
     private final AgentCatalog catalog;
     private final DelegationPlanValidator graphs;
+    private final DelegationPolicyProperties ceilings;
 
     public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs) {
+        this(catalog, graphs, DelegationPolicyProperties.defaults());
+    }
+
+    @Autowired
+    public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs,
+                               DelegationPolicyProperties ceilings) {
         this.catalog = catalog;
         this.graphs = graphs;
+        this.ceilings = ceilings;
     }
 
     public JsonNode validate(JsonNode plan, Limits limits) {
@@ -51,10 +61,12 @@ public final class DelegationValidator {
             validatePaths(id, node.path("scope").path("write_paths"), limits.allowedWriteRoots(), "write");
             tokens = Math.addExact(tokens, node.path("budget").path("max_tokens").asLong());
             cost = Math.addExact(cost, node.path("budget").path("max_cost_micros").asLong());
-            if (depth(id, nodes, new java.util.HashSet<>()) > limits.maxDepth())
+            int effectiveMaxDepth = Math.min(limits.maxDepth(), ceilings.maxDepth());
+            if (depth(id, nodes, new java.util.HashSet<>()) > effectiveMaxDepth)
                 throw invalid("maximum depth exceeded at " + id);
         }
-        if (children.values().stream().anyMatch(value -> value > limits.maxFanOut()))
+        int effectiveMaxFanOut = Math.min(limits.maxFanOut(), ceilings.maxFanOut());
+        if (children.values().stream().anyMatch(value -> value > effectiveMaxFanOut))
             throw invalid("maximum fan-out exceeded");
         if (tokens > limits.maxTotalTokens()) throw invalid("total token budget exceeded");
         if (cost > limits.maxTotalCostMicros()) throw invalid("total cost budget exceeded");

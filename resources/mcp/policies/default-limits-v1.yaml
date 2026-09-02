@@ -136,6 +136,10 @@ agent:
   maxWallDurationPerTask: PT45M
   maxPatchRepairAttempts: 2
 
+delegation:
+  maxDepth: 2
+  maxFanOut: 4
+
 scm:
   maxRepositoriesPerTask: 1
   maxPullRequestsPerAttempt: 1

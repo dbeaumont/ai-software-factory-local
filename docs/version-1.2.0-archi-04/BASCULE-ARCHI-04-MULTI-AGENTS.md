@@ -278,7 +278,7 @@
 - [x] **MAH-141** — Définir les outils `context.*` minimaux par rôle plutôt qu'un accès global en lecture. _(Six allowlists distinctes sont appliquées dans Repository Context MCP pour arbre, recherche, fichier, règles, dépendances et symboles ; tests positifs et négatifs par périmètre.)_
 - [x] **MAH-142** — Définir quels rôles peuvent obtenir `evidence.get_summary` et `evidence.read`. _(Résumé réservé à Supervisor, Test, Sécurité et Reviewer ; lecture brute réservée au workflow et au Reviewer indépendant, auditée avec le motif hôte `human-review`, lignée tâche/tentative conservée.)_
 - [x] **MAH-143** — Conserver tous les outils à effet exclusivement au rôle `workflow`. _(Inventaire unifié sandbox/assurance/stockage Evidence/livraison SCM ; matrice hôte et quatre serveurs MCP exigent l'identité `workflow`, y compris pour la création de draft PR.)_
-- [ ] **MAH-144** — Ajouter limites maximales de profondeur et de fan-out du DAG.
+- [x] **MAH-144** — Ajouter limites maximales de profondeur et de fan-out du DAG. _(Plafonds hôte profondeur 2 et fan-out 4, configurables uniquement à la baisse ; chaque plan applique le minimum entre politique et requête, avec tests de non-contournement.)_
 - [ ] **MAH-145** — Ajouter budgets par agent, délégation, périmètre et tâche complète.
 - [ ] **MAH-146** — Ajouter quotas cumulés de tokens d'entrée, sortie, coût, tours et appels MCP.
 - [ ] **MAH-147** — Ajouter concurrence globale, par tâche, par rôle et par serveur MCP.
