@@ -2,6 +2,7 @@ package com.example.aifactory.service;
 
 import com.example.aifactory.config.KillSwitchProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.StringReader;
 import java.nio.file.Files;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public final class OperationalKillSwitch {
     private final Path controlFile;
 
+    @Autowired
     public OperationalKillSwitch(KillSwitchProperties properties) {
         this(properties.controlFile() == null || properties.controlFile().isBlank()
                 ? null : Path.of(properties.controlFile()));
