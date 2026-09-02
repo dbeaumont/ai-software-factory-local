@@ -226,7 +226,7 @@
 
 ### Supervisor
 
-- [ ] **MAH-110** — Créer le manifeste et le prompt `supervisor`.
+- [x] **MAH-110** — Créer le manifeste et le prompt `supervisor`. _(`resources/agents/supervisor.yaml` et `resources/prompts/supervisor.md`, versionnés et testés contre le catalogue hôte.)_
 - [ ] **MAH-111** — Limiter Supervisor à décomposition, sélection de rôles, consolidation et proposition de replan.
 - [ ] **MAH-112** — Lui interdire tout outil à effet et toute création de rôle non catalogué.
 - [ ] **MAH-113** — Valider son DAG avant d'exécuter la première délégation.

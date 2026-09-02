@@ -1,0 +1,43 @@
+schema_version: "1"
+manifest_id: supervisor-v1
+name: Supervisor
+role: supervisor
+version: "1.0.0"
+owner: platform
+parent: workflow
+kind: agent
+autonomy: A2
+effectful: false
+prompt: prompts/supervisor.md
+operations:
+  DECOMPOSE: delegation-plan-v1
+  CONSOLIDATE: supervisor-decision-v1
+  REPLAN: supervisor-decision-v1
+primary_output_contract: supervisor-decision-v1
+input_contracts:
+  - specialist-result-v1
+  - architecture-assessment-v1
+  - integration-result-v1
+  - test-assessment-v1
+  - security-assessment-v1
+output_contracts:
+  - delegation-plan-v1
+  - supervisor-decision-v1
+may_delegate_to:
+  - architecture-agent
+  - code-agent
+  - test-agent
+  - security-agent
+allowed_tools:
+  - context.list_tree
+  - context.search_code
+  - context.get_repository_rules
+  - context.get_dependencies
+  - evidence.get_summary
+default_budget:
+  max_turns: 6
+  max_tokens: 12000
+  max_cost_micros: 12000000
+  timeout_seconds: 600
+  max_tool_calls: 24
+human_gate: risk-dependent
