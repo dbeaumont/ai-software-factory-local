@@ -1,10 +1,15 @@
 package com.example.aifactory.workflow.temporal;
 
+import io.temporal.failure.ApplicationFailure;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -172,6 +177,50 @@ class DelegationSchedulerTest {
                 .containsExactly("urgent", "alpha", "zeta");
         assertThat(results).extracting(DelegationWorkflow.Result::nodeId)
                 .containsExactly("urgent", "alpha", "zeta");
+    }
+
+    @Test
+    void normalizesChildFailuresTimeoutsCancellationsAndIndeterminateResults() {
+        DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) -> () -> {
+            switch (request.nodeId()) {
+                case "failed" -> throw ApplicationFailure.newNonRetryableFailure("invalid output", "CONTRACT");
+                case "timeout" -> throw new RuntimeException(new TimeoutException("deadline"));
+                case "cancelled" -> throw new CancellationException("cancelled by root");
+                default -> {
+                    return null;
+                }
+            }
+        });
+
+        List<DelegationWorkflow.Result> results = scheduler.executeBatch(root(), List.of(
+                node("failed", "supervisor", Set.of()), node("timeout", "supervisor", Set.of()),
+                node("cancelled", "supervisor", Set.of()), node("unknown", "supervisor", Set.of())));
+
+        assertThat(results).extracting(DelegationWorkflow.Result::status)
+                .containsExactly("FAILED", "TIMED_OUT", "CANCELLED", "INDETERMINATE");
+    }
+
+    @Test
+    void propagatesAnUnusableOutcomeTransitivelyWithoutBlockingIndependentNodes() {
+        DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) ->
+                () -> new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
+        DelegationWorkflow.Request failed = node("failed", "supervisor", Set.of());
+        DelegationWorkflow.Request child = node("child", "supervisor", Set.of("failed"));
+        DelegationWorkflow.Request grandchild = node("grandchild", "supervisor", Set.of("child"));
+        DelegationWorkflow.Request independent = node("independent", "supervisor", Set.of());
+        List<DelegationWorkflow.Request> plan = List.of(failed, child, grandchild, independent);
+        Map<String, DelegationWorkflow.Result> completed = new LinkedHashMap<>();
+        completed.put("failed", new DelegationWorkflow.Result("failed", "code-agent", "FAILED"));
+
+        List<DelegationWorkflow.Result> blocked = scheduler.propagateBlocked(plan, completed);
+
+        assertThat(blocked).extracting(DelegationWorkflow.Result::nodeId)
+                .containsExactly("child", "grandchild");
+        assertThat(blocked).extracting(DelegationWorkflow.Result::status)
+                .containsOnly("BLOCKED_BY_FAILED");
+        assertThat(scheduler.ready(plan, Set.of("failed", "child", "grandchild"), 4))
+                .extracting(DelegationWorkflow.Request::nodeId)
+                .containsExactly("independent");
     }
 
     private static SoftwareFactoryWorkflow.Request root() {

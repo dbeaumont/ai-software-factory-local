@@ -1,17 +1,22 @@
 package com.example.aifactory.workflow.temporal;
 
+import io.temporal.failure.ApplicationFailure;
+import io.temporal.failure.CanceledFailure;
+import io.temporal.failure.TimeoutFailure;
+import io.temporal.workflow.Async;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
-import io.temporal.workflow.Async;
 
-import java.util.Objects;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.TimeoutException;
 
 /** Deterministic scheduling boundary above generic Temporal child workflows. */
 public final class DelegationScheduler {
@@ -42,9 +47,7 @@ public final class DelegationScheduler {
                                              DelegationWorkflow.Request delegation) {
         Objects.requireNonNull(root, "Root workflow request is required");
         Objects.requireNonNull(delegation, "Delegation request is required");
-        String workflowId = TemporalIds.delegation(root.taskId(), root.attemptId(), delegation.nodeId());
-        return Objects.requireNonNull(children.start(workflowId, delegation).await(),
-                "Delegation child returned no result");
+        return executeBatch(root, List.of(delegation)).getFirst();
     }
 
     public List<DelegationWorkflow.Result> executeBatch(SoftwareFactoryWorkflow.Request root,
@@ -52,13 +55,60 @@ public final class DelegationScheduler {
         if (batch.isEmpty() || batch.size() > MAX_PARALLEL_DELEGATIONS) {
             throw invalid("parallel batch size is outside scheduler quota");
         }
-        List<ChildExecution> executions = batch.stream().map(delegation -> children.start(
-                TemporalIds.delegation(root.taskId(), root.attemptId(), delegation.nodeId()), delegation)).toList();
+        Objects.requireNonNull(root, "Root workflow request is required");
+        List<StartedChild> executions = new ArrayList<>();
+        for (DelegationWorkflow.Request delegation : batch) {
+            try {
+                executions.add(new StartedChild(delegation, children.start(
+                        TemporalIds.delegation(root.taskId(), root.attemptId(), delegation.nodeId()), delegation)));
+            } catch (RuntimeException failure) {
+                executions.add(new StartedChild(delegation, () -> failureResult(delegation, failure)));
+            }
+        }
         List<DelegationWorkflow.Result> results = new ArrayList<>();
-        for (ChildExecution execution : executions) {
-            results.add(Objects.requireNonNull(execution.await(), "Delegation child returned no result"));
+        for (StartedChild execution : executions) {
+            try {
+                results.add(normalizeResult(execution.request(), execution.execution().await()));
+            } catch (RuntimeException failure) {
+                results.add(failureResult(execution.request(), failure));
+            }
         }
         return List.copyOf(results);
+    }
+
+    public List<DelegationWorkflow.Result> propagateBlocked(List<DelegationWorkflow.Request> plan,
+                                                             Map<String, DelegationWorkflow.Result> completed) {
+        Map<String, DelegationWorkflow.Request> nodes = new LinkedHashMap<>();
+        plan.forEach(node -> nodes.put(node.nodeId(), node));
+        Map<String, DelegationWorkflow.Result> knownResults = new LinkedHashMap<>(completed);
+        List<DelegationWorkflow.Result> propagated = new ArrayList<>();
+        boolean progressed;
+        do {
+            progressed = false;
+            for (DelegationWorkflow.Request node : plan.stream().sorted(CONSOLIDATION_ORDER).toList()) {
+                if (knownResults.containsKey(node.nodeId())) continue;
+                String cause = dependencies(node, nodes).stream()
+                        .map(knownResults::get)
+                        .filter(Objects::nonNull)
+                        .map(DelegationWorkflow.Result::status)
+                        .map(DelegationScheduler::blockingCause)
+                        .filter(Objects::nonNull)
+                        .sorted(Comparator.comparingInt(DelegationScheduler::blockingCauseRank))
+                        .findFirst().orElse(null);
+                if (cause != null) {
+                    DelegationWorkflow.Result blocked = new DelegationWorkflow.Result(
+                            node.nodeId(), node.role(), "BLOCKED_BY_" + cause);
+                    knownResults.put(node.nodeId(), blocked);
+                    propagated.add(blocked);
+                    progressed = true;
+                }
+            }
+        } while (progressed);
+        return List.copyOf(propagated);
+    }
+
+    public boolean blocksDependents(DelegationWorkflow.Result result) {
+        return result == null || blockingCause(result.status()) != null;
     }
 
     public List<DelegationWorkflow.Request> ready(List<DelegationWorkflow.Request> plan,
@@ -162,6 +212,49 @@ public final class DelegationScheduler {
     private static IllegalArgumentException invalid(String message) {
         return new IllegalArgumentException("Invalid scheduled DAG: " + message);
     }
+
+    private static DelegationWorkflow.Result normalizeResult(DelegationWorkflow.Request request,
+                                                              DelegationWorkflow.Result result) {
+        if (result == null || !request.nodeId().equals(result.nodeId()) || !request.role().equals(result.role())
+                || result.status() == null || result.status().isBlank()) {
+            return new DelegationWorkflow.Result(request.nodeId(), request.role(), "INDETERMINATE");
+        }
+        return result;
+    }
+
+    private static DelegationWorkflow.Result failureResult(DelegationWorkflow.Request request, Throwable failure) {
+        return new DelegationWorkflow.Result(request.nodeId(), request.role(), failureStatus(failure));
+    }
+
+    private static String failureStatus(Throwable failure) {
+        boolean applicationFailure = false;
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            if (current instanceof TimeoutFailure || current instanceof TimeoutException) return "TIMED_OUT";
+            if (current instanceof CanceledFailure || current instanceof CancellationException) return "CANCELLED";
+            if (current instanceof ApplicationFailure) applicationFailure = true;
+        }
+        return applicationFailure ? "FAILED" : "INDETERMINATE";
+    }
+
+    private static String blockingCause(String status) {
+        if (status == null || status.isBlank()) return "INDETERMINATE";
+        if (status.startsWith("BLOCKED_BY_")) return status.substring("BLOCKED_BY_".length());
+        return switch (status) {
+            case "FAILED", "TIMED_OUT", "CANCELLED", "INDETERMINATE" -> status;
+            default -> null;
+        };
+    }
+
+    private static int blockingCauseRank(String cause) {
+        return switch (cause) {
+            case "CANCELLED" -> 0;
+            case "TIMED_OUT" -> 1;
+            case "FAILED" -> 2;
+            default -> 3;
+        };
+    }
+
+    private record StartedChild(DelegationWorkflow.Request request, ChildExecution execution) {}
 
     @FunctionalInterface
     interface ChildWorkflowLauncher {

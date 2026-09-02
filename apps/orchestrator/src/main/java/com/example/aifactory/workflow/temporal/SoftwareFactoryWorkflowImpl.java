@@ -37,6 +37,15 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         int processedThisRun = 0;
         int nextIndex = request.continuationState().nextDelegationIndex();
         while (nextIndex < orderedDelegations.size()) {
+            List<DelegationWorkflow.Result> propagated = scheduler.propagateBlocked(
+                    orderedDelegations, completedDelegations);
+            for (DelegationWorkflow.Result blocked : propagated) {
+                results.add(blocked);
+                completedDelegations.put(blocked.nodeId(), blocked);
+                chronology.add("DELEGATION_BLOCKED:" + blocked.nodeId() + ':' + blocked.status());
+            }
+            nextIndex += propagated.size();
+            if (nextIndex >= orderedDelegations.size()) break;
             int remainingRunCapacity = request.executionPolicy().maxDelegationsPerRun() - processedThisRun;
             if (remainingRunCapacity < 1) {
                 continueAsNew(request, nextIndex, results, chronology);
@@ -50,7 +59,9 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
             for (DelegationWorkflow.Result result : batchResults) {
                 results.add(result);
                 completedDelegations.put(result.nodeId(), result);
-                chronology.add("DELEGATION_COMPLETED:" + result.nodeId());
+                chronology.add(scheduler.blocksDependents(result)
+                        ? "DELEGATION_FAILED:" + result.nodeId() + ':' + result.status()
+                        : "DELEGATION_COMPLETED:" + result.nodeId());
             }
             processedThisRun += batch.size();
             nextIndex += batch.size();
@@ -82,7 +93,9 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         }
         if (request.approvalRequest() == null) {
             phase = decisions.isEmpty() ? (completedReview != null ? "INDEPENDENT_REVIEW_COMPLETED"
-                    : results.isEmpty() ? "READY_FOR_DELEGATION" : "DELEGATIONS_COMPLETED")
+                    : results.isEmpty() ? "READY_FOR_DELEGATION"
+                    : results.stream().anyMatch(scheduler::blocksDependents)
+                    ? "DELEGATIONS_BLOCKED" : "DELEGATIONS_COMPLETED")
                     : "DECISIONS_COMPLETED";
             return new Result(request.taskId(), request.attemptId(), request.sourceCommit(),
                     phase,

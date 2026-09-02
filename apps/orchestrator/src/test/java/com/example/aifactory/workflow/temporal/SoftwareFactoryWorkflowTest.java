@@ -2,7 +2,10 @@ package com.example.aifactory.workflow.temporal;
 
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
+import io.temporal.failure.ApplicationFailure;
 import io.temporal.testing.TestWorkflowEnvironment;
+import io.temporal.workflow.WorkflowVersioningBehavior;
+import io.temporal.common.VersioningBehavior;
 import io.temporal.worker.Worker;
 import com.example.aifactory.service.IndependentReviewBundle;
 import org.junit.jupiter.api.Test;
@@ -249,6 +252,50 @@ class SoftwareFactoryWorkflowTest {
                     new SoftwareFactoryWorkflow.Request("task-9", "attempt-1", "a".repeat(40),
                             "change", java.util.List.of(supervisorChild))))
                     .hasMessageContaining("workflow request is invalid");
+        }
+    }
+
+    @Test
+    void propagatesAChildFailureToItsDependentWithoutLaunchingIt() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("failure-propagation-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, FailingDelegationWorkflow.class,
+                    IndependentReviewWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
+                    SoftwareFactoryWorkflow.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId(TemporalIds.workflow("task-10", "attempt-1"))
+                            .setTaskQueue("failure-propagation-test").build());
+            DelegationWorkflow.Request failed = new DelegationWorkflow.Request(
+                    "task-10", "attempt-1", "failed", "supervisor", "code-agent",
+                    "a".repeat(40), "fail deterministically");
+            DelegationWorkflow.Request dependent = new DelegationWorkflow.Request(
+                    "task-10", "attempt-1", "dependent", "failed", "test-design-agent",
+                    "a".repeat(40), "must not run");
+
+            SoftwareFactoryWorkflow.Result result = workflow.run(new SoftwareFactoryWorkflow.Request(
+                    "task-10", "attempt-1", "a".repeat(40), "change",
+                    java.util.List.of(dependent, failed)));
+
+            assertThat(result.status()).isEqualTo("DELEGATIONS_BLOCKED");
+            assertThat(result.delegations()).containsExactly(
+                    new DelegationWorkflow.Result("failed", "code-agent", "FAILED"),
+                    new DelegationWorkflow.Result("dependent", "test-design-agent", "BLOCKED_BY_FAILED"));
+            assertThat(result.chronology()).containsExactly(
+                    "WORKFLOW_STARTED", "DELEGATION_FAILED:failed:FAILED",
+                    "DELEGATION_BLOCKED:dependent:BLOCKED_BY_FAILED");
+        }
+    }
+
+    public static final class FailingDelegationWorkflow implements DelegationWorkflow {
+        @Override
+        @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
+        public Result run(Request request) {
+            if ("failed".equals(request.nodeId())) {
+                throw ApplicationFailure.newNonRetryableFailure("expected failure", "TEST_FAILURE");
+            }
+            return new Result(request.nodeId(), request.role(), "SHOULD_NOT_RUN");
         }
     }
 
