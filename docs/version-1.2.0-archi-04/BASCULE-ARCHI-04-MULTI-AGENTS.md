@@ -420,7 +420,7 @@
 - [x] **MAH-274** — Vérifier refus des outils à effet pour tous les agents et sous-agents. _(`ToolPermissionMatrixTest` parcourt chacun des 14 rôles hiérarchiques et tous les effets sandbox, assurance, evidence et SCM ; `AgentRuntimeTest` confirme le second refus au niveau du runtime.)_
 - [x] **MAH-275** — Vérifier absence de secrets dans prompts, résultats, traces, erreurs et artefacts. _(Le catalogue de prompts est scanné contre les credentials ; les tests `RepositoryContextToolsTest`, `SandboxJobServiceTest`, `ExecutionTracerTest`, `McpResponseValidatorTest`, `ProcessRunnerTest` et `TaskExecutionViewTest` couvrent respectivement redaction amont, résultats, traces, erreurs et artefacts.)_
 - [x] **MAH-276** — Simuler un Supervisor compromis, un spécialiste compromis et un serveur MCP compromis. _(`SupervisorAgentTest` bloque rôle inventé, effet et contournement de gate ; `AgentRuntimeTest` bloque l'auto-élévation du spécialiste ; `CompromisedMcpServerTest` bloque outil dynamique, schéma altéré, réponse surdimensionnée, URI externe et instruction injectée.)_
-- [ ] **MAH-277** — Tester kill switch pendant une tâche et annulation des travaux enfants.
+- [x] **MAH-277** — Tester kill switch pendant une tâche et annulation des travaux enfants. _(`OperationalKillSwitchTest` active le contrôle entre deux tours d'un même agent et interdit le second appel ; `TemporalCascadeCancellationTest` observe l'annulation du Child Workflow puis de l'activité sandbox à heartbeat.)_
 
 ### Tests de résilience et charge
 

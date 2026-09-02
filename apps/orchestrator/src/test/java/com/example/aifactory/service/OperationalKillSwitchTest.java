@@ -5,10 +5,15 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class OperationalKillSwitchTest {
     @TempDir Path temp;
@@ -61,5 +66,36 @@ class OperationalKillSwitchTest {
 
         assertFalse(decision.allowed());
         assertEquals("invalid_control_file", decision.reason());
+    }
+
+    @Test
+    void stopsAnAgentToolLoopWhenActivatedDuringTheTask() {
+        Path file = temp.resolve("kill-switch.properties");
+        OperationalKillSwitch switches = new OperationalKillSwitch(file);
+        AtomicInteger modelTurns = new AtomicInteger();
+        AtomicInteger executions = new AtomicInteger();
+        AgentToolLoop loop = new AgentToolLoop(messages -> {
+            int turn = modelTurns.incrementAndGet();
+            return new AgentToolLoop.Turn(AgentToolLoop.Stop.TOOL_CALLS, null,
+                    List.of(new AgentToolLoop.ToolCall("call-" + turn, "context.read_file",
+                            Map.of("path", "README.md"))), 1, 1, 0);
+        }, call -> {
+            executions.incrementAndGet();
+            try {
+                Files.writeString(file, "revision=1\ntools.disabled=context.read_file\n");
+            } catch (java.io.IOException failure) {
+                throw new java.io.UncheckedIOException(failure);
+            }
+            return "{}";
+        }, ToolPermissionMatrix.readOnlyAgents(switches));
+
+        AgentToolLoop.AgentLoopException failure = assertThrows(AgentToolLoop.AgentLoopException.class,
+                () -> loop.run(new AgentToolLoop.Actor("task-live", "developer", "HIERARCHICAL_ACTIVE"),
+                        "system", "request", new AgentToolLoop.Budget(
+                                3, Duration.ofSeconds(10), 100, 100)));
+
+        assertEquals("tool_denied", failure.reason());
+        assertEquals(1, executions.get());
+        assertEquals(2, modelTurns.get());
     }
 }
