@@ -1,0 +1,95 @@
+version: "1"
+baselineId: deterministic-pipeline-v1.1.0-mcp
+frozenAt: "2026-09-02T14:55:00+02:00"
+description: Pipeline déterministe de référence précédant la migration multi-agent hiérarchique.
+
+source:
+  tag: v1.1.0-mcp
+  commit: 45e72011a8cc2c81006a5ff7b8b3a3f725db5174
+  tree: 76a433a60640ddfa375f56ad5f35b518d818a6e7
+  migrationStartCommit: 99239c613d88a5112a6d14e92e61bda81ac9daac
+  migrationStartHasIdenticalRuntime: true
+
+gitObjects:
+  prompts:
+    revisionPath: "v1.1.0-mcp:resources/prompts"
+    object: beb8548f273c6645aaef226a4a84c80076e6fa91
+  agentDescriptors:
+    revisionPath: "v1.1.0-mcp:resources/agents"
+    object: 40579cb4f78449f2e525a1b0d7baeb117b1ef767
+  mcpPolicies:
+    revisionPath: "v1.1.0-mcp:resources/mcp/policies"
+    object: 11a08e70e8401ced1678f4d90144cd94d30830a0
+  mcpSchemas:
+    revisionPath: "v1.1.0-mcp:resources/mcp/schemas"
+    object: 1412f23543b3e73b00b06dc6b499c382764239a4
+  infrastructure:
+    revisionPath: "v1.1.0-mcp:infrastructure"
+    object: ac038ac89473c03d66aa24b82c4c46601994265f
+  orchestrator:
+    revisionPath: "v1.1.0-mcp:apps/orchestrator"
+    object: 525df7efbbdecbd4ae0ec316e8c6b80f7624f47d
+  mcpServers:
+    revisionPath: "v1.1.0-mcp:apps/mcp"
+    object: 40f40438bb72e53439bf1370b958b448f8fedd3f
+
+execution:
+  mode: PIPELINE
+  agentToolQualification: INCOMPLETE
+  agentToolRoles: []
+  repositoryContextMode: MCP_ACTIVE
+  sandboxMode: MCP_ACTIVE
+  cloudEnabled: true
+  gatewayModel: factory-code-cloud
+  providerModel: gpt-5.6-luna
+  temperature: provider-default
+  deterministicReplayNote: Les réponses du modèle ne sont pas bit-à-bit déterministes ; les cas et métriques sont appariés.
+
+toolchain:
+  java: "25"
+  maven: "3.9.16"
+  springBoot: "4.1.1"
+  springAi: "2.0.1"
+  syft: "1.30.0"
+  trivy: "0.69.3"
+  node: "24.20.0"
+
+containerImages:
+  thirdParty:
+    postgres: "postgres@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2"
+    gitea: "gitea/gitea@sha256:e39a5a7eb0b2aca06169b6d7a0fde1d4b00f86eb3dd5d9167232b4752bad7281"
+    nginxProxy: "nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10"
+    sonarqube: "sonarqube@sha256:9026624a61cd25542a402a9e7213dd7dbb39724ac9597e331e6b85362558c079"
+    busybox: "busybox@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0"
+    artifactory: "releases-docker.jfrog.io/jfrog/artifactory-oss@sha256:f9ecd8795e3947a7c990d5835499d28facd79e21660c28f030d7352847c6fde7"
+    prometheus: "prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996"
+    grafana: "grafana/grafana@sha256:a1701c2180249361737a99a01bc770db39381640e4d631825d38ff4535efa47d"
+    litellmBase: "docker.litellm.ai/berriai/litellm@sha256:a3596b705e24f83ede26b38fb8df002b44ef4ef9ae9a8aaef731f18892a1b30a"
+  locallyBuiltContentDigests:
+    orchestrator: "sha256:b641451b52910e43e2a999f2cd670c463e7755d70cac808f627817df26fb05e4"
+    repositoryContextMcp: "sha256:58f2cdeae7b8119493b5c7961d5e31afac87d980dc7ad08a7c16b435468ec06f"
+    sandboxExecutionMcp: "sha256:654770ac3dc44c312081ba676fbb44f29b04b1dde22bcd2e5e8a343f38d47f90"
+    scmDeliveryMcp: "sha256:30c84edf04538a2a818ac4585878d8bfebc06bcb519cc20030352f984f42e637"
+    assuranceMcp: "sha256:6d7468c16e461b73fe7d766efb21475a1b93e32b7fd3c67acb7bf63469cc04b1"
+    evidenceMcp: "sha256:9b517a03cfc56fc5beee9950b31b1264292508f5a3d4b9ee6fb9e07f89b4930d"
+    sandboxEgressProxy: "sha256:afe12578eed7510ac18909b6c71ee95094f6613eebd09a90df827024d4a07457"
+    sandbox: "sha256:93c4f99915eda5535b095a82fbfc774fd7a2cd5aced2e747fe399af1e94998eb"
+    web: "sha256:931dc68356955dfc7d4203461409bdbd3025c6b0e6ab06ced1bfe456c37f59dd"
+    litellm: "sha256:b47487c529e3d2e142a8040b8ce80462943a57a57c4e3cd11e4da3fc03cf3083"
+
+referenceCampaign:
+  report: docs/mcp/MCP-180-rapport-campagne-20260902.md
+  baselineArtifact:
+    path: docs/mcp/baselines/MCP-agent-ab-20260902-01-baseline.jsonl
+    sha256: 47ea3ebd6220f18fc5570f936da89631765b0b27457ea847bfde600e743d3237
+  candidateArtifact:
+    path: docs/mcp/baselines/MCP-agent-ab-20260902-01-candidate.jsonl
+    sha256: 51f78092f66b7526a1cc0a54d3633dd88c80b8fe846725ba31e8e0da8bb6576d
+
+replay:
+  checkout: "git switch --detach v1.1.0-mcp"
+  configurationSource: .env.example
+  bootstrap: "make bootstrap"
+  campaign: "make mcp-agent-ab-campaign"
+  verifier: "ruby scripts/verify-pipeline-baseline.rb"
+  secretsCommitted: false
