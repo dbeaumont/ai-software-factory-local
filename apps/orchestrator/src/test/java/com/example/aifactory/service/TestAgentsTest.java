@@ -39,7 +39,8 @@ class TestAgentsTest {
                     Set.of("strategy-1"), "untrusted input",
                     new AgentToolLoop.Budget(3, Duration.ofMinutes(2), 3000, 1000000),
                     "c".repeat(64), Set.of(new TestEvidenceValidator.ExecutionEvidence(
-                    "execution-1", "evidence://task-1/tests", "b".repeat(64)))));
+                    "execution-1", "evidence://task-1/tests", "b".repeat(64),
+                    "PASSED", "COMPLETE", false))));
             Map<String, Object> manifest = new Yaml(new SafeConstructor(new LoaderOptions())).load(
                     Files.readString(RESOURCES.resolve("agents/" + role + ".yaml")));
             assertThat((List<String>) manifest.get("output_contracts")).containsExactly(contracts.get(role));

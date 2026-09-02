@@ -19,7 +19,8 @@ class TestEvidenceValidatorTest {
     void acceptsOnlyExactExecutionEvidenceSuppliedByWorkflow() throws Exception {
         JsonNode assessment = assessment();
         TestEvidenceValidator.ExecutionEvidence supplied = new TestEvidenceValidator.ExecutionEvidence(
-                "execution-1", "evidence://task-1/tests", "b".repeat(64));
+                "execution-1", "evidence://task-1/tests", "b".repeat(64),
+                "PASSED", "COMPLETE", false);
         assertThat(validator.validate(assessment, Set.of(supplied))).isSameAs(assessment);
 
         var foreignExecution = assessment.deepCopy();
@@ -33,6 +34,30 @@ class TestEvidenceValidatorTest {
                 .put("digest", "d".repeat(64));
         assertThatThrownBy(() -> validator.validate(alteredDigest, Set.of(supplied)))
                 .isInstanceOf(SecurityException.class).hasMessageContaining("not supplied");
+    }
+
+    @Test
+    void refusesPassedWithoutCompleteDeterministicEvidence() throws Exception {
+        JsonNode assessment = assessment();
+        TestEvidenceValidator.ExecutionEvidence partial = new TestEvidenceValidator.ExecutionEvidence(
+                "execution-1", "evidence://task-1/tests", "b".repeat(64),
+                "PASSED", "PARTIAL", true);
+        assertThatThrownBy(() -> validator.validate(assessment, Set.of(partial)))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("complete deterministic evidence");
+
+        TestEvidenceValidator.ExecutionEvidence complete = new TestEvidenceValidator.ExecutionEvidence(
+                "execution-1", "evidence://task-1/tests", "b".repeat(64),
+                "PASSED", "COMPLETE", false);
+        var missingCitation = assessment.deepCopy();
+        ((tools.jackson.databind.node.ArrayNode) missingCitation.path("evidence")).removeAll();
+        assertThatThrownBy(() -> validator.validate(missingCitation, Set.of(complete)))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("does not cite");
+
+        var missingEvidence = assessment.deepCopy();
+        ((tools.jackson.databind.node.ArrayNode) missingEvidence.path("missing_evidence"))
+                .add("integration logs");
+        assertThatThrownBy(() -> validator.validate(missingEvidence, Set.of(complete)))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("missing evidence");
     }
 
     private JsonNode assessment() throws Exception {

@@ -252,7 +252,7 @@
 - [x] **MAH-124** — Séparer `test-design` de `test-evidence`. _(Façade hôte et trois manifestes/prompts : stratégie en `test-strategy-v1`, analyse des résultats en `test-assessment-v1`.)_
 - [x] **MAH-125** — Faire produire à Test Design une stratégie liée aux critères d'acceptation. _(Critères identifiés dans le schéma, couverture obligatoire par cas et validateur hôte rejetant références inconnues ou critères non couverts.)_
 - [x] **MAH-126** — Faire analyser à Test Evidence uniquement des résultats fournis ou référencés par le workflow. _(`TestEvidenceValidator` lie chaque exécution et preuve à l'allowlist exacte URI/digest, au commit et au patch fournis par le workflow.)_
-- [ ] **MAH-127** — Interdire toute déclaration `PASSED` sans preuve déterministe complète.
+- [x] **MAH-127** — Interdire toute déclaration `PASSED` sans preuve déterministe complète. _(Verdict conditionné à toutes les exécutions, statuts réels, preuves `COMPLETE` non tronquées, citations, absence de manque et totaux cohérents.)_
 
 ### Sécurité
 
