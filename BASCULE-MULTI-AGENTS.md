@@ -200,7 +200,7 @@
 - [x] **MAH-092** — Lier chaque enregistrement au commit source et à la tentative de workflow. _(Lineage obligatoire et clés étrangères composites empêchant toute référence croisée entre tentatives ou commits.)_
 - [x] **MAH-093** — Séparer données vérifiées, données non fiables, conclusions d'agents et décisions de politique. _(Type PostgreSQL fermé et contraintes cohérentes sur artefacts, références et décisions.)_
 - [x] **MAH-094** — Ajouter verrouillage optimiste et transitions atomiques pour les mises à jour concurrentes. _(Fonction transactionnelle commune, graphe de transitions fermé et conflit de version signalé en `40001`.)_
-- [ ] **MAH-095** — Définir rétention, purge, chiffrement et classification par type d'artefact.
+- [x] **MAH-095** — Définir rétention, purge, chiffrement et classification par type d'artefact. _(Politique v1 typée : AES-256-GCM, rétentions 90–365 jours, legal hold et purge fail-closed.)_
 
 ### Intégration Evidence MCP
 

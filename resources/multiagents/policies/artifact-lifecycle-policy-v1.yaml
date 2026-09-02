@@ -1,0 +1,42 @@
+schema_version: "1"
+policy_id: artifact-lifecycle-v1
+
+storage:
+  authority: evidence-mcp
+  projection: postgresql-metadata-only
+  encryption:
+    required: true
+    algorithm: AES-256-GCM
+    key_source_local: injected-secret
+    key_source_target: gcp-secret-manager
+    bind_aad: [schema_version, task_id, attempt_id, artifact_type, digest]
+
+artifact_types:
+  plan:     { classification: INTERNAL,     retention_days: 90 }
+  patch:    { classification: INTERNAL,     retention_days: 90 }
+  metadata: { classification: INTERNAL,     retention_days: 180 }
+  tests:    { classification: INTERNAL,     retention_days: 90 }
+  sonar:    { classification: INTERNAL,     retention_days: 180 }
+  sbom:     { classification: INTERNAL,     retention_days: 365 }
+  trivy:    { classification: CONFIDENTIAL, retention_days: 365 }
+  review:   { classification: CONFIDENTIAL, retention_days: 365 }
+  approval: { classification: CONFIDENTIAL, retention_days: 365 }
+  manifest: { classification: CONFIDENTIAL, retention_days: 365 }
+
+purge:
+  schedule: "0 17 2 * * *"
+  authority_order:
+    - verify_no_legal_hold
+    - purge_encrypted_content_in_evidence_mcp
+    - write_digest_only_tombstone
+    - purge_projection_metadata_after_grace_period
+  projection_grace_days: 30
+  immutable_audit_retention_days: 730
+  failure_mode: fail-closed-and-alert
+
+legal_hold:
+  allowed_actors: [security-officer, legal-officer]
+  requires_reason: true
+  requires_expiry: true
+  audit_required: true
+
