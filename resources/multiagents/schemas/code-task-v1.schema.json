@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/code-task-v1.schema.json",
+  "title": "CodeTask v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "code_task_id", "task_id", "attempt_id", "delegation_plan_id", "node_id", "source_commit", "architecture_assessment_id", "objective", "risk_class", "scope", "scope_digest", "dependencies", "acceptance_criteria", "budget", "required_approval_ids", "issued_at", "deadline"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "code_task_id": {"$ref": "#/$defs/id"},
+    "task_id": {"$ref": "#/$defs/id"},
+    "attempt_id": {"$ref": "#/$defs/id"},
+    "delegation_plan_id": {"$ref": "#/$defs/id"},
+    "node_id": {"$ref": "#/$defs/id"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "architecture_assessment_id": {"$ref": "#/$defs/id"},
+    "objective": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "risk_class": {"enum": ["R0", "R1", "R2", "R3"]},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_id", "modules", "read_paths", "write_paths", "forbidden_paths", "max_changed_files", "max_patch_bytes"],
+      "properties": {
+        "repository_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
+        "modules": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+        "read_paths": {"type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+        "write_paths": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+        "forbidden_paths": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+        "max_changed_files": {"type": "integer", "minimum": 1, "maximum": 64},
+        "max_patch_bytes": {"type": "integer", "minimum": 1, "maximum": 1048576}
+      }
+    },
+    "scope_digest": {"$ref": "#/$defs/digest"},
+    "dependencies": {"type": "array", "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "acceptance_criteria": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["max_turns", "max_tokens", "max_cost_micros", "timeout_seconds"],
+      "properties": {"max_turns": {"type": "integer", "minimum": 1, "maximum": 16}, "max_tokens": {"type": "integer", "minimum": 1, "maximum": 100000}, "max_cost_micros": {"type": "integer", "minimum": 0, "maximum": 100000000}, "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 3600}}
+    },
+    "required_approval_ids": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "deadline": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "path": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\u0000]+$"}
+  }
+}
