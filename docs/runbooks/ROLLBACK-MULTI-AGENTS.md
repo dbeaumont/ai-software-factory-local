@@ -16,6 +16,13 @@ déclenchent également le retour sûr.
 En cas de doute sur l'état d'un effet, le considérer comme potentiellement exécuté et le réconcilier par clé
 d'idempotence. Ne jamais le répéter pour « vérifier ».
 
+## Confinement immédiat
+
+- ouvrir l'incident et noter le commit, les versions/digests, le mode et les tâches en vol ;
+- ramener le plafond des nouvelles admissions à `PIPELINE`, la qualification à `INCOMPLETE` et le canary à zéro ;
+- activer le kill switch du rôle, mode, outil ou serveur affecté ;
+- préserver historiques Temporal, workspaces, journaux et preuves.
+
 ## Procédure opérateur
 
 1. Créer l'incident, noter l'heure, le déclencheur, le mode et les tâches potentiellement affectées.
@@ -42,7 +49,24 @@ d'idempotence. Ne jamais le répéter pour « vérifier ».
 Tout rejeu par le pipeline crée une nouvelle tentative liée au même ticket et au même commit source. Il ne
 réutilise pas implicitement les décisions ou approbations de la tentative hiérarchique.
 
-## Vérifications après retour sûr
+## Diagnostic
+
+```bash
+docker compose -f infrastructure/compose.yaml ps
+docker compose -f infrastructure/compose.yaml logs --tail=200 orchestrator temporal
+curl -fsS "http://localhost:${ORCHESTRATOR_PORT:-8080}/actuator/health"
+```
+
+Déterminer le premier événement fautif, les tâches et effets concernés, puis vérifier journal chaîné, historique
+Temporal, digests, manifestes, approbations et clés d'idempotence. Une issue inconnue reste inconnue jusqu'à sa
+réconciliation auprès du système cible.
+
+## Rétablissement
+
+Le rétablissement suit la section « Reprise » ci-dessous. La version corrigée repart obligatoirement en
+`HIERARCHICAL_SHADOW`; le pipeline reste l'autorité jusqu'à une nouvelle qualification.
+
+## Vérification et clôture
 
 - aucune nouvelle admission hiérarchique ;
 - canary à zéro et qualification `INCOMPLETE` ;
@@ -56,3 +80,9 @@ réutilise pas implicitement les décisions ou approbations de la tentative hié
 La reprise exige cause racine, périmètre d'impact, correction versionnée, tests de régression, répétition réussie
 du rollback et rapport de qualification courant. Exploitation approuve toujours ; Sécurité et Produit approuvent
 selon l'impact. Le retour direct à `HIERARCHICAL_ACTIVE` est interdit.
+
+## Escalade
+
+Exploitation pilote le rollback. Sécurité est obligatoire pour permission, secret, isolation, preuve ou effet
+suspect ; Produit l'est pour impact fonctionnel ou client. Un état non déterminé, un effet non réconcilié ou une
+preuve non vérifiable interdit la clôture et la remontée de mode.
