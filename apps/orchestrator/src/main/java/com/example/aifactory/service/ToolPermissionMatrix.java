@@ -33,6 +33,10 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
     }
 
     public static ToolPermissionMatrix readOnlyAgents() {
+        return readOnlyAgents(null);
+    }
+
+    public static ToolPermissionMatrix readOnlyAgents(OperationalKillSwitch killSwitch) {
         Set<String> context = Set.of(
                 "context.list_tree", "context.search_code", "context.read_file",
                 "context.get_repository_rules", "context.get_dependencies", "context.get_symbols");
@@ -43,7 +47,7 @@ public final class ToolPermissionMatrix implements AgentToolLoop.ToolAuthorizati
                 "developer", context,
                 "patch-repair", Set.of("context.read_file", "context.get_symbols"),
                 "tester", Set.of("context.search_code", "context.read_file",
-                        "context.get_dependencies", "context.get_symbols")));
+                        "context.get_dependencies", "context.get_symbols")), killSwitch);
     }
 
     private static Set<String> union(Set<String> left, Set<String> right) {

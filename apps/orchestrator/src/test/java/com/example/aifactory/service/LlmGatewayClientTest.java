@@ -22,6 +22,7 @@ class LlmGatewayClientTest {
                 """));
 
         assertEquals("stop", completion.finishReason());
+        assertEquals(0, completion.promptTokens());
         assertEquals(321, completion.completionTokens());
         assertTrue(completion.content().contains("IMPLEMENTABLE"));
     }

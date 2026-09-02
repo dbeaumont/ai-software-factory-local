@@ -45,11 +45,15 @@ public class TaskService {
     private final Counter failedTasks;
     private final Counter plannerContractRetries;
     private final ObjectMapper objectMapper;
+    private final com.example.aifactory.config.AgentToolingProperties agentTooling;
+    private final AgentContextToolHost agentTools;
 
     public TaskService(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
                        PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses,
                        SandboxExecutor sandbox, AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
-                       MeterRegistry metrics, ObjectMapper objectMapper) {
+                       MeterRegistry metrics, ObjectMapper objectMapper,
+                       com.example.aifactory.config.AgentToolingProperties agentTooling,
+                       AgentContextToolHost agentTools) {
         this.props = props;
         this.runner = runner;
         this.contextService = contextService;
@@ -60,6 +64,8 @@ public class TaskService {
         this.assurance = assurance;
         this.scmDelivery = scmDelivery;
         this.objectMapper = objectMapper;
+        this.agentTooling = agentTooling;
+        this.agentTools = agentTools;
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted").description("Tasks submitted to the factory").register(metrics);
         this.completedTasks = Counter.builder("ai_factory_tasks_completed").description("Tasks that completed validation").register(metrics);
         this.failedTasks = Counter.builder("ai_factory_tasks_failed").description("Tasks that failed before approval").register(metrics);
@@ -133,7 +139,9 @@ public class TaskService {
             s.sourceCommit = runner.run(List.of("git", "rev-parse", "HEAD"), ws, Duration.ofSeconds(10)).strip();
             s.model = llm.modelName();
             log.info("Task {} ({}) cloned source commit {} using model {}", s.id, s.ticketNumber, s.sourceCommit, s.model);
-            String plannerContext = contextService.collectForRole(ws, s.id, s.sourceCommit, "planner");
+            String plannerContext = agentTooling.enabledFor("planner")
+                    ? "Use the authorized context tools to retrieve only the repository evidence needed for this plan."
+                    : contextService.collectForRole(ws, s.id, s.sourceCommit, "planner");
             writeRunMetadata(ws, s);
 
             s.transition(TaskStatus.PLANNING, "Planner agent analyzing requirement and repository context");
@@ -159,6 +167,7 @@ public class TaskService {
             agentResponses.requireTesterReport(testerReview);
             writeRunMetadata(ws, s);
             s.testSummary = deterministicTests + "\n\n--- AI TESTER REVIEW ---\n" + testerReview;
+            s.testsPassed = true;
             Files.createDirectories(ws.resolve(".ai-factory"));
             Files.writeString(ws.resolve(".ai-factory/test.txt"), s.testSummary);
             s.assuranceResults.put("tests", evidenceResult(s, "tests", "PASSED", deterministicTests));
@@ -183,6 +192,7 @@ public class TaskService {
             AgentResponseValidator.ReviewSummary reviewSummary = agentResponses.summarizeReview(s.review);
             logReviewerDecision(s, reviewSummary);
             agentResponses.requireReviewAllowsApproval(reviewSummary);
+            s.reviewAccepted = true;
             Files.writeString(ws.resolve(".ai-review.md"), s.review);
             writeRunMetadata(ws, s);
 
@@ -248,6 +258,7 @@ public class TaskService {
                 if (repairAttempt == MAX_PATCH_REPAIR_ATTEMPTS) {
                     throw validationFailure;
                 }
+                state.patchRepairs++;
                 log.warn("Task {} ({}) patch validation failed; starting repair attempt {}/{}: {}",
                         state.id, state.ticketNumber, repairAttempt + 1, MAX_PATCH_REPAIR_ATTEMPTS, validationFailure.getMessage());
                 Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
@@ -318,10 +329,23 @@ public class TaskService {
         log.info("Task {} ({}) invoking {} agent with prompt sha256={}",
                 state.id, state.ticketNumber, promptName, fingerprint.substring(0, 12));
         String systemPrompt = prompts.load(promptName);
+        if (agentTooling.enabledFor(promptName)) {
+            long started = System.nanoTime();
+            AgentToolLoop loop = new AgentToolLoop(
+                    messages -> llm.nextToolTurn(messages, agentTools.definitions(), maxTokensFor(promptName)),
+                    agentTools.executor(state.id, state.sourceCommit, promptName), agentTools.authorization());
+            AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(state.id, promptName), systemPrompt,
+                    untrustedInput, new AgentToolLoop.Budget(6, Duration.ofMinutes(3), 12_000, 5_000_000));
+            state.recordAgentUsage(result.turns(), result.tokens(), result.costMicros());
+            log.info("Task {} ({}) {} tool loop completed; turns={} tokens={} duration_ms={}",
+                    state.id, state.ticketNumber, promptName, result.turns(), result.tokens(),
+                    Duration.ofNanos(System.nanoTime() - started).toMillis());
+            return result.finalResult();
+        }
         Map<String, Object> responseFormat = PlannerResponseFormat.forPrompt(promptName);
-        Supplier<String> invocation = () -> llm.chat(systemPrompt, untrustedInput,
+        Supplier<String> invocation = () -> regularChat(state, systemPrompt, untrustedInput,
                 maxTokensFor(promptName), responseFormat);
-        Supplier<String> retryInvocation = () -> llm.chat(systemPrompt, untrustedInput,
+        Supplier<String> retryInvocation = () -> regularChat(state, systemPrompt, untrustedInput,
                 retryMaxTokensFor(promptName), responseFormat);
         String response = "planner".equals(promptName)
                 ? withSingleContractRetry(invocation, retryInvocation, agentResponses::hasValidPlannerContract, reason -> {
@@ -333,6 +357,13 @@ public class TaskService {
         log.info("Task {} ({}) {} agent completed; response_chars={}",
                 state.id, state.ticketNumber, promptName, response.length());
         return response;
+    }
+
+    private String regularChat(TaskState state, String systemPrompt, String input, int maxTokens,
+                               Map<String, Object> responseFormat) {
+        LlmGatewayClient.LlmCallResult result = llm.chatDetailed(systemPrompt, input, maxTokens, responseFormat);
+        state.recordAgentUsage(0, result.tokens(), result.costMicros());
+        return result.content();
     }
 
     static String withSingleContractRetry(Supplier<String> invocation, Supplier<String> retryInvocation,

@@ -3,6 +3,7 @@ package com.example.aifactory.service;
 import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.CloudAvailability;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -23,12 +24,14 @@ public class LlmGatewayClient {
     private static final Logger log = LoggerFactory.getLogger(LlmGatewayClient.class);
     private final AiFactoryProperties props;
     private final WebClient client;
+    private final ObjectMapper objectMapper;
     private volatile CloudAvailability cachedCloudAvailability;
     private volatile Instant cloudAvailabilityCheckedAt = Instant.EPOCH;
 
-    public LlmGatewayClient(AiFactoryProperties props, WebClient.Builder builder) {
+    public LlmGatewayClient(AiFactoryProperties props, WebClient.Builder builder, ObjectMapper objectMapper) {
         this.props = props;
         this.client = builder.baseUrl(props.llmBaseUrl()).build();
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -86,7 +89,61 @@ public class LlmGatewayClient {
         return chat(system, user, maxTokens, null);
     }
 
+    AgentToolLoop.Turn nextToolTurn(List<AgentToolLoop.Message> messages,
+                                    List<ToolDefinition> tools, int maxTokens) {
+        List<Map<String, Object>> wireMessages = messages.stream().map(this::wireMessage).toList();
+        JsonNode response = client.post()
+                .uri("/chat/completions")
+                .headers(this::addAuthorization)
+                .bodyValue(toolRequestBody(props.cloudModel(), wireMessages, tools, maxTokens))
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .block(Duration.ofMinutes(10));
+        ToolTurn turn = parseToolTurn(response);
+        List<AgentToolLoop.ToolCall> calls = turn.toolCalls().stream().map(call -> {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> arguments = objectMapper.readValue(call.arguments(), Map.class);
+                return new AgentToolLoop.ToolCall(call.id(), call.name(), arguments);
+            } catch (Exception exception) {
+                throw new LlmCompletionException("invalid_tool_arguments", false,
+                        "LLM returned invalid JSON tool arguments");
+            }
+        }).toList();
+        long costMicros = response == null ? 0 : Math.max(0, Math.round(
+                response.path("_hidden_params").path("response_cost").asDouble(
+                        response.path("response_cost").asDouble(0)) * 1_000_000));
+        AgentToolLoop.Stop stop = calls.isEmpty() ? AgentToolLoop.Stop.FINAL : AgentToolLoop.Stop.TOOL_CALLS;
+        return new AgentToolLoop.Turn(stop, calls.isEmpty() ? turn.content() : null, calls,
+                Math.max(0, turn.promptTokens()), Math.max(0, turn.completionTokens()), costMicros);
+    }
+
+    private Map<String, Object> wireMessage(AgentToolLoop.Message message) {
+        if ("assistant".equals(message.role()) && message.toolCalls() != null && !message.toolCalls().isEmpty()) {
+            return Map.of("role", "assistant", "content", "", "tool_calls", message.toolCalls().stream().map(call -> Map.of(
+                    "id", call.id(), "type", "function", "function", Map.of(
+                            "name", call.name(), "arguments", writeArguments(call.arguments())))).toList());
+        }
+        if ("tool".equals(message.role()) && message.toolCalls() != null && !message.toolCalls().isEmpty()) {
+            return Map.of("role", "tool", "tool_call_id", message.toolCalls().getFirst().id(),
+                    "content", message.content());
+        }
+        return Map.of("role", message.role(), "content", message.content() == null ? "" : message.content());
+    }
+
+    private String writeArguments(Map<String, Object> arguments) {
+        try {
+            return objectMapper.writeValueAsString(arguments);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Cannot serialize tool arguments", exception);
+        }
+    }
+
     String chat(String system, String user, int maxTokens, Map<String, Object> responseFormat) {
+        return chatDetailed(system, user, maxTokens, responseFormat).content();
+    }
+
+    LlmCallResult chatDetailed(String system, String user, int maxTokens, Map<String, Object> responseFormat) {
         if (!props.cloudEnabled()) {
             throw new IllegalStateException("Cloud LLM is disabled by configuration");
         }
@@ -94,6 +151,7 @@ public class LlmGatewayClient {
             throw new IllegalArgumentException("maxTokens must be between 1 and 8192");
         }
         Map<String, Object> body = requestBody(props.cloudModel(), system, user, maxTokens, responseFormat);
+        long started = System.nanoTime();
         JsonNode response = client.post()
                 .uri("/chat/completions")
                 .headers(headers -> addAuthorization(headers))
@@ -104,7 +162,8 @@ public class LlmGatewayClient {
         ChatCompletion completion = parseCompletion(response);
         log.info("LLM completion finished reason={} completion_tokens={}",
                 completion.finishReason(), completion.completionTokens());
-        return completion.content();
+        return new LlmCallResult(completion.content(), completion.promptTokens() + completion.completionTokens(),
+                completion.costMicros(), Duration.ofNanos(System.nanoTime() - started).toMillis());
     }
 
     static ChatCompletion parseCompletion(JsonNode response) {
@@ -112,6 +171,10 @@ public class LlmGatewayClient {
         JsonNode message = choice == null ? null : choice.path("message");
         String finishReason = choice == null ? "missing" : choice.path("finish_reason").asText("missing");
         int completionTokens = response == null ? -1 : response.path("usage").path("completion_tokens").asInt(-1);
+        int promptTokens = response == null ? -1 : response.path("usage").path("prompt_tokens").asInt(-1);
+        long costMicros = response == null ? 0 : Math.max(0, Math.round(
+                response.path("_hidden_params").path("response_cost").asDouble(
+                        response.path("response_cost").asDouble(0)) * 1_000_000));
         String refusal = message == null ? "" : message.path("refusal").asText("");
         if (!refusal.isBlank()) {
             throw new LlmCompletionException("refusal", false, "LLM refused the request");
@@ -130,10 +193,15 @@ public class LlmGatewayClient {
         if (content == null || !content.isTextual()) {
             throw new LlmCompletionException("missing_content", false, "Invalid response from LLM gateway");
         }
-        return new ChatCompletion(content.asText(), finishReason, completionTokens);
+        return new ChatCompletion(content.asText(), finishReason, Math.max(0, promptTokens),
+                Math.max(0, completionTokens), costMicros);
     }
 
-    record ChatCompletion(String content, String finishReason, int completionTokens) {
+    record ChatCompletion(String content, String finishReason, int promptTokens, int completionTokens,
+                          long costMicros) {
+    }
+
+    record LlmCallResult(String content, long tokens, long costMicros, long durationMillis) {
     }
 
     static Map<String, Object> requestBody(String model, String system, String user, int maxTokens,

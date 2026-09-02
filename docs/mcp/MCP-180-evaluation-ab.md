@@ -2,7 +2,7 @@
 
 ## État
 
-L'évaluateur local est prêt et testé, mais la campagne fournisseur n'est pas déclarée exécutée. Aucun résultat n'est synthétisé pour fermer artificiellement le gate.
+L'évaluateur local et le raccordement réel Planner/Reviewer sont prêts et testés. Le mode d'évaluation est séparé de l'activation production, limité aux profils locaux et désactivé par défaut.
 
 Une campagne valide doit contenir au moins vingt cas appariés `BASELINE` / `CANDIDATE` et mesurer, pour chaque variante :
 
@@ -13,6 +13,6 @@ Une campagne valide doit contenir au moins vingt cas appariés `BASELINE` / `CAN
 
 Le verdict échoue fermé si les cas ne sont pas appariés, si le corpus est incomplet, si une régression de sécurité existe, ou si les seuils qualité/ressources sont dépassés.
 
-## Condition de lancement live
+## Campagne autorisée
 
-Le lancement cloud nécessite une autorisation qui identifie précisément le corpus transmis. L'autorisation générale du plan ne remplace pas cette validation de contenu. Jusqu'à cette campagne, aucun rôle de tool calling n'est activé en production.
+David Beaumont a autorisé le 2 septembre 2026 l'envoi à OpenAI des scénarios `CTX-001` à `CTX-020` et des seuls extraits nécessaires des trois dépôts de démonstration. La campagne utilise `scripts/mcp-agent-ab-campaign.sh`, n'enregistre ni prompt ni réponse brute et ne crée aucune PR.

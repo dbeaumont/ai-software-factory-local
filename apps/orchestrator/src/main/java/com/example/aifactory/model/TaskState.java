@@ -25,6 +25,12 @@ public class TaskState {
     public String qualitySummary;
     public String securitySummary;
     public final Map<String, Object> assuranceResults = new LinkedHashMap<>();
+    public long llmTokens;
+    public long llmCostMicros;
+    public int agentTurns;
+    public int patchRepairs;
+    public boolean testsPassed;
+    public boolean reviewAccepted;
     public String review;
     public PendingEffect pendingEffect;
     public String pullRequestUrl;
@@ -57,8 +63,22 @@ public class TaskState {
     public synchronized TaskView view() {
         return new TaskView(id, ticketNumber, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
                 request.effectiveLlmMode(), workspace, sourceCommit, model, Map.copyOf(promptFingerprints), plan, patch,
-                testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), review, pendingEffect,
+                testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), evaluationMetrics(),
+                review, pendingEffect,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt);
+    }
+
+    public synchronized void recordAgentUsage(int turns, long tokens, long costMicros) {
+        this.agentTurns += turns;
+        this.llmTokens += tokens;
+        this.llmCostMicros += costMicros;
+    }
+
+    private Map<String, Object> evaluationMetrics() {
+        return Map.of("first_patch_success", patchRepairs == 0, "repairs", patchRepairs,
+                "tests_passed", testsPassed, "human_accepted", reviewAccepted,
+                "tokens", llmTokens, "cost_micros", llmCostMicros, "agent_turns", agentTurns,
+                "duration_millis", java.time.Duration.between(createdAt, updatedAt).toMillis());
     }
 
     private static String conciseMessage(Exception ex) {

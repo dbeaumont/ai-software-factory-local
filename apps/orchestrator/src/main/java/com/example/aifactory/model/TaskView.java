@@ -21,6 +21,7 @@ public record TaskView(
         String qualitySummary,
         String securitySummary,
         java.util.Map<String, Object> assuranceResults,
+        java.util.Map<String, Object> evaluationMetrics,
         String review,
         PendingEffect pendingEffect,
         String pullRequestUrl,
