@@ -96,6 +96,34 @@ class CodeWorkspaceManagerTest {
     }
 
     @Test
+    void createsIsolatedParallelWorktreesAfterDisjointScopeProof() throws Exception {
+        Path repository = repository();
+        String commit = runner.run(List.of("git", "rev-parse", "HEAD"),
+                repository, Duration.ofSeconds(5)).strip();
+        CodeWorkspaceManager manager = new CodeWorkspaceManager(runner, new CodeScopePolicy());
+        Path isolationRoot = temporaryDirectory.resolve("isolated-code");
+
+        List<CodeWorkspaceManager.Allocation> allocations = manager.createParallel(
+                repository, isolationRoot, List.of(
+                        new CodeWorkspaceManager.ScopedRequest(new CodeWorkspaceManager.Request(
+                                "task-1", "attempt-1", "developer-a", commit),
+                                scope(CodeScopePolicy.Kind.FILE, "src/A.java")),
+                        new CodeWorkspaceManager.ScopedRequest(new CodeWorkspaceManager.Request(
+                                "task-1", "attempt-1", "developer-b", commit),
+                                scope(CodeScopePolicy.Kind.FILE, "src/B.java"))));
+        Files.writeString(allocations.getFirst().path().resolve("app.txt"), "changed only in A\n");
+
+        assertThat(allocations).extracting(CodeWorkspaceManager.Allocation::nodeId)
+                .containsExactly("developer-a", "developer-b");
+        Path canonicalIsolationRoot = isolationRoot.toRealPath();
+        assertThat(allocations).extracting(CodeWorkspaceManager.Allocation::path)
+                .doesNotHaveDuplicates().allMatch(path -> path.startsWith(canonicalIsolationRoot));
+        assertThat(Files.readString(allocations.getLast().path().resolve("app.txt")))
+                .isEqualTo("baseline\n");
+        assertThat(Files.readString(repository.resolve("app.txt"))).isEqualTo("baseline\n");
+    }
+
+    @Test
     void cleanupRemovesOnlyTheExactAllocatedWorktreesAndIsIdempotent() throws Exception {
         Path repository = repository();
         String commit = runner.run(List.of("git", "rev-parse", "HEAD"),
