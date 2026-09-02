@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,7 +26,7 @@ class SecurityAgentsTest {
     void createsThreeDistinctSecurityRolesWithPromptsAndHostSelectedCapabilities() throws Exception {
         RecordingExecutor runtime = new RecordingExecutor();
         AgentCatalog catalog = new AgentCatalog();
-        SecurityAgents agents = new SecurityAgents(runtime, catalog);
+        SecurityAgents agents = agents(runtime);
 
         for (String role : List.of("security-agent", "threat-model", "security-findings")) {
             agents.execute(request(role));
@@ -47,7 +48,7 @@ class SecurityAgentsTest {
     @Test
     void rejectsRolesOutsideSecurityBeforeRuntime() {
         RecordingExecutor runtime = new RecordingExecutor();
-        SecurityAgents agents = new SecurityAgents(runtime, new AgentCatalog());
+        SecurityAgents agents = agents(runtime);
         assertThatThrownBy(() -> agents.execute(request("developer"))).hasMessageContaining("outside");
         assertThat(runtime.invocations).isEmpty();
     }
@@ -56,7 +57,7 @@ class SecurityAgentsTest {
     void threatModelIsLimitedToContextAndDependencyReads() {
         RecordingExecutor runtime = new RecordingExecutor();
         AgentCatalog catalog = new AgentCatalog();
-        new SecurityAgents(runtime, catalog).execute(request("threat-model"));
+        agents(runtime).execute(request("threat-model"));
 
         AgentRuntime.Invocation invocation = runtime.invocations.getFirst();
         assertThat(invocation.allowedTools()).containsExactlyInAnyOrder(
@@ -70,7 +71,26 @@ class SecurityAgentsTest {
     private static SecurityAgents.Request request(String role) {
         return new SecurityAgents.Request("task-1", "attempt-1", "a".repeat(40), role,
                 Set.of("security-1"), "untrusted input",
-                new AgentToolLoop.Budget(3, Duration.ofMinutes(2), 3000, 1000000));
+                new AgentToolLoop.Budget(3, Duration.ofMinutes(2), 3000, 1000000),
+                normalizedFindings(), Set.of(new SecurityFindingsInputValidator.EvidenceReference(
+                "evidence://task-1/security", "b".repeat(64))));
+    }
+
+    private static SecurityAgents agents(RecordingExecutor runtime) {
+        return new SecurityAgents(runtime, new AgentCatalog(),
+                new SecurityFindingsInputValidator(new ObjectMapper()));
+    }
+
+    private static String normalizedFindings() {
+        return """
+                {"schema_version":"1","task_id":"task-1","attempt_id":"attempt-1",
+                 "source_commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","scanner":"trivy",
+                 "verdict":"PASSED","findings":[],
+                 "summary":{"unknown":0,"low":0,"medium":0,"high":0,"critical":0},
+                 "evidence":{"uri":"evidence://task-1/security",
+                 "digest":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                 "status":"COMPLETE"}}
+                """;
     }
 
     private static final class RecordingExecutor implements AgentExecutor {
