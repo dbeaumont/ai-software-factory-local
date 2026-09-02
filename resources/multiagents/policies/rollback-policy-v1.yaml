@@ -1,0 +1,104 @@
+version: "1"
+policyId: hierarchical-rollback-v1
+safeMode: PIPELINE
+defaultOnUnknownState: DISABLE_HIERARCHICAL_AND_FREEZE_EFFECTS
+
+immediateTriggers:
+  - id: unauthorized-external-effect
+    condition: Any external effect without a valid host decision and approval binding.
+    severity: CRITICAL
+  - id: permission-or-scope-escalation
+    condition: An agent obtains or attempts a role, tool, budget, parent or scope not granted by the host.
+    severity: CRITICAL
+  - id: secret-or-sensitive-data-disclosure
+    condition: A secret or forbidden sensitive value appears in a prompt, result, trace or artifact.
+    severity: CRITICAL
+  - id: cross-task-isolation-breach
+    condition: A task reads or changes another task workspace, state or evidence.
+    severity: CRITICAL
+  - id: evidence-integrity-failure
+    condition: A manifest, digest, provenance or approval binding is invalid or divergent.
+    severity: CRITICAL
+  - id: duplicate-effect
+    condition: A retry creates a second SCM, publication, deployment, IAM or data effect.
+    severity: CRITICAL
+  - id: invalid-contract-accepted
+    condition: An invalid agent contract reaches scheduling, integration or an external gate.
+    severity: HIGH
+  - id: qualification-revoked
+    condition: The active artifact, model, prompt, policy or tool bundle is not covered by a QUALIFIED verdict.
+    severity: HIGH
+
+thresholdTriggers:
+  sloFastBurn:
+    windows:
+      - { window: PT5M, burnRate: 14.4 }
+      - { window: PT1H, burnRate: 6.0 }
+  hierarchicalFailureRate:
+    window: PT15M
+    minimumSamples: 10
+    maximum: 0.20
+  costBudgetOverrun:
+    consecutiveTasks: 2
+    maximumRatio: 1.0
+  queueSaturation:
+    duration: PT10M
+    maximumUtilization: 0.90
+  temporalNonProgress:
+    duration: PT5M
+    action: STOP_NEW_HIERARCHICAL_ADMISSIONS
+
+automaticActions:
+  order:
+    - set effective admission ceiling to PIPELINE
+    - set hierarchical qualification to INCOMPLETE
+    - set hierarchical canary percentage to zero
+    - stop new hierarchical workflow starts
+    - freeze uncommitted external effects for hierarchical attempts
+    - cancel or suspend child activities without deleting evidence
+    - preserve manifests, histories, logs and idempotency keys
+    - route newly admitted tasks to PIPELINE
+    - emit a security and operations incident
+  never:
+    - bypass a human approval
+    - retry an effect without idempotency reconciliation
+    - rewrite or delete evidence
+    - downgrade a risk class
+    - interpret an incomplete gate as success
+
+inFlightReconciliation:
+  noExternalEffectYet: CANCEL_OR_SUSPEND
+  awaitingHumanDecision: SUSPEND_AND_INVALIDATE_ON_DIGEST_CHANGE
+  effectRequestedUnknownOutcome: RECONCILE_BY_IDEMPOTENCY_KEY
+  effectConfirmed: RECORD_ONLY_NEVER_REPEAT
+  shadowAttempt: CANCEL_WITHOUT_BASELINE_IMPACT
+  newAttemptRequiredForPipelineReplay: true
+
+recovery:
+  minimumMode: HIERARCHICAL_SHADOW
+  requiredEvidence:
+    - incident root cause and affected task set
+    - integrity check of evidence and state
+    - fixed artifact digests and regression tests
+    - successful rollback rehearsal
+    - current qualification report
+  approvals:
+    operations: always
+    security: for security, isolation, permission, secret or evidence incidents
+    product: for behavior, scope or customer-impacting incidents
+  progressiveOnly: true
+  directReturnToActiveForbidden: true
+
+audit:
+  requiredFields:
+    - incident_id
+    - detected_at
+    - trigger_id
+    - source
+    - affected_tasks
+    - previous_mode
+    - effective_safe_mode
+    - frozen_effects
+    - in_flight_decisions
+    - actor
+    - policy_version
