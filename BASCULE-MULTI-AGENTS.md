@@ -113,7 +113,7 @@
 - [x] **MAH-030** — Créer `integration-result-v1.schema.json` avec ordre d'application et conflits détectés. _(`resources/multiagents/schemas/integration-result-v1.schema.json`.)_
 - [x] **MAH-031** — Créer `test-strategy-v1.schema.json` et `test-assessment-v1.schema.json`. _(`resources/multiagents/schemas/test-strategy-v1.schema.json` et `test-assessment-v1.schema.json`.)_
 - [x] **MAH-032** — Créer `security-assessment-v1.schema.json` et réutiliser les findings normalisés existants. _(`resources/multiagents/schemas/security-assessment-v1.schema.json`, référence `vulnerability-result-v1`.)_
-- [ ] **MAH-033** — Versionner le contrat de sortie de l'Independent Reviewer et y référencer le manifeste final.
+- [x] **MAH-033** — Versionner le contrat de sortie de l'Independent Reviewer et y référencer le manifeste final. _(`resources/multiagents/schemas/independent-review-v1.schema.json`.)_
 
 ### Validation et compatibilité
 
