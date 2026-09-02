@@ -493,7 +493,7 @@
 
 - [x] **MAH-330** — Mettre à jour README, architecture du proto, workflow et diagrammes. _(README réaligné sur les quatre modes ; état, composants et diagrammes du workflow 1.2.0 dans `docs/version-1.2.0-archi-04/ETAT-PROTO-1.2.0.md`.)_
 - [x] **MAH-331** — Documenter rôles, sous-agents, permissions, contrats et propriétaires. _(Matrices de rôles, autorité, permissions, contrats et responsabilités dans `docs/agents/CATALOGUE-AGENTS-V1.md`.)_
-- [ ] **MAH-332** — Documenter comment ajouter, modifier, évaluer, promouvoir et retirer un agent.
+- [x] **MAH-332** — Documenter comment ajouter, modifier, évaluer, promouvoir et retirer un agent. _(Cycle complet, artefacts gouvernés, gates et retrait sûr dans `docs/agents/CYCLE-DE-VIE-AGENT.md`.)_
 - [ ] **MAH-333** — Documenter le versionnement des workflows Temporal et les déploiements sûrs.
 - [ ] **MAH-334** — Documenter Task Memory, Evidence MCP, rétention, restauration et audit.
 - [ ] **MAH-335** — Documenter routage, replans, contradictions et décisions humaines.
