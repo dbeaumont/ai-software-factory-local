@@ -132,7 +132,7 @@
 
 ### Ports et composants
 
-- [ ] **MAH-040** — Introduire un port `WorkflowCoordinator` indépendant de Temporal.
+- [x] **MAH-040** — Introduire un port `WorkflowCoordinator` indépendant de Temporal. _(`apps/orchestrator/.../workflow/WorkflowCoordinator.java`, sans type Temporal.)_
 - [ ] **MAH-041** — Extraire le pipeline actuel de `TaskService` dans `DeterministicWorkflowCoordinator`.
 - [ ] **MAH-042** — Réduire `TaskService` à la création, consultation et commande des tâches.
 - [ ] **MAH-043** — Introduire `AgentRuntime` pour exécuter un rôle avec prompt, contrat, outils et budget explicites.
