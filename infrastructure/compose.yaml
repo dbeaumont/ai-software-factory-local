@@ -16,6 +16,10 @@ services:
       timeout: 5s
       retries: 30
       start_period: 10s
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1g }
+        reservations: { cpus: "0.10", memory: 128m }
     networks: [workflow-internal]
 
   temporal:
@@ -32,6 +36,7 @@ services:
       DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
       DEFAULT_NAMESPACE: ${AI_FACTORY_TEMPORAL_NAMESPACE:-ai-factory-local}
       DEFAULT_NAMESPACE_RETENTION: ${TEMPORAL_NAMESPACE_RETENTION_DAYS:-7}
+      PROMETHEUS_ENDPOINT: 0.0.0.0:8000
     volumes:
       - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
     healthcheck:
@@ -40,6 +45,10 @@ services:
       timeout: 3s
       retries: 60
       start_period: 30s
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2g }
+        reservations: { cpus: "0.25", memory: 256m }
     networks: [workflow-internal]
 
   # Developer diagnostics only; never routed through the product reverse proxy.
@@ -53,6 +62,10 @@ services:
       TEMPORAL_CORS_ORIGINS: http://127.0.0.1:${TEMPORAL_UI_PORT:-8233}
     ports:
       - "${TEMPORAL_UI_BIND_ADDRESS:-127.0.0.1}:${TEMPORAL_UI_PORT:-8233}:8080"
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256m }
+        reservations: { cpus: "0.05", memory: 64m }
     networks: [workflow-internal]
 
   # Source-control service and its dedicated persistent PostgreSQL database.
@@ -540,7 +553,7 @@ services:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "${PROMETHEUS_PORT}:9090"
-    networks: [factory, mcp-internal]
+    networks: [factory, mcp-internal, workflow-internal]
 
   grafana:
     image: grafana/grafana:12.1.1

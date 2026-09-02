@@ -163,7 +163,7 @@
 - [x] **MAH-061** — Ajouter Temporal UI sur un port de diagnostic non exposé comme point d'entrée métier. _(UI 2.53.0 liée à `127.0.0.1:8233`, absente du reverse proxy produit.)_
 - [x] **MAH-062** — Ajouter le Temporal Java SDK et épingler sa version dans le build de l'orchestrateur. _(Dépendance `temporal-sdk` épinglée à la version 1.38.0 compatible Spring Boot 4/Jackson 3.)_
 - [x] **MAH-063** — Configurer namespace, certificats ou authentification, task queues et règles de rétention. _(Configuration typée validée, files spécialisées, rétention 7 jours et options TLS/auth distantes.)_
-- [ ] **MAH-064** — Ajouter readiness, métriques, dashboards et limites de ressources des services Temporal.
+- [x] **MAH-064** — Ajouter readiness, métriques, dashboards et limites de ressources des services Temporal. _(Healthcheck, scrape Prometheus privé, dashboard Grafana et plafonds CPU/mémoire.)_
 
 ### Modèle de workflow
 

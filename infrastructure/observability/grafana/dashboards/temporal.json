@@ -1,0 +1,37 @@
+{
+  "title": "AI Factory Temporal",
+  "description": "Local Temporal Server health and workflow execution signals.",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Temporal scrape readiness",
+      "targets": [{"expr": "up{job=\"temporal\"}", "legendFormat": "server"}],
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0}
+    },
+    {
+      "type": "timeseries",
+      "title": "Frontend request and error rates",
+      "targets": [
+        {"expr": "sum(rate(service_requests{service_name=\"frontend\"}[5m]))", "legendFormat": "requests/s"},
+        {"expr": "sum(rate(service_errors{service_name=\"frontend\"}[5m]))", "legendFormat": "errors/s"}
+      ],
+      "gridPos": {"h": 8, "w": 16, "x": 8, "y": 0}
+    },
+    {
+      "type": "timeseries",
+      "title": "Workflow task schedule-to-start p95",
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(workflow_task_schedule_to_start_latency_bucket[5m])) by (le))",
+        "legendFormat": "p95"
+      }],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+    },
+    {
+      "type": "timeseries",
+      "title": "Persistence errors",
+      "targets": [{"expr": "sum(rate(persistence_errors[5m]))", "legendFormat": "errors/s"}],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+    }
+  ]
+}

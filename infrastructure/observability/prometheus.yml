@@ -13,3 +13,7 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["sandbox-execution-mcp:8092"]
+  - job_name: temporal
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["temporal:8000"]
