@@ -4,7 +4,6 @@ import com.example.aifactory.model.LlmMode;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
-import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -162,8 +161,7 @@ class TaskServiceTest {
 
     private static final class TestableTaskService extends TaskService {
         private TestableTaskService() {
-            super(null, null, null, null, null, new AgentResponseValidator(new ObjectMapper()), null, null, null,
-                    new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), new ObjectMapper(), null, null);
+            super(null, null, null, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
         }
     }
 }
