@@ -1,0 +1,42 @@
+{
+  "schema_version": "1",
+  "baseline_id": "deterministic-pipeline-v1.1.0-mcp",
+  "campaign_id": "MCP-agent-ab-20260902-01",
+  "campaign_date": "2026-09-02",
+  "variant": "BASELINE",
+  "paired_case_manifest": "resources/mcp/baselines/context-shadow-campaign-v1.json",
+  "source_artifact": {
+    "path": "docs/mcp/baselines/MCP-agent-ab-20260902-01-baseline.jsonl",
+    "sha256": "47ea3ebd6220f18fc5570f936da89631765b0b27457ea847bfde600e743d3237"
+  },
+  "sample": {
+    "cases": 20,
+    "status_counts": {
+      "FAILED": 19,
+      "WAITING_APPROVAL": 1
+    }
+  },
+  "metrics": {
+    "first_patch_success_rate": 0.75,
+    "repairs_average": 0.35,
+    "tests_passed_rate": 0.10,
+    "review_accepted_rate": 0.05,
+    "human_accepted_rate": 0.0,
+    "tokens_total": 134365,
+    "tokens_average": 6718.25,
+    "duration_millis_total": 543041,
+    "duration_millis_average": 27152.05,
+    "security_failures": 0
+  },
+  "cost": {
+    "telemetry_available": false,
+    "observed_cost_micros_total": 0,
+    "interpretation": "UNAVAILABLE_NOT_ZERO"
+  },
+  "campaign_incidents": [
+    "OPENAI_TOOL_NAME_TRANSPORT_INCOMPATIBILITY",
+    "PROMPT_TOOL_ACCESS_CONTRADICTION",
+    "SECURITY_CLASSIFIER_FALSE_POSITIVE"
+  ],
+  "report": "docs/mcp/MCP-180-rapport-campagne-20260902.md"
+}
