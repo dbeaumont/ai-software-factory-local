@@ -223,6 +223,25 @@ class DelegationSchedulerTest {
                 .containsExactly("independent");
     }
 
+    @Test
+    void reproducesTheSameCoordinationSequenceForTheSameDagAndExternalOutcomes() {
+        DelegationWorkflow.Request architecture = node("architecture", "supervisor", Set.of());
+        DelegationWorkflow.Request code = node("code", "supervisor", Set.of());
+        DelegationWorkflow.Request tests = node("tests", "supervisor", Set.of("code"));
+        DelegationWorkflow.Request security = node("security", "supervisor", Set.of("architecture"));
+        Map<String, String> externalOutcomes = Map.of(
+                "architecture", "FAILED", "code", "DONE", "tests", "DONE", "security", "DONE");
+
+        List<String> first = coordinate(
+                List.of(tests, architecture, security, code), externalOutcomes);
+        List<String> replay = coordinate(
+                List.of(code, security, architecture, tests), externalOutcomes);
+
+        assertThat(replay).isEqualTo(first).containsExactly(
+                "START:architecture", "START:code", "RESULT:architecture:FAILED", "RESULT:code:DONE",
+                "BLOCKED:security:BLOCKED_BY_FAILED", "START:tests", "RESULT:tests:DONE");
+    }
+
     private static SoftwareFactoryWorkflow.Request root() {
         return new SoftwareFactoryWorkflow.Request("task-1", "attempt-1", "a".repeat(40), "change");
     }
@@ -240,5 +259,30 @@ class DelegationSchedulerTest {
     private static DelegationWorkflow.Request prioritizedNode(String id, int priority) {
         return new DelegationWorkflow.Request("task-1", "attempt-1", id, "supervisor", "code-agent",
                 "a".repeat(40), id, priority, Set.of(), new DelegationWorkflow.Budget(100, 100, 1));
+    }
+
+    private static List<String> coordinate(List<DelegationWorkflow.Request> plan, Map<String, String> outcomes) {
+        List<String> sequence = new ArrayList<>();
+        DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) -> {
+            sequence.add("START:" + request.nodeId());
+            return () -> new DelegationWorkflow.Result(
+                    request.nodeId(), request.role(), outcomes.get(request.nodeId()));
+        });
+        List<DelegationWorkflow.Request> ordered = scheduler.validateAndOrder(root(), plan);
+        Map<String, DelegationWorkflow.Result> completed = new LinkedHashMap<>();
+        while (completed.size() < ordered.size()) {
+            for (DelegationWorkflow.Result blocked : scheduler.propagateBlocked(ordered, completed)) {
+                completed.put(blocked.nodeId(), blocked);
+                sequence.add("BLOCKED:" + blocked.nodeId() + ':' + blocked.status());
+            }
+            if (completed.size() == ordered.size()) break;
+            List<DelegationWorkflow.Result> results = scheduler.executeBatch(
+                    root(), scheduler.ready(ordered, completed.keySet(), 4));
+            for (DelegationWorkflow.Result result : results) {
+                completed.put(result.nodeId(), result);
+                sequence.add("RESULT:" + result.nodeId() + ':' + result.status());
+            }
+        }
+        return List.copyOf(sequence);
     }
 }

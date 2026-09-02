@@ -308,7 +308,7 @@
 
 ### Gate du lot 7
 
-- [ ] Le même DAG validé produit une séquence de coordination reproductible sous les mêmes événements externes.
+- [x] Le même DAG validé produit une séquence de coordination reproductible sous les mêmes événements externes. _(Preuves et verdict : `docs/multiagents/GATE-LOT-7-SCHEDULER-ROUTAGE.md`.)_
 
 ## 12. Lot 8 — Worktrees, patches parallèles et intégration
 
