@@ -8,7 +8,7 @@ import java.util.Set;
 
 /** Executes one explicitly configured role and validates its final structured result. */
 @Component
-public final class AgentRuntime {
+public final class AgentRuntime implements AgentExecutor {
     private final PromptService prompts;
     private final LlmGatewayClient llm;
     private final AgentContextToolHost toolHost;
@@ -22,6 +22,7 @@ public final class AgentRuntime {
         this.contracts = contracts;
     }
 
+    @Override
     public Result execute(Invocation invocation) {
         if (invocation.allowedTools().stream().anyMatch(AgentRuntime::effectfulTool)) {
             throw new IllegalArgumentException("Effectful sandbox, assurance and SCM tools cannot be injected into AgentRuntime");
