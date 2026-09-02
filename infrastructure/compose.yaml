@@ -2,6 +2,44 @@ name: ai-software-factory
 
 # All application services share this private Docker network; only explicitly mapped ports are exposed to the host.
 services:
+  # Durable workflow engine and its dedicated PostgreSQL persistence for local development.
+  temporal-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    volumes:
+      - temporal-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks: [workflow-internal]
+
+  temporal:
+    image: temporalio/auto-setup:${TEMPORAL_VERSION:-1.31.2}
+    depends_on:
+      temporal-db:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: temporal-db
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    volumes:
+      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "7233"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+    networks: [workflow-internal]
+
   # Source-control service and its dedicated persistent PostgreSQL database.
   gitea-db:
     image: postgres:16-alpine
@@ -485,6 +523,10 @@ services:
     networks: [factory]
 
 networks:
+  # Temporal frontend and database remain private; only workflow workers join this segment.
+  workflow-internal:
+    name: ai-factory-workflow-internal
+    internal: true
   # Explicit name lets sandbox containers join the same network at runtime.
   factory:
     name: ai-factory-network
@@ -505,6 +547,7 @@ networks:
 
 volumes:
   # Persistent service state. `factory-workspace` is shared with ephemeral task sandboxes.
+  temporal-db-data:
   gitea-db-data:
   gitea-data:
   factory-workspace:

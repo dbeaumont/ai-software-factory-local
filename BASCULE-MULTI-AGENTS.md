@@ -159,7 +159,7 @@
 
 ### Infrastructure locale
 
-- [ ] **MAH-060** — Ajouter Temporal Server et sa persistance à l'environnement Docker Compose local.
+- [x] **MAH-060** — Ajouter Temporal Server et sa persistance à l'environnement Docker Compose local. _(Serveur 1.31.2 et PostgreSQL dédié persistant sur réseau interne.)_
 - [ ] **MAH-061** — Ajouter Temporal UI sur un port de diagnostic non exposé comme point d'entrée métier.
 - [ ] **MAH-062** — Ajouter le Temporal Java SDK et épingler sa version dans le build de l'orchestrateur.
 - [ ] **MAH-063** — Configurer namespace, certificats ou authentification, task queues et règles de rétention.
