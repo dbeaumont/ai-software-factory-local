@@ -195,7 +195,7 @@
 
 ### Modèle de données
 
-- [ ] **MAH-090** — Modéliser `tasks`, `workflow_runs`, `delegations`, `agent_runs`, `decisions` et `approvals`.
+- [x] **MAH-090** — Modéliser `tasks`, `workflow_runs`, `delegations`, `agent_runs`, `decisions` et `approvals`. _(Migration PostgreSQL relationnelle avec identités, filiation, états, budgets et index de lecture.)_
 - [ ] **MAH-091** — Modéliser `artifacts`, `evidence_refs`, `contradictions`, `budget_usage` et `tool_invocations`.
 - [ ] **MAH-092** — Lier chaque enregistrement au commit source et à la tentative de workflow.
 - [ ] **MAH-093** — Séparer données vérifiées, données non fiables, conclusions d'agents et décisions de politique.
