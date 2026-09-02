@@ -9,10 +9,12 @@ import java.util.Set;
 public final class SupervisorAgent {
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;
+    private final DelegationValidator delegations;
 
-    public SupervisorAgent(AgentExecutor runtime, AgentCatalog catalog) {
+    public SupervisorAgent(AgentExecutor runtime, AgentCatalog catalog, DelegationValidator delegations) {
         this.runtime = runtime;
         this.catalog = catalog;
+        this.delegations = delegations;
     }
 
     public AgentRuntime.Result execute(Request request) {
@@ -27,15 +29,23 @@ public final class SupervisorAgent {
             case CONSOLIDATE, REPLAN -> "supervisor-decision-v1";
         };
         AgentCatalog.Role role = catalog.require("supervisor");
-        return runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
+        AgentRuntime.Result result = runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
                 request.sourceCommit(), role.name(), "supervisor", outputContract, Set.copyOf(role.tools()),
                 request.allowedReferenceIds(), request.untrustedInput(), request.budget()));
+        if (operation == Operation.DECOMPOSE) {
+            if (request.delegationLimits() == null) {
+                throw new IllegalArgumentException("Host delegation limits are required before decomposition");
+            }
+            delegations.validate(result.document(), request.delegationLimits());
+        }
+        return result;
     }
 
     enum Operation { DECOMPOSE, CONSOLIDATE, REPLAN }
 
     public record Request(String taskId, String attemptId, String sourceCommit, String operation,
-                          Set<String> allowedReferenceIds, String untrustedInput, AgentToolLoop.Budget budget) {
+                          Set<String> allowedReferenceIds, String untrustedInput, AgentToolLoop.Budget budget,
+                          DelegationValidator.Limits delegationLimits) {
         public Request {
             if (operation == null || operation.isBlank()) {
                 throw new IllegalArgumentException("Supervisor operation is required");

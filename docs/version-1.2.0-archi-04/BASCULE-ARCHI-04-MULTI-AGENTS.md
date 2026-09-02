@@ -229,7 +229,7 @@
 - [x] **MAH-110** — Créer le manifeste et le prompt `supervisor`. _(`resources/agents/supervisor.yaml` et `resources/prompts/supervisor.md`, versionnés et testés contre le catalogue hôte.)_
 - [x] **MAH-111** — Limiter Supervisor à décomposition, sélection de rôles, consolidation et proposition de replan. _(`SupervisorAgent` n'expose que `DECOMPOSE`, `CONSOLIDATE` et `REPLAN`, avec contrat de sortie imposé par l'hôte.)_
 - [x] **MAH-112** — Lui interdire tout outil à effet et toute création de rôle non catalogué. _(Catalogue Supervisor validé en lecture seule, écritures Evidence incluses dans les effets interdits et rôles hors schéma rejetés avant planification.)_
-- [ ] **MAH-113** — Valider son DAG avant d'exécuter la première délégation.
+- [x] **MAH-113** — Valider son DAG avant d'exécuter la première délégation. _(`SupervisorAgent` applique contrat, acyclicité, hiérarchie, scopes, profondeur, fan-out et budgets hôte avant de rendre tout résultat `DECOMPOSE`.)_
 - [ ] **MAH-114** — Exiger citations, hypothèses, risques, budget proposé et critères de succès.
 
 ### Architecture
