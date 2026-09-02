@@ -78,4 +78,19 @@ class TaskMemorySchemaTest {
         assertThat(sql.split("ADD COLUMN information_kind information_kind NOT NULL", -1).length - 1)
                 .isEqualTo(3);
     }
+
+    @Test
+    void transitionsAreAtomicAndUseOptimisticVersionChecks() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V005__optimistic_locking_and_atomic_transitions.sql"));
+
+        assertThat(sql).contains("CREATE FUNCTION valid_execution_transition")
+                .contains("CREATE FUNCTION transition_execution")
+                .contains("version = version + 1")
+                .contains("version = expected_version AND status = previous_status")
+                .contains("GET DIAGNOSTICS affected = ROW_COUNT")
+                .contains("ERRCODE = '40001'")
+                .contains("ERRCODE = '23514'");
+        assertThat(sql.split("WHERE .*version = expected_version AND status = previous_status", -1).length - 1)
+                .isEqualTo(4);
+    }
 }

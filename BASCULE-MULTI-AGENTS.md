@@ -199,7 +199,7 @@
 - [x] **MAH-091** — Modéliser `artifacts`, `evidence_refs`, `contradictions`, `budget_usage` et `tool_invocations`. _(Migration dédiée aux métadonnées de preuve, conflits, budgets et appels MCP, sans contenu brut.)_
 - [x] **MAH-092** — Lier chaque enregistrement au commit source et à la tentative de workflow. _(Lineage obligatoire et clés étrangères composites empêchant toute référence croisée entre tentatives ou commits.)_
 - [x] **MAH-093** — Séparer données vérifiées, données non fiables, conclusions d'agents et décisions de politique. _(Type PostgreSQL fermé et contraintes cohérentes sur artefacts, références et décisions.)_
-- [ ] **MAH-094** — Ajouter verrouillage optimiste et transitions atomiques pour les mises à jour concurrentes.
+- [x] **MAH-094** — Ajouter verrouillage optimiste et transitions atomiques pour les mises à jour concurrentes. _(Fonction transactionnelle commune, graphe de transitions fermé et conflit de version signalé en `40001`.)_
 - [ ] **MAH-095** — Définir rétention, purge, chiffrement et classification par type d'artefact.
 
 ### Intégration Evidence MCP
