@@ -1,6 +1,14 @@
 # AI Software Factory
 
-Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. Le dépôt matérialise un flux contrôlé de type :
+Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. La version 1.2.0 introduit une
+architecture **multi-agent hiérarchique gouvernée** tout en conservant le pipeline déterministe 1.1.0 comme
+baseline et chemin de repli.
+
+Le mode `PIPELINE` reste le mode opérationnel de référence tant que la qualification et les approbations de
+bascule ne sont pas acquises. Les modes `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY` et
+`HIERARCHICAL_ACTIVE` sont activés de façon fail-closed par politique et par rôle.
+
+Le chemin court historique reste :
 
 `requirement -> plan -> patch -> validation du diff -> réparation si besoin -> sandbox -> tests -> SonarQube -> SBOM Syft -> scan Trivy -> review IA -> approbation humaine -> pull request Gitea`
 
@@ -25,6 +33,9 @@ La stack actuelle contient :
 | Point d'entrée HTTP | `reverse-proxy` Nginx (port 8080) |
 | Interface de saisie & suivi | `factory-web` (SPA HTML/JS/CSS servie par Nginx) |
 | Orchestration | Spring Boot 4.1 / Spring AI 2.0 / Java 25 (`orchestrator`) |
+| Workflow durable | Temporal Server / Java SDK, workflows racine et enfants versionnés |
+| Hiérarchie | Supervisor, agents Architecture, Code, Tests, Sécurité et Independent Reviewer |
+| Mémoire de tâche | Projection PostgreSQL, historique Temporal et artefacts Evidence MCP |
 | Contexte MCP | Serveur MCP stateless en lecture seule (`repository-context-mcp`) |
 | Exécution MCP | Contrôleur de jobs à profils immuables (`sandbox-execution-mcp`) |
 | Passerelle LLM | LiteLLM (port 4000 interne) |
@@ -38,7 +49,42 @@ La stack actuelle contient :
 | Scan sécurité | Trivy (vulnérabilités & secrets) |
 | Observabilité | Prometheus v3.5 + Grafana 12.1 (métriques Micrometer/Actuator) |
 
+### Architecture multi-agent 1.2.0
+
+```mermaid
+flowchart LR
+  U[Utilisateur] --> W[Workflow Coordinator\nTemporal]
+  W --> S[Supervisor]
+  S --> A[Architecture]
+  S --> C[Code]
+  S --> T[Tests]
+  S --> X[Sécurité]
+  W --> R[Independent Reviewer]
+  A --> M[(Task Memory et Evidence MCP)]
+  C --> M
+  T --> M
+  X --> M
+  M --> R
+  W -. seul propriétaire des effets .-> G[Sandbox / Assurance / SCM MCP]
+  R --> H{Approbation humaine}
+  H --> G
+```
+
+Le Supervisor propose un DAG borné ; l'hôte valide rôles, scopes, dépendances, budgets et contrats. Les agents
+n'appellent jamais directement un outil à effet. Le `WorkflowCoordinator` reste seul autorisé à appliquer un
+patch, lancer les gates, écrire les preuves faisant autorité et livrer une Pull Request.
+
 ## Ce que fait réellement le prototype
+
+Deux chemins coexistent :
+
+- le mode `PIPELINE` exécute le flux séquentiel compatible 1.1.0 décrit ci-dessous ;
+- les modes hiérarchiques routent la tâche, construisent un DAG de délégations typées, exécutent les
+  spécialistes autorisés, consolident leurs preuves puis font intervenir l'Independent Reviewer hors de la
+  chaîne d'autorité du Supervisor.
+
+Une activation hiérarchique non qualifiée, un rôle non promu ou une télémétrie comparative incomplète est
+refusé. Le pipeline de référence est alors conservé sans contourner les gates.
 
 1. L'utilisateur soumet un ticket depuis l'interface web (`factory-web`) ou via l'API REST `POST /api/tasks`.
 2. L'orchestrateur attribue une référence unique (`AF-0001`, etc.) et clone le dépôt cible de manière asynchrone.
@@ -315,11 +361,14 @@ make demo
 
 ## Limites actuelles
 
-- stockage des tâches en mémoire uniquement ;
-- pas de persistance PostgreSQL pour l'orchestrateur ;
-- exécution locale avec file bornée en mémoire, sans scheduler distribué ;
-- prompts versionnés mais sans gouvernance avancée ;
-- un seul pipeline d'exécution, avec rôles LLM logiques ;
+- le mode hiérarchique n'est pas généralisé : la campagne cloud comparative, les approbations formelles et le
+  canary réel restent nécessaires ;
+- le déploiement local Compose ne démontre pas encore la reprise après arrêt simultané de l'orchestrateur, de
+  Temporal et de tous les serveurs MCP à chaque phase critique ;
+- les projections PostgreSQL et Evidence MCP sont implémentées, mais leur exploitation managée et leur plan de
+  restauration doivent être validés sur l'environnement cible ;
+- les prompts, contrats, politiques et qualifications sont versionnés ; leur promotion reste soumise aux
+  propriétaires humains désignés ;
 - support des builds limité à Maven, Gradle et npm ;
 - pas de SSO, RBAC ni policy engine ;
 - montage de `/var/run/docker.sock` encore présent dans le contrôleur local `sandbox-execution-mcp` ;
@@ -332,6 +381,8 @@ ni une sandbox de production : ces limites restent bloquantes pour un usage entr
 
 ## Documentation complémentaire
 
-- [Fonctionnement et workflow](docs/proto-workflow.md)
-- [Architecture](docs/proto-architecture.md)
-- [Sécurité](docs/proto-security.md)
+- [État, architecture et workflow du prototype 1.2.0](docs/version-1.2.0-archi-04/ETAT-PROTO-1.2.0.md)
+- [Architecture cible multi-agent hiérarchique](docs/version-1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md)
+- [Plan de bascule](docs/version-1.2.0-archi-04/BASCULE-ARCHI-04-MULTI-AGENTS.md)
+- [Catalogue des agents](docs/agents/CATALOGUE-AGENTS-V1.md)
+- [Architecture, workflow et sécurité de la baseline 1.1.0](docs/version-1.1.0-archi-02-mcp/ETAT-PROTO-1.1.0.md)

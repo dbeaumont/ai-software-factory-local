@@ -491,7 +491,7 @@
 
 ## 19. Lot 15 — Documentation et modèle opératoire
 
-- [ ] **MAH-330** — Mettre à jour README, architecture du proto, workflow et diagrammes.
+- [x] **MAH-330** — Mettre à jour README, architecture du proto, workflow et diagrammes. _(README réaligné sur les quatre modes ; état, composants et diagrammes du workflow 1.2.0 dans `docs/version-1.2.0-archi-04/ETAT-PROTO-1.2.0.md`.)_
 - [ ] **MAH-331** — Documenter rôles, sous-agents, permissions, contrats et propriétaires.
 - [ ] **MAH-332** — Documenter comment ajouter, modifier, évaluer, promouvoir et retirer un agent.
 - [ ] **MAH-333** — Documenter le versionnement des workflows Temporal et les déploiements sûrs.
