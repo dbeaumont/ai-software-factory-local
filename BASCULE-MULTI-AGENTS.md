@@ -126,7 +126,7 @@
 
 ### Gate du lot 1
 
-- [ ] Tous les échanges inter-agents sont représentables par des contrats fermés, versionnés et testés.
+- [x] Tous les échanges inter-agents sont représentables par des contrats fermés, versionnés et testés. _(Preuves : `docs/multiagents/GATE-LOT-1-CONTRATS.md`.)_
 
 ## 6. Lot 2 — Découpage du monolithe d'orchestration
 
