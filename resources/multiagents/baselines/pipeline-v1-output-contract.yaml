@@ -1,0 +1,38 @@
+version: "1"
+baselineCommit: 45e72011a8cc2c81006a5ff7b8b3a3f725db5174
+finalStatus: WAITING_APPROVAL
+transitions:
+  - CLONING
+  - PLANNING
+  - GENERATING_PATCH
+  - APPLYING_PATCH
+  - TESTING
+  - QUALITY_SCANNING
+  - SECURITY_SCANNING
+  - REVIEWING
+  - WAITING_APPROVAL
+populatedOutputs:
+  - plan
+  - patch
+  - testSummary
+  - qualitySummary
+  - securitySummary
+  - review
+assuranceKeys:
+  - quality
+  - sbom
+  - security
+  - tests
+artifactPaths:
+  - .ai-factory/run-metadata.json
+  - .ai-factory/sbom.cdx.json
+  - .ai-factory/test.txt
+  - .ai-plan.md
+  - .ai-review.md
+  - changes.patch
+testsPassed: true
+reviewAccepted: true
+pendingEffect:
+  tool: scm.create_draft_pull_request
+  policyDecision: ALLOW
+  confirmationRequired: true

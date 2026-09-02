@@ -149,7 +149,7 @@
 - [x] **MAH-051** — Vérifier que seul le coordinateur appelle validation/application, tests, scans, assurance et SCM. _(Test d'architecture sur les propriétaires des appels à effet ; patch borné par `PatchIntegrator`.)_
 - [x] **MAH-052** — Interdire à `AgentRuntime` d'injecter un client sandbox, assurance ou SCM dans une boucle LLM. _(Refus explicite des outils à effet et test de frontière sur les dépendances injectées.)_
 - [x] **MAH-053** — Ajouter un test d'architecture interdisant une dépendance Agent vers un adaptateur à effet. _(Règle automatique couvrant toutes les classes Agent présentes et futures du package service.)_
-- [ ] **MAH-054** — Maintenir la compatibilité du pipeline et comparer ses sorties avant/après extraction.
+- [x] **MAH-054** — Maintenir la compatibilité du pipeline et comparer ses sorties avant/après extraction. _(Contrat de sortie figé sur v1.1.0-mcp et test du pipeline extrait avec dépendances simulées.)_
 
 ### Gate du lot 2
 
