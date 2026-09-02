@@ -35,6 +35,7 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
     private final LlmGatewayClient llm;
     private final AgentResponseValidator agentResponses;
     private final SandboxExecutor sandbox;
+    private final PatchIntegrator patchIntegrator;
     private final AssuranceGateway assurance;
     private final ScmDeliveryGateway scmDelivery;
     private final Counter completedTasks;
@@ -46,7 +47,8 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
 
     public DeterministicWorkflowCoordinator(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
                        PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses,
-                       SandboxExecutor sandbox, AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
+                       SandboxExecutor sandbox, PatchIntegrator patchIntegrator,
+                       AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
                        MeterRegistry metrics, ObjectMapper objectMapper,
                        com.example.aifactory.config.AgentToolingProperties agentTooling,
                        AgentContextToolHost agentTools) {
@@ -57,6 +59,7 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
         this.llm = llm;
         this.agentResponses = agentResponses;
         this.sandbox = sandbox;
+        this.patchIntegrator = patchIntegrator;
         this.assurance = assurance;
         this.scmDelivery = scmDelivery;
         this.objectMapper = objectMapper;
@@ -121,7 +124,8 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
             s.patch = validateAndRepairPatch(s, ws, rawPatch);
 
             s.transition(TaskStatus.APPLYING_PATCH, "Applying generated patch inside isolated Docker sandbox");
-            sandbox.applyPatch(ws, s.id, s.sourceCommit);
+            patchIntegrator.apply(ws, s.id, s.sourceCommit,
+                    new PatchIntegrator.IntegratedPatch(s.patch, PatchIntegrator.digestFor(s.patch)));
 
             s.transition(TaskStatus.TESTING, "Running deterministic build and tests in sandbox");
             String deterministicTests = tail(sandbox.test(ws, s.id, s.sourceCommit), 12000);
@@ -211,12 +215,10 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
     }
 
     private String validateAndRepairPatch(TaskState state, Path workspace, String rawPatch) throws Exception {
-        String patch = UnifiedDiffNormalizer.normalize(stripFence(rawPatch));
+        String patch = PatchIntegrator.normalize(rawPatch);
         for (int repairAttempt = 0; repairAttempt <= MAX_PATCH_REPAIR_ATTEMPTS; repairAttempt++) {
-            Files.writeString(workspace.resolve("changes.patch"), patch);
             try {
-                sandbox.checkPatch(workspace, state.id, state.sourceCommit);
-                return patch;
+                return patchIntegrator.validate(workspace, state.id, state.sourceCommit, patch).content();
             } catch (Exception validationFailure) {
                 if (repairAttempt == MAX_PATCH_REPAIR_ATTEMPTS) {
                     throw validationFailure;
@@ -233,23 +235,14 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
                         untrusted("INVALID_PATCH", patch) + untrusted("GIT_APPLY_ERROR", validationFailure.getMessage()) +
                         untrusted("REPAIR_ATTEMPT", Integer.toString(repairAttempt + 1)));
                 writeRunMetadata(workspace, state);
-                patch = UnifiedDiffNormalizer.normalize(stripFence(repaired));
+                patch = PatchIntegrator.normalize(repaired);
             }
         }
         throw new IllegalStateException("Patch validation exited unexpectedly");
     }
 
     static String stripFence(String s) {
-        String out = s.strip();
-        int fenceStart = out.indexOf("```");
-        if (fenceStart >= 0) {
-            int firstNewline = out.indexOf('\n', fenceStart);
-            if (firstNewline >= 0) out = out.substring(firstNewline + 1);
-            if (out.endsWith("```")) out = out.substring(0, out.length() - 3);
-        }
-        int diffStart = out.indexOf("diff --git ");
-        if (diffStart > 0) out = out.substring(diffStart);
-        return out.strip();
+        return PatchIntegrator.stripFence(s);
     }
 
     private static String affectedFileContext(Path workspace, String patch) throws Exception {
