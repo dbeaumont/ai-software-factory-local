@@ -26,7 +26,7 @@ class ArtifactLifecyclePolicyTest {
                 .containsEntry("algorithm", "AES-256-GCM")
                 .containsKey("key_source_target");
         assertThat(types.keySet()).containsExactlyInAnyOrderElementsOf(List.of(
-                "plan", "patch", "metadata", "tests", "sonar", "sbom", "trivy", "review",
+                "plan", "evaluation", "patch", "integration", "metadata", "tests", "sonar", "sbom", "trivy", "review",
                 "approval", "manifest"));
         types.forEach((name, rule) -> {
             assertThat(rule.get("classification")).as(name).isIn("INTERNAL", "CONFIDENTIAL");

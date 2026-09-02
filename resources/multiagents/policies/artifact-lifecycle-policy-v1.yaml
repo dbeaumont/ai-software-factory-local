@@ -13,7 +13,9 @@ storage:
 
 artifact_types:
   plan:     { classification: INTERNAL,     retention_days: 90 }
+  evaluation: { classification: INTERNAL,   retention_days: 180 }
   patch:    { classification: INTERNAL,     retention_days: 90 }
+  integration: { classification: INTERNAL,  retention_days: 90 }
   metadata: { classification: INTERNAL,     retention_days: 180 }
   tests:    { classification: INTERNAL,     retention_days: 90 }
   sonar:    { classification: INTERNAL,     retention_days: 180 }
@@ -39,4 +41,3 @@ legal_hold:
   requires_reason: true
   requires_expiry: true
   audit_required: true
-
