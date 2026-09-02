@@ -25,6 +25,23 @@ class RoutingEvaluationTest {
         assertThat(report.pathAccuracy()).isEqualTo(2.0 / 3.0);
         assertThat(report.specialistPrecision()).isEqualTo(5.0 / 6.0);
         assertThat(report.specialistRecall()).isEqualTo(5.0 / 6.0);
+        assertThat(report.unnecessaryHierarchicalRateOnSimpleCases()).isZero();
         assertThat(report.cases()).isEqualTo(3);
+    }
+
+    @Test
+    void rejectsQualificationWhenHierarchyIsUsedUnnecessarilyOnSimpleCases() {
+        RoutingEvaluation evaluation = new RoutingEvaluation();
+        List<RoutingEvaluation.Case> cases = java.util.stream.IntStream.rangeClosed(1, 20)
+                .mapToObj(index -> new RoutingEvaluation.Case("SHORT-" + index,
+                        RoutingEvaluation.Path.SHORT_CODE_PATH,
+                        index <= 2 ? RoutingEvaluation.Path.HIERARCHICAL_PATH
+                                : RoutingEvaluation.Path.SHORT_CODE_PATH,
+                        Set.of("developer"), Set.of("developer"))).toList();
+
+        RoutingEvaluation.Report report = evaluation.evaluate(cases);
+
+        assertThat(report.unnecessaryHierarchicalRateOnSimpleCases()).isEqualTo(0.10);
+        assertThat(evaluation.qualificationVerdict(report, 0.05)).isEqualTo("REJECTED");
     }
 }

@@ -443,7 +443,7 @@
 - [x] **MAH-295** — Mesurer tokens, coût complet, durée, compute sandbox et temps humain. _(`ResourceEvaluation` agrège totaux et moyennes des cinq dimensions, ainsi que le p95 de durée, avec compteurs non négatifs et additions protégées contre les dépassements.)_
 - [x] **MAH-296** — Mesurer sécurité : outils refusés, injections, dépassements, preuves invalides et effets tentés. _(`SecurityEvaluation` agrège tentatives et blocages par catégorie, refuse les compteurs incohérents et signale tout incident non contenu.)_
 - [x] **MAH-297** — Inclure un nombre représentatif de tâches simples, multi-domaines et adversariales. _(La suite contient 8 cas simples, 12 multi-domaines, 8 adversariaux et 8 de reprise ; `EvaluationSuiteCoverageTest` impose les minima de politique, 36 cas appariés, des identifiants uniques et au moins trois écosystèmes.)_
-- [ ] **MAH-298** — Rejeter la qualification si le chemin hiérarchique est utilisé inutilement sur les tâches simples.
+- [x] **MAH-298** — Rejeter la qualification si le chemin hiérarchique est utilisé inutilement sur les tâches simples. _(`RoutingEvaluation` calcule ce taux sur le seul cohort simple et rend `REJECTED` dès qu'il dépasse le maximum de politique de 5 %.)_
 - [ ] **MAH-299** — Exiger une télémétrie de coût exploitable avant verdict.
 - [ ] **MAH-300** — Faire approuver le rapport de qualification par Produit, Architecture, Sécurité et Exploitation.
 - [ ] **MAH-301** — Maintenir tous les rôles hiérarchiques désactivés si le verdict n'est pas `QUALIFIED`.

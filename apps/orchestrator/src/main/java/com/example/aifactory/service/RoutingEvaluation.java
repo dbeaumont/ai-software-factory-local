@@ -14,9 +14,15 @@ public final class RoutingEvaluation {
         int expectedSpecialists = 0;
         int selectedSpecialists = 0;
         int relevantSelections = 0;
+        int simpleCases = 0;
+        int unnecessaryHierarchicalCases = 0;
         for (Case sample : cases) {
             if (sample == null) throw new IllegalArgumentException("Routing evaluation case is required");
             if (sample.expectedPath() == sample.actualPath()) correctPaths++;
+            if (sample.expectedPath() == Path.SHORT_CODE_PATH) {
+                simpleCases++;
+                if (sample.actualPath() == Path.HIERARCHICAL_PATH) unnecessaryHierarchicalCases++;
+            }
             Set<String> expected = new HashSet<>(sample.expectedSpecialists());
             Set<String> selected = new HashSet<>(sample.selectedSpecialists());
             expectedSpecialists += expected.size();
@@ -27,7 +33,17 @@ public final class RoutingEvaluation {
         return new Report(rate(correctPaths, cases.size()),
                 rate(relevantSelections, selectedSpecialists),
                 rate(relevantSelections, expectedSpecialists),
+                rate(unnecessaryHierarchicalCases, simpleCases),
                 cases.size(), expectedSpecialists, selectedSpecialists);
+    }
+
+    public String qualificationVerdict(Report report, double maximumUnnecessaryHierarchicalRate) {
+        if (report == null || maximumUnnecessaryHierarchicalRate < 0
+                || maximumUnnecessaryHierarchicalRate > 1) {
+            throw new IllegalArgumentException("Routing qualification threshold is invalid");
+        }
+        return report.unnecessaryHierarchicalRateOnSimpleCases() <= maximumUnnecessaryHierarchicalRate
+                ? "QUALIFIED" : "REJECTED";
     }
 
     private static double rate(int numerator, int denominator) {
@@ -49,5 +65,6 @@ public final class RoutingEvaluation {
     }
 
     public record Report(double pathAccuracy, double specialistPrecision, double specialistRecall,
+                         double unnecessaryHierarchicalRateOnSimpleCases,
                          int cases, int expectedSpecialists, int selectedSpecialists) { }
 }
