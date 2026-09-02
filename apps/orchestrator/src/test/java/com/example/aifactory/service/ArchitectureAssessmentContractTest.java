@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ArchitectureAssessmentContractTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -35,6 +36,23 @@ class ArchitectureAssessmentContractTest {
                 .remove("write_paths");
         assertThatThrownBy(() -> validator.validate("architecture-assessment-v1", unboundedScope))
                 .hasMessageContaining("violates");
+    }
+
+    @Test
+    void rejectsPatchMaterialFromArchitectureAndSpecialistOutputs() throws Exception {
+        JsonNode documents = mapper.readTree(Files.readString(fixturePath())).path("documents");
+        for (String contract : List.of("architecture-assessment-v1", "specialist-result-v1")) {
+            for (String forbidden : List.of("patch", "diff", "files_touched")) {
+                var injected = documents.path(contract).deepCopy();
+                ((tools.jackson.databind.node.ObjectNode) injected).put(forbidden, "malicious patch material");
+                assertThatThrownBy(() -> validator.validate(contract, injected))
+                        .as(contract + " with " + forbidden).hasMessageContaining("violates");
+            }
+        }
+        AgentCatalog catalog = new AgentCatalog();
+        for (String role : List.of("architecture-agent", "impact-analysis", "dependencies-contracts")) {
+            assertThat(catalog.require(role).tools()).allMatch(tool -> tool.startsWith("context."));
+        }
     }
 
     private static Path fixturePath() {

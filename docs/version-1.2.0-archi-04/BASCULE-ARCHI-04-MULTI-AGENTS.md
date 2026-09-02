@@ -237,7 +237,7 @@
 - [x] **MAH-115** — Créer `architecture-agent`, `impact-analysis` et `dependencies-contracts`. _(Trois manifestes et prompts versionnés, propriétaires et contrats vérifiés contre le catalogue.)_
 - [x] **MAH-116** — Limiter leurs outils aux lectures `context.*` nécessaires. _(`ArchitectureAgents` injecte l'allowlist exacte par rôle ; `context.get_symbols` est désormais exposé et autorisé de bout en bout.)_
 - [x] **MAH-117** — Produire scopes de code, contraintes, impacts API/données et décisions humaines. _(`architecture-assessment-v1` impose désormais ces cinq dimensions, avec scopes bornés et structures typées testées.)_
-- [ ] **MAH-118** — Interdire à ce périmètre de générer ou d'appliquer un patch.
+- [x] **MAH-118** — Interdire à ce périmètre de générer ou d'appliquer un patch. _(Aucun outil d'écriture n'est injectable et les contrats fermés rejettent explicitement `patch`, `diff` et `files_touched`.)_
 
 ### Code
 
