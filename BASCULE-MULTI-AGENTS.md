@@ -83,7 +83,7 @@
 - [x] **MAH-011** — Figer une version reproductible du pipeline actuel, des prompts, modèles, images et politiques. _(Manifeste : `resources/multiagents/baselines/pipeline-v1.yaml` ; vérification : `scripts/verify-pipeline-baseline.rb`.)_
 - [x] **MAH-012** — Rejouer la suite de référence et enregistrer qualité, tests, réparations, tokens, coût, durée et incidents. _(Campagne appariée du 2026-09-02 : `docs/mcp/MCP-180-rapport-campagne-20260902.md` ; agrégat : `resources/multiagents/baselines/pipeline-v1-metrics.json`.)_
 - [x] **MAH-013** — Corriger ou documenter toute métrique de coût fournisseur absente avant une nouvelle comparaison. _(Écart et règle fail-closed : `docs/multiagents/COST-TELEMETRY-V1.md` ; politique : `resources/multiagents/policies/evaluation-data-policy-v1.yaml`.)_
-- [ ] **MAH-014** — Définir les seuils bloquants par métrique et le nombre minimal de cas appariés.
+- [x] **MAH-014** — Définir les seuils bloquants par métrique et le nombre minimal de cas appariés. _(Politique : `resources/multiagents/policies/qualification-thresholds-v1.yaml` ; synthèse : `docs/multiagents/QUALIFICATION-THRESHOLDS-V1.md`.)_
 - [ ] **MAH-015** — Ajouter des cas multi-domaines qui justifient réellement Architecture, Code, Tests et Sécurité.
 - [ ] **MAH-016** — Ajouter des cas simples devant obligatoirement emprunter le chemin court.
 - [ ] **MAH-017** — Ajouter des cas adversariaux : injection, délégation excessive, conflit de scopes et preuve falsifiée.
