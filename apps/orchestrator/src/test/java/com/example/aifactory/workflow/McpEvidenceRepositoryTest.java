@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class McpEvidenceRepositoryTest {
     @Test
@@ -44,6 +45,33 @@ class McpEvidenceRepositoryTest {
                     "task-1", "attempt-1", type, "text/plain", content, digest, "workflow"));
             assertThat(stored.uri()).isEqualTo("evidence://task-1/attempt-1/" + type + '/' + digest);
         }
+    }
+
+    @Test
+    void rawReadIsLimitedToAuditedActorsAndReverifiedLocally() throws Exception {
+        byte[] content = "proof".getBytes(StandardCharsets.UTF_8);
+        String digest = HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(content));
+        String uri = "evidence://task-1/attempt-1/review/" + digest;
+        McpToolInvoker mcp = new McpToolInvoker() {
+            @Override
+            public tools.jackson.databind.JsonNode call(String server, String tool, Map<String, Object> arguments) {
+                assertThat(tool).isEqualTo("evidence.read");
+                assertThat(arguments).containsEntry("actor", "reviewer")
+                        .containsEntry("purpose", "human-review");
+                return new ObjectMapper().valueToTree(Map.of(
+                        "uri", uri, "type", "review", "digest", digest, "status", "COMPLETE",
+                        "classification", "CONFIDENTIAL",
+                        "content_base64", java.util.Base64.getEncoder().encodeToString(content)));
+            }
+
+            @Override public Availability availability(String serverName) { return new Availability(true, null); }
+        };
+        McpEvidenceRepository repository = new McpEvidenceRepository(mcp, properties());
+
+        assertThat(repository.read(new EvidenceRepository.ReadRequest(
+                "task-1", uri, "reviewer", "human-review")).content()).isEqualTo(content);
+        assertThatThrownBy(() -> repository.read(new EvidenceRepository.ReadRequest(
+                "task-1", uri, "developer", "human-review"))).isInstanceOf(SecurityException.class);
     }
 
     private static McpClientProperties properties() {

@@ -91,6 +91,9 @@ class EvidenceStoreTest {
         String audit = java.nio.file.Files.readString(root.resolve("audit/raw-reads.jsonl"));
         assertTrue(audit.contains("DENIED"));
         assertTrue(audit.contains("ALLOWED"));
+        assertTrue(audit.contains("reviewer"));
+        assertTrue(audit.contains("human-review"));
+        assertTrue(audit.contains(stored.uri()));
         assertFalse(audit.contains("review proof"));
     }
 }

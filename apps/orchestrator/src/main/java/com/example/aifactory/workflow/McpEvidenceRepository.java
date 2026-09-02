@@ -9,6 +9,8 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 
 /** EvidenceRepository adapter whose writes are exclusively mediated by Evidence MCP. */
 @Service
@@ -104,12 +106,43 @@ public final class McpEvidenceRepository implements EvidenceRepository {
 
     @Override
     public RawEvidence read(ReadRequest request) {
-        throw new UnsupportedOperationException("raw evidence migration is pending");
+        if (!server.enabled()) throw new IllegalStateException("evidence MCP server is disabled");
+        if (request == null || !("workflow".equals(request.actor()) || "reviewer".equals(request.actor()))
+                || request.purpose() == null || request.purpose().isBlank()) {
+            throw new SecurityException("raw evidence read is not authorized");
+        }
+        JsonNode response = mcp.call(server.expectedName(), "evidence.read", Map.of(
+                "schema_version", "1", "task_id", request.taskId(), "uri", request.uri(),
+                "actor", request.actor(), "purpose", request.purpose()));
+        byte[] content;
+        try {
+            content = Base64.getDecoder().decode(requiredText(response, "content_base64"));
+        } catch (IllegalArgumentException invalidBase64) {
+            throw new SecurityException("evidence MCP returned invalid content encoding", invalidBase64);
+        }
+        String digest = requiredText(response, "digest");
+        String actualDigest = sha256(content);
+        RawEvidence evidence = new RawEvidence(requiredText(response, "uri"), requiredText(response, "type"),
+                digest, requiredText(response, "status"), requiredText(response, "classification"), content);
+        if (!request.uri().equals(evidence.uri()) || !evidence.uri().startsWith("evidence://" + request.taskId() + '/')
+                || !MessageDigest.isEqual(HexFormat.of().parseHex(digest), HexFormat.of().parseHex(actualDigest))
+                || !"COMPLETE".equals(evidence.status())) {
+            throw new SecurityException("raw evidence response failed task, URI, digest or status binding");
+        }
+        return evidence;
     }
 
     private static String requiredText(JsonNode response, String field) {
         String value = response == null ? null : response.path(field).asText(null);
         if (value == null || value.isBlank()) throw new SecurityException("evidence MCP response misses " + field);
         return value;
+    }
+
+    private static String sha256(byte[] value) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value));
+        } catch (Exception exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
     }
 }
