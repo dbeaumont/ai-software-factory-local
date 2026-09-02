@@ -1,0 +1,63 @@
+version: "1"
+policyId: multiagent-contract-compatibility-v1
+status: ACCEPTED
+
+versions:
+  strategy: N_AND_N_MINUS_1
+  currentMajor: 1
+  minimumOverlap: P28D
+  writerVersion: N
+  readersRequired: [N, N_MINUS_1]
+  schemaVersionRequiredOnEveryDocument: true
+  unknownMajorDecision: REJECT
+
+additiveWithinMajor:
+  allowed:
+    - add optional field after all N readers are deployed
+    - relax a numeric or size maximum after security review
+    - add a new optional evidence type after reader support
+    - add a catalog entry without changing an existing contract
+  forbidden:
+    - add required field
+    - remove or rename field
+    - change field type or semantic meaning
+    - tighten a constraint for an existing producer
+    - reuse an enum value with different meaning
+    - remove enum value
+  enumAdditionRequiresReadersFirst: true
+  additionalPropertiesRemainFalse: true
+
+breakingChanges:
+  requireNewMajor: true
+  requireNewSchemaId: true
+  requireParallelCatalogEntry: true
+  requireMigrationAndRollbackPlan: true
+  overwriteOldSchemaForbidden: true
+
+migrations:
+  direction: FORWARD_ADDITIVE
+  preserveOriginalDocument: true
+  preserveOriginalDigest: true
+  upcasterMustBePureAndDeterministic: true
+  downMigration: FORBIDDEN
+  unknownFieldLoss: FORBIDDEN
+  migrationEvidenceRequired: true
+  failedMigrationDecision: INCOMPATIBLE_SCHEMA
+
+retirement:
+  requirements:
+    - all producers write N
+    - all consumers read N
+    - no N-1 document observed for P14D
+    - N and N-1 golden and negative tests pass
+    - persisted documents replay successfully
+    - rollback rehearsal passes
+    - architecture and operations approve
+
+deploymentOrder:
+  - publish N schema and fixtures
+  - deploy readers accepting N and N-1
+  - verify replay of persisted N-1 documents
+  - deploy writers producing N
+  - observe overlap and telemetry
+  - retire N-1 only after approval
