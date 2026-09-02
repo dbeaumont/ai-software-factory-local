@@ -1,0 +1,38 @@
+version: "1"
+policyId: hierarchical-budget-policy-v1
+
+# Hard ceilings. Agent manifests may request less, never more.
+delegation:
+  max_turns: 6
+  max_tokens: 12000
+  max_cost_micros: 12000000
+  timeout_seconds: 900
+  max_tool_calls: 24
+
+agents:
+  supervisor: {max_turns: 6, max_tokens: 12000, max_cost_micros: 12000000, timeout_seconds: 600, max_tool_calls: 24}
+  architecture-agent: {max_turns: 6, max_tokens: 10000, max_cost_micros: 10000000, timeout_seconds: 600, max_tool_calls: 24}
+  impact-analysis: {max_turns: 4, max_tokens: 6000, max_cost_micros: 6000000, timeout_seconds: 360, max_tool_calls: 16}
+  dependencies-contracts: {max_turns: 4, max_tokens: 6000, max_cost_micros: 6000000, timeout_seconds: 360, max_tool_calls: 16}
+  code-agent: {max_turns: 6, max_tokens: 10000, max_cost_micros: 10000000, timeout_seconds: 600, max_tool_calls: 16}
+  developer: {max_turns: 6, max_tokens: 12000, max_cost_micros: 12000000, timeout_seconds: 900, max_tool_calls: 24}
+  patch-repair: {max_turns: 3, max_tokens: 6000, max_cost_micros: 6000000, timeout_seconds: 360, max_tool_calls: 12}
+  test-agent: {max_turns: 5, max_tokens: 8000, max_cost_micros: 8000000, timeout_seconds: 600, max_tool_calls: 20}
+  test-design: {max_turns: 4, max_tokens: 6000, max_cost_micros: 6000000, timeout_seconds: 360, max_tool_calls: 16}
+  test-evidence: {max_turns: 3, max_tokens: 4000, max_cost_micros: 4000000, timeout_seconds: 300, max_tool_calls: 12}
+  security-agent: {max_turns: 6, max_tokens: 10000, max_cost_micros: 10000000, timeout_seconds: 600, max_tool_calls: 24}
+  threat-model: {max_turns: 4, max_tokens: 6000, max_cost_micros: 6000000, timeout_seconds: 360, max_tool_calls: 16}
+  security-findings: {max_turns: 3, max_tokens: 5000, max_cost_micros: 5000000, timeout_seconds: 300, max_tool_calls: 12}
+  independent-reviewer: {max_turns: 6, max_tokens: 10000, max_cost_micros: 10000000, timeout_seconds: 600, max_tool_calls: 24}
+
+perimeters:
+  architecture-agent: {max_turns: 14, max_tokens: 22000, max_cost_micros: 22000000, max_tool_calls: 56}
+  code-agent: {max_turns: 15, max_tokens: 28000, max_cost_micros: 28000000, max_tool_calls: 52}
+  test-agent: {max_turns: 12, max_tokens: 18000, max_cost_micros: 18000000, max_tool_calls: 48}
+  security-agent: {max_turns: 13, max_tokens: 21000, max_cost_micros: 21000000, max_tool_calls: 52}
+
+task:
+  max_turns: 60
+  max_tokens: 80000
+  max_cost_micros: 80000000
+  max_tool_calls: 208

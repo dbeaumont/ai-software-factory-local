@@ -18,6 +18,7 @@
     <mcp.schemas.directory>../../resources/mcp/schemas</mcp.schemas.directory>
     <multiagent.schemas.directory>../../resources/multiagents/schemas</multiagent.schemas.directory>
     <agents.directory>../../resources/agents</agents.directory>
+    <multiagent.policies.directory>../../resources/multiagents/policies</multiagent.policies.directory>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -100,6 +101,10 @@
       <resource>
         <directory>${agents.directory}</directory>
         <targetPath>agents</targetPath>
+      </resource>
+      <resource>
+        <directory>${multiagent.policies.directory}</directory>
+        <targetPath>multiagents/policies</targetPath>
       </resource>
     </resources>
     <plugins>

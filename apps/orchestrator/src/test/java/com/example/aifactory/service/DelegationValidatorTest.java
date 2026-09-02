@@ -56,11 +56,11 @@ class DelegationValidatorTest {
                 {"nodes":[
                   {"node_id":"architecture","role":"architecture-agent","parent_node_id":null,"depends_on":[],
                    "scope":{"read_paths":["src"],"write_paths":[]},
-                   "budget":{"max_tokens":100,"max_cost_micros":10},
+                   "budget":{"max_turns":1,"max_tokens":100,"max_cost_micros":10,"timeout_seconds":30,"max_tool_calls":1},
                    "success_criteria":["done"],"stop_condition":"SUCCESS_CRITERIA_MET"},
                   {"node_id":"code","role":"code-agent","parent_node_id":null,"depends_on":[],
                    "scope":{"read_paths":["src"],"write_paths":[]},
-                   "budget":{"max_tokens":100,"max_cost_micros":10},
+                   "budget":{"max_turns":1,"max_tokens":100,"max_cost_micros":10,"timeout_seconds":30,"max_tool_calls":1},
                    "success_criteria":["done"],"stop_condition":"SUCCESS_CRITERIA_MET"}
                 ]}
                 """);
@@ -73,10 +73,10 @@ class DelegationValidatorTest {
         return mapper.readTree("""
                 {"nodes":[
                   {"node_id":"parent","role":"%s","parent_node_id":null,"depends_on":[],
-                   "scope":{"read_paths":["src"],"write_paths":[]},"budget":{"max_tokens":1000,"max_cost_micros":100},
+                   "scope":{"read_paths":["src"],"write_paths":[]},"budget":{"max_turns":1,"max_tokens":1000,"max_cost_micros":100,"timeout_seconds":30,"max_tool_calls":1},
                    "success_criteria":["planned"],"stop_condition":"SUCCESS_CRITERIA_MET"},
                   {"node_id":"child","role":"%s","parent_node_id":"parent","depends_on":["parent"],
-                   "scope":{"read_paths":["src"],"write_paths":["%s"]},"budget":{"max_tokens":%d,"max_cost_micros":100},
+                   "scope":{"read_paths":["src"],"write_paths":["%s"]},"budget":{"max_turns":1,"max_tokens":%d,"max_cost_micros":100,"timeout_seconds":30,"max_tool_calls":1},
                    "success_criteria":["done"],"stop_condition":"SUCCESS_CRITERIA_MET"}
                 ]}
                 """.formatted(parentRole, childRole, writePath, childTokens));

@@ -1,5 +1,6 @@
 package com.example.aifactory.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
@@ -13,17 +14,26 @@ public final class AgentRuntime implements AgentExecutor {
     private final LlmGatewayClient llm;
     private final AgentContextToolHost toolHost;
     private final MultiAgentContractValidator contracts;
+    private final HierarchicalBudgetPolicy budgets;
 
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts) {
+        this(prompts, llm, toolHost, contracts, new HierarchicalBudgetPolicy());
+    }
+
+    @Autowired
+    public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
+                        MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets) {
         this.prompts = prompts;
         this.llm = llm;
         this.toolHost = toolHost;
         this.contracts = contracts;
+        this.budgets = budgets;
     }
 
     @Override
     public Result execute(Invocation invocation) {
+        budgets.validateInvocation(invocation.role(), invocation.budget());
         if (invocation.allowedTools().stream().anyMatch(AgentRuntime::effectfulTool)) {
             throw new IllegalArgumentException("Effectful sandbox, assurance and SCM tools cannot be injected into AgentRuntime");
         }

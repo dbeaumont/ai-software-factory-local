@@ -70,11 +70,11 @@ class SupervisorAgentTest {
                 {"nodes":[
                   {"node_id":"a","role":"code-agent","parent_node_id":null,"depends_on":["b"],
                    "scope":{"read_paths":["src"],"write_paths":[]},
-                   "budget":{"max_tokens":100,"max_cost_micros":10},
+                   "budget":{"max_turns":1,"max_tokens":100,"max_cost_micros":10,"timeout_seconds":30,"max_tool_calls":1},
                    "success_criteria":["a done"],"stop_condition":"SUCCESS_CRITERIA_MET"},
                   {"node_id":"b","role":"test-agent","parent_node_id":null,"depends_on":["a"],
                    "scope":{"read_paths":["src"],"write_paths":[]},
-                   "budget":{"max_tokens":100,"max_cost_micros":10},
+                   "budget":{"max_turns":1,"max_tokens":100,"max_cost_micros":10,"timeout_seconds":30,"max_tool_calls":1},
                    "success_criteria":["b done"],"stop_condition":"SUCCESS_CRITERIA_MET"}]}
                 """);
         SupervisorAgent supervisor = supervisor(new RecordingExecutor(cyclic));
@@ -102,7 +102,7 @@ class SupervisorAgentTest {
         return new ObjectMapper().readTree("""
                 {"nodes":[{"node_id":"code","role":"code-agent","parent_node_id":null,"depends_on":[],
                  "scope":{"read_paths":["src"],"write_paths":[]},
-                 "budget":{"max_tokens":100,"max_cost_micros":10},
+                 "budget":{"max_turns":1,"max_tokens":100,"max_cost_micros":10,"timeout_seconds":30,"max_tool_calls":1},
                  "success_criteria":["plan ready"],"stop_condition":"SUCCESS_CRITERIA_MET"}]}
                 """);
     }

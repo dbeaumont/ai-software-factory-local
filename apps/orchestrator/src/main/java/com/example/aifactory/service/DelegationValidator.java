@@ -17,17 +17,24 @@ public final class DelegationValidator {
     private final AgentCatalog catalog;
     private final DelegationPlanValidator graphs;
     private final DelegationPolicyProperties ceilings;
+    private final HierarchicalBudgetPolicy budgets;
 
     public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs) {
-        this(catalog, graphs, DelegationPolicyProperties.defaults());
+        this(catalog, graphs, DelegationPolicyProperties.defaults(), new HierarchicalBudgetPolicy());
+    }
+
+    public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs,
+                               DelegationPolicyProperties ceilings) {
+        this(catalog, graphs, ceilings, new HierarchicalBudgetPolicy());
     }
 
     @Autowired
     public DelegationValidator(AgentCatalog catalog, DelegationPlanValidator graphs,
-                               DelegationPolicyProperties ceilings) {
+                               DelegationPolicyProperties ceilings, HierarchicalBudgetPolicy budgets) {
         this.catalog = catalog;
         this.graphs = graphs;
         this.ceilings = ceilings;
+        this.budgets = budgets;
     }
 
     public JsonNode validate(JsonNode plan, Limits limits) {
@@ -37,6 +44,8 @@ public final class DelegationValidator {
         long tokens = 0;
         long cost = 0;
         Map<String, Integer> children = new HashMap<>();
+        Map<String, HierarchicalBudgetPolicy.Usage> perimeterUsage = new HashMap<>();
+        HierarchicalBudgetPolicy.Usage taskUsage = HierarchicalBudgetPolicy.Usage.zero();
 
         for (Map.Entry<String, JsonNode> entry : nodes.entrySet()) {
             String id = entry.getKey();
@@ -59,6 +68,10 @@ public final class DelegationValidator {
 
             validatePaths(id, node.path("scope").path("read_paths"), limits.allowedReadRoots(), "read");
             validatePaths(id, node.path("scope").path("write_paths"), limits.allowedWriteRoots(), "write");
+            HierarchicalBudgetPolicy.Usage usage = budgets.validateDelegation(roleName, node.path("budget"));
+            String perimeter = perimeter(id, nodes);
+            perimeterUsage.merge(perimeter, usage, HierarchicalBudgetPolicy.Usage::plus);
+            taskUsage = taskUsage.plus(usage);
             tokens = Math.addExact(tokens, node.path("budget").path("max_tokens").asLong());
             cost = Math.addExact(cost, node.path("budget").path("max_cost_micros").asLong());
             int effectiveMaxDepth = Math.min(limits.maxDepth(), ceilings.maxDepth());
@@ -68,9 +81,17 @@ public final class DelegationValidator {
         int effectiveMaxFanOut = Math.min(limits.maxFanOut(), ceilings.maxFanOut());
         if (children.values().stream().anyMatch(value -> value > effectiveMaxFanOut))
             throw invalid("maximum fan-out exceeded");
+        perimeterUsage.forEach(budgets::validatePerimeter);
+        budgets.validateTask(taskUsage);
         if (tokens > limits.maxTotalTokens()) throw invalid("total token budget exceeded");
         if (cost > limits.maxTotalCostMicros()) throw invalid("total cost budget exceeded");
         return plan;
+    }
+
+    private static String perimeter(String id, Map<String, JsonNode> nodes) {
+        JsonNode node = nodes.get(id);
+        JsonNode parent = node.path("parent_node_id");
+        return parent.isNull() ? node.path("role").asText() : perimeter(parent.asText(), nodes);
     }
 
     private static int depth(String id, Map<String, JsonNode> nodes, Set<String> visiting) {

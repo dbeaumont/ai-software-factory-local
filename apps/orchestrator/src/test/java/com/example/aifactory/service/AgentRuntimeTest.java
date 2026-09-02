@@ -64,6 +64,19 @@ class AgentRuntimeTest {
                 .hasMessageContaining("cannot be injected");
     }
 
+    @Test
+    void rejectsAnInvocationThatExceedsTheRoleBudgetBeforeCallingDependencies() {
+        AgentRuntime runtime = new AgentRuntime(mock(PromptService.class), mock(LlmGatewayClient.class),
+                mock(AgentContextToolHost.class), new MultiAgentContractValidator(new ObjectMapper()));
+        AgentRuntime.Invocation excessive = new AgentRuntime.Invocation(
+                "task-1", "attempt-1", "a".repeat(40), "developer", "developer-v1",
+                "agent-run-event-v1", Set.of(), Set.of(), "untrusted input",
+                new AgentToolLoop.Budget(7, Duration.ofSeconds(30), 1_000, 1_000));
+
+        assertThatThrownBy(() -> runtime.execute(excessive))
+                .hasMessageContaining("agent budget exceeded").hasMessageContaining("developer");
+    }
+
     private static AgentRuntime.Invocation invocation(Set<String> tools) {
         return new AgentRuntime.Invocation("task-1", "attempt-1", "a".repeat(40), "developer",
                 "developer-v1", "agent-run-event-v1", tools, Set.of("specialist-1", "node-1"),
