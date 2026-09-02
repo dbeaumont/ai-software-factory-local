@@ -16,21 +16,22 @@ public final class CodePatchArtifactPublisher {
         this.evidence = evidence;
     }
 
-    public PatchArtifact publish(CodeWorkspaceManager.Allocation allocation, String rawPatch) throws Exception {
+    public PatchArtifact publish(CodeWorkspaceManager.Allocation allocation,
+                                 PatchProposalValidator.ValidatedPatch patch) throws Exception {
         CodeWorkspaceManager.Allocation verified = worktrees.verify(allocation);
-        String patch = PatchIntegrator.normalize(rawPatch);
-        if (patch.isBlank()) throw new IllegalArgumentException("Developer patch result is empty");
-        byte[] content = patch.getBytes(StandardCharsets.UTF_8);
-        String digest = PatchIntegrator.digestFor(patch);
+        byte[] content = patch.content().getBytes(StandardCharsets.UTF_8);
+        if (content.length != patch.sizeBytes() || !PatchIntegrator.digestFor(patch.content()).equals(patch.digest())) {
+            throw new SecurityException("Validated Code patch changed before evidence publication");
+        }
         EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
                 verified.taskId(), verified.attemptId(), "code-patch", "text/x-diff",
-                content, digest, "workflow"));
-        if (!digest.equals(stored.digest()) || !"COMPLETE".equals(stored.status())
+                content, patch.digest(), "workflow"));
+        if (!patch.digest().equals(stored.digest()) || !"COMPLETE".equals(stored.status())
                 || !"text/x-diff".equals(stored.mediaType()) || stored.sizeBytes() != content.length) {
             throw new SecurityException("Stored Code patch evidence does not match the submitted artifact");
         }
         return new PatchArtifact(verified.worktreeId(), verified.nodeId(), verified.sourceCommit(),
-                stored.uri(), digest, stored.mediaType(), stored.sizeBytes());
+                stored.uri(), patch.digest(), stored.mediaType(), stored.sizeBytes());
     }
 
     public record PatchArtifact(String worktreeId, String nodeId, String sourceCommit, String uri,

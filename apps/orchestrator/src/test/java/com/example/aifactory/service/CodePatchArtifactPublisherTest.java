@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,8 +31,23 @@ class CodePatchArtifactPublisherTest {
         RecordingEvidenceRepository evidence = new RecordingEvidenceRepository();
         CodePatchArtifactPublisher publisher = new CodePatchArtifactPublisher(worktrees, evidence);
 
-        CodePatchArtifactPublisher.PatchArtifact artifact = publisher.publish(allocation,
-                "```diff\ndiff --git a/app.txt b/app.txt\n--- a/app.txt\n+++ b/app.txt\n@@ -1 +1 @@\n-baseline\n+changed\n```");
+        String rawPatch = "```diff\ndiff --git a/app.txt b/app.txt\n--- a/app.txt\n+++ b/app.txt\n"
+                + "@@ -1 +1 @@\n-baseline\n+changed\n```";
+        String normalized = PatchIntegrator.normalize(rawPatch);
+        String digest = PatchIntegrator.digestFor(normalized);
+        var mapper = new ObjectMapper();
+        var codeTask = mapper.readTree("""
+                {"scope":{"write_paths":["app.txt"],"forbidden_paths":[],
+                "max_changed_files":1,"max_patch_bytes":10000}}
+                """);
+        var proposal = mapper.readTree("""
+                {"patch_digest":"%s","diff_artifact":{"digest":"%s","size_bytes":%d},
+                "files_touched":[{"path":"app.txt","operation":"MODIFY"}]}
+                """.formatted(digest, digest, normalized.getBytes(java.nio.charset.StandardCharsets.UTF_8).length));
+        PatchProposalValidator.ValidatedPatch validated = new PatchProposalValidator(
+                new PatchScopeValidator()).validate(codeTask, proposal, rawPatch);
+
+        CodePatchArtifactPublisher.PatchArtifact artifact = publisher.publish(allocation, validated);
 
         assertThat(artifact.worktreeId()).isEqualTo(allocation.worktreeId());
         assertThat(artifact.sourceCommit()).isEqualTo(commit);
