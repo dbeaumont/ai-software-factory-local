@@ -31,6 +31,7 @@ public class TaskState {
     public int patchRepairs;
     public boolean testsPassed;
     public boolean reviewAccepted;
+    public boolean humanApproved;
     public String review;
     public PendingEffect pendingEffect;
     public String pullRequestUrl;
@@ -76,8 +77,9 @@ public class TaskState {
 
     private Map<String, Object> evaluationMetrics() {
         return Map.of("first_patch_success", patchRepairs == 0, "repairs", patchRepairs,
-                "tests_passed", testsPassed, "human_accepted", reviewAccepted,
-                "tokens", llmTokens, "cost_micros", llmCostMicros, "agent_turns", agentTurns,
+                "tests_passed", testsPassed, "review_accepted", reviewAccepted,
+                "human_accepted", humanApproved, "tokens", llmTokens,
+                "cost_micros", llmCostMicros, "agent_turns", agentTurns,
                 "duration_millis", java.time.Duration.between(createdAt, updatedAt).toMillis());
     }
 

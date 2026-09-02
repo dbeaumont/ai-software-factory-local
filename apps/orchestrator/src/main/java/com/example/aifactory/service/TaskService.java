@@ -111,6 +111,7 @@ public class TaskService {
             throw new IllegalStateException("No policy-approved effect is awaiting confirmation");
         }
         log.info("Task {} ({}) approved by the delivery workflow", state.id, state.ticketNumber);
+        state.humanApproved = true;
         state.transition(TaskStatus.APPROVED, "Human approval recorded");
         executor.submit(() -> {
             try {

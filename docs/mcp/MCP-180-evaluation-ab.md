@@ -2,7 +2,7 @@
 
 ## État
 
-L'évaluateur local et le raccordement réel Planner/Reviewer sont prêts et testés. Le mode d'évaluation est séparé de l'activation production, limité aux profils locaux et désactivé par défaut.
+La campagne A/B autorisée a été exécutée sur 20 cas appariés. Son verdict est **REJECTED** en raison d'une régression du succès des tests et d'une hausse des tokens supérieure au seuil. Le mode d'évaluation reste séparé de l'activation production, limité aux profils locaux et désactivé par défaut. Le rapport complet est dans `docs/mcp/MCP-180-rapport-campagne-20260902.md`.
 
 Une campagne valide doit contenir au moins vingt cas appariés `BASELINE` / `CANDIDATE` et mesurer, pour chaque variante :
 

@@ -50,9 +50,10 @@ while IFS= read -r task; do
   done
   jq -cn --arg case_id "$case_id" --arg variant "$variant" --arg task_id "$task_id" --arg status "$status" \
     --argjson m "$(jq '.evaluationMetrics' <<<"$state")" \
-    --argjson security_failure "$(jq '((.error // "") | ascii_downcase | test("security|trivy|vulnerab"))' <<<"$state")" \
+    --argjson security_failure "$(jq '((.error // "") | ascii_downcase | test("run-security rejected|security scan rejected|trivy.{0,200}(critical|high)"))' <<<"$state")" \
     '{case_id:$case_id,variant:$variant,task_id:$task_id,status:$status,
       first_patch_success:$m.first_patch_success,repairs:$m.repairs,tests_passed:$m.tests_passed,
-      human_accepted:$m.human_accepted,tokens:$m.tokens,duration_millis:$m.duration_millis,
+      review_accepted:($m.review_accepted // false),human_accepted:$m.human_accepted,
+      tokens:$m.tokens,duration_millis:$m.duration_millis,
       cost_micros:$m.cost_micros,security_failure:$security_failure}' >> "$output"
 done < <(jq -c '.tasks[]' "$manifest")
