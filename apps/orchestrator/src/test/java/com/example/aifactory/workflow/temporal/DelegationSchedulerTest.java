@@ -16,7 +16,8 @@ class DelegationSchedulerTest {
         DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) -> {
             workflowIds.add(workflowId);
             requests.add(request);
-            return new DelegationWorkflow.Result(request.nodeId(), request.role(), "READY_FOR_ACTIVITIES");
+            return () -> new DelegationWorkflow.Result(
+                    request.nodeId(), request.role(), "READY_FOR_ACTIVITIES");
         });
         SoftwareFactoryWorkflow.Request root = new SoftwareFactoryWorkflow.Request(
                 "task-1", "attempt-1", "a".repeat(40), "change");
@@ -35,7 +36,7 @@ class DelegationSchedulerTest {
     @Test
     void validatesTheWholeDagAndOrdersDependenciesBeforeExecution() {
         DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) ->
-                new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
+                () -> new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
         SoftwareFactoryWorkflow.Request root = root();
         DelegationWorkflow.Request child = node("child", "parent", Set.of("parent"));
         DelegationWorkflow.Request parent = node("parent", "supervisor", Set.of());
@@ -56,7 +57,7 @@ class DelegationSchedulerTest {
         List<String> launched = new ArrayList<>();
         DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) -> {
             launched.add(request.nodeId());
-            return new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE");
+            return () -> new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE");
         });
         SoftwareFactoryWorkflow.Request root = root();
         DelegationWorkflow.Request one = node("one", "supervisor", Set.of());
@@ -80,7 +81,7 @@ class DelegationSchedulerTest {
     @Test
     void rejectsDepthFanOutForecastCostAndCriticalPathDurationAboveHardLimits() {
         DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) ->
-                new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
+                () -> new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> scheduler.validateAndOrder(root(), List.of(
                 node("parent", "supervisor", Set.of()), node("child", "parent", Set.of()),
@@ -103,6 +104,55 @@ class DelegationSchedulerTest {
                 node("slow-child", "slow-parent", Set.of(),
                         new DelegationWorkflow.Budget(100, 100, 1, 1_500)))))
                 .hasMessageContaining("critical-path duration");
+    }
+
+    @Test
+    void startsEveryIndependentNodeBeforeAwaitingBatchResults() {
+        List<String> started = new ArrayList<>();
+        List<String> awaited = new ArrayList<>();
+        DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) -> {
+            started.add(request.nodeId());
+            return () -> {
+                assertThat(started).containsExactly("architecture", "code");
+                awaited.add(request.nodeId());
+                return new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE");
+            };
+        });
+        List<DelegationWorkflow.Request> batch = List.of(
+                node("architecture", "supervisor", Set.of()),
+                node("code", "supervisor", Set.of()));
+
+        List<DelegationWorkflow.Result> results = scheduler.executeBatch(root(), batch);
+
+        assertThat(awaited).containsExactly("architecture", "code");
+        assertThat(results).extracting(DelegationWorkflow.Result::nodeId)
+                .containsExactly("architecture", "code");
+    }
+
+    @Test
+    void selectsOnlyDependencySatisfiedNodesAndCapsParallelismAtFour() {
+        DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) ->
+                () -> new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
+        DelegationWorkflow.Request architecture = node("architecture", "supervisor", Set.of());
+        DelegationWorkflow.Request code = node("code", "supervisor", Set.of());
+        DelegationWorkflow.Request tests = node("tests", "code", Set.of("architecture"));
+        List<DelegationWorkflow.Request> plan = List.of(architecture, code, tests);
+
+        assertThat(scheduler.ready(plan, Set.of(), 10))
+                .extracting(DelegationWorkflow.Request::nodeId)
+                .containsExactly("architecture", "code");
+        assertThat(scheduler.ready(plan, Set.of("architecture", "code"), 10))
+                .extracting(DelegationWorkflow.Request::nodeId)
+                .containsExactly("tests");
+
+        List<DelegationWorkflow.Request> fiveIndependentNodes = List.of(
+                node("one", "supervisor", Set.of()), node("two", "supervisor", Set.of()),
+                node("three", "supervisor", Set.of()), node("four", "supervisor", Set.of()),
+                node("five", "supervisor", Set.of()));
+        assertThat(scheduler.ready(fiveIndependentNodes, Set.of(), 10)).hasSize(4);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                scheduler.executeBatch(root(), fiveIndependentNodes))
+                .hasMessageContaining("parallel batch size");
     }
 
     private static SoftwareFactoryWorkflow.Request root() {

@@ -35,16 +35,25 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         List<DelegationWorkflow.Result> results = new ArrayList<>(request.continuationState().delegations());
         List<DelegationWorkflow.Request> orderedDelegations = scheduler.validateAndOrder(request, request.delegations());
         int processedThisRun = 0;
-        for (int index = request.continuationState().nextDelegationIndex();
-             index < orderedDelegations.size(); index++) {
-            DelegationWorkflow.Request delegation = orderedDelegations.get(index);
-            scheduler.requireDependenciesSatisfied(delegation, completedDelegations.keySet(), orderedDelegations);
-            DelegationWorkflow.Result result = scheduler.execute(request, delegation);
-            results.add(result);
-            completedDelegations.put(result.nodeId(), result);
-            chronology.add("DELEGATION_COMPLETED:" + result.nodeId());
-            processedThisRun++;
-            int nextIndex = index + 1;
+        int nextIndex = request.continuationState().nextDelegationIndex();
+        while (nextIndex < orderedDelegations.size()) {
+            int remainingRunCapacity = request.executionPolicy().maxDelegationsPerRun() - processedThisRun;
+            if (remainingRunCapacity < 1) {
+                continueAsNew(request, nextIndex, results, chronology);
+                return null;
+            }
+            List<DelegationWorkflow.Request> batch = scheduler.ready(
+                    orderedDelegations, completedDelegations.keySet(), remainingRunCapacity);
+            batch.forEach(delegation -> scheduler.requireDependenciesSatisfied(
+                    delegation, completedDelegations.keySet(), orderedDelegations));
+            List<DelegationWorkflow.Result> batchResults = scheduler.executeBatch(request, batch);
+            for (DelegationWorkflow.Result result : batchResults) {
+                results.add(result);
+                completedDelegations.put(result.nodeId(), result);
+                chronology.add("DELEGATION_COMPLETED:" + result.nodeId());
+            }
+            processedThisRun += batch.size();
+            nextIndex += batch.size();
             if (nextIndex < orderedDelegations.size()
                     && shouldContinueAsNew(request.executionPolicy(), processedThisRun)) {
                 continueAsNew(request, nextIndex, results, chronology);

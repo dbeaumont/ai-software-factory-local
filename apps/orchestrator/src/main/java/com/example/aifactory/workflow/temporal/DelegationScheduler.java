@@ -2,6 +2,7 @@ package com.example.aifactory.workflow.temporal;
 
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import io.temporal.workflow.Async;
 
 import java.util.Objects;
 import java.util.ArrayList;
@@ -17,13 +18,15 @@ public final class DelegationScheduler {
     static final int MAX_FAN_OUT = 4;
     static final long MAX_TOTAL_COST_MICROS = 70_000_000;
     static final long MAX_CRITICAL_PATH_SECONDS = 2_700;
+    static final int MAX_PARALLEL_DELEGATIONS = 4;
     private final ChildWorkflowLauncher children;
 
     public DelegationScheduler() {
         this((workflowId, request) -> {
             DelegationWorkflow child = Workflow.newChildWorkflowStub(DelegationWorkflow.class,
                     ChildWorkflowOptions.newBuilder().setWorkflowId(workflowId).build());
-            return child.run(request);
+            var promise = Async.function(child::run, request);
+            return promise::get;
         });
     }
 
@@ -36,8 +39,38 @@ public final class DelegationScheduler {
         Objects.requireNonNull(root, "Root workflow request is required");
         Objects.requireNonNull(delegation, "Delegation request is required");
         String workflowId = TemporalIds.delegation(root.taskId(), root.attemptId(), delegation.nodeId());
-        return Objects.requireNonNull(children.run(workflowId, delegation),
+        return Objects.requireNonNull(children.start(workflowId, delegation).await(),
                 "Delegation child returned no result");
+    }
+
+    public List<DelegationWorkflow.Result> executeBatch(SoftwareFactoryWorkflow.Request root,
+                                                        List<DelegationWorkflow.Request> batch) {
+        if (batch.isEmpty() || batch.size() > MAX_PARALLEL_DELEGATIONS) {
+            throw invalid("parallel batch size is outside scheduler quota");
+        }
+        List<ChildExecution> executions = batch.stream().map(delegation -> children.start(
+                TemporalIds.delegation(root.taskId(), root.attemptId(), delegation.nodeId()), delegation)).toList();
+        List<DelegationWorkflow.Result> results = new ArrayList<>();
+        for (ChildExecution execution : executions) {
+            results.add(Objects.requireNonNull(execution.await(), "Delegation child returned no result"));
+        }
+        return List.copyOf(results);
+    }
+
+    public List<DelegationWorkflow.Request> ready(List<DelegationWorkflow.Request> plan,
+                                                  Set<String> completedNodeIds, int requestedLimit) {
+        int limit = Math.min(requestedLimit, MAX_PARALLEL_DELEGATIONS);
+        if (limit < 1) throw invalid("ready-node limit must be positive");
+        Map<String, DelegationWorkflow.Request> nodes = new LinkedHashMap<>();
+        plan.forEach(node -> nodes.put(node.nodeId(), node));
+        List<DelegationWorkflow.Request> ready = plan.stream()
+                .filter(node -> !completedNodeIds.contains(node.nodeId()))
+                .filter(node -> completedNodeIds.containsAll(dependencies(node, nodes)))
+                .limit(limit).toList();
+        if (ready.isEmpty() && completedNodeIds.size() < plan.size()) {
+            throw invalid("no dependency-satisfied node is ready");
+        }
+        return ready;
     }
 
     public List<DelegationWorkflow.Request> validateAndOrder(SoftwareFactoryWorkflow.Request root,
@@ -128,6 +161,11 @@ public final class DelegationScheduler {
 
     @FunctionalInterface
     interface ChildWorkflowLauncher {
-        DelegationWorkflow.Result run(String workflowId, DelegationWorkflow.Request request);
+        ChildExecution start(String workflowId, DelegationWorkflow.Request request);
+    }
+
+    @FunctionalInterface
+    interface ChildExecution {
+        DelegationWorkflow.Result await();
     }
 }
