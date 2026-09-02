@@ -1,5 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.service.IndependentReviewBundle;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -198,7 +200,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                 "independent-reviewer".equals(delegation.role()))
                 || request.approvalRequest() != null && !"legacy".equals(request.repositoryId())
                 && request.independentReview() == null
-                || !reviewMatchesRoot(request)) {
+                || !reviewMatchesRoot(request) || !approvalMatchesReview(request)) {
             throw new IllegalArgumentException("Software factory workflow request is invalid");
         }
     }
@@ -212,6 +214,18 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                 request.taskId(), request.attemptId(), request.sourceCommit())
                 && request.delegations().stream().noneMatch(delegation ->
                 review.reviewId().equals(delegation.nodeId()));
+    }
+
+    private static boolean approvalMatchesReview(Request request) {
+        ApprovalRequest approval = request.approvalRequest();
+        if (approval == null || request.independentReview() == null) return true;
+        IndependentReviewBundle bundle = request.independentReview().bundle();
+        if (bundle.contradictions().stream().anyMatch(contradiction -> "OPEN".equals(contradiction.status()))) {
+            return false;
+        }
+        IndependentReviewBundle.FinalManifest reviewed = bundle.finalManifest();
+        return approval.manifestId().equals(reviewed.manifestId())
+                && approval.uri().equals(reviewed.uri()) && approval.digest().equals(reviewed.digest());
     }
 
     private static void requireManifest(ApprovalRequest manifest) {

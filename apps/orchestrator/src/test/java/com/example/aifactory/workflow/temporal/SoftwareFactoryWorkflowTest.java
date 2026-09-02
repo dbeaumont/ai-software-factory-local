@@ -300,10 +300,11 @@ class SoftwareFactoryWorkflowTest {
                     IndependentReviewWorkflowImpl.class);
             environment.start();
             SoftwareFactoryWorkflow workflow = stub(environment, "task-81");
-            String manifestId = "b".repeat(64);
-            String manifestDigest = "c".repeat(64);
+            String manifestId = "c".repeat(64);
+            String manifestDigest = "d".repeat(64);
             IndependentReviewWorkflow.Request review = new IndependentReviewWorkflow.Request(
-                    "task-81", "attempt-1", "final-review", "a".repeat(40), reviewBundle("task-81"), null);
+                    "task-81", "attempt-1", "final-review", "a".repeat(40),
+                    reviewBundle("task-81", java.util.List.of()), null);
             var request = new SoftwareFactoryWorkflow.Request("task-81", "attempt-1", "sample-repo",
                     "a".repeat(40), "change", java.util.List.of(),
                     new SoftwareFactoryWorkflow.ApprovalRequest(manifestId,
@@ -336,6 +337,35 @@ class SoftwareFactoryWorkflowTest {
         assertThatThrownBy(() -> new SoftwareFactoryWorkflowImpl().run(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("workflow request is invalid");
+    }
+
+    @Test
+    void blocksApprovalWhenAReviewedContradictionIsOpenOrManifestChanged() {
+        String taskId = "task-83";
+        IndependentReviewWorkflow.Request withOpenContradiction = new IndependentReviewWorkflow.Request(
+                taskId, "attempt-1", "review-open", "a".repeat(40), reviewBundle(taskId), null);
+        IndependentReviewBundle.FinalManifest reviewed = withOpenContradiction.bundle().finalManifest();
+        var openRequest = new SoftwareFactoryWorkflow.Request(taskId, "attempt-1", "sample-repo",
+                "a".repeat(40), "change", java.util.List.of(),
+                new SoftwareFactoryWorkflow.ApprovalRequest(
+                        reviewed.manifestId(), reviewed.uri(), reviewed.digest()),
+                java.util.List.of(), null, null, withOpenContradiction);
+
+        assertThatThrownBy(() -> new SoftwareFactoryWorkflowImpl().run(openRequest))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("workflow request is invalid");
+
+        String cleanTask = "task-84";
+        IndependentReviewBundle cleanBundle = reviewBundle(cleanTask, java.util.List.of());
+        IndependentReviewWorkflow.Request cleanReview = new IndependentReviewWorkflow.Request(
+                cleanTask, "attempt-1", "review-clean", "a".repeat(40), cleanBundle, null);
+        var changedManifest = new SoftwareFactoryWorkflow.Request(cleanTask, "attempt-1", "sample-repo",
+                "a".repeat(40), "change", java.util.List.of(),
+                new SoftwareFactoryWorkflow.ApprovalRequest(cleanBundle.finalManifest().manifestId(),
+                        cleanBundle.finalManifest().uri(), "e".repeat(64)),
+                java.util.List.of(), null, null, cleanReview);
+
+        assertThatThrownBy(() -> new SoftwareFactoryWorkflowImpl().run(changedManifest))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("workflow request is invalid");
     }
 
     @Test
@@ -383,16 +413,20 @@ class SoftwareFactoryWorkflowTest {
     }
 
     private static IndependentReviewBundle reviewBundle(String taskId) {
+        return reviewBundle(taskId, java.util.List.of(new IndependentReviewBundle.ContradictionReference(
+                "contradiction-1", "OPEN", "evidence://" + taskId + "/contradiction",
+                "f".repeat(64))));
+    }
+
+    private static IndependentReviewBundle reviewBundle(
+            String taskId, java.util.List<IndependentReviewBundle.ContradictionReference> contradictions) {
         return new IndependentReviewBundle(taskId, "attempt-1", "a".repeat(40),
                 new IndependentReviewBundle.ConsolidatedPatch("patch-1", "evidence://" + taskId + "/patch",
                         "b".repeat(64), java.util.List.of("src/App.java")),
                 new IndependentReviewBundle.FinalManifest("c".repeat(64),
                         "evidence://" + taskId + "/manifest", "d".repeat(64)),
                 java.util.List.of(new IndependentReviewBundle.ResultReference("result-1", "code-agent",
-                        "evidence://" + taskId + "/result", "e".repeat(64))),
-                java.util.List.of(new IndependentReviewBundle.ContradictionReference(
-                        "contradiction-1", "OPEN", "evidence://" + taskId + "/contradiction",
-                        "f".repeat(64))));
+                        "evidence://" + taskId + "/result", "e".repeat(64))), contradictions);
     }
 
     private static SoftwareFactoryWorkflow stub(TestWorkflowEnvironment environment, String taskId) {
