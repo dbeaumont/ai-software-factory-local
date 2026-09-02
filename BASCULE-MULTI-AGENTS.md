@@ -153,7 +153,7 @@
 
 ### Gate du lot 2
 
-- [ ] Le pipeline actuel fonctionne via le nouveau port sans changement de comportement ni régression de sécurité.
+- [x] Le pipeline actuel fonctionne via le nouveau port sans changement de comportement ni régression de sécurité. _(Preuves : `docs/multiagents/GATE-LOT-2-DECOUPLAGE.md`.)_
 
 ## 7. Lot 3 — Workflow durable avec Temporal
 
