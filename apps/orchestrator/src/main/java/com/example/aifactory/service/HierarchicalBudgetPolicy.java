@@ -54,15 +54,17 @@ public final class HierarchicalBudgetPolicy {
     }
 
     public Usage validateDelegation(String role, JsonNode value) {
-        Budget requested = new Budget(value.path("max_turns").asInt(), value.path("max_tokens").asLong(),
-                value.path("max_cost_micros").asLong(), value.path("timeout_seconds").asLong(),
-                value.path("max_tool_calls").asInt());
+        Budget requested = requested(value);
         Budget roleCeiling = agents.get(role);
         if (roleCeiling == null) throw invalid("agent role has no budget: " + role);
         requireWithin(requested, delegation, "delegation");
         requireWithin(requested, roleCeiling, "agent " + role);
         return new Usage(requested.maxTurns(), requested.maxTokens(), requested.maxCostMicros(),
                 requested.maxToolCalls());
+    }
+
+    public void validateChildDelegation(JsonNode child, JsonNode parent) {
+        requireWithin(requested(child), requested(parent), "child delegation");
     }
 
     public void validatePerimeter(String perimeter, Usage usage) {
@@ -107,6 +109,12 @@ public final class HierarchicalBudgetPolicy {
         return new Budget(number(value, "max_turns"), number(value, "max_tokens"),
                 number(value, "max_cost_micros"), number(value, "timeout_seconds"),
                 number(value, "max_tool_calls"));
+    }
+
+    private static Budget requested(JsonNode value) {
+        return new Budget(value.path("max_turns").asLong(), value.path("max_tokens").asLong(),
+                value.path("max_cost_micros").asLong(), value.path("timeout_seconds").asLong(),
+                value.path("max_tool_calls").asLong());
     }
 
     private static AggregateBudget aggregateBudget(Map<String, Object> value) {

@@ -28,7 +28,7 @@ class DelegationValidatorTest {
         assertThatThrownBy(() -> validator.validate(plan("infrastructure", 1000, "developer", "code-agent"), limits()))
                 .hasMessageContaining("write scope outside");
         assertThatThrownBy(() -> validator.validate(plan("src/main", 6000, "developer", "code-agent"), limits()))
-                .hasMessageContaining("token budget");
+                .hasMessageContaining("child delegation budget");
         assertThatThrownBy(() -> validator.validate(plan("src/main", 1000, "developer", "architecture-agent"), limits()))
                 .hasMessageContaining("invalid parent");
     }
@@ -67,6 +67,19 @@ class DelegationValidatorTest {
 
         assertThatThrownBy(() -> strict.validate(roots, permissiveCaller))
                 .hasMessageContaining("maximum fan-out");
+    }
+
+    @Test
+    void childCannotIncreaseAnyBudgetDimensionReceivedFromItsParent() throws Exception {
+        for (String field : List.of("max_turns", "max_tokens", "max_cost_micros", "timeout_seconds",
+                "max_tool_calls")) {
+            JsonNode candidate = plan("src/main", 1000, "developer", "code-agent");
+            ((tools.jackson.databind.node.ObjectNode) candidate.path("nodes").get(1).path("budget"))
+                    .put(field, candidate.path("nodes").get(0).path("budget").path(field).asLong() + 1);
+
+            assertThatThrownBy(() -> validator.validate(candidate, limits()))
+                    .as(field).hasMessageContaining("child delegation budget exceeded");
+        }
     }
 
     private JsonNode plan(String writePath, int childTokens, String childRole, String parentRole) throws Exception {

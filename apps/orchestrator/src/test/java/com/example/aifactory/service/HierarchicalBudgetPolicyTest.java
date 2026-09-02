@@ -49,4 +49,19 @@ class HierarchicalBudgetPolicyTest {
                 new HierarchicalBudgetPolicy.Usage(60, 80_001, 80_000_000, 208)))
                 .hasMessageContaining("task budget exceeded");
     }
+
+    @Test
+    void rejectsAChildBudgetThatRaisesOneOfItsParentLimits() throws Exception {
+        var parent = mapper.readTree("""
+                {"max_turns":2,"max_tokens":1000,"max_cost_micros":1000,
+                 "timeout_seconds":60,"max_tool_calls":2}
+                """);
+        var child = mapper.readTree("""
+                {"max_turns":2,"max_tokens":1001,"max_cost_micros":1000,
+                 "timeout_seconds":60,"max_tool_calls":2}
+                """);
+
+        assertThatThrownBy(() -> policy.validateChildDelegation(child, parent))
+                .hasMessageContaining("child delegation budget exceeded");
+    }
 }

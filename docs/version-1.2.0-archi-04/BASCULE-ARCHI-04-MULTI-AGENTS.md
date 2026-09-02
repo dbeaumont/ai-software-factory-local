@@ -282,7 +282,7 @@
 - [x] **MAH-145** — Ajouter budgets par agent, délégation, périmètre et tâche complète. _(Politique hôte versionnée pour les 14 rôles, plafond unitaire de délégation, agrégats Architecture/Code/Tests/Sécurité et plafond global ; validation branchée sur AgentRuntime et DelegationValidator.)_
 - [x] **MAH-146** — Ajouter quotas cumulés de tokens d'entrée, sortie, coût, tours et appels MCP. _(Ledger atomique par tâche, cumulant toutes les tentatives ; chaque tour LLM et appel MCP réserve sa consommation réelle, avec refus sans écriture partielle pour chacun des cinq quotas.)_
 - [x] **MAH-147** — Ajouter concurrence globale, par tâche, par rôle et par serveur MCP. _(Quatre sémaphores équitables acquis dans un ordre fixe sous une même deadline ; plafonds configurables 32/4/8/16, conservation des permis jusqu'à l'arrêt réel et tests isolant chaque dimension.)_
-- [ ] **MAH-148** — Interdire à une délégation enfant d'augmenter le budget reçu de son parent.
+- [x] **MAH-148** — Interdire à une délégation enfant d'augmenter le budget reçu de son parent. _(Comparaison hôte composante par composante des tours, tokens, coût, délai et appels d'outils avant acceptation du DAG ; tests de refus indépendants sur les cinq dimensions.)_
 - [ ] **MAH-149** — Réserver une part du budget au Reviewer et aux gates finaux.
 - [ ] **MAH-150** — Définir une condition d'arrêt stable pour budget épuisé, deadline ou absence de progression.
 - [ ] **MAH-151** — Étendre le kill switch aux rôles hiérarchiques et aux modes shadow/canary/active.

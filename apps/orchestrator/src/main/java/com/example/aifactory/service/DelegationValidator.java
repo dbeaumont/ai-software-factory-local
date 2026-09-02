@@ -63,6 +63,7 @@ public final class DelegationValidator {
                 String parentRole = parent.path("role").asText();
                 if (!parentRole.equals(role.parent()) || !catalog.require(parentRole).mayDelegateTo().contains(roleName))
                     throw invalid("invalid parent for " + roleName);
+                budgets.validateChildDelegation(node.path("budget"), parent.path("budget"));
                 children.merge(parentId.asText(), 1, Integer::sum);
             }
 
