@@ -406,7 +406,7 @@
 ### Tests d'intégration
 
 - [ ] **MAH-265** — Exécuter le workflow complet avec MCP simulés puis MCP réels.
-- [ ] **MAH-266** — Tester parallélisme Architecture, Tests et Sécurité.
+- [x] **MAH-266** — Tester parallélisme Architecture, Tests et Sécurité. _(`DelegationSchedulerTest` vérifie que les trois Child Workflows indépendants sont tous démarrés avant l'attente du premier résultat.)_
 - [ ] **MAH-267** — Tester agents Code parallèles sur scopes disjoints.
 - [ ] **MAH-268** — Tester conflit de patches, réparation ciblée et escalade.
 - [ ] **MAH-269** — Tester approbation, refus, expiration et changement de manifeste.

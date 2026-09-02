@@ -135,6 +135,28 @@ class DelegationSchedulerTest {
     }
 
     @Test
+    void startsArchitectureTestsAndSecurityBeforeAwaitingAnyPerimeter() {
+        List<String> started = new ArrayList<>();
+        DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) -> {
+            started.add(request.role());
+            return () -> {
+                assertThat(started).containsExactly(
+                        "architecture-agent", "test-agent", "security-agent");
+                return new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE");
+            };
+        });
+        List<DelegationWorkflow.Request> independentPerimeters = List.of(
+                roleNode("architecture", "architecture-agent"),
+                roleNode("tests", "test-agent"),
+                roleNode("security", "security-agent"));
+
+        List<DelegationWorkflow.Result> results = scheduler.executeBatch(root(), independentPerimeters);
+
+        assertThat(results).extracting(DelegationWorkflow.Result::role)
+                .containsExactly("architecture-agent", "test-agent", "security-agent");
+    }
+
+    @Test
     void selectsOnlyDependencySatisfiedNodesAndCapsParallelismAtFour() {
         DelegationScheduler scheduler = new DelegationScheduler((workflowId, request) ->
                 () -> new DelegationWorkflow.Result(request.nodeId(), request.role(), "DONE"));
@@ -259,6 +281,11 @@ class DelegationSchedulerTest {
     private static DelegationWorkflow.Request prioritizedNode(String id, int priority) {
         return new DelegationWorkflow.Request("task-1", "attempt-1", id, "supervisor", "code-agent",
                 "a".repeat(40), id, priority, Set.of(), new DelegationWorkflow.Budget(100, 100, 1));
+    }
+
+    private static DelegationWorkflow.Request roleNode(String id, String role) {
+        return new DelegationWorkflow.Request("task-1", "attempt-1", id, "supervisor", role,
+                "a".repeat(40), id, Set.of(), new DelegationWorkflow.Budget(100, 100, 1));
     }
 
     private static List<String> coordinate(List<DelegationWorkflow.Request> plan, Map<String, String> outcomes) {
