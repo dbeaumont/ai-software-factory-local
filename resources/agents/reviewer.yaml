@@ -1,5 +1,13 @@
-name: Reviewer
+schema_version: "1"
+manifest_id: reviewer-pipeline-compat-v1
+name: Reviewer (pipeline compatibility)
 role: reviewer
+version: "1.1.0"
+owner: risk
+kind: compatibility-role
+replacement: independent-reviewer
+available_modes:
+  - PIPELINE
 prompt: prompts/reviewer.md
 autonomy: A1
 human_gate: true

@@ -1,0 +1,34 @@
+schema_version: "1"
+manifest_id: independent-reviewer-v1
+name: Independent Reviewer
+role: independent-reviewer
+version: "1.0.0"
+owner: risk
+parent: workflow
+kind: agent
+autonomy: A1
+effectful: false
+prompt: prompts/independent-reviewer.md
+input_contracts:
+  - architecture-assessment-v1
+  - integration-result-v1
+  - test-assessment-v1
+  - security-assessment-v1
+  - contradiction-v1
+output_contracts:
+  - independent-review-v1
+may_delegate_to: []
+allowed_tools:
+  - context.search_code
+  - context.read_file
+  - context.get_dependencies
+  - context.get_symbols
+  - evidence.get_summary
+  - evidence.read
+default_budget:
+  max_turns: 6
+  max_tokens: 10000
+  max_cost_micros: 10000000
+  timeout_seconds: 600
+  max_tool_calls: 24
+human_gate: required-after-review
