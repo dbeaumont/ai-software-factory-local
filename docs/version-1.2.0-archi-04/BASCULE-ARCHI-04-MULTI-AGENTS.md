@@ -303,7 +303,7 @@
 - [x] **MAH-166** — Permettre au Supervisor un nombre borné de replans avec justification et nouveau digest du DAG. _(`DelegationReplanPolicy` réserve la proposition au rôle Supervisor, recalcule et lie les digests courant/remplaçant, refuse un plan inchangé et plafonne à deux replans acceptés ; contrat et prompt exigent les digests ainsi qu'une justification bornée.)_
 - [x] **MAH-167** — Détecter absence de progression, cycles de replan et délégations répétées. _(`DelegationReplanPolicy` refuse les digests déjà rencontrés, les remplacements sémantiquement identiques malgré un renommage et la réintroduction par identifiant ou signature d'un travail déclaré terminé ; l'intégrité de l'historique de replans est également vérifiée.)_
 - [x] **MAH-168** — Implémenter le chemin court pour changement simple, mono-module et faible risque. _(`ShortCodePathPlanner` applique la politique versionnée et ne produit que le blueprint borné Supervisor minimal, un Developer et Reviewer indépendant pour les cas R0/R1 mono-module/mono-domaine ; patch, tests, qualité, sécurité et manifeste restent des contrôles déterministes obligatoires.)_
-- [ ] **MAH-169** — Implémenter le chemin complet pour changement multi-domaines ou à forte incertitude.
+- [x] **MAH-169** — Implémenter le chemin complet pour changement multi-domaines ou à forte incertitude. _(`HierarchicalPathPlanner` applique les déclencheurs versionnés modules/domaines/scopes/impacts/décision ouverte et produit le DAG Supervisor → Architecture → Code → Tests/Sécurité → Reviewer indépendant, avec ce dernier conservé sous l'autorité du workflow et une gate `BEFORE_EXTERNAL_EFFECT` en R2.)_
 - [ ] **MAH-170** — Enregistrer la raison de routage et permettre son évaluation a posteriori.
 
 ### Gate du lot 7
