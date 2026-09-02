@@ -67,7 +67,7 @@
 
 ### Décisions d'architecture
 
-- [ ] **MAH-001** — Rédiger l'ADR actant Spring Boot comme control plane et Temporal comme moteur de workflow durable.
+- [x] **MAH-001** — Rédiger l'ADR actant Spring Boot comme control plane et Temporal comme moteur de workflow durable. _(ADR : `docs/adr/ADR-MAH-001-workflow-coordinator-temporal.md`.)_
 - [ ] **MAH-002** — Décider du mode Temporal local : serveur de développement dans Compose ou environnement partagé dédié.
 - [ ] **MAH-003** — Décider de la topologie cible Temporal : Cloud, self-managed ou service interne opéré par la plateforme.
 - [ ] **MAH-004** — Définir la frontière entre état Temporal, projection métier PostgreSQL et artefacts Evidence MCP.
