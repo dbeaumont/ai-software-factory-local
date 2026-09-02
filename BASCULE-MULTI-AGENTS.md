@@ -146,7 +146,7 @@
 ### Séparation des effets
 
 - [x] **MAH-050** — Inventorier tous les appels à effet encore présents dans l'orchestrateur. _(Inventaire des déclencheurs, ports, adaptateurs et frontières cibles documenté.)_
-- [ ] **MAH-051** — Vérifier que seul le coordinateur appelle validation/application, tests, scans, assurance et SCM.
+- [x] **MAH-051** — Vérifier que seul le coordinateur appelle validation/application, tests, scans, assurance et SCM. _(Test d'architecture sur les propriétaires des appels à effet ; patch borné par `PatchIntegrator`.)_
 - [ ] **MAH-052** — Interdire à `AgentRuntime` d'injecter un client sandbox, assurance ou SCM dans une boucle LLM.
 - [ ] **MAH-053** — Ajouter un test d'architecture interdisant une dépendance Agent vers un adaptateur à effet.
 - [ ] **MAH-054** — Maintenir la compatibilité du pipeline et comparer ses sorties avant/après extraction.
