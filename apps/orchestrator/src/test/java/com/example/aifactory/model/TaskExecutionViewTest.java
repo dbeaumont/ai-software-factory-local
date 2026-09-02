@@ -86,4 +86,37 @@ class TaskExecutionViewTest {
         assertThat(view.humanActions()).containsExactly(new TaskView.HumanActionView(
                 "decision-1", "contradiction-1", "ARCHITECTURE", "Choose contract", "d".repeat(64), "PENDING"));
     }
+
+    @Test
+    void bindsHumanResponsesToThePendingObjectAndAuthorizedDomain() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.recordHumanAction("decision-1", "contradiction-1", "SECURITY", "Accept risk?",
+                "d".repeat(64), "PENDING");
+
+        state.answerHumanAction("decision-1", "ACCEPT_RISK", "d".repeat(64), "security-owner", "SECURITY");
+
+        assertThat(state.view().humanActions().getFirst().status()).isEqualTo("ANSWERED");
+        assertThat(state.view().decisions()).containsExactly(new TaskView.DecisionView(
+                "human-decision-1", "contradiction-1", "human-decision", "ACCEPT_RISK", "security-owner"));
+        assertThatThrownBy(() -> state.answerHumanAction("decision-1", "REJECT", "d".repeat(64),
+                "security-owner", "SECURITY")).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void cancellationIsTerminalAndCancelsPendingHumanActions() {
+        TaskState state = new TaskState("task-1", "AF-0001",
+                new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
+        state.recordHumanAction("decision-1", "contradiction-1", "PRODUCT", "Choose behavior",
+                "d".repeat(64), "PENDING");
+
+        state.cancel("No longer required", "product-owner");
+
+        assertThat(state.status).isEqualTo(TaskStatus.CANCELLED);
+        assertThat(state.view().humanActions().getFirst().status()).isEqualTo("CANCELLED");
+        assertThatThrownBy(() -> state.transition(TaskStatus.PLANNING, "late transition"))
+                .isInstanceOf(java.util.concurrent.CancellationException.class);
+        state.fail(new IllegalStateException("late failure"));
+        assertThat(state.status).isEqualTo(TaskStatus.CANCELLED);
+    }
 }

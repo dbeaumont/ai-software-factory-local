@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,9 @@ public class TaskState {
     }
 
     public synchronized void transition(TaskStatus newStatus, String summary) {
+        if (this.status == TaskStatus.CANCELLED && newStatus != TaskStatus.CANCELLED) {
+            throw new CancellationException("Task was cancelled");
+        }
         this.status = newStatus;
         this.updatedAt = Instant.now();
         this.steps.add(new AgentStep(newStatus.name(), "OK", summary, this.updatedAt));
@@ -65,6 +69,7 @@ public class TaskState {
     }
 
     public synchronized void fail(Exception ex) {
+        if (this.status == TaskStatus.CANCELLED) return;
         this.status = TaskStatus.FAILED;
         this.error = ex.getMessage();
         this.updatedAt = Instant.now();
@@ -164,12 +169,50 @@ public class TaskState {
                 || !List.of("PRODUCT", "ARCHITECTURE", "SECURITY", "DATA").contains(domain)
                 || question == null || question.isBlank() || question.length() > 1_000
                 || objectDigest == null || !objectDigest.matches("[0-9a-f]{64}")
-                || !List.of("PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED").contains(status)) {
+                || !List.of("PENDING", "ANSWERED", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED")
+                .contains(status)) {
             throw new IllegalArgumentException("Task human action view is invalid");
         }
         humanActions.put(requestId, new TaskView.HumanActionView(requestId, contradictionId, domain,
                 question, objectDigest, status));
         updatedAt = Instant.now();
+    }
+
+    public synchronized void answerHumanAction(String requestId, String decision, String objectDigest,
+                                               String actor, String actorRole) {
+        TaskView.HumanActionView action = humanActions.get(requestId);
+        if (action == null) throw new IllegalArgumentException("Unknown human decision request " + requestId);
+        if (!"PENDING".equals(action.status())) {
+            throw new IllegalStateException("Human decision request is not pending");
+        }
+        if (objectDigest == null || !objectDigest.equals(action.objectDigest())) {
+            throw new SecurityException("Human decision object digest does not match");
+        }
+        if (actorRole == null || !actorRole.equals(action.domain())) {
+            throw new SecurityException("Actor role is not authorized for this decision domain");
+        }
+        if (decision == null || !decision.matches("[A-Z][A-Z0-9_-]{0,127}")
+                || actor == null || actor.isBlank() || actor.length() > 256) {
+            throw new IllegalArgumentException("Human decision response is invalid");
+        }
+        humanActions.put(requestId, new TaskView.HumanActionView(action.requestId(), action.contradictionId(),
+                action.domain(), action.question(), action.objectDigest(), "ANSWERED"));
+        recordDecision("human-" + requestId, action.contradictionId(), "human-decision", decision, actor);
+    }
+
+    public synchronized void cancel(String reason, String actor) {
+        if (status == TaskStatus.CANCELLED) return;
+        if (List.of(TaskStatus.APPROVED, TaskStatus.PR_CREATED, TaskStatus.FAILED).contains(status)) {
+            throw new IllegalStateException("Task can no longer be cancelled");
+        }
+        if (reason == null || reason.isBlank() || reason.length() > 1_000
+                || actor == null || actor.isBlank() || actor.length() > 256) {
+            throw new IllegalArgumentException("Task cancellation request is invalid");
+        }
+        humanActions.replaceAll((id, action) -> "PENDING".equals(action.status())
+                ? new TaskView.HumanActionView(action.requestId(), action.contradictionId(), action.domain(),
+                action.question(), action.objectDigest(), "CANCELLED") : action);
+        transition(TaskStatus.CANCELLED, "Cancelled by " + actor + ": " + reason);
     }
 
     private static boolean validProjectionId(String value) {

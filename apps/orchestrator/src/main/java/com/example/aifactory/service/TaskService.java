@@ -3,6 +3,8 @@ package com.example.aifactory.service;
 import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.CloudAvailability;
 import com.example.aifactory.model.TaskRequest;
+import com.example.aifactory.model.TaskCancellationRequest;
+import com.example.aifactory.model.HumanDecisionResponse;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.model.TaskView;
@@ -77,6 +79,21 @@ public class TaskService {
         state.humanApproved = true;
         state.transition(TaskStatus.APPROVED, "Human approval recorded");
         coordinator.resumeAfterApproval(state);
+        return state.view();
+    }
+
+    public TaskView cancel(String id, TaskCancellationRequest request) {
+        if (request == null) throw new IllegalArgumentException("Cancellation request is required");
+        TaskState state = requireTask(id);
+        state.cancel(request.reason(), request.actor());
+        return state.view();
+    }
+
+    public TaskView answerDecision(String id, String requestId, HumanDecisionResponse response) {
+        if (response == null) throw new IllegalArgumentException("Human decision response is required");
+        TaskState state = requireTask(id);
+        state.answerHumanAction(requestId, response.decision(), response.objectDigest(),
+                response.actor(), response.actorRole());
         return state.view();
     }
 

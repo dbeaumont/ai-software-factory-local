@@ -357,7 +357,7 @@
 - [x] **MAH-221** — Exposer les délégations, rôles, dépendances, statuts et raisons d'arrêt. _(`TaskView.delegations` fournit une projection structurée et `TaskState.recordDelegation` normalise les mises à jour par nœud.)_
 - [x] **MAH-222** — Exposer les artefacts uniquement par métadonnées et URI autorisées. _(`TaskView.artifacts` est métadonnées-only ; `TaskState` masque l'URI quand son autorisation n'est pas établie.)_
 - [x] **MAH-223** — Exposer contradictions, décisions et points nécessitant une action humaine. _(`TaskView` publie des projections compactes et validées pour les contradictions, arbitrages et demandes de décision humaine, sans exposer leurs contenus de travail internes.)_
-- [ ] **MAH-224** — Ajouter endpoints ou commandes pour annuler, répondre à une décision et approuver.
+- [x] **MAH-224** — Ajouter endpoints ou commandes pour annuler, répondre à une décision et approuver. _(Les routes `POST /api/tasks/{id}/cancel` et `POST /api/tasks/{id}/decisions/{requestId}` complètent l'approbation existante ; digest, rôle, état terminal et courses asynchrones sont contrôlés.)_
 - [ ] **MAH-225** — Garantir compatibilité API pour les consommateurs du pipeline actuel.
 
 ### Interface

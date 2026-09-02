@@ -13,5 +13,6 @@ public enum TaskStatus {
     WAITING_APPROVAL,
     APPROVED,
     PR_CREATED,
+    CANCELLED,
     FAILED
 }

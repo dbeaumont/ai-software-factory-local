@@ -2,6 +2,8 @@ package com.example.aifactory.controller;
 
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
+import com.example.aifactory.model.TaskCancellationRequest;
+import com.example.aifactory.model.HumanDecisionResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +28,10 @@ class RestApiCompatibilityTest {
         assertRoute(TaskController.class.getMethod("list"), GetMapping.class, "", false);
         assertRoute(TaskController.class.getMethod("get", String.class), GetMapping.class, "/{id}", false);
         assertRoute(TaskController.class.getMethod("approve", String.class), PostMapping.class, "/{id}/approve", true);
+        assertRoute(TaskController.class.getMethod("cancel", String.class, TaskCancellationRequest.class),
+                PostMapping.class, "/{id}/cancel", true);
+        assertRoute(TaskController.class.getMethod("answerDecision", String.class, String.class,
+                HumanDecisionResponse.class), PostMapping.class, "/{id}/decisions/{requestId}", true);
 
         assertThat(FactoryController.class.getAnnotation(RequestMapping.class).value()).containsExactly("/api");
         assertRoute(FactoryController.class.getMethod("capabilities"), GetMapping.class, "/capabilities", false);

@@ -11,7 +11,7 @@ import java.util.Set;
 
 /** Compatibility reader for immutable legacy views archived in Evidence MCP. */
 public final class MigratedTaskReader {
-    private static final Set<TaskStatus> TERMINAL = Set.of(TaskStatus.PR_CREATED, TaskStatus.FAILED);
+    private static final Set<TaskStatus> TERMINAL = Set.of(TaskStatus.PR_CREATED, TaskStatus.CANCELLED, TaskStatus.FAILED);
     private final EvidenceRepository evidenceRepository;
     private final ObjectMapper objectMapper;
 
