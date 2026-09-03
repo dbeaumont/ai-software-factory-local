@@ -370,6 +370,7 @@ services:
       additional_contexts:
         mcp-schemas: ../resources/mcp/schemas
         multiagent-schemas: ../resources/multiagents/schemas
+        multiagent-policies: ../resources/multiagents/policies
         agent-resources: ../resources/agents
       args:
         MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
@@ -468,6 +469,12 @@ services:
     volumes:
       - factory-workspace:/workspace/tasks
       - ../resources/prompts:/opt/ai-factory/resources/prompts:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
     depends_on:
       gitea:
         condition: service_healthy
@@ -498,8 +505,6 @@ services:
         - artifactory_token
     volumes:
       - ../docs/assets:/usr/share/nginx/html/docs/assets:ro
-    depends_on:
-      - reverse-proxy
     networks: [factory]
 
   # Public HTTP entry point: serves the frontend and forwards API requests to the orchestrator.
@@ -509,8 +514,17 @@ services:
       - "${WEB_APP_PORT}:80"
     volumes:
       - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
     depends_on:
-      - orchestrator
+      orchestrator:
+        condition: service_healthy
+      factory-web:
+        condition: service_healthy
     networks: [factory]
 
   # SonarQube and its dedicated persistent PostgreSQL database.
@@ -522,11 +536,18 @@ services:
       POSTGRES_DB: sonar
     volumes:
       - sonar-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks: [factory]
 
   sonarqube:
     image: sonarqube:community
-    depends_on: [sonar-db]
+    depends_on:
+      sonar-db:
+        condition: service_healthy
     environment:
       SONAR_JDBC_URL: jdbc:postgresql://sonar-db:5432/sonar
       SONAR_JDBC_USERNAME: sonar
@@ -608,6 +629,12 @@ services:
       - ./observability/alerts:/etc/prometheus/rules:ro
     ports:
       - "${PROMETHEUS_PORT}:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
     networks: [factory, mcp-internal, workflow-internal]
 
   grafana:
@@ -618,7 +645,15 @@ services:
       - grafana-data:/var/lib/grafana
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on: [prometheus]
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
     networks: [factory]
 
 networks:

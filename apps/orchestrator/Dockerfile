@@ -49,6 +49,7 @@ RUN --mount=type=secret,id=artifactory_token \
 COPY src ./src
 COPY --from=mcp-schemas . /src/external-schemas
 COPY --from=multiagent-schemas . /src/external-multiagent-schemas
+COPY --from=multiagent-policies . /src/external-multiagent-policies
 COPY --from=agent-resources . /src/external-agents
 
 # Build du projet avec le profil prod (tests ignorés — ils sont exécutés en CI séparément) avec le profil prod.
@@ -56,9 +57,9 @@ RUN --mount=type=secret,id=artifactory_token \
     --mount=type=cache,target=/root/.m2 \
   if [ -n "${MAVEN_MIRROR_URL}" ]; then \
     export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token); \
-    mvn package -DskipTests -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dagents.directory=/src/external-agents; \
+    mvn package -DskipTests -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dagents.directory=/src/external-agents; \
   else \
-    mvn package -DskipTests -B -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dagents.directory=/src/external-agents; \
+    mvn package -DskipTests -B -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dagents.directory=/src/external-agents; \
   fi
 
 # ─────────────────────────────────────────────────────────────────────────────
