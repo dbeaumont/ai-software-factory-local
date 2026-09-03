@@ -77,7 +77,7 @@ fi
 
 TOKEN_VALID=false
 if [ -n "$GITEA_TOKEN" ] && curl -fsS -H "Authorization: token $GITEA_TOKEN" \
-  "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api" >/dev/null 2>&1; then
+  "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api/collaborators" >/dev/null 2>&1; then
   TOKEN_VALID=true
   echo "Gitea token already configured and valid."
 elif [ -n "$GITEA_TOKEN" ]; then

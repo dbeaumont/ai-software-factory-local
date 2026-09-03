@@ -105,6 +105,32 @@ class GiteaDeliveryBackendTest {
         assertThrows(SecurityException.class, () -> GiteaDeliveryBackend.pushRefspec(forbidden));
     }
 
+    @Test
+    void askPassScriptUsesTheExecutableScmStateVolume(@TempDir Path root) throws Exception {
+        Path token = root.resolve("token");
+        Path approval = root.resolve("approval");
+        Path stateRoot = root.resolve("state");
+        Files.writeString(token, "gitea-token-for-tests");
+        Files.writeString(approval, "approval-key-for-tests-at-least-32-bytes");
+        ScmDeliveryProperties properties = new ScmDeliveryProperties("http://gitea:3000", "http://localhost:3000",
+                "delivery", token, stateRoot, root.resolve("registry"), root, approval);
+        GiteaDeliveryBackend backend = new GiteaDeliveryBackend(properties, new ScmCredentials(properties),
+                WebClient.builder());
+
+        Path askPass = backend.createAskPass();
+        try {
+            assertTrue(askPass.startsWith(stateRoot.resolve("askpass")));
+            Process process = new ProcessBuilder(askPass.toString(), "Username for Gitea")
+                    .redirectErrorStream(true)
+                    .start();
+            process.getOutputStream().close();
+            assertEquals(0, process.waitFor());
+            assertEquals("", new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+        } finally {
+            Files.deleteIfExists(askPass);
+        }
+    }
+
     private static void run(Path directory, String... command) throws Exception {
         Process process = new ProcessBuilder(command).directory(directory.toFile()).redirectErrorStream(true).start();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

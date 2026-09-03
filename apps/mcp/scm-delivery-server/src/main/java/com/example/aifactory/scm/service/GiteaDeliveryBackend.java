@@ -55,7 +55,7 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
     @Override
     public DeliveryResult createDraftPullRequest(DeliveryCommand command) throws Exception {
         String commit = prepareCommit(command);
-        Path askpass = createAskPass(command.taskId());
+        Path askpass = createAskPass();
         try {
             git(command, askpass, "push", remote(command.repository()), pushRefspec(command));
             JsonNode response = client.post()
@@ -76,7 +76,7 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
     }
 
     String prepareCommit(DeliveryCommand command) throws Exception {
-        Path askpass = createAskPass(command.taskId());
+        Path askpass = createAskPass();
         try {
             git(command, askpass, "checkout", "-b", command.branch());
             git(command, askpass, "config", "user.email", "ai-factory@example.local");
@@ -112,8 +112,10 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
         return output;
     }
 
-    private Path createAskPass(String taskId) throws Exception {
-        Path script = Path.of("/tmp", "scm-askpass-" + taskId);
+    Path createAskPass() throws Exception {
+        Path askPassRoot = properties.stateRoot().resolve("askpass").normalize();
+        Files.createDirectories(askPassRoot);
+        Path script = Files.createTempFile(askPassRoot, "git-askpass-", ".sh");
         Files.writeString(script, "#!/bin/sh\ncase \"$1\" in *Username*) printf '%s' \"$AI_FACTORY_GIT_USER\";; *) printf '%s' \"$AI_FACTORY_GIT_TOKEN\";; esac\n");
         Files.setPosixFilePermissions(script, PosixFilePermissions.fromString("rwx------"));
         return script;
