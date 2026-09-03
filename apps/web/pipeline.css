@@ -136,7 +136,7 @@
 .decision-alternatives small { margin-top: 2px; color: var(--muted); line-height: 1.35; }
 .human-decision.status-answered,.human-decision.status-approved { border-color: #7ee2b8; background: #dcfff1; }
 .effect-manifest { overflow-wrap: anywhere; padding: 7px; border-left: 2px solid var(--blue); color: #344563; background: var(--blue-soft); font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 9px; line-height: 1.4; }
-.operator-actions { position: sticky; top: 77px; display: flex; gap: 7px; margin-top: -12px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: #fff; box-shadow: 0 1px 2px #091e420f; }
+.operator-actions { position: sticky; z-index: 1; top: calc(100vh - 76px); display: flex; gap: 7px; margin-top: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: #fff; box-shadow: 0 1px 2px #091e420f; }
 .operator-actions[hidden] { display: none; }
 .operator-actions button,.delegation-retry { padding: 6px 8px; border: 1px solid #b6c2cf; border-radius: 3px; color: #44546f; background: #fff; cursor: pointer; font-size: 9px; font-weight: 700; }
 .operator-actions button:hover,.delegation-retry:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-soft); }
