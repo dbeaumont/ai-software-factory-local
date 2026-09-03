@@ -100,4 +100,12 @@ class MultiAgentUiContractTest {
                 "/delegations/${encodeURIComponent(node.delegationId)}/retry", "/cancel", "/fallback",
                 "function executeOperatorCommand(url, reason)");
     }
+
+    @Test
+    void omitsTheCloudBadgeFromTheTicketCreationForm() throws Exception {
+        String html = Files.readString(WEB.resolve("index.html"));
+
+        assertThat(html).contains("MOTEUR IA", "id=\"llm-mode-label\"")
+                .doesNotContain("privacy-badge");
+    }
 }
