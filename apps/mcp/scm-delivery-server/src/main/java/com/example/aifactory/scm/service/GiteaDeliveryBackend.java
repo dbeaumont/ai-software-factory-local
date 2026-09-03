@@ -82,7 +82,8 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
             git(command, askpass, "config", "user.email", "ai-factory@example.local");
             git(command, askpass, "config", "user.name", "AI Factory Delivery");
             git(command, askpass, "add", "-A");
-            git(command, askpass, "reset", "--", ".ai-plan.md", "changes.patch", ".ai-review.md", ".ai-factory");
+            git(command, askpass, "rm", "--cached", "--ignore-unmatch", "-r", "--",
+                    ".ai-plan.md", "changes.patch", ".ai-review.md", ".ai-factory");
             git(command, askpass, "commit", "-m", command.title());
             return git(command, askpass, "rev-parse", "HEAD").strip();
         } finally {

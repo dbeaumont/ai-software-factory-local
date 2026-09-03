@@ -54,6 +54,35 @@ class GiteaDeliveryBackendTest {
     }
 
     @Test
+    void commitSucceedsWhenNoFactoryArtifactsWereCreated(@TempDir Path root) throws Exception {
+        Path workspace = root.resolve("task-1");
+        Files.createDirectories(workspace);
+        run(workspace, "git", "init", "-q");
+        run(workspace, "git", "config", "user.email", "test@example.local");
+        run(workspace, "git", "config", "user.name", "Test");
+        Files.writeString(workspace.resolve("app.txt"), "before\n");
+        run(workspace, "git", "add", "app.txt");
+        run(workspace, "git", "commit", "-qm", "initial");
+        String sourceCommit = output(workspace, "git", "rev-parse", "HEAD").strip();
+        Files.writeString(workspace.resolve("app.txt"), "after\n");
+        Path token = root.resolve("token");
+        Path approval = root.resolve("approval");
+        Files.writeString(token, "gitea-token-for-tests");
+        Files.writeString(approval, "approval-key-for-tests-at-least-32-bytes");
+        ScmDeliveryProperties properties = new ScmDeliveryProperties("http://gitea:3000", "http://localhost:3000",
+                "delivery", token, root.resolve("state"), root.resolve("registry"), root, approval);
+        GiteaDeliveryBackend backend = new GiteaDeliveryBackend(properties, new ScmCredentials(properties),
+                WebClient.builder());
+        RepositoryRegistry.RepositoryDefinition repository = new RepositoryRegistry.RepositoryDefinition(
+                "customer-api", "aiadmin", "customer-api", "/aiadmin/customer-api.git", java.util.List.of("main"));
+
+        backend.prepareCommit(new ScmDeliveryBackend.DeliveryCommand(repository, workspace, "task-1", sourceCommit,
+                "main", "ai-factory/task-1-attempt-1", "AI Factory: test"));
+
+        assertTrue(output(workspace, "git", "show", "--pretty=format:", "--name-only", "HEAD").contains("app.txt"));
+    }
+
+    @Test
     void pushIsNonForceToDerivedFeatureBranchAndRegisteredRemote(@TempDir Path root) throws Exception {
         Path token = root.resolve("token");
         Path approval = root.resolve("approval");
