@@ -18,7 +18,7 @@ public final class PatchIntegrator {
     }
 
     public IntegratedPatch validate(Path workspace, String taskId, String sourceCommit, String proposal) throws Exception {
-        String patch = normalize(proposal);
+        String patch = WorkspaceDiffNormalizer.normalize(workspace, normalize(proposal));
         Path artifact = workspace.resolve("changes.patch");
         Files.writeString(artifact, patch, StandardCharsets.UTF_8);
         sandbox.checkPatch(workspace, taskId, sourceCommit);

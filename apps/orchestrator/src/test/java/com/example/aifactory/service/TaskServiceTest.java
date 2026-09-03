@@ -116,6 +116,34 @@ class TaskServiceTest {
     }
 
     @Test
+    void retriesATruncatedPatchRepairCompletionWithTheLargerBudget() {
+        AtomicInteger retries = new AtomicInteger();
+
+        String response = DeterministicWorkflowCoordinator.withSingleRetryableCompletion(
+                () -> {
+                    throw new LlmCompletionException("length", true, "truncated");
+                }, () -> "valid", reason -> {
+                    assertEquals("length", reason);
+                    retries.incrementAndGet();
+                });
+
+        assertEquals("valid", response);
+        assertEquals(1, retries.get());
+        assertEquals(3_200, DeterministicWorkflowCoordinator.retryMaxTokensFor("patch-repair"));
+    }
+
+    @Test
+    void doesNotRetryANonRetryablePatchRepairCompletion() {
+        assertThrows(LlmCompletionException.class,
+                () -> DeterministicWorkflowCoordinator.withSingleRetryableCompletion(
+                        () -> {
+                            throw new LlmCompletionException("refusal", false, "refused");
+                        }, () -> "unexpected", reason -> {
+                            throw new AssertionError("A refusal must not be retried");
+                        }));
+    }
+
+    @Test
     void doesNotRetryARefusal() {
         assertThrows(LlmCompletionException.class, () -> DeterministicWorkflowCoordinator.withSingleContractRetry(
                 () -> {

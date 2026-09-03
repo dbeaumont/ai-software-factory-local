@@ -1,10 +1,13 @@
 package com.example.aifactory.service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -71,6 +74,31 @@ class PatchProposalValidatorTest {
         assertThatThrownBy(() -> validator.validate(codeTask(10_000, "src"),
                 proposal("not a diff\n", "src/App.java", "MODIFY"), "not a diff\n"))
                 .hasMessageContaining("no file diff");
+    }
+
+    @Test
+    void convertsAnInvalidBlankContextLineIntoAnAddedBlankLineWhenTheWorkspaceRequiresIt(@TempDir Path workspace)
+            throws Exception {
+        Path source = workspace.resolve("src/App.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                class App {
+                    void first() {
+                    }
+                }
+                """);
+        String invalid = "diff --git a/src/App.java b/src/App.java\n"
+                + "--- a/src/App.java\n"
+                + "+++ b/src/App.java\n"
+                + "@@ -4,2 +4,4 @@\n"
+                + " \n"
+                + "+    void second() {\n"
+                + "+    }\n"
+                + " }\n";
+
+        String normalized = WorkspaceDiffNormalizer.normalize(workspace, invalid);
+
+        assertThat(normalized).contains("@@ -4 +4,4 @@\n+\n+    void second() {");
     }
 
     private JsonNode codeTask(long maxBytes, String writeRoot) throws Exception {

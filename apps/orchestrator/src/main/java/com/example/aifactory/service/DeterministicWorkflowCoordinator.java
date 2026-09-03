@@ -307,13 +307,23 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
                 maxTokensFor(promptName), responseFormat);
         Supplier<String> retryInvocation = () -> regularChat(state, systemPrompt, untrustedInput,
                 retryMaxTokensFor(promptName), responseFormat);
-        String response = "planner".equals(promptName)
-                ? withSingleContractRetry(invocation, retryInvocation, agentResponses::hasValidPlannerContract, reason -> {
-                    plannerContractRetries.increment();
-                    log.warn("Task {} ({}) planner retrying once; reason={}",
-                            state.id, state.ticketNumber, reason);
-                })
-                : invocation.get();
+        String response;
+        if ("planner".equals(promptName)) {
+            response = withSingleContractRetry(invocation, retryInvocation, agentResponses::hasValidPlannerContract,
+                    reason -> {
+                        plannerContractRetries.increment();
+                        log.warn("Task {} ({}) planner retrying once; reason={}",
+                                state.id, state.ticketNumber, reason);
+                    });
+        } else if ("patch-repair".equals(promptName)) {
+            response = withSingleRetryableCompletion(invocation, retryInvocation, reason -> {
+                operationalMetrics.retry("agent");
+                log.warn("Task {} ({}) patch-repair retrying once with a larger output budget; reason={}",
+                        state.id, state.ticketNumber, reason);
+            });
+        } else {
+            response = invocation.get();
+        }
         log.info("Task {} ({}) {} agent completed; response_chars={}",
                 state.id, state.ticketNumber, promptName, response.length());
         return response;
@@ -346,8 +356,25 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
         return retryInvocation.get();
     }
 
+    static String withSingleRetryableCompletion(Supplier<String> invocation, Supplier<String> retryInvocation,
+                                                java.util.function.Consumer<String> retryObserver) {
+        try {
+            return invocation.get();
+        } catch (LlmCompletionException exception) {
+            if (!exception.retryable()) {
+                throw exception;
+            }
+            retryObserver.accept(exception.reason());
+            return retryInvocation.get();
+        }
+    }
+
     static int retryMaxTokensFor(String promptName) {
-        return "planner".equals(promptName) ? 2_400 : maxTokensFor(promptName);
+        return switch (promptName) {
+            case "planner" -> 2_400;
+            case "patch-repair" -> 3_200;
+            default -> maxTokensFor(promptName);
+        };
     }
 
     static int maxTokensFor(String promptName) {
