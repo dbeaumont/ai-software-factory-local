@@ -3,6 +3,7 @@ package com.example.aifactory.service;
 import com.example.aifactory.workflow.temporal.DelegationScheduler;
 import com.example.aifactory.workflow.temporal.DelegationWorkflow;
 import com.example.aifactory.workflow.temporal.SoftwareFactoryWorkflow;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -22,6 +23,7 @@ public final class PatchIntegrationPlanner {
     private final DelegationScheduler scheduler;
     private final PatchConflictDetector conflicts;
 
+    @Autowired
     public PatchIntegrationPlanner(PatchConflictDetector conflicts) {
         this(new DelegationScheduler(), conflicts);
     }
