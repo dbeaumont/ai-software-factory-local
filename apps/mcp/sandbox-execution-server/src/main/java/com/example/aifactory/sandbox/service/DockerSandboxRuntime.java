@@ -136,6 +136,9 @@ public class DockerSandboxRuntime implements SandboxRuntime {
         if (profile.mavenCache()) {
             command.addAll(List.of("-v", "ai-factory-m2:/root/.m2"));
         }
+        if ("security-syft-trivy-v2".equals(profile.id())) {
+            command.addAll(List.of("-v", "ai-factory-trivy-db:/root/.cache/trivy/db"));
+        }
         if (environmentFile != null) {
             command.addAll(List.of("--env-file", environmentFile.toString()));
         }

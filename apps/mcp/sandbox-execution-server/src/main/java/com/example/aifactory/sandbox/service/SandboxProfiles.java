@@ -34,10 +34,13 @@ final class SandboxProfiles {
                             "MAVEN_OPTS", "MAVEN_PROXY_HOST", "MAVEN_NO_PROXY_HOSTS",
                             "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY"),
                     false, true);
-            case RUN_SECURITY -> new Profile("security-syft-trivy-v1", "factory", Duration.ofMinutes(10),
+            case RUN_SECURITY -> new Profile("security-syft-trivy-v2", "factory", Duration.ofMinutes(10),
                     "set -o pipefail && mkdir -p .ai-factory && " +
                             "syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json >/dev/null && " +
-                            "trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1 --format table . " +
+                            "for attempt in 1 2 3; do trivy fs --download-db-only --timeout 2m && break; " +
+                            "if [ \"$attempt\" -eq 3 ]; then exit 2; fi; sleep \"$attempt\"; done && " +
+                            "trivy fs --skip-db-update --scanners vuln,secret --severity HIGH,CRITICAL " +
+                            "--exit-code 1 --format table . " +
                             "| tee .ai-factory/trivy.txt && echo 'SBOM: .ai-factory/sbom.cdx.json'",
                     List.of("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "SYFT_CHECK_FOR_APP_UPDATE",
                             "TRIVY_NO_PROGRESS"), false, false);

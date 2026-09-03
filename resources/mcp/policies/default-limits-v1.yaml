@@ -121,7 +121,7 @@ sandbox:
     quality-sonar-v1:
       timeout: PT15M
       networkPolicy: dependencies-and-sonar
-    security-syft-trivy-v1:
+    security-syft-trivy-v2:
       timeout: PT10M
       networkPolicy: none-target
 

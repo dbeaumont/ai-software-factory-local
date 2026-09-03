@@ -37,7 +37,7 @@ class GkeSandboxRuntimeTest {
 
         GkeJobController.JobRequest request = captured.get();
         assertEquals(0, result.exitCode());
-        assertEquals("security-syft-trivy-v1", request.profileId());
+        assertEquals("security-syft-trivy-v2", request.profileId());
         assertEquals("sandbox-dependency-egress", request.networkPolicy());
         assertEquals("2Gi", request.memory());
         assertEquals(512, request.pidsLimit());

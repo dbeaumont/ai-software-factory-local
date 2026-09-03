@@ -142,10 +142,16 @@ class DockerSandboxRuntimeTest {
     @Test
     void routesSecurityDatabaseAccessThroughTheServerManagedProxy() {
         SandboxProfiles.Profile profile = SandboxProfiles.forOperation(Operation.RUN_SECURITY);
+        List<String> command = runtime().command(profile, "ai-factory-sbx-security",
+                Path.of("/workspace/tasks/task-1"), null);
 
+        assertEquals("security-syft-trivy-v2", profile.id());
         assertEquals("factory", profile.network());
+        assertTrue(profile.script().contains("trivy fs --download-db-only --timeout 2m"));
+        assertTrue(profile.script().contains("trivy fs --skip-db-update"));
         assertTrue(profile.environmentNames().containsAll(List.of(
                 "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "SYFT_CHECK_FOR_APP_UPDATE", "TRIVY_NO_PROGRESS")));
+        assertTrue(command.contains("ai-factory-trivy-db:/root/.cache/trivy/db"));
     }
 
     @Test

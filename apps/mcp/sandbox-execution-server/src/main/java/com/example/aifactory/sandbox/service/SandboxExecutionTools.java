@@ -89,7 +89,7 @@ public class SandboxExecutionTools {
                 traceparent, deadline, idempotency_key, patch_digest);
     }
 
-    @Tool(name = "sandbox.run_security", description = "Start immutable profile security-syft-trivy-v1 with bounded resources")
+    @Tool(name = "sandbox.run_security", description = "Start immutable profile security-syft-trivy-v2 with bounded resources")
     public ExecutionView runSecurity(
             @ToolParam(description = "Contract version, currently 1") String schema_version,
             @ToolParam(description = "Registered task identifier") String task_id,
