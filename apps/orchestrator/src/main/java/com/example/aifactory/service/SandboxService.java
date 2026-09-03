@@ -42,18 +42,19 @@ public class SandboxService {
 
     public String applyPatch(Path workspace) throws Exception {
         return execute(workspace, "none",
-                "git apply --check changes.patch && git apply changes.patch && git diff --check && git diff --stat",
+                "git apply --3way --check changes.patch && git apply --3way changes.patch && git diff --check && git diff --stat",
                 Duration.ofMinutes(3));
     }
 
     public String checkPatch(Path workspace) throws Exception {
-        return execute(workspace, "none", "git apply --check changes.patch", Duration.ofMinutes(3));
+        return execute(workspace, "none", "git apply --3way --check changes.patch", Duration.ofMinutes(3));
     }
 
     public String test(Path workspace) throws Exception {
         return execute(workspace, props.sandboxNetwork(),
-                "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B -s /opt/ai-factory/maven-settings.xml test; " +
-                        "elif [ -f pom.xml ]; then mvn -B -s /opt/ai-factory/maven-settings.xml test; " +
+            "MAVEN_SETTINGS=''; if [ -n \"$MAVEN_MIRROR_URL\" ]; then MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; fi; " +
+                "if [ -f mvnw ]; then chmod +x mvnw; ./mvnw -B $MAVEN_SETTINGS test; " +
+                "elif [ -f pom.xml ]; then mvn -B $MAVEN_SETTINGS test; " +
                         "elif [ -f gradlew ]; then chmod +x gradlew; ./gradlew test; " +
                         "elif [ -f package.json ]; then npm test -- --runInBand; " +
                         "else echo 'No supported build file found'; exit 2; fi",
@@ -66,8 +67,9 @@ public class SandboxService {
             return "Skipped because AI_FACTORY_SONAR_TOKEN is not configured.";
         }
         return execute(workspace, props.sandboxNetwork(),
-                "if [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
-                        "mvn -B -s /opt/ai-factory/maven-settings.xml " +
+            "if [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
+                "MAVEN_SETTINGS=''; if [ -n \"$MAVEN_MIRROR_URL\" ]; then MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; fi && " +
+                "mvn -B $MAVEN_SETTINGS " +
                         "org.sonarsource.scanner.maven:sonar-maven-plugin:sonar " +
                         "-Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_TOKEN\" -Dsonar.qualitygate.wait=true " +
                         "| tee .ai-factory/sonar.txt; " +
