@@ -7,7 +7,7 @@ Le proto 1.0.0 est de type Architecture 02 :
 
 ## Verdict
 
-Le projet est actuellement dans un état de prototype fonctionnel, pas encore dans une architecture d’usine logicielle IA industrielle. La documentation du dépôt le qualifie explicitement de “prototype local” et de “POC / Proof of Concept” dans `proto-architecture.md` et `proto-security.md`, tandis que `cible-industrialisation avec GCP.md` décrit la cible d’industrialisation avec GCP comme un écart clair par rapport au prototype.
+Le projet est actuellement dans un état de prototype fonctionnel, pas encore dans une architecture d’usine logicielle IA industrielle. La documentation du dépôt le qualifie explicitement de “prototype local” et de “POC / Proof of Concept” dans [proto-architecture.md](./proto-architecture.md) et [proto-security.md](./proto-security.md), tandis que [cible-industrialisation avec GCP.md](<../old/cible-industrialisation avec GCP.md>) décrit la cible d’industrialisation avec GCP comme un écart clair par rapport au prototype.
 
 En clair, il correspond à une “AI software factory de démonstration / validation de principe”, avec un workflow agentique contrôlé, mais pas à une plateforme d’entreprise exploitable en production.
 
@@ -23,16 +23,16 @@ Le projet a déjà les éléments d’une architecture de preuve de concept soli
 - approbation humaine avant PR
 - observabilité locale (Prometheus / Grafana)
 
-Tout cela est visible dans `README.md`, `proto-architecture.md` et `compose.yaml`.
+Tout cela est visible dans le [README](../../README.md), [proto-architecture.md](./proto-architecture.md) et [compose.yaml](../../infrastructure/compose.yaml).
 
 C’est précisément le type d’architecture “prototype de workflow agentique piloté par des preuves” que le document cible décrit comme un bon socle, mais pas comme une cible finale.
 
 ## Ce qui montre qu’on est encore en prototype
 
-Les limites structurales sont très nettes, et elles correspondent exactement aux écarts listés dans `cible-industrialisation avec GCP.md` :
+Les limites structurales sont très nettes, et elles correspondent exactement aux écarts listés dans [cible-industrialisation avec GCP.md](<../old/cible-industrialisation avec GCP.md>) :
 
 - tâches conservées en mémoire : pas de persistance durable, pas de reprise fiable
-- orchestrateur monté avec le socket Docker de l’hôte dans `compose.yaml`
+- orchestrateur monté avec le socket Docker de l’hôte dans [compose.yaml](../../infrastructure/compose.yaml)
 - sandbox sur réseau partagé, pas de default-deny ni d’isolement stricte
 - secrets placés localement, pas d’identity-based access
 - pas de SSO / RBAC / séparation de responsabilités d’entreprise
@@ -52,7 +52,7 @@ Si on classe les architectures selon la logique du document :
    - Mais le système reste mono-instance, local, partagé et fragile
 
 2. Architecture de référence industrielle GCP
-   - C’est la cible décrite dans `cible-industrialisation avec GCP.md`
+   - C’est la cible décrite dans [cible-industrialisation avec GCP.md](<../old/cible-industrialisation avec GCP.md>)
    - Elle sépare contrôle, IA/context, exécution non fiable et confiance/livraison
    - Elle impose durable, réseau isolé, IAM, secret manager, sandbox dédiée, provenance, SLSA, observabilité
 
@@ -77,4 +77,3 @@ Si tu veux, je peux maintenant te faire une version plus structurée en :
 - “niveau de maturité par catégorie d’architecture”,
 - “matrice prototype vs cible GCP”,
 - ou “recommandations concrètes pour passer du prototype à l’industrialisation”.
-

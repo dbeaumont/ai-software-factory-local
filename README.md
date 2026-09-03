@@ -337,7 +337,7 @@ make demo
 | Commande | Description |
 |---|---|
 | `make help` | Affiche l'aide des commandes Make |
-| `make init` | Initialise `.env` et `.vault` à partir des exemples |
+| `make init` | Initialise `.env` et `.vault`, puis génère les secrets locaux obligatoires absents |
 | `make build` | Construit l'image sandbox et les services Compose |
 | `make up` | Démarre la stack complète en arrière-plan |
 | `make all` | Remet à zéro les données et démarre une stack entièrement bootstrappée |

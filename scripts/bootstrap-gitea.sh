@@ -16,15 +16,16 @@ if [ "${1:-}" = "--token-only" ]; then
   TOKEN_ONLY=true
 fi
 
-set_env() {
-  local key="$1"
-  local value="$2"
-  python3 - "$key" "$value" <<'PY'
+set_config_value() {
+  local path="$1"
+  local key="$2"
+  local value="$3"
+  python3 - "$path" "$key" "$value" <<'PY'
 from pathlib import Path
 import sys
 
-path = Path('.env')
-key, value = sys.argv[1:]
+path = Path(sys.argv[1])
+key, value = sys.argv[2:]
 lines = path.read_text().splitlines() if path.exists() else []
 updated = False
 for index, line in enumerate(lines):
@@ -92,10 +93,12 @@ if [ "$TOKEN_VALID" = false ]; then
     --scopes "write:repository,write:issue" \
     --raw 2>/dev/null || true)
   if [ -n "$TOKEN" ]; then
-    set_env "GITEA_TOKEN" "$TOKEN"
-    echo "Generated Gitea token and saved it to .env"
+    set_config_value ".env" "GITEA_TOKEN" "$TOKEN"
+    set_config_value ".vault" "GITEA_TOKEN" "$TOKEN"
+    chmod 600 .env .vault
+    echo "Generated Gitea token and saved it to the local configuration"
   else
-    echo "Could not auto-generate a Gitea token. Create one in Settings -> Applications and set GITEA_TOKEN in .env."
+    echo "Could not auto-generate a Gitea token. Create one in Settings -> Applications and set the same GITEA_TOKEN in .env and .vault."
   fi
 fi
 

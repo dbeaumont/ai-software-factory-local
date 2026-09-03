@@ -22,8 +22,8 @@ services:
         reservations: { cpus: "0.10", memory: 128m }
     networks: [workflow-internal]
 
-  temporal:
-    image: temporalio/auto-setup:${TEMPORAL_VERSION:-1.31.2}
+  temporal-schema:
+    image: temporalio/admin-tools:${TEMPORAL_ADMINTOOLS_VERSION:-1.31.2}
     depends_on:
       temporal-db:
         condition: service_healthy
@@ -33,9 +33,31 @@ services:
       POSTGRES_USER: temporal
       POSTGRES_PWD: temporal
       POSTGRES_SEEDS: temporal-db
+      SQL_PASSWORD: temporal
+    entrypoint: ["/bin/sh"]
+    command: ["/opt/temporal/setup-postgres.sh"]
+    volumes:
+      - ./temporal/scripts:/opt/temporal:ro
+    restart: "no"
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256m }
+        reservations: { cpus: "0.05", memory: 64m }
+    networks: [workflow-internal]
+
+  temporal:
+    image: temporalio/server:${TEMPORAL_VERSION:-1.31.2}
+    depends_on:
+      temporal-schema:
+        condition: service_completed_successfully
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: temporal-db
       DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
-      DEFAULT_NAMESPACE: ${AI_FACTORY_TEMPORAL_NAMESPACE:-ai-factory-local}
-      DEFAULT_NAMESPACE_RETENTION: ${TEMPORAL_NAMESPACE_RETENTION_DAYS:-7}
+      BIND_ON_IP: 0.0.0.0
       PROMETHEUS_ENDPOINT: 0.0.0.0:8000
     volumes:
       - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
@@ -51,12 +73,32 @@ services:
         reservations: { cpus: "0.25", memory: 256m }
     networks: [workflow-internal]
 
+  temporal-namespace:
+    image: temporalio/admin-tools:${TEMPORAL_ADMINTOOLS_VERSION:-1.31.2}
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      DEFAULT_NAMESPACE: ${AI_FACTORY_TEMPORAL_NAMESPACE:-ai-factory-local}
+      DEFAULT_NAMESPACE_RETENTION: ${TEMPORAL_NAMESPACE_RETENTION_DAYS:-7}d
+    entrypoint: ["/bin/sh"]
+    command: ["/opt/temporal/create-namespace.sh"]
+    volumes:
+      - ./temporal/scripts:/opt/temporal:ro
+    restart: on-failure:5
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256m }
+        reservations: { cpus: "0.05", memory: 64m }
+    networks: [workflow-internal]
+
   # Developer diagnostics only; never routed through the product reverse proxy.
   temporal-ui:
     image: temporalio/ui:${TEMPORAL_UI_VERSION:-2.53.0}
     depends_on:
-      temporal:
-        condition: service_healthy
+      temporal-namespace:
+        condition: service_completed_successfully
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://127.0.0.1:${TEMPORAL_UI_PORT:-8233}

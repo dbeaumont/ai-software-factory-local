@@ -12,7 +12,7 @@ Le proto est aujourd'hui très proche de l'archétype 2 ("pipeline déterministe
 
 Le proto n’est pas encore réellement de type 04. Il correspond surtout à l’archétype 02, « pipeline déterministe enrichi par IA », avec plusieurs rôles LLM spécialisés.
 
-Le signe le plus clair est le pipeline entièrement codé et séquentiel dans [TaskService.java](/Users/david/Dev/ai-software-factory-local/apps/orchestrator/src/main/java/com/example/aifactory/service/TaskService.java:129) : Planner → Developer → tests → qualité → sécurité → Reviewer. Aucun superviseur ne décompose dynamiquement la tâche, ne choisit les spécialistes à mobiliser ou n’arbitre leurs contradictions.
+Le signe le plus clair est le pipeline entièrement codé et séquentiel dans [TaskService.java](../../apps/orchestrator/src/main/java/com/example/aifactory/service/TaskService.java) : Planner → Developer → tests → qualité → sécurité → Reviewer. Aucun superviseur ne décompose dynamiquement la tâche, ne choisit les spécialistes à mobiliser ou n’arbitre leurs contradictions.
 
 Je viserais donc un **multi-agent hiérarchique gouverné** : le superviseur propose la décomposition et la synthèse, tandis que le workflow garde le contrôle des effets, des budgets et des gates.
 
@@ -40,7 +40,7 @@ Consolidation et arbitrage par le superviseur
 Reviewer indépendant → approbation humaine → PR
 ```
 
-Le workflow resterait seul autorisé à appliquer un patch, lancer les contrôles et créer une PR, conformément à la séparation déjà présente dans [tool-permissions-v1.yaml](/Users/david/Dev/ai-software-factory-local/resources/mcp/policies/tool-permissions-v1.yaml:3).
+Le workflow resterait seul autorisé à appliquer un patch, lancer les contrôles et créer une PR, conformément à la séparation déjà présente dans [tool-permissions-v1.yaml](../../resources/mcp/policies/tool-permissions-v1.yaml).
 
 ## Les changements structurants
 
@@ -86,11 +86,11 @@ Je retiendrais au minimum :
 | Reviewer | Contrôle final indépendant | Lecture des preuves |
 | Workflow | Appliquer, tester, scanner, livrer | Seul rôle à effet |
 
-Les rôles actuels sont déjà une bonne base, mais l’activation agentique est limitée à Planner et Reviewer dans [AgentToolingProperties.java](/Users/david/Dev/ai-software-factory-local/apps/orchestrator/src/main/java/com/example/aifactory/config/AgentToolingProperties.java:12).
+Les rôles actuels sont déjà une bonne base, mais l’activation agentique est limitée à Planner et Reviewer dans [AgentToolingProperties.java](../../apps/orchestrator/src/main/java/com/example/aifactory/config/AgentToolingProperties.java).
 
 4. **Créer une vraie mémoire de tâche partagée**
 
-Aujourd’hui, l’état est un `ConcurrentHashMap` et un objet mutable [TaskState.java](/Users/david/Dev/ai-software-factory-local/apps/orchestrator/src/main/java/com/example/aifactory/model/TaskState.java:12). Pour le type 04, je stockerais durablement :
+Aujourd’hui, l’état est un `ConcurrentHashMap` et un objet mutable [TaskState.java](../../apps/orchestrator/src/main/java/com/example/aifactory/model/TaskState.java). Pour le type 04, je stockerais durablement :
 
 - `task`, `run`, `delegation`, `agent_run` ;
 - décisions et contradictions ;
@@ -99,7 +99,7 @@ Aujourd’hui, l’état est un `ConcurrentHashMap` et un objet mutable [TaskSta
 - budgets consommés ;
 - preuves et approbations.
 
-Les agents ne s’écriraient pas directement entre eux. Ils publieraient des résultats validés dans cette mémoire via l’orchestrateur. Le `evidence-mcp` déjà présent dans [compose.yaml](/Users/david/Dev/ai-software-factory-local/infrastructure/compose.yaml:213) pourrait devenir le registre immuable des artefacts, complété par une base pour l’état du workflow.
+Les agents ne s’écriraient pas directement entre eux. Ils publieraient des résultats validés dans cette mémoire via l’orchestrateur. Le `evidence-mcp` déjà présent dans [compose.yaml](../../infrastructure/compose.yaml) pourrait devenir le registre immuable des artefacts, complété par une base pour l’état du workflow.
 
 5. **Étendre les contrats d’échange**
 
@@ -157,7 +157,7 @@ L’interface passerait du stepper linéaire à une vue de graphe montrant dél�
 
 ## Ce que je conserverais
 
-Je ne réécrirais pas les serveurs MCP, la sandbox, les quality gates, le kill switch ou l’approbation humaine. Ce sont précisément les bons rails pour une architecture 04. La matrice deny-by-default de [ToolPermissionMatrix.java](/Users/david/Dev/ai-software-factory-local/apps/orchestrator/src/main/java/com/example/aifactory/service/ToolPermissionMatrix.java:39) permet déjà de maintenir les effets du côté du workflow.
+Je ne réécrirais pas les serveurs MCP, la sandbox, les quality gates, le kill switch ou l’approbation humaine. Ce sont précisément les bons rails pour une architecture 04. La matrice deny-by-default de [ToolPermissionMatrix.java](../../apps/orchestrator/src/main/java/com/example/aifactory/service/ToolPermissionMatrix.java:39) permet déjà de maintenir les effets du côté du workflow.
 
 Je ne créerais pas non plus un microservice par agent : la hiérarchie est un patron de coordination, pas nécessairement une topologie de déploiement.
 
@@ -169,8 +169,8 @@ Je ne créerais pas non plus un microservice par agent : la hiérarchie est un p
 4. Introduire ensuite plusieurs agents Code sur des scopes disjoints.
 5. Qualifier la nouvelle architecture par A/B avant activation générale.
 
-Cette prudence est importante : la dernière campagne a rejeté l’autonomie Planner/Reviewer, avec 0 % de succès des tests côté candidat et +28,19 % de tokens ([rapport MCP-180](/Users/david/Dev/ai-software-factory-local/docs/mcp/MCP-180-rapport-campagne-20260902.md:11)). Je conserverais donc le mode actuel comme chemin de repli et je réserverais initialement la hiérarchie aux changements réellement multi-domaines.
+Cette prudence est importante : la dernière campagne a rejeté l’autonomie Planner/Reviewer, avec 0 % de succès des tests côté candidat et +28,19 % de tokens ([rapport MCP-180](../mcp/MCP-180-rapport-campagne-20260902.md)). Je conserverais donc le mode actuel comme chemin de repli et je réserverais initialement la hiérarchie aux changements réellement multi-domaines.
 
-En résumé : **le changement principal n’est pas d’ajouter davantage d’agents, mais d’introduire une délégation typée, une mémoire partagée, un DAG exécutable et un mécanisme explicite de consolidation/arbitrage** — les quatre caractéristiques centrales de l’architecture 04 décrite page 8 du [dossier](/Users/david/Dev/ai-software-factory-local/docs/dossier-architectures-usines-logicielles-ia.pdf).
+En résumé : **le changement principal n’est pas d’ajouter davantage d’agents, mais d’introduire une délégation typée, une mémoire partagée, un DAG exécutable et un mécanisme explicite de consolidation/arbitrage** — les quatre caractéristiques centrales de l’architecture 04 décrite page 8 du [dossier](../dossier-architectures-usines-logicielles-ia.pdf).
 
 Aucun fichier du projet n’a été modifié.

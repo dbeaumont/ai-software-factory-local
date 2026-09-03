@@ -1,3 +1,6 @@
 # Copy this file to .vault and set provider secrets. Never commit .vault.
+GITEA_TOKEN=
+APPROVAL_ATTESTATION_KEY=
+JF_SHARED_SECURITY_MASTERKEY=
+JF_SHARED_SECURITY_JOINKEY=
 OPENAI_API_KEY=
-

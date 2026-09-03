@@ -47,6 +47,7 @@ init:
 	$(log-target)
 	@test -f .env || cp .env.example .env
 	@test -f .vault || cp .vault.example .vault
+	@./scripts/init-local-config.sh
 	@echo -e "$(GREEN).env and .vault ready$(NC)"
 
 build:
@@ -73,7 +74,7 @@ up: init build
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls
 
-all:
+all: init
 	$(log-target)
 	@echo -e "$(YELLOW)Resetting and bootstrapping complete factory...$(NC)"
 	$(MAKE) clean
@@ -86,7 +87,7 @@ bootstrap: init
 	@echo -e "$(BLUE)Bootstrapping Gitea and SonarQube...$(NC)"
 	./scripts/bootstrap-gitea.sh
 	./scripts/bootstrap-sonar.sh
-	$(COMPOSE) up -d --force-recreate sandbox-execution-mcp orchestrator
+	$(COMPOSE) up -d --force-recreate sandbox-execution-mcp scm-delivery-mcp orchestrator
 	@echo -e "$(GREEN)Bootstrap complete!$(NC)"
 
 tokens: init
@@ -94,7 +95,7 @@ tokens: init
 	@echo -e "$(BLUE)Updating Gitea and SonarQube tokens...$(NC)"
 	./scripts/bootstrap-gitea.sh --token-only
 	./scripts/bootstrap-sonar.sh
-	$(COMPOSE) up -d --force-recreate orchestrator
+	$(COMPOSE) up -d --force-recreate scm-delivery-mcp orchestrator
 	@echo -e "$(GREEN)Tokens updated!$(NC)"
 
 demo:

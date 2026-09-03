@@ -26,7 +26,9 @@ d'un service externe. Le dépôt utilise déjà Docker Compose pour l'orchestrat
 | Service | Rôle | Exposition |
 |---|---|---|
 | `temporal-db` | Persistance interne du moteur | Réseau privé uniquement |
+| `temporal-schema` | Initialisation versionnée des schémas PostgreSQL | Job éphémère, réseau privé uniquement |
 | `temporal` | Frontend et services Temporal | Réseau `workflow-internal` |
+| `temporal-namespace` | Création idempotente du namespace local | Job éphémère, réseau privé uniquement |
 | `temporal-ui` | Inspection des workflows | Loopback, diagnostic uniquement |
 | `orchestrator` | Client et worker Java | Réseaux applicatif, MCP et workflow |
 

@@ -96,7 +96,7 @@ et de ses références de preuve. Seul le workflow porte l'identité autorisée 
 ## État de la bascule
 
 Les lots de construction, de sécurité, d'observabilité et de tests sont majoritairement réalisés et suivis dans
-le [plan de bascule](BASCULE-ARCHI-04-MULTI-AGENTS.md). Restent notamment des preuves externes non simulables :
+le [plan de bascule](./BASCULE-ARCHI-04-MULTI-AGENTS.md). Restent notamment des preuves externes non simulables :
 
 - campagne cloud réelle et télémétrie fournisseur complète ;
 - validation formelle des responsables ;
@@ -104,5 +104,5 @@ le [plan de bascule](BASCULE-ARCHI-04-MULTI-AGENTS.md). Restent notamment des pr
 - canary, fenêtres d'observation, rollback et généralisation en environnement cible.
 
 Le détail des agents, sous-agents, MCP et outils figure dans
-[l'architecture cible](cible-architecture-multi-agent-hierarchique.md). Les invariants de sécurité restent ceux
+[l'architecture cible](./cible-architecture-multi-agent-hierarchique.md). Les invariants de sécurité restent ceux
 de la baseline : gates déterministes, preuve liée au digest, approbation humaine et livraison par le workflow.

@@ -20,16 +20,20 @@ class TemporalComposeTest {
         }
         Map<String, Map<String, Object>> services = (Map<String, Map<String, Object>>) root.get("services");
         Map<String, Object> database = services.get("temporal-db");
+        Map<String, Object> schema = services.get("temporal-schema");
         Map<String, Object> temporal = services.get("temporal");
+        Map<String, Object> namespace = services.get("temporal-namespace");
 
         assertThat(database.get("image")).isEqualTo("postgres:16-alpine");
         assertThat((List<String>) database.get("volumes"))
                 .contains("temporal-db-data:/var/lib/postgresql/data");
         assertThat(database.get("networks")).isEqualTo(List.of("workflow-internal"));
-        assertThat(temporal.get("image").toString()).startsWith("temporalio/auto-setup:").doesNotEndWith("latest");
+        assertThat(schema.get("image").toString()).startsWith("temporalio/admin-tools:").doesNotEndWith("latest");
+        assertThat((Map<String, Object>) schema.get("depends_on")).containsKey("temporal-db");
+        assertThat(temporal.get("image").toString()).startsWith("temporalio/server:").doesNotEndWith("latest");
         assertThat(temporal).doesNotContainKey("ports");
         assertThat(temporal.get("networks")).isEqualTo(List.of("workflow-internal"));
-        assertThat((Map<String, Object>) temporal.get("environment"))
+        assertThat((Map<String, Object>) namespace.get("environment"))
                 .containsKeys("DEFAULT_NAMESPACE", "DEFAULT_NAMESPACE_RETENTION");
         assertThat((List<String>) services.get("orchestrator").get("networks"))
                 .contains("workflow-internal");
