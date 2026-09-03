@@ -1,6 +1,7 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.config.AgentToolingProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Production gate between configured qualification and every hierarchical agent invocation. */
@@ -9,6 +10,7 @@ public final class AgentActivationGuard {
     private final AgentToolingProperties properties;
     private final boolean testBypass;
 
+    @Autowired
     public AgentActivationGuard(AgentToolingProperties properties) {
         this(properties, false);
     }
