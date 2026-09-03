@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -22,6 +23,7 @@ public final class TaskQueueMetrics {
     private final Map<String, AtomicInteger> activeByPerimeter = new LinkedHashMap<>();
     private final int workerCapacity;
 
+    @Autowired
     public TaskQueueMetrics(MeterRegistry registry, TemporalProperties temporal,
                             TaskQueueObservabilityProperties properties) {
         this(registry, temporal.taskQueues(), properties.workerCapacity());
