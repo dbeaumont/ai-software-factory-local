@@ -4,11 +4,16 @@
 - Date : 2026-09-02
 - Portée : architecture multi-agent hiérarchique, modes shadow, canary et actif
 
+> Mise à jour d'implémentation : le pipeline a depuis été extrait de `TaskService` dans
+> `DeterministicWorkflowCoordinator`. Le port `WorkflowCoordinator` est actif, tandis que son chemin Temporal reste
+> disponible mais désactivé par défaut.
+
 ## Contexte
 
-Le pipeline actuel est exécuté dans `TaskService` par une suite d'appels Java asynchrones. Son état est conservé
-en mémoire et sa progression dépend de la disponibilité du processus Spring Boot. La cible ajoute des délégations
-hiérarchiques, des branches parallèles, des attentes humaines, des budgets cumulés et des reprises après panne.
+Au moment de la décision, le pipeline était exécuté dans `TaskService` par une suite d'appels Java asynchrones. Son
+état actif reste conservé en mémoire et sa progression dépend de la disponibilité du processus Spring Boot. La cible
+ajoute des délégations hiérarchiques, des branches parallèles, des attentes humaines, des budgets cumulés et des
+reprises après panne.
 
 Le coordinateur doit rester distinct du runtime LLM : le workflow applique les règles et déclenche les effets,
 tandis que les agents proposent des plans, patches et évaluations sous contrats.

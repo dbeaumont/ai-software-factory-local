@@ -5,12 +5,29 @@ architecture **multi-agent hiérarchique gouvernée** tout en conservant le pipe
 baseline et chemin de repli.
 
 Le mode `PIPELINE` reste le mode opérationnel de référence tant que la qualification et les approbations de
-bascule ne sont pas acquises. Les modes `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY` et
-`HIERARCHICAL_ACTIVE` sont activés de façon fail-closed par politique et par rôle.
+bascule ne sont pas acquises. L'activation des modes `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY` et
+`HIERARCHICAL_ACTIVE` est protégée de façon fail-closed par politique et par rôle.
 
 Le chemin court historique reste :
 
 `requirement -> plan -> patch -> validation du diff -> réparation si besoin -> sandbox -> tests -> SonarQube -> SBOM Syft -> scan Trivy -> review IA -> approbation humaine -> pull request Gitea`
+
+## Objectifs fonctionnels et périmètre
+
+L'usine transforme un besoin fonctionnel en une **proposition de changement vérifiée et traçable**. Elle automatise
+la préparation d'une Pull Request, mais ne fusionne ni ne déploie le code en production.
+
+| Objectif | Réponse apportée | Résultat observable |
+|---|---|---|
+| Accélérer un changement applicatif | Planification et génération de patch assistées par LLM | Plan, diff et branche de travail |
+| Réduire le risque de régression | Validation Git, tests, quality gate et revue indépendante | Preuves liées à la tâche et au commit source |
+| Contrôler la supply chain | SBOM CycloneDX et scan Trivy des vulnérabilités et secrets | Rapports Syft/Trivy bloquants |
+| Garder l'humain responsable | Effet SCM suspendu jusqu'à une approbation explicite | Pull Request brouillon après approbation |
+| Rendre l'agentique gouvernable | Rôles, contrats JSON, budgets, permissions et kill switch | Décisions auditables et refus fail-closed |
+| Comparer avant de basculer | Pipeline 1.1.0 conservé comme baseline des modes hiérarchiques | Mesures de qualité, coût et latence appariées |
+
+Le périmètre actuel couvre les dépôts Maven, Gradle et npm. La fusion de PR, le déploiement, la gestion de
+production et la remédiation automatique d'un finding de sécurité restent hors périmètre.
 
 ## Organisation du dépôt
 
@@ -33,9 +50,9 @@ La stack actuelle contient :
 | Point d'entrée HTTP | `reverse-proxy` Nginx (port 8080) |
 | Interface de saisie & suivi | `factory-web` (SPA HTML/JS/CSS servie par Nginx) |
 | Orchestration | Spring Boot 4.1 / Spring AI 2.0 / Java 25 (`orchestrator`) |
-| Workflow durable | Temporal Server / Java SDK, workflows racine et enfants versionnés |
-| Hiérarchie | Supervisor, agents Architecture, Code, Tests, Sécurité et Independent Reviewer |
-| Mémoire de tâche | Projection PostgreSQL, historique Temporal et artefacts Evidence MCP |
+| Workflow | Coordinateur déterministe actif ; workflows Temporal implémentés mais désactivés par défaut |
+| Hiérarchie en qualification | Supervisor, agents Architecture, Code, Tests, Sécurité et Independent Reviewer |
+| Mémoire de tâche | Adaptateur en mémoire actif ; schémas PostgreSQL et projections Temporal préparés pour la cible durable |
 | Contexte MCP | Serveur MCP stateless en lecture seule (`repository-context-mcp`) |
 | Exécution MCP | Contrôleur de jobs à profils immuables (`sandbox-execution-mcp`) |
 | Passerelle LLM | LiteLLM (port 4000 interne) |
@@ -53,7 +70,8 @@ La stack actuelle contient :
 
 ```mermaid
 flowchart LR
-  U[Utilisateur] --> W[Workflow Coordinator\nTemporal]
+  U[Utilisateur] --> W[Workflow Coordinator]
+  W -. cible durable .-> TP[Temporal]
   W --> S[Supervisor]
   S --> A[Architecture]
   S --> C[Code]
@@ -70,18 +88,85 @@ flowchart LR
   H --> G
 ```
 
-Le Supervisor propose un DAG borné ; l'hôte valide rôles, scopes, dépendances, budgets et contrats. Les agents
-n'appellent jamais directement un outil à effet. Le `WorkflowCoordinator` reste seul autorisé à appliquer un
-patch, lancer les gates, écrire les preuves faisant autorité et livrer une Pull Request.
+Dans le chemin hiérarchique, le Supervisor propose un DAG borné ; l'hôte valide rôles, scopes, dépendances,
+budgets et contrats. Les agents n'appellent jamais directement un outil à effet. Le `WorkflowCoordinator` reste
+seul autorisé à appliquer un patch, lancer les gates, écrire les preuves faisant autorité et livrer une Pull Request.
+
+Les agents représentés ici ne sont pas des conteneurs Docker dédiés : `Supervisor`, spécialistes et
+`Independent Reviewer` sont des rôles chargés dans la JVM du service `orchestrator`. Compose sépare les capacités
+MCP, pas chaque agent. Une extraction en runtimes autonomes n'est proposée que pour la cible distribuée/GCP et par
+frontière de sécurité ou de montée en charge, comme détaillé dans la [rétrodocumentation](docs/RETRODOCUMENTATION.md#35-pertinence-de-modules-dagents-autonomes).
+
+### Architecture technique locale
+
+```mermaid
+flowchart TB
+  User[Utilisateur] -->|HTTP :8080| Proxy[Reverse proxy Nginx]
+  Proxy --> Web[SPA factory-web]
+  Proxy --> API[Orchestrateur Spring Boot]
+
+  subgraph Control[Plan de contrôle]
+    API --> LLM[LiteLLM]
+    LLM --> Cloud[Modèle OpenAI]
+    API --> Context[Repository Context MCP]
+    API --> Sandbox[Sandbox Execution MCP]
+    API --> Assurance[Assurance MCP]
+    API --> Evidence[Evidence MCP]
+    API --> SCM[SCM Delivery MCP]
+    API -. option désactivée par défaut .-> Temporal[Temporal]
+  end
+
+  subgraph Execution[Plan d'exécution non fiable]
+    Sandbox --> Jobs[Conteneurs sandbox éphémères]
+    Jobs --> ProxyEgress[Proxy egress allow-list]
+    Jobs --> Sonar[SonarQube]
+    Jobs --> Artifactory[Artifactory]
+  end
+
+  SCM --> Gitea[Gitea]
+  Evidence --> EvidenceVolume[(Volume de preuves)]
+  API --> Workspace[(Workspaces de tâches)]
+  Prometheus[Prometheus] --> API
+  Prometheus --> Context
+  Prometheus --> Sandbox
+  Grafana[Grafana] --> Prometheus
+```
+
+Les cinq serveurs MCP séparent les capacités par nature : lecture du dépôt, exécution, évaluation, preuves et
+livraison SCM. Les endpoints MCP ne sont pas publiés sur l'hôte. Le réseau Compose est lui-même segmenté entre
+le trafic applicatif (`factory`), MCP (`mcp-internal`), workflow (`workflow-internal`) et les deux niveaux d'accès
+des sandboxes (`sandbox-egress` et `sandbox-quality`).
+
+> **État du prototype.** `DeterministicWorkflowCoordinator` et `InMemoryTaskMemory` sont les adaptateurs actifs de
+> la configuration locale. Les workflows Temporal, les migrations SQL et les projections sont présents dans le
+> code afin de préparer la cible durable, mais `AI_FACTORY_TEMPORAL_ENABLED=false` par défaut et aucun adaptateur
+> PostgreSQL de `TaskMemory` n'est câblé dans la stack Compose actuelle.
+
+### Repères dans l'implémentation
+
+| Responsabilité | Point d'entrée principal |
+|---|---|
+| API de tâches et commandes opérateur | [`TaskController`](apps/orchestrator/src/main/java/com/example/aifactory/controller/TaskController.java) |
+| Admission et mémoire des tâches | [`TaskService`](apps/orchestrator/src/main/java/com/example/aifactory/service/TaskService.java), [`InMemoryTaskMemory`](apps/orchestrator/src/main/java/com/example/aifactory/service/InMemoryTaskMemory.java) |
+| Pipeline de référence | [`DeterministicWorkflowCoordinator`](apps/orchestrator/src/main/java/com/example/aifactory/service/DeterministicWorkflowCoordinator.java) |
+| Runtime et permissions des agents | [`AgentRuntime`](apps/orchestrator/src/main/java/com/example/aifactory/service/AgentRuntime.java), [`ToolPermissionMatrix`](apps/orchestrator/src/main/java/com/example/aifactory/service/ToolPermissionMatrix.java) |
+| Workflow durable cible | [`SoftwareFactoryWorkflowImpl`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/SoftwareFactoryWorkflowImpl.java) |
+| Contexte dépôt | [`McpRepositoryContextService`](apps/orchestrator/src/main/java/com/example/aifactory/service/McpRepositoryContextService.java) |
+| Exécution isolée | [`McpSandboxService`](apps/orchestrator/src/main/java/com/example/aifactory/service/McpSandboxService.java), [`SandboxJobService`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/SandboxJobService.java) |
+| Profils et limites sandbox | [`SandboxProfiles`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/SandboxProfiles.java), [`DockerSandboxRuntime`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/DockerSandboxRuntime.java) |
+| Preuves et approbation durable | [`McpEvidenceRepository`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/McpEvidenceRepository.java), [`EvidenceApprovalGate`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/EvidenceApprovalGate.java) |
+| Livraison Gitea | [`ScmDeliveryGateway`](apps/orchestrator/src/main/java/com/example/aifactory/service/ScmDeliveryGateway.java) |
+| Configuration locale | [`compose.yaml`](infrastructure/compose.yaml), [`application.yml`](apps/orchestrator/src/main/resources/application.yml), [`.env.example`](.env.example) |
 
 ## Ce que fait réellement le prototype
 
-Deux chemins coexistent :
+Deux chemins sont représentés dans l'implémentation :
 
-- le mode `PIPELINE` exécute le flux séquentiel compatible 1.1.0 décrit ci-dessous ;
-- les modes hiérarchiques routent la tâche, construisent un DAG de délégations typées, exécutent les
-  spécialistes autorisés, consolident leurs preuves puis font intervenir l'Independent Reviewer hors de la
-  chaîne d'autorité du Supervisor.
+- le mode `PIPELINE`, utilisé par l'API publique dans la configuration actuelle, exécute le flux séquentiel
+  compatible 1.1.0 décrit ci-dessous ;
+- les composants hiérarchiques implémentent le routage, le DAG de délégations typées, les spécialistes et
+  l'Independent Reviewer, mais restent un chemin de qualification qui n'est pas généralisé au flux de création
+  de tâche local.
 
 Une activation hiérarchique non qualifiée, un rôle non promu ou une télémétrie comparative incomplète est
 refusé. Le pipeline de référence est alors conservé sans contourner les gates.
@@ -92,7 +177,7 @@ refusé. Le pipeline de référence est alors conservé sans contourner les gate
 4. L'agent `Planner` produit une feuille de route (`.ai-plan.md`).
 5. L'agent `Developer` génère un patch `unified diff`.
 6. Le patch est normalisé (`UnifiedDiffNormalizer`), puis validé avec `git apply --check` dans une sandbox sans réseau.
-7. En cas d'échec de validation du diff, l'agent `PatchRepair` tente une réparation complète en analysant les fichiers sources authoritative.
+7. En cas d'échec de validation du diff, l'agent `PatchRepair` tente une réparation complète en analysant les fichiers sources faisant autorité.
 8. Le patch est appliqué en sandbox, puis `git diff --check` et `git diff --stat` sont contrôlés.
 9. Les tests unitaires/d'intégration s'exécutent dans la sandbox (via Artifactory pour Maven). L'agent `Tester` analyse les journaux de test avec un contrat JSON validé.
 10. L'analyse de qualité SonarQube est déclenchée ; son quality gate est bloquant. En l'absence de jeton ou pour un type de projet non encore pris en charge, le run échoue au lieu de considérer le contrôle comme réussi.
@@ -100,6 +185,36 @@ refusé. Le pipeline de référence est alors conservé sans contourner les gate
 12. L'agent `Reviewer` synthétise les preuves dans `.ai-review.md` avec un contrat JSON validé. Un rejet ou un finding `blocker` bloque le run.
 13. La tâche passe au statut `WAITING_APPROVAL`.
 14. Après approbation humaine (`POST /api/tasks/{id}/approve`), l'orchestrateur bascule sur une branche `ai-factory/<taskId>`, exclut les artefacts de travail IA (`git reset`), committe, pousse vers Gitea et ouvre une Pull Request.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as Utilisateur
+  participant API as Orchestrateur
+  participant C as Context MCP
+  participant L as LiteLLM
+  participant S as Sandbox MCP
+  participant A as Assurance MCP
+  participant M as SCM MCP
+  participant G as Git / Gitea
+
+  U->>API: POST /api/tasks
+  API->>G: Cloner le commit source
+  API->>C: Lire le contexte borné du dépôt
+  API->>L: Planifier puis proposer un patch
+  API->>S: Valider et appliquer le patch
+  API->>S: Tests, Sonar, SBOM et Trivy
+  S-->>API: Retourner les preuves déterministes
+  API->>A: Évaluer gates et politiques
+  API->>L: Revue fondée sur les preuves
+  API-->>U: WAITING_APPROVAL
+  U->>API: Approbation de l'effet SCM
+  API->>M: Demander la livraison approuvée
+  M->>G: Créer branche, commit et PR brouillon
+  G-->>M: Pull Request créée
+  M-->>API: URL de la Pull Request
+  API-->>U: PR_CREATED
+```
 
 ## Pré-requis
 
@@ -188,7 +303,7 @@ curl -s http://localhost:8080/api/capabilities
 
 ## États de tâche
 
-Les 13 statuts du cycle de vie d'une tâche sont :
+Les 14 statuts du cycle de vie d'une tâche sont :
 
 1. `QUEUED` : Tâche enregistrée en mémoire.
 2. `CLONING` : Clonage du dépôt Git.
@@ -202,7 +317,8 @@ Les 13 statuts du cycle de vie d'une tâche sont :
 10. `WAITING_APPROVAL` : En attente de l'approbation humaine.
 11. `APPROVED` : Validation humaine enregistrée.
 12. `PR_CREATED` : Branche créée, commit effectué, push réalisé et Pull Request ouverte sur Gitea.
-13. `FAILED` : Échec rencontré à l'une des étapes (diff invalide non réparable, erreur de build, etc.).
+13. `CANCELLED` : Annulation explicite de la tâche par un opérateur.
+14. `FAILED` : Échec rencontré à l'une des étapes (diff invalide non réparable, erreur de build, etc.).
 
 ## Modèle LLM
 
@@ -295,20 +411,22 @@ OPENAI_MODEL=gpt-5.6-luna
 AI_FACTORY_CLOUD_ENABLED=true
 LITELLM_MASTER_KEY=local-dev-litellm-key
 MAVEN_MIRROR_URL=
-NPM_REGISTRY_URL=
-NPM_REGISTRY_HOST=
+AI_FACTORY_SANDBOX_MAVEN_MIRROR_URL=https://repo.maven.apache.org/maven2
+NPM_REGISTRY_URL=https://registry.npmjs.org/
+NPM_REGISTRY_HOST=registry.npmjs.org
 ```
 
-Sur un poste disposant d'un accès Internet direct, laissez les trois variables de registre ci-dessus vides :
-Maven utilise alors Maven Central et npm son registre public par défaut. En environnement d'entreprise,
-renseignez-les avec les endpoints autorisés ; le `settings.xml` et le jeton Artifactory ne sont chargés que
-lorsqu'un miroir Maven est explicitement configuré.
+`MAVEN_MIRROR_URL` est le miroir optionnel utilisé lors de la construction des images. Les profils sandbox exigent
+en revanche des endpoints explicites : Maven Central et le registre npm public sont proposés dans `.env.example`.
+En environnement d'entreprise, remplacez-les par les endpoints autorisés ; le `settings.xml` et le jeton
+Artifactory ne sont chargés que lorsqu'un miroir Maven authentifié est configuré.
 
 Pour utiliser le mode cloud, placez votre clé OpenAI dans le fichier `.vault` :
 ```bash
 VAULT_OPENAI_API_KEY=sk-...
 ```
-Ce fichier est exclu du contrôle de version Git et est chargé de façon sécurisée par le conteneur LiteLLM.
+Ce fichier est exclu du contrôle de version Git, créé avec des permissions locales restrictives et chargé au
+runtime par LiteLLM. Il s'agit d'un mécanisme de développement local, pas d'un coffre de secrets de production.
 
 Si un proxy d'entreprise intercepte le trafic HTTPS et présente un certificat interne, LiteLLM ajoute au démarrage la chaîne présentée par `api.openai.com:443` à son bundle de confiance. Pour employer un autre endpoint, configurez dans `.env` :
 ```bash
@@ -316,6 +434,155 @@ OPENAI_CA_CERT_HOST=api.openai.com:443
 ```
 Cette étape n'est exécutée que lorsqu'une clé OpenAI est configurée et la vérification TLS reste active.
 Les certificats d'interception historiques qui n'ont pas d'Authority Key Identifier restent compatibles avec Python 3.13 ; la chaîne, la signature et le nom d'hôte restent vérifiés.
+
+## Sécurité et frontières de confiance
+
+Le dépôt, le ticket, les sorties LLM et les logs de build sont traités comme des données non fiables. Ils peuvent
+contenir du code malveillant, des secrets ou des instructions de prompt injection ; ils ne deviennent jamais une
+autorité de décision simplement parce qu'un agent les a produits.
+
+```mermaid
+flowchart LR
+  subgraph Untrusted[Entrées non fiables]
+    Ticket[Ticket utilisateur]
+    Repo[Dépôt source]
+    Model[Sortie du modèle]
+  end
+
+  subgraph Policy[Plan de contrôle de confiance]
+    Contracts[Validation des contrats]
+    Permissions[Permissions par rôle]
+    Budgets[Budgets et quotas]
+    Coordinator[Workflow Coordinator]
+    Audit[Journal de sécurité chaîné]
+  end
+
+  subgraph Effects[Effets contrôlés]
+    Sandbox[Profils sandbox immuables]
+    Gates[Tests / qualité / sécurité]
+    PR[Création de PR]
+  end
+
+  Ticket --> Contracts
+  Repo --> Contracts
+  Model --> Contracts
+  Contracts --> Permissions --> Budgets --> Coordinator
+  Coordinator --> Sandbox --> Gates
+  Gates --> Approval{Approbation humaine}
+  Approval -->|accord| PR
+  Approval -->|refus| Stop[Arrêt sans effet SCM]
+  Permissions --> Audit
+  Coordinator --> Audit
+  Approval --> Audit
+```
+
+### Règles appliquées
+
+| Domaine | Règle |
+|---|---|
+| Autorité | Le rôle vient de l'identité du workflow, jamais de la réponse du modèle. La matrice d'outils est deny-by-default. |
+| Effets | Les agents spécialistes n'ont accès qu'au contexte et aux preuves ; seul le workflow peut appliquer, tester, scanner, écrire les preuves ou créer une PR. |
+| Contrats | Les sorties d'agents sont validées contre des schémas versionnés et bornées à 1 MiB. Un contrat invalide est refusé. |
+| MCP | Nom/version du serveur, protocole, audience, outil et taille de réponse sont contrôlés. Une indisponibilité ne déclenche pas de fallback direct. |
+| Sandbox | Aucun appelant ne fournit de commande, image, volume, réseau ou variable d'environnement ; il choisit seulement une opération allow-listée. |
+| Conteneurs | `--cap-drop ALL`, `no-new-privileges`, 2 CPU, 2 Gio et 512 PID ; validation et application du patch sans réseau. |
+| Réseau | Les sorties externes des tests et scans passent par un proxy Squid limité aux registries nécessaires ; SonarQube n'est accessible qu'au profil qualité. |
+| Secrets | `.env` et `.vault` ne sont pas versionnés. Les secrets de build utilisent BuildKit ; ceux des jobs sandbox restent côté serveur MCP et sont injectés par fichier temporaire `0600`. |
+| Preuves | Logs redacted, pagination bornée, digest SHA-256 recalculé côté orchestrateur ; une preuve absente, partielle, tronquée ou incohérente ne valide pas un gate. |
+| Livraison | Une approbation humaine précède toujours l'effet SCM. La passerelle signe ensuite une preuve à durée limitée liée au commit source, au patch et aux preuves ; le chemin durable sait en plus imposer l'approbation d'un manifeste immuable. |
+| Arrêt d'urgence | Le code du kill switch peut interdire un serveur, un outil, un rôle ou un mode ; son fichier de contrôle n'est toutefois pas monté par le Compose courant. |
+
+Le journal d'audit de sécurité est chaîné en mémoire avec HMAC-SHA-256 afin de rendre les altérations détectables
+pendant la vie du processus. Cette propriété ne remplace toutefois ni la persistance, ni un stockage WORM, ni
+l'export vers un SIEM dans une cible de production.
+
+### Risques résiduels du déploiement local
+
+- `sandbox-execution-mcp` monte encore `/var/run/docker.sock` : une compromission de ce contrôleur menace l'hôte ;
+- les transports MCP sont confinés aux réseaux Compose mais ne disposent pas encore d'une authentification forte ;
+- l'API publique n'implémente pas encore SSO, RBAC, séparation multi-tenant ni rate limiting par utilisateur ;
+- le pipeline de référence utilise encore l'approbation simple ; l'endpoint d'approbation lié à un manifeste est
+  présent mais appartient au chemin durable non généralisé ;
+- `.vault` est un fichier local et les mots de passe par défaut des services de développement ne conviennent pas à
+  une exposition réseau ;
+- les volumes Docker assurent la persistance locale, pas la sauvegarde, le chiffrement géré ou un plan de reprise.
+
+La stack doit donc rester liée à la boucle locale ou à un environnement de démonstration isolé.
+
+## Quotas, budgets et timeouts
+
+Toutes les valeurs ci-dessous sont des **plafonds par défaut versionnés**. Leur dépassement provoque un refus ou un
+résultat indéterminé ; il n'augmente jamais silencieusement la capacité demandée.
+
+### Gouvernance agentique
+
+| Niveau | Plafond par défaut |
+|---|---|
+| DAG de délégation | profondeur 2, fan-out 4, chemin critique 2 700 s |
+| Une délégation | 6 tours, 12 000 tokens, 12 000 000 micro-unités de coût, 900 s, 24 appels outil |
+| Une tâche | 60 tours, 80 000 tokens planifiés, 80 000 000 micro-unités de coût, 208 appels outil |
+| Usage réel cumulé | 120 000 tokens d'entrée, 40 000 de sortie, 80 000 000 micro-unités de coût, 60 tours, 208 appels MCP |
+| Réserve de finalisation | 10 000 tokens d'entrée, 5 000 de sortie, 10 000 000 micro-unités de coût, 6 tours, 32 appels MCP |
+
+Chaque rôle et chaque périmètre Architecture/Code/Tests/Sécurité possède en plus un plafond inférieur ou égal à
+ces limites. La politique faisant foi est
+[`resources/multiagents/policies/hierarchical-budget-policy-v1.yaml`](resources/multiagents/policies/hierarchical-budget-policy-v1.yaml).
+
+### MCP et contexte dépôt
+
+| Ressource | Valeur par défaut | Variable principale |
+|---|---:|---|
+| Réponse MCP | 65 536 octets | `AI_FACTORY_MCP_MAX_RESPONSE_BYTES` |
+| Appels MCP simultanés | 32 globaux, 16/serveur, 4/tâche, 8/rôle | `AI_FACTORY_MCP_MAX_INFLIGHT_*` |
+| Timeout d'une requête MCP | 20 s | `AI_FACTORY_MCP_REQUEST_TIMEOUT` |
+| Tentatives lecture / effet | 3 / 2, avec backoff et jitter | `AI_FACTORY_MCP_*_RETRY_MAX_ATTEMPTS` |
+| Fichier lu par Context MCP | 1 MiB | `AI_FACTORY_CONTEXT_MAX_FILE_BYTES` |
+| Recherche / arbre du dépôt | 1 000 fichiers / 1 000 entrées | `AI_FACTORY_CONTEXT_MAX_SEARCH_FILES`, `AI_FACTORY_CONTEXT_MAX_TREE_ENTRIES` |
+| Capacité déclarée d'une task queue | 4 workers | `AI_FACTORY_TASK_QUEUE_WORKER_CAPACITY` |
+
+### Jobs sandbox
+
+| Ressource | Valeur par défaut | Variable ou politique |
+|---|---:|---|
+| Jobs exécutés / en attente | 2 / 32 | `AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS`, `AI_FACTORY_SANDBOX_MAX_QUEUED_JOBS` |
+| Jobs actifs par tâche | 2 | `AI_FACTORY_SANDBOX_MAX_ACTIVE_JOBS_PER_TASK` |
+| États de jobs conservés | 500 pendant 7 jours | `AI_FACTORY_SANDBOX_MAX_JOBS`, `AI_FACTORY_SANDBOX_JOB_RETENTION` |
+| Sortie conservée / patch accepté | 65 536 caractères / 1 MiB | `AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS`, `AI_FACTORY_SANDBOX_MAX_PATCH_BYTES` |
+| Ressources d'un conteneur | 2 CPU, 2 Gio, 512 PID | profil serveur immuable |
+| Validation / application d'un patch | 3 min / 3 min | profil serveur immuable |
+| Tests / qualité / sécurité | 15 min / 15 min / 10 min | profil serveur immuable |
+| Heartbeat / polling orchestrateur | 15 s / 20 min | `AI_FACTORY_SANDBOX_HEARTBEAT_INTERVAL`, `AI_FACTORY_MCP_SANDBOX_POLL_TIMEOUT` |
+
+Les quotas d'admission sont évalués avant la création du snapshot. Une répétition avec la même clé d'idempotence
+retrouve le job existant ; une nouvelle demande au-delà du plafond est refusée immédiatement.
+
+## Choix de déploiement
+
+### Déploiement fourni : Docker Compose local
+
+Compose privilégie la reproductibilité et la lisibilité des frontières : un seul hôte, des services nommés, cinq
+réseaux dédiés et des volumes persistants. C'est le bon format pour développer, démontrer les gates et qualifier
+les contrats, mais pas pour isoler fortement du code hostile ou garantir haute disponibilité et reprise d'activité.
+
+### Cible d'industrialisation
+
+La cible documentée n'est pas livrée sous forme de manifests de production dans ce dépôt. Elle conserve les
+contrats MCP pour pouvoir remplacer les backends sans donner davantage de pouvoir aux agents.
+
+| Capacité | Local actuel | Cible recommandée | Motivation |
+|---|---|---|---|
+| Web et API | Nginx + Spring sur Compose | Cloud Run ou GKE derrière HTTPS/IAP | Authentification, autoscaling et exposition maîtrisée |
+| Workflow | Coordinateur en processus ; Temporal disponible mais désactivé | Temporal managé ou opéré, workers séparés par task queue | Reprise durable, signaux humains, retries et versionnement |
+| État | Mémoire JVM et volumes locaux | PostgreSQL/Cloud SQL + stockage objet des preuves | Transactions, sauvegardes, rétention et restauration |
+| Sandbox | Conteneur Docker via socket locale | GKE dédié avec gVisor/Agent Sandbox et Jobs éphémères | Séparer le code non fiable du plan de contrôle |
+| Réseau | Réseaux Compose et proxy Squid allow-listé | `default deny`, egress explicite, VPC séparé, aucun accès metadata/control plane | Réduire mouvement latéral et exfiltration |
+| Identités et secrets | Fichiers `.env`/`.vault` | Workload Identity et Secret Manager | Identités courtes, minimales et auditables |
+| SCM, qualité, artefacts | Gitea, SonarQube et Artifactory locaux | Services d'entreprise via adaptateurs MCP | Conserver les politiques et systèmes de référence |
+| Observabilité | Prometheus et Grafana locaux | métriques, traces et audit centralisés avec alerting/SIEM | SLO, investigation et conformité |
+
+La promotion suit `PIPELINE -> HIERARCHICAL_SHADOW -> HIERARCHICAL_CANARY -> HIERARCHICAL_ACTIVE`. Chaque étape
+exige les seuils de qualification, les rôles autorisés et les preuves de sécurité attendues ; en leur absence, le
+routage reste sur la baseline ou s'arrête de façon fail-closed.
 
 ## Démonstration
 
@@ -329,8 +596,8 @@ make demo
 
 - **SonarQube** (`http://localhost:9000`) : Analyse de la qualité du code Java/Maven. Les jetons sont générés par `make bootstrap` ou `make tokens`.
 - **Artifactory** (`http://localhost:8082`) : Dépôt d'artefacts local. Les builds Maven des sandboxes utilisent le miroir explicite `MAVEN_MIRROR_URL`.
-- **Prometheus** (`http://localhost:9090`) : Collecte les métriques Micrometer de l'orchestrateur et des serveurs MCP, dont les appels clients et les compteurs de jobs sandbox.
-- **Grafana** (`http://localhost:3001`) : Tableau de bord de suivi pré-provisionné (`orchestrator.json`).
+- **Prometheus** (`http://localhost:9090`) : collecte l'orchestrateur, Repository Context MCP, Sandbox Execution MCP et Temporal. Assurance, Evidence et SCM MCP restent à ajouter.
+- **Grafana** (`http://localhost:3001`) : six dashboards sont pré-provisionnés pour l'orchestrateur, le Supervisor, les agents, Temporal, MCP et la sandbox.
 
 ## Commandes Make disponibles
 
@@ -347,6 +614,7 @@ make demo
 | `make test` | Exécute les tests de l'orchestrateur et des serveurs MCP |
 | `make test-sandbox-runtime` | Vérifie les contraintes effectives des conteneurs sandbox |
 | `make mcp-shadow-campaign` | Valide le corpus shadow de 20 tâches sans l'exécuter |
+| `make mcp-active-campaign` | Exécute le canary `MCP_ACTIVE` limité aux rôles autorisés |
 | `make mcp-shadow-campaign CAMPAIGN_ARGS=--execute AI_FACTORY_RUN_CLOUD_CAMPAIGN=true` | Exécute volontairement la campagne cloud séquentielle |
 | `make mcp-shadow-report` | Génère le rapport des métriques shadow courantes |
 | `make package` | Compile et empaquette l'orchestrateur Java (sans tests) |
@@ -357,7 +625,6 @@ make demo
 | `make urls` | Liste toutes les URLs de services et points d'accès |
 | `make down` | Arrête la stack Compose |
 | `make clean` | Arrête la stack et supprime tous les volumes (destructif) |
-```
 
 ## Limites actuelles
 
@@ -365,14 +632,14 @@ make demo
   canary réel restent nécessaires ;
 - le déploiement local Compose ne démontre pas encore la reprise après arrêt simultané de l'orchestrateur, de
   Temporal et de tous les serveurs MCP à chaque phase critique ;
-- les projections PostgreSQL et Evidence MCP sont implémentées, mais leur exploitation managée et leur plan de
-  restauration doivent être validés sur l'environnement cible ;
+- les schémas/projections PostgreSQL et Evidence MCP sont implémentés, mais ne sont pas encore intégrés de bout en
+  bout au pipeline de référence ; leur exploitation managée et leur restauration restent à valider ;
 - les prompts, contrats, politiques et qualifications sont versionnés ; leur promotion reste soumise aux
   propriétaires humains désignés ;
 - support des builds limité à Maven, Gradle et npm ;
 - pas de SSO, RBAC ni policy engine ;
 - montage de `/var/run/docker.sock` encore présent dans le contrôleur local `sandbox-execution-mcp` ;
-- pas de sandbox Kubernetes ni d'egress allow-list ;
+- pas encore de sandbox Kubernetes ; l'allow-list egress locale doit être transposée en politiques réseau de production ;
 - approbation humaine obligatoire avant push/PR ;
 
 Les règles de confiance des prompts, la validation des contrats de sortie et les gates de tests, qualité et
@@ -381,6 +648,8 @@ ni une sandbox de production : ces limites restent bloquantes pour un usage entr
 
 ## Documentation complémentaire
 
+- [Guide de lecture et statut des documents](docs/README.md)
+- [Rétrodocumentation complète : fonctionnel, architecture, sécurité, données et packaging](docs/RETRODOCUMENTATION.md)
 - [État, architecture et workflow du prototype 1.2.0](docs/version-1.2.0-archi-04/ETAT-PROTO-1.2.0.md)
 - [Architecture cible multi-agent hiérarchique](docs/version-1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md)
 - [Plan de bascule](docs/version-1.2.0-archi-04/BASCULE-ARCHI-04-MULTI-AGENTS.md)

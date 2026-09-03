@@ -1,5 +1,10 @@
 # Runbooks multi-agents
 
+> Applicabilité : Temporal et les modes hiérarchiques sont désactivés par défaut. Les procédures correspondantes
+> décrivent la cible d'exploitation et ne deviennent exécutables qu'après câblage des configurations, identités,
+> montages et commandes opérateur. Le kill switch existe dans le code mais son fichier n'est pas monté par le
+> Compose courant.
+
 | Situation | Action initiale | Runbook |
 |---|---|---|
 | Activation ou extension progressive | vérifier prérequis, périmètre et retour arrière | [Canary, kill switch et incident](CANARY-KILL-SWITCH-INCIDENT.md) |

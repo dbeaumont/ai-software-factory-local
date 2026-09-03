@@ -10,8 +10,9 @@ suspicion de compromission d'un serveur MCP.
 
 1. Stopper les nouvelles admissions et identifier le serveur, l'outil, sa version/digest, la première et la
    dernière tâche potentiellement affectées.
-2. Désactiver le serveur ou ses outils dans le fichier monté par `AI_FACTORY_MCP_KILL_SWITCH_FILE`. Le fichier doit
-   porter une nouvelle `revision`; un contrôle illisible échoue fermé.
+2. Si le fichier `AI_FACTORY_MCP_KILL_SWITCH_FILE` est effectivement monté, désactiver le serveur ou ses outils et
+   inscrire une nouvelle `revision`; un contrôle illisible échoue fermé. Dans le Compose courant, ce montage manque :
+   arrêter et isoler le service suspect, puis bloquer les admissions jusqu'à son rétablissement contrôlé.
 3. Pour `scm-delivery-mcp`, `assurance-mcp`, `evidence-mcp` ou `sandbox-execution-mcp`, geler tous les effets en vol
    dont l'issue n'est pas confirmée. Ne pas activer de chemin direct de secours.
 4. Préserver conteneurs, journaux, volumes et historiques ; ne pas modifier la preuve suspecte.

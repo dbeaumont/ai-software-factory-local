@@ -1,5 +1,8 @@
 # Modernisation de l'usine logicielle IA
 
+> **ARCHIVE — note non normative.** Les modes et composants cités peuvent avoir été remplacés. Consulter la
+> [rétrodocumentation](../RETRODOCUMENTATION.md) pour l'état actuel.
+
 ## Objectif
 
 Cette note propose une trajectoire pour faire évoluer le prototype AI Software Factory vers une plateforme d'agents de développement fiable, mesurable et exploitable en équipe.

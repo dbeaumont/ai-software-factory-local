@@ -6,6 +6,10 @@
 > Cible technologique recommandée : Spring Boot et Java pour le control plane, Temporal Java SDK pour le
 > workflow durable, Spring AI/LiteLLM pour l'exécution des agents, MCP pour les capacités techniques gouvernées,
 > PostgreSQL pour les projections métier et Evidence MCP pour les artefacts vérifiables.
+>
+> Règle de lecture : une tâche cochée atteste le livrable ou le test cité, pas son activation dans le parcours
+> public. Les lots 13/14, l'intégration E2E et la qualification restent ouverts ; `PIPELINE` est donc toujours le
+> mode actif. Voir l'[état du prototype](ETAT-PROTO-1.2.0.md).
 
 ## 1. Résultat attendu
 
@@ -277,7 +281,7 @@
 - [x] **MAH-140** — Étendre la matrice deny-by-default aux nouveaux rôles et sous-agents. _(Les 14 identités hiérarchiques sont déclarées explicitement dans la matrice hôte, la politique MCP et l'enveloppe commune ; toute identité absente reste refusée.)_
 - [x] **MAH-141** — Définir les outils `context.*` minimaux par rôle plutôt qu'un accès global en lecture. _(Six allowlists distinctes sont appliquées dans Repository Context MCP pour arbre, recherche, fichier, règles, dépendances et symboles ; tests positifs et négatifs par périmètre.)_
 - [x] **MAH-142** — Définir quels rôles peuvent obtenir `evidence.get_summary` et `evidence.read`. _(Résumé réservé à Supervisor, Test, Sécurité et Reviewer ; lecture brute réservée au workflow et au Reviewer indépendant, auditée avec le motif hôte `human-review`, lignée tâche/tentative conservée.)_
-- [x] **MAH-143** — Conserver tous les outils à effet exclusivement au rôle `workflow`. _(Inventaire unifié sandbox/assurance/stockage Evidence/livraison SCM ; matrice hôte et quatre serveurs MCP exigent l'identité `workflow`, y compris pour la création de draft PR.)_
+- [x] **MAH-143** — Conserver tous les outils à effet exclusivement au rôle `workflow`. _(Inventaire unifié sandbox/assurance/stockage Evidence/livraison SCM ; la matrice hôte et les quatre serveurs MCP à effet exigent l'identité `workflow`, tandis que Repository Context MCP reste en lecture seule.)_
 - [x] **MAH-144** — Ajouter limites maximales de profondeur et de fan-out du DAG. _(Plafonds hôte profondeur 2 et fan-out 4, configurables uniquement à la baisse ; chaque plan applique le minimum entre politique et requête, avec tests de non-contournement.)_
 - [x] **MAH-145** — Ajouter budgets par agent, délégation, périmètre et tâche complète. _(Politique hôte versionnée pour les 14 rôles, plafond unitaire de délégation, agrégats Architecture/Code/Tests/Sécurité et plafond global ; validation branchée sur AgentRuntime et DelegationValidator.)_
 - [x] **MAH-146** — Ajouter quotas cumulés de tokens d'entrée, sortie, coût, tours et appels MCP. _(Ledger atomique par tâche, cumulant toutes les tentatives ; chaque tour LLM et appel MCP réserve sa consommation réelle, avec refus sans écriture partielle pour chacun des cinq quotas.)_
@@ -379,15 +383,15 @@
 
 - [x] **MAH-240** — Propager `trace_id`, `task_id`, `run_id`, `delegation_id` et `agent_run_id` de bout en bout. _(`ExecutionIdentity` lie des identifiants stables aux métadonnées Workflow/Activity, aux invocations d'agents et aux enveloppes MCP ; toute divergence Activity/agent est refusée.)_
 - [x] **MAH-241** — Créer un span pour workflow, Child Workflow, Activity, appel LLM et appel MCP. _(`ExecutionTracer` normalise les cinq familles de spans et leur corrélation ; l'intercepteur worker couvre workflows racine/enfant et Activities, les frontières runtime couvrent LLM et MCP.)_
-- [x] **MAH-242** — Désactiver la collecte du contenu des prompts, résultats et preuves par défaut. _(Politique Spring, Compose et OpenTelemetry en opt-in explicite par canal ; les spans ne portent que métadonnées et identifiants de corrélation.)_
+- [x] **MAH-242** — Désactiver la collecte du contenu des prompts, résultats et preuves par défaut. _(Politique Spring et Compose en opt-in explicite par canal ; les variables réservées à OpenTelemetry sont désactivées. Aucun exporteur OTLP n'est encore câblé.)_
 - [x] **MAH-243** — Mesurer tokens, coût, durée, tours, fan-out et profondeur par rôle. _(`AgentMetrics` publie compteurs, timers et distributions Micrometer aux frontières d'exécution et après validation du DAG ; le tag rôle est borné au catalogue.)_
 - [x] **MAH-244** — Mesurer temps d'attente des task queues et taux de saturation par périmètre. _(`TaskQueueMetrics` mesure le schedule-to-start Temporal et publie actifs/ratio de saturation pour chaque file déclarée, avec capacité worker configurable.)_
 - [x] **MAH-245** — Mesurer taux de succès, retries, réparations, replans, contradictions et escalades. _(Le taux de succès dérive des timers d'agents par outcome ; `ai_workflow_events` compte les cinq événements de fiabilité depuis leurs points de décision, avec tags fermés.)_
 - [x] **MAH-246** — Corréler jobs sandbox, digests, verdicts assurance et livraison SCM. _(`DeliveryCorrelationVerifier` refuse toute rupture job→preuve→assurance→manifeste→PR et ne produit l'identifiant de corrélation déterministe qu'après vérification complète.)_
-- [x] **MAH-247** — Journaliser autorisations, refus, approbations et changements de mode de manière inviolable. _(`HashChainedSecurityAuditJournal` signe par HMAC une chaîne append-only séquencée ; permissions, refus, approbations et fallback de mode y sont raccordés, avec test d'altération.)_
+- [x] **MAH-247** — Rendre détectable localement l'altération des autorisations, refus, approbations et changements de mode. _(`HashChainedSecurityAuditJournal` signe par HMAC une chaîne append-only séquencée ; permissions, refus, approbations et fallback de mode y sont raccordés. La persistance WORM externe reste à faire.)_
 - [x] **MAH-248** — Créer dashboards global, Supervisor, agents, Temporal, MCP et sandbox. _(Six dashboards Grafana provisionnés couvrent santé globale, décisions/topologie, usage agents, moteur durable, appels MCP et jobs sandbox ; leurs JSON et requêtes sont testés.)_
 - [x] **MAH-249** — Définir alertes sur boucle, budget, coût, backlog, heartbeat, erreur de contrat et preuve altérée.
-- [x] **MAH-250** — Écrire runbooks pour saturation, agent défaillant, Temporal indisponible, MCP compromis et rollback.
+- [x] **MAH-250** — Écrire les runbooks pour saturation, agent défaillant, Temporal indisponible, MCP compromis, rollback et incident canary/kill switch.
 
 ### Gate du lot 11
 
@@ -531,6 +535,10 @@ Les lots 3, 4, 5 et une partie du lot 11 peuvent avancer en parallèle après st
 ports du lot 2. Les lots 8 et 9 ne doivent pas être activés avant validation du scheduler et des permissions.
 
 ## 21. Ordre conseillé des premières itérations
+
+Cette checklist conserve l'ordre de mise en œuvre proposé à l'origine ; elle n'est pas le suivi d'avancement.
+Les cases faisant autorité sont celles des lots précédents. Plusieurs composants ci-dessous existent dans le code
+mais restent volontairement non activés tant que les lots 13 et 14 ne sont pas franchis.
 
 ### Itération 1 — Préparer sans changer le comportement
 

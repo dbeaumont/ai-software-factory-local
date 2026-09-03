@@ -1,5 +1,9 @@
 # Architecture cible multi-agent hiérarchique
 
+> Statut : architecture cible et capacités disponibles, non description du chemin actif. Dans Compose, les agents
+> restent des rôles internes au conteneur `orchestrator`; Temporal et le mode hiérarchique sont désactivés par
+> défaut. Voir la [rétrodocumentation](../RETRODOCUMENTATION.md) pour l'état d'intégration courant.
+
 ## Objet
 
 Cette cible fait évoluer le prototype d'un pipeline IA séquentiel vers une architecture **multi-agent
@@ -112,8 +116,9 @@ flowchart TB
   class SUP,DAG,ARCH_AGENT,ARCH_OUT,WORKTREES,INTEGRATOR,TEST_OUT,SEC_AGENT,SEC_OUT,GATE,REPLAN new;
 ```
 
-**Légende :** vert = composant ou capacité déjà présent ; orange = composant existant à faire évoluer ; bleu =
-nouveau composant logique. Les agents restent des rôles exécutés par l'orchestrateur via LiteLLM : ils ne
+**Légende de conception :** vert = composant ou capacité déjà présent ; orange = composant existant à faire
+évoluer ; bleu = composant logique introduit par l'architecture 04. Cette couleur n'indique pas qu'un composant est
+actif dans le parcours public. Les agents restent des rôles exécutés par l'orchestrateur via LiteLLM : ils ne
 doivent pas nécessairement devenir des microservices.
 
 ## Hiérarchie des agents, serveurs MCP et outils sous-jacents
@@ -279,17 +284,17 @@ ajoutées à la matrice deny-by-default et qualifiées avant activation.
 
 | Composant | Statut cible | Responsabilité |
 |---|---|---|
-| `WorkflowCoordinator` | Évolution de `TaskService` | Porte l'état global, valide les transitions et reste le seul acteur autorisé à déclencher des effets. |
-| `SupervisorAgent` | Nouveau | Décompose le besoin, sélectionne les spécialistes, consolide leurs résultats et propose une décision. |
-| `DelegationScheduler` | Nouveau | Valide et exécute le DAG, respecte dépendances, concurrence, priorités, budgets et conditions d'arrêt. |
-| `TaskMemory` | Évolution | Persiste tâches, délégations, exécutions d'agents, décisions, consommations et références d'artefacts. |
+| `WorkflowCoordinator` | Port actif ; implémentation Temporal disponible | Porte l'état global, valide les transitions et reste le seul acteur autorisé à déclencher des effets. |
+| `SupervisorAgent` | Implémenté, non activé par défaut | Décompose le besoin, sélectionne les spécialistes, consolide leurs résultats et propose une décision. |
+| `DelegationScheduler` | Implémenté, non activé par défaut | Valide et exécute le DAG, respecte dépendances, concurrence, priorités, budgets et conditions d'arrêt. |
+| `TaskMemory` | Adaptateur mémoire actif ; projection PostgreSQL cible | Persiste à terme tâches, délégations, exécutions d'agents, décisions, consommations et références d'artefacts. |
 | `Repository Context MCP` | Existant | Fournit à chaque rôle un contexte minimal, borné, en lecture seule et lié au commit source. |
-| `Evidence MCP` | Existant à intégrer | Conserve les artefacts vérifiables, leurs métadonnées, leur digest et leur classification. |
+| `Evidence MCP` | Existant ; intégration pipeline partielle | Conserve les artefacts vérifiables, leurs métadonnées, leur digest et leur classification. |
 | `Sandbox Execution MCP` | Existant | Applique les patches et exécute les profils techniques autorisés dans un environnement isolé. |
 | `Assurance MCP` | Existant | Convertit les résultats déterministes en verdicts structurés ; une preuve absente reste bloquante. |
 | `SCM Delivery MCP` | Existant | Crée branche, commit et draft PR uniquement après politiques, preuves et approbation humaine. |
 | `Policy Enforcement` | Existant à étendre | Applique permissions par rôle, scopes, quotas, budgets, approbations et kill switch. |
-| `Observability` | À étendre | Corrèle tâche, délégation, agent, appel d'outil, artefact, tokens, coût, latence et décision. |
+| `Observability` | Corrélation/métriques présentes ; OTLP à ajouter | Corrèle tâche, délégation, agent, appel d'outil, artefact, tokens, coût, latence et décision. |
 
 ## Périmètre Architecture
 

@@ -2,6 +2,9 @@
 
 Date de qualification : 1er septembre 2026.
 
+> Ce rapport décrit la topologie utilisée pendant la campagne. Dans le Compose courant, le profil sécurité rejoint
+> `sandbox-egress` et utilise le proxy allow-listé ; il ne rejoint plus directement le réseau `factory`.
+
 ## Périmètre
 
 Le serveur `sandbox-execution-mcp` porte temporairement les deux opérations historiques de `SandboxService` :

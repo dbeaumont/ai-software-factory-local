@@ -4,6 +4,9 @@
 - Verdict : `PASS`
 - Critère : chaque tâche est traçable de l'intention à la PR sans exposer de secret ou contenu sensible.
 
+> Portée du verdict : corrélation applicative, métriques, dashboards, alertes et audit testés. Aucun exporteur
+> OpenTelemetry/OTLP n'est câblé dans le runtime courant et le journal HMAC reste local au processus.
+
 ## Chaîne de traçabilité
 
 | Segment | Identité ou liaison vérifiée | Preuve d'implémentation |
@@ -22,7 +25,8 @@ restent rattachées à la même identité durable.
 
 ## Confidentialité et cardinalité
 
-- la capture des prompts, résultats et preuves est désactivée par défaut dans Spring, Compose et OpenTelemetry ;
+- la capture des prompts, résultats et preuves est désactivée par défaut dans Spring et Compose ; les variables
+  réservées à une future instrumentation OpenTelemetry suivent aussi cette valeur sûre ;
 - spans et métriques ne transportent que des identifiants et métadonnées bornés ;
 - rôles, outcomes, raisons d'arrêt, périmètres et événements proviennent de listes fermées ;
 - l'interface expose les références et digests de preuves, jamais leur contenu brut ;
@@ -38,7 +42,8 @@ processus : la durabilité externe/WORM reste une exigence d'industrialisation e
 
 - six dashboards Grafana : global, Supervisor, agents, Temporal, MCP et sandbox ;
 - sept alertes Prometheus : boucle, budget, coût, backlog, heartbeat, contrat et preuve altérée ;
-- cinq runbooks : saturation, agent défaillant, Temporal indisponible, MCP compromis et rollback ;
+- six runbooks actuels : saturation, agent défaillant, Temporal indisponible, MCP compromis, rollback et incident
+  canary/kill switch ;
 - seuils et temporisations versionnés dans `infrastructure/observability/alerts/multiagents.yml` ;
 - règles montées en lecture seule dans Prometheus et validées par `promtool`.
 
@@ -52,7 +57,7 @@ processus : la durabilité externe/WORM reste une exigence d'industrialisation e
 | `ObservabilityContentPropertiesTest` | Capture de contenu désactivée par défaut. |
 | `MultiAgentDashboardsTest` | Six dashboards lisibles avec requêtes actionnables. |
 | `MultiAgentAlertRulesTest` | Sept alertes structurées, annotées et montées dans Prometheus. |
-| `MultiAgentRunbooksTest` | Cinq procédures complètes et reliées aux alertes. |
+| `MultiAgentRunbooksTest` | Cinq procédures du périmètre initial complètes et reliées aux alertes ; le runbook canary a été ajouté ensuite. |
 | `promtool check rules` | `SUCCESS` — 7 règles reconnues. |
 | Suite Maven de l'orchestrateur | `PASS` — 380 tests, 0 échec, 0 erreur. |
 

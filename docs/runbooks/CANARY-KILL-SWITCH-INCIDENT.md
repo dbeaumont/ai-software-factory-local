@@ -51,6 +51,10 @@ autorisé déclenche le rollback immédiat, sans attendre la fin de la fenêtre.
 L'orchestrateur relit avant chaque appel le fichier indiqué par `AI_FACTORY_MCP_KILL_SWITCH_FILE`. Il n'expose
 aucune API d'écriture ; en cible, seul le compte d'exploitation modifie le montage en lecture seule.
 
+**Précondition non satisfaite par le Compose courant :** la variable n'est pas transmise et aucun fichier de
+contrôle n'est monté. Le canary ne doit pas être ouvert avant l'ajout de ce montage, de sa procédure atomique et
+d'un test opérateur. Dans le POC actuel, arrêter/isoler le service concerné reste le confinement disponible.
+
 ```properties
 revision=incident-<identifiant-unique>
 global.disabled=false

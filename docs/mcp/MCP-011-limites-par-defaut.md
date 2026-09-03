@@ -102,9 +102,11 @@ Chaque job est limité à 2 Gio, 2 CPU et 512 PIDs. Les timeouts sont :
 - patch check/application : 3 minutes, réseau `none` ;
 - tests : 15 minutes, seules dépendances autorisées ;
 - qualité Sonar : 15 minutes, dépendances et SonarQube ;
-- sécurité Syft/Trivy : 10 minutes, cible sans réseau avec bases préchargées.
+- sécurité Syft/Trivy : 10 minutes, proxy allow-listé sur `sandbox-egress`; cible sans réseau avec bases préchargées.
 
-Le réseau `factory` partagé utilisé actuellement pour certains profils est un écart de mise en œuvre. La politique `dependencies-only`/`dependencies-and-sonar` décrit la cible d'egress, pas l'isolation réellement atteinte par Compose.
+Compose sépare actuellement `sandbox-egress` et `sandbox-quality`, tous deux internes, et ne raccorde aucun job au
+réseau de contrôle `factory`. Cette isolation locale doit encore être transposée en NetworkPolicies dans le backend
+GKE cible.
 
 ## 7. Boucle agentique et budget
 
@@ -141,6 +143,8 @@ Les budgets sont comptés par l'orchestrateur à partir des usages normalisés r
 | résumé transmis à un agent | 64 Kio |
 
 Une limite de taille n'autorise pas à tronquer silencieusement une preuve requise. Une preuve trop grande doit utiliser le mécanisme d'artefact adapté ; une preuve incomplète produit `INDETERMINATE`.
+Le plafond de politique de 10 Mio n'est pas la valeur du backend local : Compose configure actuellement Evidence
+MCP à 1 Mio par artefact, et la valeur la plus restrictive s'applique.
 
 ## 9. Comportement en cas de dépassement
 
@@ -169,4 +173,3 @@ Une limite de taille n'autorise pas à tronquer silencieusement une preuve requi
 - [x] Tours, appels d'outils, tokens, coût et durée agentiques sont bornés.
 - [x] La priorité des politiques et le comportement au dépassement sont explicites.
 - [x] Une politique machine-readable versionnée accompagne le document.
-

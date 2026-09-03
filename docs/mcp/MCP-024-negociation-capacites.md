@@ -18,6 +18,9 @@ Les valeurs initiales sont :
 |---|---:|---|
 | `repository-context-mcp` | `0.3.0` | Cinq outils stables ; ajouter `context.get_symbols` à l'allow-list uniquement avec le feature flag associé |
 | `sandbox-execution-mcp` | `0.1.0` | `sandbox.validate_patch`, `sandbox.apply_patch`, `sandbox.run_tests`, `sandbox.run_quality`, `sandbox.run_security`, `sandbox.get_execution`, `sandbox.cancel_execution` |
+| `scm-delivery-mcp` | `0.1.0` | `scm.get_repository`, `scm.resolve_revision`, `scm.create_draft_pull_request` |
+| `assurance-mcp` | `0.1.0` | `assurance.evaluate_quality_gate`, `assurance.normalize_findings`, `assurance.evaluate_policy` |
+| `evidence-mcp` | `0.1.0` | `evidence.store`, `evidence.create_manifest`, `evidence.get_summary`, `evidence.read` |
 
 Les versions de protocole acceptées sont `2025-11-25` puis `2025-06-18`, afin de couvrir la version négociée par le SDK courant et la révision précédente. Une modification de cette liste, d'une version serveur ou d'une allowlist est un changement de configuration contrôlé.
 
@@ -35,7 +38,10 @@ Les versions de protocole acceptées sont `2025-11-25` puis `2025-06-18`, afin d
 | `DEGRADED` | client désactivé, non initialisé ou serveur inaccessible | indicateur `DOWN` |
 | `INCOMPATIBLE` | divergence de protocole, identité, version ou catalogue | indicateur `DOWN` |
 
-Dans un mode non actif (`DIRECT` ou `MCP_SHADOW`), l'indicateur reste `UP` pour préserver le chemin historique mais expose l'état dégradé ou incompatible dans ses détails. Aucun secret, URI ou contenu de réponse n'est publié.
+Dans un mode non actif historique (`DIRECT` ou `MCP_SHADOW`), l'indicateur reste `UP` mais expose l'état dégradé
+ou incompatible dans ses détails. Depuis le retrait des collecteurs directs, ces modes ne constituent plus un
+fallback d'exécution : une collecte configurée ainsi échoue explicitement. Aucun secret, URI ou contenu de réponse
+n'est publié.
 
 ## Vérification
 

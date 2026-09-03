@@ -36,6 +36,10 @@ ce plafond. Aucun ticket ou résultat de modèle ne peut augmenter ce niveau.
 
 ## Configuration cible
 
+Cette configuration décrit le contrat de bascule visé. Ces variables ne sont pas encore câblées dans
+`infrastructure/compose.yaml` et le chemin public demeure le pipeline déterministe. Les garde-fous actuellement
+exposés concernent principalement `AI_FACTORY_AGENT_TOOL_*` et l'activation Temporal.
+
 ```text
 AI_FACTORY_WORKFLOW_MODE=PIPELINE
 AI_FACTORY_HIERARCHICAL_QUALIFICATION=INCOMPLETE

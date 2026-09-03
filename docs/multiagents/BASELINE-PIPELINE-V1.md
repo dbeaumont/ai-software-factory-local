@@ -28,7 +28,8 @@ images tierces utilisent des références par digest récupérables depuis leur 
 1. créer un worktree ou un checkout détaché sur `v1.1.0-mcp` ;
 2. dériver la configuration locale de `.env.example` sans committer de secret ;
 3. utiliser les références d'images du manifeste, ou vérifier les images locales par leur digest de contenu ;
-4. exécuter `make bootstrap`, puis `make mcp-agent-ab-campaign` avec les autorisations fournisseur attendues ;
+4. exécuter `make bootstrap`, puis `./scripts/mcp-agent-ab-campaign.sh` avec les autorisations fournisseur
+   attendues (aucune cible Make équivalente n'est actuellement déclarée) ;
 5. conserver les sorties JSONL avec leur SHA-256 et les paramètres effectifs du fournisseur.
 
 Une réponse LLM n'est pas reproductible bit à bit. La reproductibilité recherchée porte donc sur le code, les

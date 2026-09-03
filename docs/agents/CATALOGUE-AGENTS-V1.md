@@ -126,7 +126,7 @@ permissions, évaluation de qualité et autorisation de mode avant d'être ajout
 - schémas inter-agents : `resources/multiagents/schemas/contract-catalog-v1.json` ;
 - limites cumulées : `resources/multiagents/policies/hierarchical-budget-policy-v1.yaml` ;
 - seuils de promotion : `resources/multiagents/policies/qualification-thresholds-v1.yaml` et configuration
-  `ai.factory.agent-tooling` de l'orchestrateur.
+  `ai-factory.agent-tools` de l'orchestrateur.
 
 En cas de divergence, l'hôte refuse l'activation ou l'appel. Aucune source documentaire ne peut élargir une
 permission déclarée dans les politiques exécutables.

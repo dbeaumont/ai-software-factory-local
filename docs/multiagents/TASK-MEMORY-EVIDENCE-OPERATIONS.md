@@ -1,5 +1,9 @@
 # Exploitation de Task Memory et Evidence MCP
 
+> Statut : procédure cible du mode durable. Dans le chemin actif, `TaskMemory` utilise encore l'adaptateur mémoire,
+> Temporal est désactivé et la projection PostgreSQL n'est pas câblée. Ne pas appliquer cette procédure comme si
+> ces trois sources étaient déjà opérationnelles en production.
+
 ## Sources d'autorité
 
 | Donnée | Autorité | Usage |

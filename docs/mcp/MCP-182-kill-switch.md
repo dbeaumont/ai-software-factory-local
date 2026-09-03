@@ -1,5 +1,9 @@
 # MCP-182 — Coupe-circuits opérationnels
 
+> État courant : le mécanisme est implémenté dans l'application, mais le fichier n'est ni monté ni configuré par
+> `infrastructure/compose.yaml`. Sans cette intégration, l'exploitation locale doit arrêter/isoler le service ou
+> bloquer les admissions ; la procédure cible suppose un montage en lecture seule.
+
 L'orchestrateur relit le fichier désigné par `AI_FACTORY_MCP_KILL_SWITCH_FILE` avant chaque appel. Le format `properties` accepte :
 
 ```properties

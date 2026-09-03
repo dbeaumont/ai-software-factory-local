@@ -1,6 +1,6 @@
 # MCP-005 — Threat model de la trajectoire MCP
 
-> Statut : baseline de menace à faire approuver au gate du lot 0  
+> Statut : baseline approuvée pour le POC local ; risques ouverts remis en cohérence le 3 septembre 2026
 > Propriétaires : `Product Owner AI Software Factory` et `Représentant RSSI`  
 > Référence des actifs/frontières : `docs/mcp/MCP-004-actifs-frontieres-confiance.md`
 
@@ -200,7 +200,9 @@ flowchart TD
   D --> D1[scope ou egress trop large]
 ```
 
-La réduction principale consiste à retirer le jeton Gitea de l'orchestrateur, centraliser la livraison dans une commande atomique, vérifier une approbation liée aux digests et limiter l'identité SCM au seul dépôt/effet autorisé.
+La réduction principale prévue a été mise en œuvre : le jeton Gitea a été retiré de l'orchestrateur, la livraison
+est centralisée dans une commande atomique, l'approbation durable est liée aux digests et l'identité SCM est
+confinée à `scm-delivery-mcp`.
 
 ## 6. Plan de vérification priorisé
 
@@ -223,10 +225,11 @@ Les risques suivants sont acceptables uniquement pour une démonstration locale 
 
 1. `/var/run/docker.sock` reste détenu par le contrôleur sandbox Compose.
 2. Les endpoints MCP ne disposent pas encore d'authentification workload complète.
-3. Les jobs sandbox rejoignent encore le réseau `factory` partagé pour plusieurs profils.
-4. `GITEA_TOKEN` reste dans l'environnement de l'orchestrateur.
-5. Les preuves restent principalement mutables dans le workspace.
-6. La preuve d'approbation liée aux digests n'est pas encore implémentée.
+3. L'API opérateur ne possède pas encore de SSO, RBAC ni rate limiting.
+4. Les preuves immuables et l'approbation liée aux digests sont disponibles dans le chemin durable, mais pas
+   intégrées de bout en bout au pipeline déterministe de référence.
+5. Le journal d'audit HMAC reste local au processus et n'est pas un journal externe WORM.
+6. La cible GKE et l'équivalent de l'allow-list réseau locale ne sont pas opérationnels.
 
 Ces risques ne peuvent pas être considérés comme compensés uniquement par le caractère privé du réseau Compose.
 
@@ -246,4 +249,3 @@ Ces risques ne peuvent pas être considérés comme compensés uniquement par le
 - [x] Chaque menace possède contrôles et tests associés.
 - [x] Les risques ouverts du POC sont distingués du risque résiduel cible.
 - [x] Les règles de cotation, d'acceptation et de révision sont définies.
-

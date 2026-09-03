@@ -1,3 +1,9 @@
+# Mode agentique Planner/Reviewer
+
+> Portée : cette note concerne la campagne MCP-180 sur l'appel autonome d'outils par Planner et Reviewer. Son seuil
+> historique de 20 cas ne remplace pas la campagne de qualification hiérarchique de 36 cas décrite dans la
+> documentation multi-agent.
+
 « Le mode agentique reste désactivé » signifie que les agents IA Planner et Reviewer ne peuvent pas, en production, choisir eux-mêmes quels outils MCP appeler ni enchaîner plusieurs appels selon leurs résultats.
 
 Le fonctionnement actuel reste celui-ci :
@@ -36,4 +42,6 @@ AI_FACTORY_AGENT_TOOL_SECURITY_PASSED=false
 AI_FACTORY_AGENT_TOOL_EVALUATION_ENABLED=false
 ```
 
-Cela ne signifie donc pas que MCP est désactivé. Les serveurs MCP de contexte, sandbox, assurance et livraison restent utilisés par l’orchestrateur. Seule l’autonomie du modèle pour sélectionner et enchaîner les outils MCP est coupée.
+Cela ne signifie donc pas que MCP est désactivé. Les serveurs MCP de contexte, sandbox, assurance, preuves et
+livraison restent utilisés ou disponibles pour l'orchestrateur. Seule l'autonomie du modèle pour sélectionner et
+enchaîner les outils MCP est coupée.

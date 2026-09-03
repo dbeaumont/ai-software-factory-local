@@ -4,6 +4,9 @@
 - Date : 2026-09-02
 - Branche : `features/multiagents`
 
+> Portée du verdict : schémas, reconstruction et scénarios automatisés. L'adaptateur actif de `TaskMemory` reste
+> en mémoire ; la projection PostgreSQL et l'Evidence MCP ne sont pas intégrés de bout en bout au pipeline public.
+
 ## Critère
 
 > Toutes les décisions peuvent être reproduites depuis l'état durable, les contrats et les preuves vérifiées.

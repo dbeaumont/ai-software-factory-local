@@ -4,6 +4,9 @@
 > Portée : ticket, dépôt, source SHA, patch, workspace, preuves, approbation, jetons et pull request  
 > Principe : une donnée contrôlée ou signée peut devenir exploitable sans devenir intrinsèquement sûre
 
+> Les contrôles marqués « obligatoires » décrivent la cible de sécurité. Le Compose local ne fournit actuellement
+> ni authentification workload entre services, ni SSO/RBAC pour l'API.
+
 ## 1. Modèle de confiance
 
 L'orchestrateur est le propriétaire du workflow, mais il ne doit pas être l'autorité de toutes les données. Chaque actif possède une source autoritative, une liaison à une tâche/tentative et des conditions d'usage. Les données provenant d'un utilisateur, d'un dépôt, d'un modèle, d'un log ou d'un outil restent non fiables lorsqu'elles sont réinjectées dans un prompt.
@@ -40,8 +43,8 @@ flowchart LR
   U -->|commande non fiable| O
   O -->|prompt borné| L
   L -->|sortie non fiable| O
-  O -->|appel authentifié| C
-  O -->|appel authentifié + politique| S & D & A & E
+  O -->|appel validé, authentification cible| C
+  O -->|appel validé + politique, authentification cible| S & D & A & E
   C -->|lecture bornée| J
   S -->|profil signé| J
   J -->|résultats non fiables + digests| S
@@ -147,4 +150,3 @@ Les invariants suivants sont obligatoires :
 - [x] Les invariants anti-substitution et anti-rejeu sont explicites.
 - [x] Les responsabilités respectives de l'orchestrateur, des MCP, des outils, du modèle et de l'humain sont fixées.
 - [x] Le comportement fail-closed est défini pour les objets ou preuves incertains.
-

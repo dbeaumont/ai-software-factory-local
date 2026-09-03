@@ -1,105 +1,101 @@
-# Backlog & Pistes d'évolution
+# Backlog et pistes d'évolution
+
+> État revu le 3 septembre 2026. Les éléments « faits » attestent une présence dans le dépôt ; ils ne valent pas
+> qualification de production. Voir la [rétrodocumentation](RETRODOCUMENTATION.md) pour la matrice actif/disponible/cible.
 
 ## Fait
 
-- [x] Point d'entrée HTTP avec reverse proxy Nginx (`reverse-proxy` relayant `/` vers `factory-web` et `/api/` vers `orchestrator`)
-- [x] Intégration SonarQube et miroir Artifactory pour la qualité et la résolution d'artefacts
-- [x] Scans de sécurité déterministes (SBOM Syft CycloneDX + Trivy vulnérabilités & secrets)
-- [x] Boucle d'auto-réparation de diff (`PatchRepair`) lors de l'échec de `git apply --check`
-- [x] Observabilité complète avec métriques Micrometer, Prometheus v3.5 et tableau de bord Grafana v12.1
+- [x] Point d'entrée HTTP avec reverse proxy Nginx (`/` vers `factory-web`, `/api/` vers `orchestrator`).
+- [x] Intégration SonarQube et miroir Artifactory.
+- [x] Scans déterministes : SBOM Syft CycloneDX et vulnérabilités/secrets Trivy.
+- [x] Boucle bornée de réparation du patch lorsque `git apply --check` échoue.
+- [x] Migration vers Java 25, Spring Boot 4.1.1 et Spring AI 2.0.1.
+- [x] Cinq serveurs MCP séparant contexte, sandbox, SCM, assurance et preuves.
+- [x] Métriques Micrometer, Prometheus, six dashboards Grafana et règles d'alerte multi-agents.
+- [x] Diagrammes d'architecture du pipeline, des agents, des données, de la confiance et de la cible GCP.
+- [x] Implémentations Temporal, DAG multi-agent, contrats et politiques de qualification disponibles dans le code.
 
-## À étudier / Prochaines étapes
+## Prochaines étapes produit et plateforme
 
-- [ ] Support d'OpenSpec / OpenAPI pour la définition formelle des contrats de tickets
-- [ ] Intégration Keycloak / OpenID Connect pour l'authentification et le RBAC des utilisateurs
-- [ ] Déclenchement de l'orchestration via GitHub Actions / GitLab CI au lieu du socket Docker
-- [ ] Diagrammes d'architecture enrichis centrés sur les boucles de rétroaction agentiques
-- [ ] Persistance des tâches et journaux d'audit dans une base de données de contrôle dédiée
-- [ ] Suppression de l'accès direct à la socket docker
-- [ ] Passer en Java 25 et SpringBoot 4.x
-- [ ] Support de SpecKit pour la définition formelle des spécifications
-- [ ] Support de OpenTelemetry pour la supervision
-- [ ] Mise en place d'écrans de supervision : 
-         - fonctionnelle : supervision des processus (ce qui a marché, interruptions et raisons)
-         - technique : activité par agent (like top -o cpu)
-         - finops : consommation par agent
-- [ ] Kill switch dans l'IHM de supervision
+- [ ] Formaliser les contrats de tickets avec OpenAPI et, si retenu, OpenSpec/SpecKit.
+- [ ] Intégrer Keycloak ou un fournisseur OpenID Connect pour l'authentification et le RBAC.
+- [ ] Ajouter un déclenchement par GitHub Actions/GitLab CI sans le confondre avec le backend d'exécution sandbox.
+- [ ] Persister les tâches et journaux d'audit dans un stockage de contrôle durable.
+- [ ] Remplacer l'accès direct du contrôleur sandbox à `/var/run/docker.sock` par un backend distant isolé.
+- [ ] Ajouter un export OpenTelemetry réel ; `ExecutionTracer` et les métriques actuelles ne constituent pas encore
+  une chaîne OTLP de bout en bout.
+- [ ] Compléter les écrans de supervision fonctionnelle, technique et FinOps.
+- [ ] Ajouter une commande opérateur et une vue IHM pour le kill switch.
+- [ ] Scraper Assurance, Evidence et SCM MCP dans Prometheus.
+- [ ] Qualifier puis activer progressivement Temporal et le mode hiérarchique.
+- [ ] Valider sauvegarde, restauration, rétention et purge de bout en bout.
 
+## Écarts de l'interface d'exploitation
 
-où sont les agents ?
-activer le mode pipeline dans compose / makefile
-activer le kill switch
-vérifier les variables de .env.exemple qui ne seraient pas présentes dans .env
-ajouter les target du mode hiérarchique dans makefile
-activer temporal
+### P0 — `make urls` expose des secrets
 
+Le [`Makefile`](../Makefile) affiche les mots de passe Gitea, SonarQube, Artifactory et Grafana. Ils apparaissent
+aussi lors d'un `make -n urls`. La cible doit n'afficher que les URLs et utilisateurs, puis indiquer le mécanisme
+sécurisé de récupération des secrets.
 
+### P1 — aucune cible Make n'active l'architecture hiérarchique
 
-## Verdict
+Les seules campagnes exposées sont `mcp-shadow-campaign` et `mcp-active-campaign`, consacrées à la migration MCP
+historique des rôles `planner`, `developer` et `patch-repair`. Il manque notamment :
 
-Le Makefile est syntaxiquement valide et sa cible de tests fonctionne, mais il n’est pas encore cohérent comme interface d’exploitation de l’architecture multi-agent hiérarchique.
+- `multiagent-shadow` ;
+- `multiagent-qualification` ;
+- `multiagent-canary` ;
+- `multiagent-status` ;
+- `multiagent-rollback`.
 
-### Points importants
+L'API de création ne permet pas de sélectionner directement un mode hiérarchique :
+[`TaskRequest.java`](../apps/orchestrator/src/main/java/com/example/aifactory/model/TaskRequest.java) force aujourd'hui
+le mode LLM cloud et ne porte pas de mode d'exécution multi-agent.
 
-1. **Critique — `make urls` expose des secrets**
+### P1 — Temporal est démarré mais désactivé côté orchestrateur
 
-Le Makefile affiche directement les mots de passe Gitea, SonarQube, Artifactory et Grafana : [Makefile](/Users/david/Dev/ai-software-factory-local/Makefile:164). Ils apparaissent aussi avec `make -n urls`.
+`make up` démarre Temporal et sa base. Cependant :
 
-Il faudrait n’afficher que les utilisateurs et indiquer où récupérer les secrets.
+- `AI_FACTORY_TEMPORAL_ENABLED` vaut `false` par défaut dans
+  [`compose.yaml`](../infrastructure/compose.yaml) ;
+- le démarrage de l'orchestrateur en mode pipeline ne dépend volontairement pas de la readiness Temporal ;
+- [`DeterministicWorkflowCoordinator`](../apps/orchestrator/src/main/java/com/example/aifactory/service/DeterministicWorkflowCoordinator.java)
+  reste l'implémentation active de `WorkflowCoordinator`.
 
-2. **Majeur — aucune cible n’active réellement l’architecture hiérarchique**
+Le démarrage de la stack ne signifie donc pas que le chemin public utilise Temporal.
 
-Les seules campagnes disponibles sont `mcp-shadow-campaign` et `mcp-active-campaign`, qui testent la migration MCP historique avec les rôles `planner`, `developer` et `patch-repair` : [Makefile](/Users/david/Dev/ai-software-factory-local/Makefile:121).
+### P1 — kill switch non raccordé au déploiement local
 
-Il manque des cibles explicites comme :
+La propriété `AI_FACTORY_MCP_KILL_SWITCH_FILE` existe dans [`.env.example`](../.env.example) et le code applique
+les décisions de `OperationalKillSwitch`. Compose ne transmet toutefois pas cette variable, ne monte aucun fichier
+de contrôle et le Makefile n'expose aucune commande de vérification ou d'activation.
 
-- `multiagent-shadow`
-- `multiagent-qualification`
-- `multiagent-canary`
-- `multiagent-status`
-- `multiagent-rollback`
+### P2 — `make build` ne reconstruit pas explicitement LiteLLM
 
-L’API de création ne permet d’ailleurs pas de sélectionner un mode hiérarchique : [TaskRequest.java](/Users/david/Dev/ai-software-factory-local/apps/orchestrator/src/main/java/com/example/aifactory/model/TaskRequest.java:3).
+LiteLLM possède un contexte `build`, mais ne figure pas dans la liste explicite de services passée à `docker
+compose build` par le [`Makefile`](../Makefile). Une modification de son Dockerfile ou de sa configuration n'est
+donc pas reconstruite par cette cible.
 
-3. **Majeur — Temporal est démarré, mais désactivé côté orchestrateur**
+### P2 — une commande de campagne documentée n'existe pas
 
-`make up` démarre tous les services Compose, y compris Temporal, mais :
+[`BASELINE-PIPELINE-V1.md`](multiagents/BASELINE-PIPELINE-V1.md) demandait auparavant
+`make mcp-agent-ab-campaign`, mais aucune cible Make de ce nom n'existe. La documentation utilise désormais le
+script réel `./scripts/mcp-agent-ab-campaign.sh` ; une cible Make dédiée reste souhaitable pour l'ergonomie.
 
-- `AI_FACTORY_TEMPORAL_ENABLED` vaut `false` par défaut : [compose.yaml](/Users/david/Dev/ai-software-factory-local/infrastructure/compose.yaml:407) ;
-- l’orchestrateur ne dépend pas de la readiness de Temporal : [compose.yaml](/Users/david/Dev/ai-software-factory-local/infrastructure/compose.yaml:429) ;
-- le seul `WorkflowCoordinator` de production trouvé reste `DeterministicWorkflowCoordinator` : [DeterministicWorkflowCoordinator.java](/Users/david/Dev/ai-software-factory-local/apps/orchestrator/src/main/java/com/example/aifactory/service/DeterministicWorkflowCoordinator.java:25).
+### P3 — commandes opérateur centrées sur le pipeline
 
-Le Makefile donne donc l’impression de démarrer la cible 1.2.0, alors que le chemin opérationnel reste le pipeline.
+- `make restart` et `make logs` ne ciblent que l'orchestrateur ;
+- `make urls` n'affiche pas Temporal UI ;
+- les routes `approve-manifest`, annulation, décisions, retry et fallback ne sont pas présentées ;
+- l'aide de `make build` ne cite pas tous les composants effectivement construits.
 
-4. **Majeur — le kill switch n’est pas raccordé à Compose**
+## Contrôles de cohérence
 
-La variable existe dans [.env.example](/Users/david/Dev/ai-software-factory-local/.env.example:108), mais elle n’est ni transmise à l’orchestrateur ni associée à un fichier monté dans [compose.yaml](/Users/david/Dev/ai-software-factory-local/infrastructure/compose.yaml:336).
-
-Aucune cible Make ne permet non plus de vérifier ou d’actionner proprement ce coupe-circuit.
-
-5. **Moyen — `make build` oublie LiteLLM**
-
-LiteLLM possède un contexte `build`, mais ne figure pas dans la liste explicite de [Makefile](/Users/david/Dev/ai-software-factory-local/Makefile:66). Une modification de sa configuration ou de son image de base ne sera donc pas reconstruite par `make build`.
-
-6. **Moyen — une commande documentée n’existe pas**
-
-La baseline demande `make mcp-agent-ab-campaign` dans [BASELINE-PIPELINE-V1.md](/Users/david/Dev/ai-software-factory-local/docs/multiagents/BASELINE-PIPELINE-V1.md:31), et le script existe, mais aucune cible correspondante n’est définie.
-
-7. **Mineur — commandes opérateur encore centrées sur l’ancien pipeline**
-
-- `make restart` ne redémarre que l’orchestrateur.
-- `make logs` ne suit que l’orchestrateur.
-- `make urls` n’affiche pas Temporal UI.
-- Les nouvelles API `approve-manifest`, annulation, décisions, retry et fallback ne sont pas présentées.
-- Les descriptions de `make build` parlent encore uniquement de la sandbox et de l’orchestrateur.
-
-### Contrôles réussis
-
-- `make config` : succès.
-- Toutes les cibles déclarées sont syntaxiquement valides.
-- `make test` : succès, avec **491 tests**.
-- Les cinq serveurs MCP sont couverts : Context, Sandbox, SCM, Assurance et Evidence.
-- Les campagnes MCP shadow et active passent leur validation à blanc.
+- `make config` était déclaré en succès lors de la précédente vérification et `docker compose config --quiet`
+  reste syntaxiquement valide lors de la revue documentaire du 3 septembre 2026.
+- Les rapports Surefire présents couvrent 158 classes et 499 cas, avec 0 échec, 0 erreur et 1 cas ignoré. Cette
+  lecture d'artefacts ne remplace pas une nouvelle exécution de `make test`.
+- Les cinq serveurs MCP possèdent des tests.
+- Les campagnes MCP shadow et active restent des preuves historiques versionnées.
 - `clean` est correctement présenté comme destructif.
-
-Aucun fichier n’a été modifié durant cette vérification. Les corrections prioritaires seraient : supprimer l’exposition des secrets, raccorder réellement Temporal et le kill switch, puis créer des cibles distinctes pour shadow, qualification, canary et rollback hiérarchiques.

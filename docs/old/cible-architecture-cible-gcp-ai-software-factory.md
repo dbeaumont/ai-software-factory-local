@@ -1,8 +1,11 @@
 # Architecture cible GCP — AI Software Factory
 
+> **ARCHIVE — document remplacé.** Cette étude ne décrit pas l'état courant. Consulter la
+> [rétrodocumentation](../RETRODOCUMENTATION.md) et l'[architecture 1.2](../version-1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md).
+
 ## Diagramme d’architecture cible
 
-![Diagramme d'architecture GCP de l'usine logicielle](assets/cible-architecture-cible-gcp-ai-software-factory.svg)
+![Diagramme d'architecture GCP de l'usine logicielle](../assets/cible-architecture-cible-gcp-ai-software-factory.svg)
 
 Le diagramme représente la cible industrialisée de l’usine. Le **plan de contrôle de confiance** orchestre et audite les travaux, tandis que le code produit par l’IA est exécuté dans un **plan de sandbox séparé, éphémère et considéré comme non fiable**. L’usine s’arrête à la création d’une Pull Request accompagnée d’un dossier de preuves. La CI/CD d’entreprise conserve la responsabilité du build de référence, de la promotion et du déploiement.
 

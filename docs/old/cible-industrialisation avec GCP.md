@@ -1,5 +1,8 @@
 # Industrialisation GCP de l’AI Software Factory
 
+> **ARCHIVE — étude datée du 27 août 2026.** Les constats au présent s'appliquent à la révision citée ci-dessous,
+> pas au dépôt courant. Consulter la [rétrodocumentation](../RETRODOCUMENTATION.md) pour l'état actuel.
+
 **Dépôt analysé :** [`dbeaumont/ai-software-factory-local`](https://github.com/dbeaumont/ai-software-factory-local)  
 **Révision de référence :** [`3b68ba5e`](https://github.com/dbeaumont/ai-software-factory-local/commit/3b68ba5e491e219c6d5bb8cc6ad280b12dfaf398), branche `main`, 27 août 2026  
 **Objet :** état de l’art du marché, diagnostic du prototype et trajectoire vers une usine logicielle IA d’entreprise déployée dans Google Cloud.

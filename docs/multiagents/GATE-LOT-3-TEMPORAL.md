@@ -4,6 +4,9 @@
 - Date : 2026-09-02
 - Branche : `features/multiagents`
 
+> Portée du verdict : implémentation et scénarios automatisés du workflow durable. Ce `PASS` n'indique pas que
+> Temporal porte le parcours `POST /api/tasks` dans Compose ; il est désactivé par défaut.
+
 ## Critère
 
 > Une tâche complète survit aux redémarrages et conserve une chronologie déterministe et consultable.
@@ -44,4 +47,3 @@ Le workflow durable conserve ses identifiants, son état, ses budgets, ses réf�
 chronologie lors des retries et des changements de run. Les signaux restent liés à la tâche et à la tentative,
 et les effets rejouables utilisent une identité déterministe ou un `execution_id`. Le gate du lot 3 est donc
 franchi pour le périmètre local et CI du prototype.
-

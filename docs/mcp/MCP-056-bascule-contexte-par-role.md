@@ -1,5 +1,9 @@
 # MCP-056 — Bascule du contexte dépôt par rôle
 
+> Rapport historique de rollout. Depuis MCP-057, le collecteur direct a été supprimé : `DIRECT` et `MCP_SHADOW`
+> ne sont plus des options de rollback dans le binaire courant. Le retour arrière exige le redéploiement d'une
+> version antérieure compatible.
+
 ## Décision de rollout
 
 La bascule reste limitée au POC local. Elle s'appuie sur le gate du lot 0 déjà approuvé par le Product Owner AI Software Factory et le Représentant RSSI, ainsi que sur l'autorisation explicite de David Beaumont du 1er septembre 2026 de poursuivre les tâches MCP et leurs campagnes.
@@ -30,7 +34,7 @@ Le lanceur `make mcp-active-campaign CAMPAIGN_ARGS=--execute` refuse de démarre
 - aucune lecture directe pour le rôle actif ;
 - aucun fallback silencieux en cas d'échec MCP ;
 - revue des décisions, fichiers impactés et tests ;
-- rollback immédiat par retrait du rôle ou retour à `MCP_SHADOW`.
+- rollback alors prévu par retrait du rôle ou retour à `MCP_SHADOW`; mécanisme remplacé depuis par MCP-057.
 
 Les opérations sandbox, qualité, sécurité et SCM ne sont pas créditées à ce gate.
 
@@ -51,4 +55,5 @@ La campagne `20260901-212521` conserve 20/20 plans présents et zéro contrat in
 
 Quatre des cinq tâches ayant utilisé PatchRepair ont dépassé l'étape de validation du patch ; une reste bloquée après la limite de réparation. Cette qualité de génération relève des évaluations agentiques, pas du routage de contexte.
 
-Décision MCP-056 : **GO et tâche terminée**. Le rollback reste disponible par réduction de l'allow-list ou retour à `MCP_SHADOW`.
+Décision MCP-056 : **GO et tâche terminée** à la date de la campagne. La procédure de rollback décrite à cette date
+est remplacée par [MCP-057](MCP-057-retrait-collecteur-direct.md).

@@ -2,30 +2,35 @@
 
 ## Statut
 
-Le prototype implémente les briques de l'architecture multi-agent hiérarchique gouvernée : workflow durable,
-DAG de délégations, catalogue de rôles, contrats fermés, mémoire de tâche, preuves immuables, permissions,
-budgets, intégration déterministe et revue indépendante.
+Le prototype implémente dans le code les briques de l'architecture multi-agent hiérarchique gouvernée : classes
+de workflow durable, DAG de délégations, catalogue de rôles, contrats fermés, modèle de mémoire durable, preuves
+immuables, permissions, budgets, intégration déterministe et revue indépendante.
 
 Cette disponibilité technique ne vaut pas autorisation de généralisation. `PIPELINE` demeure la baseline et le
 chemin de rollback. L'activation de `HIERARCHICAL_CANARY` puis `HIERARCHICAL_ACTIVE` reste conditionnée à une
 campagne comparative complète, aux approbations Produit, Architecture, Sécurité et Exploitation, puis à un
 canary observé sur l'environnement cible.
 
+Avec la configuration Compose par défaut, `DeterministicWorkflowCoordinator` et `InMemoryTaskMemory` restent le
+chemin actif. Temporal est démarré mais `AI_FACTORY_TEMPORAL_ENABLED=false`; les rôles hiérarchiques sont vides et
+leur qualification vaut `INCOMPLETE`. Les migrations PostgreSQL ne sont pas reliées à un adaptateur runtime.
+
 ## Composants et responsabilités
 
 | Couche | Composants | Responsabilité |
 |---|---|---|
 | Expérience | Factory Web, API REST | Soumission, suivi du DAG, preuves, contradictions et décisions |
-| Control plane | Spring Boot, `WorkflowCoordinator`, Temporal | Cycle de vie, politiques, effets, retries, signaux et reprise |
+| Control plane | Spring Boot, `WorkflowCoordinator`; Temporal disponible | Cycle de vie et effets actifs ; retries/signaux/reprise dans le chemin durable préparé |
 | Coordination | Supervisor, `DelegationScheduler` | Décomposition et consolidation sous validation de l'hôte |
 | Spécialistes | Architecture, Code, Tests, Sécurité | Propositions bornées et résultats contractuels sans effet direct |
 | Revue | Independent Reviewer | Avis indépendant lancé par le workflow racine |
-| État | Temporal, Task Memory PostgreSQL, Evidence MCP | Historique durable, projection et artefacts vérifiables |
+| État actif | mémoire JVM et workspace | suivi volatile de la tâche et artefacts du pipeline de référence |
+| État durable disponible/cible | Temporal, migrations PostgreSQL, Evidence MCP | historique, projection et artefacts vérifiables à intégrer de bout en bout |
 | Capacités | Context, Sandbox, Assurance, Evidence et SCM MCP | Outils typés, politiques deny-by-default et idempotence |
 | Exécution | Docker local, cible GKE Jobs | Worktrees isolés, tests, qualité, SBOM et scans |
-| Observabilité | OpenTelemetry, Prometheus, Grafana | Traces parent/enfant, budgets, SLO, audit et alertes |
+| Observabilité | `ExecutionTracer`, Micrometer, Prometheus, Grafana ; OpenTelemetry cible | corrélation applicative, budgets, métriques, audit et alertes |
 
-## Workflow cible implémenté
+## Workflow cible implémenté dans le code, non actif par défaut
 
 ```mermaid
 flowchart TD
@@ -106,3 +111,5 @@ le [plan de bascule](./BASCULE-ARCHI-04-MULTI-AGENTS.md). Restent notamment des 
 Le détail des agents, sous-agents, MCP et outils figure dans
 [l'architecture cible](./cible-architecture-multi-agent-hierarchique.md). Les invariants de sécurité restent ceux
 de la baseline : gates déterministes, preuve liée au digest, approbation humaine et livraison par le workflow.
+La [rétrodocumentation courante](../RETRODOCUMENTATION.md) fait foi pour distinguer les capacités actives,
+disponibles et cibles.
