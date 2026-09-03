@@ -322,7 +322,11 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
                         state.id, state.ticketNumber, reason);
             });
         } else {
-            response = invocation.get();
+            response = withSingleRetryableCompletion(invocation, retryInvocation, reason -> {
+                operationalMetrics.retry("agent");
+                log.warn("Task {} ({}) {} retrying once with a larger output budget; reason={}",
+                        state.id, state.ticketNumber, promptName, reason);
+            });
         }
         log.info("Task {} ({}) {} agent completed; response_chars={}",
                 state.id, state.ticketNumber, promptName, response.length());
@@ -373,7 +377,7 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
         return switch (promptName) {
             case "planner" -> 2_400;
             case "patch-repair" -> 3_200;
-            default -> maxTokensFor(promptName);
+            default -> 2_400;
         };
     }
 

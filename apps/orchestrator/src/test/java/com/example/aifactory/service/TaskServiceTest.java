@@ -133,6 +133,13 @@ class TaskServiceTest {
     }
 
     @Test
+    void givesStandardAgentsTheLargerRetryBudget() {
+        assertEquals(2_400, DeterministicWorkflowCoordinator.retryMaxTokensFor("developer"));
+        assertEquals(2_400, DeterministicWorkflowCoordinator.retryMaxTokensFor("tester"));
+        assertEquals(2_400, DeterministicWorkflowCoordinator.retryMaxTokensFor("reviewer"));
+    }
+
+    @Test
     void doesNotRetryANonRetryablePatchRepairCompletion() {
         assertThrows(LlmCompletionException.class,
                 () -> DeterministicWorkflowCoordinator.withSingleRetryableCompletion(
