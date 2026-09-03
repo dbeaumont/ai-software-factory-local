@@ -98,6 +98,12 @@ class SandboxExecutionMcpIntegrationTest {
                 .jsonPath("$.result.tools[?(@.name == 'sandbox.get_execution')].inputSchema.properties.output_cursor")
                 .exists()
                 .jsonPath("$.result.tools[?(@.name == 'sandbox.get_execution')].inputSchema.properties.output_limit")
+                .exists()
+                .jsonPath("$.result.tools[?(@.name == 'sandbox.validate_patch')].inputSchema.properties.run_id")
+                .exists()
+                .jsonPath("$.result.tools[?(@.name == 'sandbox.validate_patch')].inputSchema.properties.delegation_id")
+                .exists()
+                .jsonPath("$.result.tools[?(@.name == 'sandbox.validate_patch')].inputSchema.properties.agent_run_id")
                 .exists();
 
         client.post().uri("/mcp")
@@ -108,17 +114,20 @@ class SandboxExecutionMcpIntegrationTest {
                         "jsonrpc", "2.0", "id", 3, "method", "tools/call",
                         "params", Map.of(
                                 "name", "sandbox.validate_patch",
-                                "arguments", Map.of(
-                                        "schema_version", "1",
-                                        "task_id", "integration-task",
-                                        "attempt_id", "attempt-1",
-                                        "source_commit", commit,
-                                        "actor", "workflow",
-                                        "trace_id", "0123456789abcdef0123456789abcdef",
-                                        "traceparent", "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
-                                        "deadline", java.time.Instant.now().plusSeconds(60).toString(),
-                                        "idempotency_key", "integration-idempotency-key",
-                                        "patch_digest", patchDigest))))
+                                "arguments", Map.ofEntries(
+                                        Map.entry("schema_version", "1"),
+                                        Map.entry("task_id", "integration-task"),
+                                        Map.entry("attempt_id", "attempt-1"),
+                                        Map.entry("source_commit", commit),
+                                        Map.entry("actor", "workflow"),
+                                        Map.entry("trace_id", "0123456789abcdef0123456789abcdef"),
+                                        Map.entry("traceparent", "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"),
+                                        Map.entry("run_id", "pipeline-1"),
+                                        Map.entry("delegation_id", "workflow"),
+                                        Map.entry("agent_run_id", "workflow-pipeline-1"),
+                                        Map.entry("deadline", java.time.Instant.now().plusSeconds(60).toString()),
+                                        Map.entry("idempotency_key", "integration-idempotency-key"),
+                                        Map.entry("patch_digest", patchDigest)))))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
