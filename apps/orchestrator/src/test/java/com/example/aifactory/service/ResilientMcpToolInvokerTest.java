@@ -152,6 +152,19 @@ class ResilientMcpToolInvokerTest {
         assertThat(usage.snapshot("task-1", TaskUsageLedger.Lane.FINALIZATION).mcpCalls()).isEqualTo(1);
     }
 
+    @Test
+    void doesNotChargeHostControlledSandboxStatusPollingToTaskMcpQuota() {
+        TaskUsageLedger usage = new TaskUsageLedger(new HierarchicalBudgetPolicy());
+        invoker = new ResilientMcpToolInvoker(delegate((server, tool, arguments) ->
+                new ObjectMapper().createObjectNode().put("status", "RUNNING")),
+                properties(1, Duration.ofSeconds(1)), new SimpleMeterRegistry(), new ObjectMapper(), usage);
+
+        invoker.call("sandbox-execution-mcp", "sandbox.get_execution", arguments("task-1", "workflow"));
+
+        assertThat(usage.snapshot("task-1", TaskUsageLedger.Lane.STANDARD).mcpCalls()).isZero();
+        assertThat(usage.snapshot("task-1", TaskUsageLedger.Lane.FINALIZATION).mcpCalls()).isZero();
+    }
+
     private void assertConcurrencyLimit(ConcurrencyCase limits) throws Exception {
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);

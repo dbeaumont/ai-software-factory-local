@@ -162,6 +162,11 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
     }
 
     private void accountMcp(String toolName, Map<String, Object> arguments) {
+        // Sandbox status polling is host-controlled and bounded by the sandbox polling timeout.
+        // It must not exhaust the task budget reserved for agent work.
+        if ("sandbox.get_execution".equals(toolName)) {
+            return;
+        }
         String actor = String.valueOf(arguments.getOrDefault("actor", "unknown"));
         TaskUsageLedger.Lane lane = "independent-reviewer".equals(actor) || FINAL_GATE_TOOLS.contains(toolName)
                 ? TaskUsageLedger.Lane.FINALIZATION : TaskUsageLedger.Lane.STANDARD;
