@@ -67,7 +67,7 @@ up: init build
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls
 
-all:
+all: init
 	$(log-target)
 	@echo -e "$(YELLOW)Resetting and bootstrapping complete factory...$(NC)"
 	$(MAKE) clean
