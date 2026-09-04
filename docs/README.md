@@ -9,7 +9,7 @@ Cette documentation est organisée par usage et par statut. Le code et la config
 | démarrer et utiliser le prototype | [`README.md`](../README.md) |
 | comprendre l’état réellement câblé | [`overview/current-state.md`](overview/current-state.md) |
 | obtenir une synthèse pour la décision | [`overview/executive-summary.md`](overview/executive-summary.md) |
-| suivre les écarts et prochaines actions | [`delivery/roadmap.md`](delivery/roadmap.md) |
+| suivre les écarts et prochaines actions | [`delivery/roadmap/README.md`](delivery/roadmap/README.md) |
 | intervenir sur un incident | [`operations/runbooks/README.md`](operations/runbooks/README.md) |
 
 ## Répertoires
