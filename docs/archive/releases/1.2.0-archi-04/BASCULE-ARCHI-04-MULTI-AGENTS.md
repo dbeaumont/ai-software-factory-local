@@ -1,0 +1,592 @@
+# Plan de bascule vers l'architecture multi-agent hiérarchique
+
+> Plan d'exécution pour faire évoluer le pipeline IA déterministe actuel vers l'architecture décrite dans
+> [`cible-architecture-multi-agent-hierarchique.md`](cible-architecture-multi-agent-hierarchique.md).
+>
+> Cible technologique recommandée : Spring Boot et Java pour le control plane, Temporal Java SDK pour le
+> workflow durable, Spring AI/LiteLLM pour l'exécution des agents, MCP pour les capacités techniques gouvernées,
+> PostgreSQL pour les projections métier et Evidence MCP pour les artefacts vérifiables.
+>
+> Règle de lecture : une tâche cochée atteste le livrable ou le test cité, pas son activation dans le parcours
+> public. Les lots 13/14, l'intégration E2E et la qualification restent ouverts ; `PIPELINE` est donc toujours le
+> mode actif. Voir l'[état du prototype](ETAT-PROTO-1.2.0.md).
+
+## 1. Résultat attendu
+
+À l'issue de la bascule :
+
+- un `WorkflowCoordinator` durable possède le cycle de vie global et reste le seul acteur autorisé à déclencher
+  des opérations à effet ;
+- un `SupervisorAgent` décompose les demandes éligibles en un DAG de délégations typées et bornées ;
+- les périmètres Architecture, Code, Tests et Sécurité disposent d'agents et sous-agents spécialisés ;
+- l'`IndependentReviewerAgent` est lancé directement par le workflow racine et reste indépendant du Supervisor ;
+- chaque délégation possède un scope, un budget, des dépendances, un contrat de sortie, des critères de succès et
+  des preuves attendues ;
+- les agents échangent par la mémoire de tâche et des artefacts versionnés, jamais par conversation libre faisant
+  autorité ;
+- les travaux Code parallèles utilisent des worktrees isolés et ne sont autorisés que sur des scopes disjoints ;
+- les tests, analyses qualité, scans sécurité, décisions de politique et livraison restent déterministes ;
+- le pipeline actuel demeure disponible comme baseline et chemin de rollback jusqu'à qualification complète.
+
+### Indicateurs de succès
+
+- [ ] `100 %` des délégations possèdent `task_id`, `run_id`, `delegation_id`, `parent_run_id`, `source_commit`, rôle, scope et budget.
+- [ ] `100 %` des sorties d'agents sont validées par un JSON Schema ou par un format d'artefact strict avant utilisation.
+- [ ] `0` action à effet n'est accessible à un agent LLM, y compris Supervisor et Independent Reviewer.
+- [ ] `0` agent Code parallèle ne partage un worktree mutable avec un autre agent.
+- [ ] `100 %` des décisions finales référencent les preuves et digests ayant servi à la décision.
+- [ ] `100 %` des approbations humaines portent sur le patch consolidé et son manifeste final.
+- [ ] Une reprise après redémarrage conserve le DAG, les délégations, les attentes humaines et les résultats terminaux.
+- [ ] Une annulation de tâche se propage à toutes les délégations et exécutions sandbox actives.
+- [ ] Le mode hiérarchique respecte les seuils A/B de qualité, sécurité, coût et latence définis avant son activation.
+- [ ] Le retour au pipeline déterministe ne contourne aucun gate et ne perd aucune preuve.
+
+## 2. Fondations déjà disponibles
+
+- [x] Pipeline ticket vers plan, patch, tests, qualité, sécurité, revue, approbation et draft PR.
+- [x] Rôles Planner, Developer, Patch Repair, Tester et Reviewer exécutés via LiteLLM.
+- [x] Boucle d'outils agentique bornée en tours, délai, tokens, coût, fan-out et appels répétés.
+- [x] Serveur `repository-context-mcp` et outils de lecture bornés.
+- [x] Serveur `sandbox-execution-mcp` et profils immuables de validation, tests, qualité et sécurité.
+- [x] Serveurs `assurance-mcp`, `scm-delivery-mcp` et `evidence-mcp`.
+- [x] Matrice de permissions deny-by-default et effets réservés au rôle `workflow`.
+- [x] Kill switch global, par serveur, outil et rôle.
+- [x] Approbation humaine obligatoire avant livraison SCM.
+- [x] Campagne A/B de référence et activation agentique fail-closed après verdict `REJECTED`.
+
+## 3. Principes non négociables
+
+- [ ] Conserver les gates déterministes hors du contrôle des modèles.
+- [ ] Interdire au Supervisor de s'attribuer des outils, rôles, budgets ou scopes supplémentaires.
+- [ ] Interdire les appels directs Agent vers Docker, GKE, Gitea, SonarQube, registres, stockage ou secrets.
+- [ ] Conserver `workflow` comme seule identité autorisée pour `sandbox.*`, `assurance.*`, stockage de preuve et `scm.*` à effet.
+- [ ] Traiter ticket, dépôt, résultats MCP, sorties d'agents et preuves brutes comme des données non fiables.
+- [ ] Échouer fermé sur contrat invalide, preuve absente, digest divergent, rôle inconnu ou gate indéterminé.
+- [ ] Séparer les faits vérifiés, les décisions déterministes et les opinions produites par les modèles.
+- [ ] Conserver l'Independent Reviewer en dehors de la chaîne d'autorité du Supervisor.
+- [ ] N'activer le multi-agent que lorsqu'il apporte de la valeur ; conserver un chemin court pour les tâches simples.
+- [ ] Ne supprimer le pipeline actuel qu'après qualification, canary, rollback testé et période d'observation réussie.
+
+## 4. Lot 0 — Cadrage, décisions et baseline
+
+### Décisions d'architecture
+
+- [x] **MAH-001** — Rédiger l'ADR actant Spring Boot comme control plane et Temporal comme moteur de workflow durable. _(ADR : `docs/architecture/adr/ADR-MAH-001-workflow-coordinator-temporal.md`.)_
+- [x] **MAH-002** — Décider du mode Temporal local : serveur de développement dans Compose ou environnement partagé dédié. _(Décision : Compose avec PostgreSQL dédié ; ADR `docs/architecture/adr/ADR-MAH-002-temporal-local-compose.md`.)_
+- [x] **MAH-003** — Décider de la topologie cible Temporal : Cloud, self-managed ou service interne opéré par la plateforme. _(Décision : Temporal Cloud par défaut, GKE pour le profil souverain ; ADR `docs/architecture/adr/ADR-MAH-003-temporal-target-topology.md`.)_
+- [x] **MAH-004** — Définir la frontière entre état Temporal, projection métier PostgreSQL et artefacts Evidence MCP. _(ADR : `docs/architecture/adr/ADR-MAH-004-state-and-evidence-ownership.md`.)_
+- [x] **MAH-005** — Définir les modes `PIPELINE`, `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY` et `HIERARCHICAL_ACTIVE`. _(ADR : `docs/architecture/adr/ADR-MAH-005-execution-modes.md`.)_
+- [x] **MAH-006** — Définir le catalogue officiel des agents, sous-agents, propriétaires et niveaux d'autonomie. _(Catalogue : `resources/agents/catalog-v1.yaml` ; documentation : `docs/architecture/agents/CATALOGUE-AGENTS-V1.md`.)_
+- [x] **MAH-007** — Décider si Planner devient `SupervisorAgent`, `ArchitectureAgent`, ou reste un rôle de compatibilité. _(Décision : Planner reste réservé au mode `PIPELINE` ; ADR `docs/architecture/adr/ADR-MAH-007-planner-role-transition.md`.)_
+- [x] **MAH-008** — Définir la règle de routage entre chemin court mono-agent et chemin hiérarchique multi-agent. _(ADR : `docs/architecture/adr/ADR-MAH-008-routing-short-or-hierarchical.md` ; politique : `resources/multiagents/policies/routing-policy-v1.yaml`.)_
+- [x] **MAH-009** — Définir les classes de risque autorisées par mode et les cas imposant une décision humaine préalable. _(ADR : `docs/architecture/adr/ADR-MAH-009-risk-and-human-gates.md` ; politique : `resources/multiagents/policies/risk-policy-v1.yaml`.)_
+- [ ] **MAH-010** — Faire valider architecture, permissions, données et modèle de menace par les responsables produit et sécurité.
+
+### Baseline et critères de passage
+
+- [x] **MAH-011** — Figer une version reproductible du pipeline actuel, des prompts, modèles, images et politiques. _(Manifeste : `resources/multiagents/baselines/pipeline-v1.yaml` ; vérification : `scripts/verify-pipeline-baseline.rb`.)_
+- [x] **MAH-012** — Rejouer la suite de référence et enregistrer qualité, tests, réparations, tokens, coût, durée et incidents. _(Campagne appariée du 2026-09-02 : `docs/qualification/mcp/reports/MCP-180-rapport-campagne-20260902.md` ; agrégat : `resources/multiagents/baselines/pipeline-v1-metrics.json`.)_
+- [x] **MAH-013** — Corriger ou documenter toute métrique de coût fournisseur absente avant une nouvelle comparaison. _(Écart et règle fail-closed : `docs/qualification/multi-agents/policies-and-operations/COST-TELEMETRY-V1.md` ; politique : `resources/multiagents/policies/evaluation-data-policy-v1.yaml`.)_
+- [x] **MAH-014** — Définir les seuils bloquants par métrique et le nombre minimal de cas appariés. _(Politique : `resources/multiagents/policies/qualification-thresholds-v1.yaml` ; synthèse : `docs/qualification/multi-agents/policies-and-operations/QUALIFICATION-THRESHOLDS-V1.md`.)_
+- [x] **MAH-015** — Ajouter des cas multi-domaines qui justifient réellement Architecture, Code, Tests et Sécurité. _(12 cas sur Maven, Gradle et npm : `resources/multiagents/evaluations/multi-domain-cases-v1.json`.)_
+- [x] **MAH-016** — Ajouter des cas simples devant obligatoirement emprunter le chemin court. _(8 cas R0/R1 mono-module : `resources/multiagents/evaluations/short-path-cases-v1.json`.)_
+- [x] **MAH-017** — Ajouter des cas adversariaux : injection, délégation excessive, conflit de scopes et preuve falsifiée. _(8 cas négatifs : `resources/multiagents/evaluations/adversarial-cases-v1.json`.)_
+- [x] **MAH-018** — Définir la procédure de rollback et les conditions imposant une désactivation immédiate. _(Runbook : `docs/operations/runbooks/ROLLBACK-MULTI-AGENTS.md` ; politique : `resources/multiagents/policies/rollback-policy-v1.yaml`.)_
+
+### Gate du lot 0
+
+- [ ] ADR approuvés, baseline reproductible, seuils A/B mesurables et responsabilités explicites.
+
+## 5. Lot 1 — Contrats de délégation et de résultat
+
+### Contrats communs
+
+- [x] **MAH-020** — Créer `delegation-plan-v1.schema.json` pour le DAG proposé par le Supervisor. _(`resources/multiagents/schemas/delegation-plan-v1.schema.json`.)_
+- [x] **MAH-021** — Créer `specialist-task-v1.schema.json` pour la mission remise à un agent ou sous-agent. _(`resources/multiagents/schemas/specialist-task-v1.schema.json`.)_
+- [x] **MAH-022** — Créer `specialist-result-v1.schema.json` pour le résultat commun et ses références de preuves. _(`resources/multiagents/schemas/specialist-result-v1.schema.json`.)_
+- [x] **MAH-023** — Créer `agent-run-event-v1.schema.json` pour les transitions, consommations et raisons d'arrêt. _(`resources/multiagents/schemas/agent-run-event-v1.schema.json`.)_
+- [x] **MAH-024** — Créer `contradiction-v1.schema.json` pour les conclusions incompatibles et leur arbitrage. _(`resources/multiagents/schemas/contradiction-v1.schema.json`.)_
+- [x] **MAH-025** — Créer `supervisor-decision-v1.schema.json` pour consolidation, replanification ou escalade. _(`resources/multiagents/schemas/supervisor-decision-v1.schema.json`.)_
+- [x] **MAH-026** — Créer `human-decision-request-v1.schema.json` pour une question matérialisant plusieurs choix à impact. _(`resources/multiagents/schemas/human-decision-request-v1.schema.json`.)_
+
+### Contrats par périmètre
+
+- [x] **MAH-027** — Créer `architecture-assessment-v1.schema.json`. _(`resources/multiagents/schemas/architecture-assessment-v1.schema.json`.)_
+- [x] **MAH-028** — Créer `code-task-v1.schema.json` et y borner les fichiers ou modules autorisés. _(`resources/multiagents/schemas/code-task-v1.schema.json`.)_
+- [x] **MAH-029** — Créer `patch-proposal-v1.schema.json` avec commit source, digest, fichiers touchés et artefact de diff. _(`resources/multiagents/schemas/patch-proposal-v1.schema.json`.)_
+- [x] **MAH-030** — Créer `integration-result-v1.schema.json` avec ordre d'application et conflits détectés. _(`resources/multiagents/schemas/integration-result-v1.schema.json`.)_
+- [x] **MAH-031** — Créer `test-strategy-v1.schema.json` et `test-assessment-v1.schema.json`. _(`resources/multiagents/schemas/test-strategy-v1.schema.json` et `test-assessment-v1.schema.json`.)_
+- [x] **MAH-032** — Créer `security-assessment-v1.schema.json` et réutiliser les findings normalisés existants. _(`resources/multiagents/schemas/security-assessment-v1.schema.json`, référence `vulnerability-result-v1`.)_
+- [x] **MAH-033** — Versionner le contrat de sortie de l'Independent Reviewer et y référencer le manifeste final. _(`resources/multiagents/schemas/independent-review-v1.schema.json`.)_
+
+### Validation et compatibilité
+
+- [x] **MAH-034** — Ajouter tous les contrats au catalogue MCP et au mécanisme de validation côté hôte. _(Catalogue `resources/multiagents/schemas/contract-catalog-v1.json` et `MultiAgentContractValidator`.)_
+- [x] **MAH-035** — Refuser les champs supplémentaires, identifiants absents, rôles inconnus et références hors tâche. _(`MultiAgentContractValidator` lie chaque document au contexte tâche/tentative et à ses références autorisées.)_
+- [x] **MAH-036** — Valider que les dépendances forment un DAG sans cycle, nœud orphelin ou référence inconnue. _(`DelegationPlanValidator` et tests de cycle, orphelin, auto-référence et doublon.)_
+- [x] **MAH-037** — Vérifier que chaque délégation dispose de critères de succès et d'une condition d'arrêt exécutable. _(`DelegationPlanValidator` impose critères non vides et conditions d'arrêt allow-listées.)_
+- [x] **MAH-038** — Définir la politique de compatibilité N/N-1 et les migrations additives des schémas. _(Politique : `resources/multiagents/policies/contract-compatibility-policy-v1.yaml`.)_
+- [x] **MAH-039** — Ajouter fixtures golden, tests négatifs, fuzzing et limites de taille pour chaque contrat. _(15 fixtures dans `resources/multiagents/fixtures/golden-contracts-v1.json` et couverture exhaustive dans `MultiAgentContractValidatorTest`.)_
+
+### Gate du lot 1
+
+- [x] Tous les échanges inter-agents sont représentables par des contrats fermés, versionnés et testés. _(Preuves : `docs/qualification/multi-agents/gates/GATE-LOT-1-CONTRATS.md`.)_
+
+## 6. Lot 2 — Découpage du monolithe d'orchestration
+
+### Ports et composants
+
+- [x] **MAH-040** — Introduire un port `WorkflowCoordinator` indépendant de Temporal. _(`apps/orchestrator/.../workflow/WorkflowCoordinator.java`, sans type Temporal.)_
+- [x] **MAH-041** — Extraire le pipeline actuel de `TaskService` dans `DeterministicWorkflowCoordinator`. _(Le coordinateur implémente le port et possède désormais l'exécution asynchrone complète.)_
+- [x] **MAH-042** — Réduire `TaskService` à la création, consultation et commande des tâches. _(Boundary test : aucune dépendance sandbox, assurance, SCM ou outils d'agents.)_
+- [x] **MAH-043** — Introduire `AgentRuntime` pour exécuter un rôle avec prompt, contrat, outils et budget explicites. _(Entrée immutable, outils filtrés par l'hôte et sortie validée par contrat.)_
+- [x] **MAH-044** — Introduire `AgentCatalog` pour charger les manifestes de rôles versionnés. _(Catalogue YAML embarqué, parsing sûr et références parent/enfant validées.)_
+- [x] **MAH-045** — Introduire `DelegationValidator` pour rôle, scope, budget, dépendances et profondeur. _(Validation hôte du catalogue, hiérarchie, scopes, DAG, profondeur, fan-out et budgets cumulés.)_
+- [x] **MAH-046** — Introduire `PatchIntegrator` comme service déterministe distinct des agents. _(Normalisation, validation et application contrôlée d'un artefact immuable vérifié par digest.)_
+- [x] **MAH-047** — Introduire `TaskMemory` comme port, sans coupler les agents au stockage choisi. _(Port de persistance neutre et adaptateur local concurrent remplaçable.)_
+- [x] **MAH-048** — Introduire un port `EvidenceRepository` devant le client Evidence MCP. _(API typée indépendante de MCP pour dépôt, manifeste, résumé et lecture auditée.)_
+- [x] **MAH-049** — Préserver les API REST existantes pendant le refactoring. _(Test de compatibilité des routes, statuts HTTP et champs JSON documentés en architecture 02.)_
+
+### Séparation des effets
+
+- [x] **MAH-050** — Inventorier tous les appels à effet encore présents dans l'orchestrateur. _(Inventaire des déclencheurs, ports, adaptateurs et frontières cibles documenté.)_
+- [x] **MAH-051** — Vérifier que seul le coordinateur appelle validation/application, tests, scans, assurance et SCM. _(Test d'architecture sur les propriétaires des appels à effet ; patch borné par `PatchIntegrator`.)_
+- [x] **MAH-052** — Interdire à `AgentRuntime` d'injecter un client sandbox, assurance ou SCM dans une boucle LLM. _(Refus explicite des outils à effet et test de frontière sur les dépendances injectées.)_
+- [x] **MAH-053** — Ajouter un test d'architecture interdisant une dépendance Agent vers un adaptateur à effet. _(Règle automatique couvrant toutes les classes Agent présentes et futures du package service.)_
+- [x] **MAH-054** — Maintenir la compatibilité du pipeline et comparer ses sorties avant/après extraction. _(Contrat de sortie figé sur v1.1.0-mcp et test du pipeline extrait avec dépendances simulées.)_
+
+### Gate du lot 2
+
+- [x] Le pipeline actuel fonctionne via le nouveau port sans changement de comportement ni régression de sécurité. _(Preuves : `docs/qualification/multi-agents/gates/GATE-LOT-2-DECOUPLAGE.md`.)_
+
+## 7. Lot 3 — Workflow durable avec Temporal
+
+### Infrastructure locale
+
+- [x] **MAH-060** — Ajouter Temporal Server et sa persistance à l'environnement Docker Compose local. _(Serveur 1.31.2 et PostgreSQL dédié persistant sur réseau interne.)_
+- [x] **MAH-061** — Ajouter Temporal UI sur un port de diagnostic non exposé comme point d'entrée métier. _(UI 2.53.0 liée à `127.0.0.1:8233`, absente du reverse proxy produit.)_
+- [x] **MAH-062** — Ajouter le Temporal Java SDK et épingler sa version dans le build de l'orchestrateur. _(Dépendance `temporal-sdk` épinglée à la version 1.38.0 compatible Spring Boot 4/Jackson 3.)_
+- [x] **MAH-063** — Configurer namespace, certificats ou authentification, task queues et règles de rétention. _(Configuration typée validée, files spécialisées, rétention 7 jours et options TLS/auth distantes.)_
+- [x] **MAH-064** — Ajouter readiness, métriques, dashboards et limites de ressources des services Temporal. _(Healthcheck, scrape Prometheus privé, dashboard Grafana et plafonds CPU/mémoire.)_
+
+### Modèle de workflow
+
+- [x] **MAH-065** — Créer `SoftwareFactoryWorkflow` comme workflow racine d'une tâche. _(Interface Temporal typée, implémentation déterministe et exécution vérifiée sur serveur de test.)_
+- [x] **MAH-066** — Créer un Child Workflow générique de délégation ou des workflows typés par périmètre. _(Child Workflow générique par nœud/rôle, identifiant déterministe et invocation depuis la racine.)_
+- [x] **MAH-067** — Mapper les appels LLM, MCP et stockage vers des Activities idempotentes. _(Activities typées pour AgentRuntime, MCP et EvidenceRepository avec liaison et clé d'idempotence obligatoires.)_
+- [x] **MAH-068** — Définir timeouts et Retry Policies distincts pour lecture, LLM, sandbox, assurance et SCM. _(Six profils bornés, erreurs non rejouables explicites et heartbeat sandbox.)_
+- [x] **MAH-069** — Utiliser des identifiants déterministes pour les workflows, délégations et Activities à effet. _(Fabrique canonique bornée pour workflow, Child Workflow, Activity et clé d'idempotence.)_
+- [x] **MAH-070** — Implémenter le Signal d'approbation humaine lié au manifeste soumis. _(Attente durable et liaison stricte tâche, tentative, identifiant et digest du manifeste.)_
+- [x] **MAH-071** — Implémenter les Signals d'annulation et de décision humaine complémentaire. _(Décisions bornées et annulation liées à la tâche/tentative, persistées dans la chronologie.)_
+- [x] **MAH-072** — Implémenter les Queries de statut, DAG, budgets, preuves et effets en attente. _(Cinq Queries Temporal typées et consultables pendant les attentes durables.)_
+- [x] **MAH-073** — Garantir que le code Workflow ne réalise aucun I/O, appel réseau, horloge système ou aléa direct. _(Test d'architecture bloquant les accès directs aux effets et sources usuelles de non-déterminisme.)_
+- [x] **MAH-074** — Définir la politique de versionnement des workflows lors des déploiements applicatifs. _(Worker Versioning rainbow, workflows épinglés, patching de repli, replay, rollout, rollback et drainage formalisés.)_
+- [x] **MAH-075** — Borner l'historique et prévoir `Continue-As-New` pour les tâches ou boucles longues. _(Seuils événements/octets/batch, checkpoint d'état et mise à niveau optionnelle à la frontière de continuation.)_
+
+### Reprise et résilience
+
+- [x] **MAH-076** — Tester redémarrage d'un worker pendant une délégation LLM. _(Arrêt/reprise du polling entre deux tentatives et achèvement durable de la délégation.)_
+- [x] **MAH-077** — Tester redémarrage pendant un job sandbox et reprise par `execution_id`. _(Heartbeat de l'identifiant, récupération au retry et preuve d'une unique soumission externe.)_
+- [x] **MAH-078** — Tester une attente d'approbation sur plusieurs jours puis reprise. _(Sept jours d'horloge Temporal, Query toujours disponible, puis reprise et achèvement par Signal.)_
+- [x] **MAH-079** — Tester timeout, retry, doublon, réponse tardive et indisponibilité d'une task queue. _(Trois scénarios couvrent retry sur timeout, réponse obsolète, idempotence et Schedule-To-Start expiré.)_
+- [x] **MAH-080** — Tester l'annulation en cascade des Child Workflows et jobs sandbox. _(Propagation confirmée du parent au Child Workflow puis à l'Activity sandbox avec heartbeat.)_
+
+### Gate du lot 3
+
+- [x] Une tâche complète survit aux redémarrages et conserve une chronologie déterministe et consultable. _(Preuves : `docs/qualification/multi-agents/gates/GATE-LOT-3-TEMPORAL.md`.)_
+
+## 8. Lot 4 — Mémoire de tâche et preuves partagées
+
+### Modèle de données
+
+- [x] **MAH-090** — Modéliser `tasks`, `workflow_runs`, `delegations`, `agent_runs`, `decisions` et `approvals`. _(Migration PostgreSQL relationnelle avec identités, filiation, états, budgets et index de lecture.)_
+- [x] **MAH-091** — Modéliser `artifacts`, `evidence_refs`, `contradictions`, `budget_usage` et `tool_invocations`. _(Migration dédiée aux métadonnées de preuve, conflits, budgets et appels MCP, sans contenu brut.)_
+- [x] **MAH-092** — Lier chaque enregistrement au commit source et à la tentative de workflow. _(Lineage obligatoire et clés étrangères composites empêchant toute référence croisée entre tentatives ou commits.)_
+- [x] **MAH-093** — Séparer données vérifiées, données non fiables, conclusions d'agents et décisions de politique. _(Type PostgreSQL fermé et contraintes cohérentes sur artefacts, références et décisions.)_
+- [x] **MAH-094** — Ajouter verrouillage optimiste et transitions atomiques pour les mises à jour concurrentes. _(Fonction transactionnelle commune, graphe de transitions fermé et conflit de version signalé en `40001`.)_
+- [x] **MAH-095** — Définir rétention, purge, chiffrement et classification par type d'artefact. _(Politique v1 typée : AES-256-GCM, rétentions 90–365 jours, legal hold et purge fail-closed.)_
+
+### Intégration Evidence MCP
+
+- [x] **MAH-096** — Brancher `evidence-mcp` dans la configuration et le registre client de l'orchestrateur. _(Connexion Spring AI, contrat client épinglé, variables Compose et dépendance de readiness.)_
+- [x] **MAH-097** — Stocker plans, évaluations, patches, résultats d'intégration et reviews par `evidence.store`. _(Adaptateur EvidenceRepository MCP avec contenu Base64, liaison stricte et cinq familles d'artefacts testées.)_
+- [x] **MAH-098** — Créer le manifeste final avec `evidence.create_manifest` avant l'approbation humaine. _(Gate applicatif ne construisant l'ApprovalRequest qu'après validation du manifeste MCP `COMPLETE`.)_
+- [x] **MAH-099** — Réserver `evidence.read` au Reviewer, au workflow et aux usages humains audités. _(Autorisation doublée client/serveur, motif obligatoire, audit ALLOWED/DENIED et revérification locale du contenu.)_
+- [x] **MAH-100** — Fournir aux autres agents des résumés ou extraits bornés, jamais les preuves brutes par défaut. _(Résumé MCP limité aux métadonnées, rôles allowlistés et rejet de tout champ de contenu brut.)_
+- [x] **MAH-101** — Vérifier URI, digest, tâche, tentative, classification et statut à chaque lecture. _(Attempt obligatoire de bout en bout, digest recalculé et métadonnées revérifiées côté serveur et adaptateur.)_
+- [x] **MAH-102** — Bloquer consolidation et livraison si une preuve requise est absente, partielle ou altérée. _(Gate fail-closed sur ensemble exact, statut, portée et revérification MCP avant création du manifeste.)_
+
+### Projection et API
+
+- [x] **MAH-103** — Construire une projection PostgreSQL pour les lectures UI sans dupliquer les contenus sensibles. _(Trois vues de lecture restreintes aux statuts, DAG, budgets, compteurs et métadonnées de preuve.)_
+- [x] **MAH-104** — Reconstituer la projection depuis l'historique Temporal et Evidence MCP après perte contrôlée. _(Rebuilder fail-closed alimenté par l'historique d'événements Temporal, résumés Evidence MCP revérifiés et test de perte/restauration à l'identique.)_
+- [x] **MAH-105** — Migrer les tâches en mémoire vers le nouveau modèle sans casser les tâches déjà terminées. _(Import idempotent des seuls états terminaux, vue legacy complète archivée dans Evidence MCP, métadonnées PostgreSQL et lecteur de compatibilité vérifié.)_
+
+### Gate du lot 4
+
+- [x] Toutes les décisions peuvent être reproduites depuis l'état durable, les contrats et les preuves vérifiées. _(Qualification documentée dans `docs/qualification/multi-agents/gates/GATE-LOT-4-MEMOIRE-PREUVES.md`, suites orchestrateur et Evidence MCP au vert.)_
+
+## 9. Lot 5 — Catalogue hiérarchique d'agents
+
+### Supervisor
+
+- [x] **MAH-110** — Créer le manifeste et le prompt `supervisor`. _(`resources/agents/supervisor.yaml` et `resources/prompts/supervisor.md`, versionnés et testés contre le catalogue hôte.)_
+- [x] **MAH-111** — Limiter Supervisor à décomposition, sélection de rôles, consolidation et proposition de replan. _(`SupervisorAgent` n'expose que `DECOMPOSE`, `CONSOLIDATE` et `REPLAN`, avec contrat de sortie imposé par l'hôte.)_
+- [x] **MAH-112** — Lui interdire tout outil à effet et toute création de rôle non catalogué. _(Catalogue Supervisor validé en lecture seule, écritures Evidence incluses dans les effets interdits et rôles hors schéma rejetés avant planification.)_
+- [x] **MAH-113** — Valider son DAG avant d'exécuter la première délégation. _(`SupervisorAgent` applique contrat, acyclicité, hiérarchie, scopes, profondeur, fan-out et budgets hôte avant de rendre tout résultat `DECOMPOSE`.)_
+- [x] **MAH-114** — Exiger citations, hypothèses, risques, budget proposé et critères de succès. _(Contrat Supervisor renforcé : citations digestées et liées au contexte, hypothèses/risques explicites, budget et critères obligatoires par nœud.)_
+
+### Architecture
+
+- [x] **MAH-115** — Créer `architecture-agent`, `impact-analysis` et `dependencies-contracts`. _(Trois manifestes et prompts versionnés, propriétaires et contrats vérifiés contre le catalogue.)_
+- [x] **MAH-116** — Limiter leurs outils aux lectures `context.*` nécessaires. _(`ArchitectureAgents` injecte l'allowlist exacte par rôle ; `context.get_symbols` est désormais exposé et autorisé de bout en bout.)_
+- [x] **MAH-117** — Produire scopes de code, contraintes, impacts API/données et décisions humaines. _(`architecture-assessment-v1` impose désormais ces cinq dimensions, avec scopes bornés et structures typées testées.)_
+- [x] **MAH-118** — Interdire à ce périmètre de générer ou d'appliquer un patch. _(Aucun outil d'écriture n'est injectable et les contrats fermés rejettent explicitement `patch`, `diff` et `files_touched`.)_
+
+### Code
+
+- [x] **MAH-119** — Créer `code-agent` comme coordinateur logique des délégations Developer. _(Façade hôte, manifeste/prompt et contrat `integration-proposal-v1`, distinct du résultat d'intégration déterministe.)_
+- [x] **MAH-120** — Faire évoluer Developer pour accepter un scope et un contrat de patch explicites. _(`DeveloperAgent` valide `code-task-v1`, impose `patch-proposal-v1` et revérifie tâche, nœud, commit et digest du scope ; prompt pipeline conservé.)_
+- [x] **MAH-121** — Faire évoluer Patch Repair pour une délégation, un worktree et une tentative précis. _(Contrats dédiés d'entrée/sortie et `PatchRepairAgent` revérifiant neuf liens immuables ; prompt pipeline conservé.)_
+- [x] **MAH-122** — Empêcher Developer et Patch Repair d'appeler directement `sandbox.*`. _(Verrou transversal testé : catalogues sans sandbox, matrice deny-by-default, rejet runtime et absence de dépendance aux adaptateurs d'effet.)_
+- [x] **MAH-123** — Refuser tout fichier touché hors scope avant validation sandbox. _(`PatchScopeValidator` contrôle chemins actuels/renommés, interdictions, nombre de fichiers et taille avant retour des agents Code.)_
+
+### Tests
+
+- [x] **MAH-124** — Séparer `test-design` de `test-evidence`. _(Façade hôte et trois manifestes/prompts : stratégie en `test-strategy-v1`, analyse des résultats en `test-assessment-v1`.)_
+- [x] **MAH-125** — Faire produire à Test Design une stratégie liée aux critères d'acceptation. _(Critères identifiés dans le schéma, couverture obligatoire par cas et validateur hôte rejetant références inconnues ou critères non couverts.)_
+- [x] **MAH-126** — Faire analyser à Test Evidence uniquement des résultats fournis ou référencés par le workflow. _(`TestEvidenceValidator` lie chaque exécution et preuve à l'allowlist exacte URI/digest, au commit et au patch fournis par le workflow.)_
+- [x] **MAH-127** — Interdire toute déclaration `PASSED` sans preuve déterministe complète. _(Verdict conditionné à toutes les exécutions, statuts réels, preuves `COMPLETE` non tronquées, citations, absence de manque et totaux cohérents.)_
+
+### Sécurité
+
+- [x] **MAH-128** — Créer `security-agent`, `threat-model` et `security-findings`. _(Trois manifestes/prompts et façade hôte distincte, tous liés à `security-assessment-v1` et au catalogue.)_
+- [x] **MAH-129** — Limiter Threat Model aux lectures de contexte et dépendances. _(Allowlist exacte testée : recherche/lecture, dépendances et symboles ; aucun accès Evidence, sandbox, SCM ou assurance.)_
+- [x] **MAH-130** — Fournir à Security Findings les findings normalisés et références de preuves nécessaires. _(Entrée construite par l'hôte, validée contre `vulnerability-result-v1` et liée à une preuve `COMPLETE` URI/digest fournie par le workflow.)_
+- [x] **MAH-131** — Interdire à Security Agent d'accepter un risque ou de déclasser un finding sans politique explicite. _(Le contrat expose des `risk_decisions` structurées et l'hôte exige une correspondance exacte avec la décision URI/digest fournie par le workflow, sans altération des findings normalisés.)_
+
+### Revue indépendante
+
+- [x] **MAH-132** — Renommer et formaliser le rôle existant en `independent-reviewer`. _(Manifeste, prompt et point d'entrée hôte dédiés ; identité parente `workflow`, contrat `independent-review-v1`, rôle historique `reviewer` conservé uniquement comme compatibilité `PIPELINE`.)_
+- [x] **MAH-133** — Le lancer depuis le workflow racine, jamais comme sous-agent du Supervisor. _(`SoftwareFactoryWorkflow` lance un `IndependentReviewWorkflow` dédié après les délégations ; le chemin générique refuse le rôle `independent-reviewer` et lie la revue à la tâche, tentative et source du workflow racine.)_
+- [x] **MAH-134** — Lui fournir le patch consolidé, le manifeste final et les contradictions résolues ou ouvertes. _(`IndependentReviewBundle` transporte des références immuables URI/digest pour patch, manifeste, résultats et contradictions `OPEN`/`RESOLVED` ; l'hôte construit l'entrée JSON, contrôle la lignée et borne les références autorisées dans la sortie.)_
+- [x] **MAH-135** — Vérifier qu'il ne peut ni replanifier, ni modifier, ni livrer le changement. _(Invariant de catalogue et tests dédiés : aucun enfant, opération de replan, adaptateur à effet ou outil sandbox/assurance/stockage/SCM ; le contrat fermé refuse également ces instructions.)_
+
+### Gate du lot 5
+
+- [x] Chaque rôle possède un propriétaire, un prompt, un contrat, des outils, des budgets et des tests dédiés. _(Preuves : `docs/qualification/multi-agents/gates/GATE-LOT-5-HIERARCHIE-AGENTS.md` ; 217 tests orchestrateur réussis.)_
+
+## 10. Lot 6 — Permissions, budgets et limites hiérarchiques
+
+- [x] **MAH-140** — Étendre la matrice deny-by-default aux nouveaux rôles et sous-agents. _(Les 14 identités hiérarchiques sont déclarées explicitement dans la matrice hôte, la politique MCP et l'enveloppe commune ; toute identité absente reste refusée.)_
+- [x] **MAH-141** — Définir les outils `context.*` minimaux par rôle plutôt qu'un accès global en lecture. _(Six allowlists distinctes sont appliquées dans Repository Context MCP pour arbre, recherche, fichier, règles, dépendances et symboles ; tests positifs et négatifs par périmètre.)_
+- [x] **MAH-142** — Définir quels rôles peuvent obtenir `evidence.get_summary` et `evidence.read`. _(Résumé réservé à Supervisor, Test, Sécurité et Reviewer ; lecture brute réservée au workflow et au Reviewer indépendant, auditée avec le motif hôte `human-review`, lignée tâche/tentative conservée.)_
+- [x] **MAH-143** — Conserver tous les outils à effet exclusivement au rôle `workflow`. _(Inventaire unifié sandbox/assurance/stockage Evidence/livraison SCM ; la matrice hôte et les quatre serveurs MCP à effet exigent l'identité `workflow`, tandis que Repository Context MCP reste en lecture seule.)_
+- [x] **MAH-144** — Ajouter limites maximales de profondeur et de fan-out du DAG. _(Plafonds hôte profondeur 2 et fan-out 4, configurables uniquement à la baisse ; chaque plan applique le minimum entre politique et requête, avec tests de non-contournement.)_
+- [x] **MAH-145** — Ajouter budgets par agent, délégation, périmètre et tâche complète. _(Politique hôte versionnée pour les 14 rôles, plafond unitaire de délégation, agrégats Architecture/Code/Tests/Sécurité et plafond global ; validation branchée sur AgentRuntime et DelegationValidator.)_
+- [x] **MAH-146** — Ajouter quotas cumulés de tokens d'entrée, sortie, coût, tours et appels MCP. _(Ledger atomique par tâche, cumulant toutes les tentatives ; chaque tour LLM et appel MCP réserve sa consommation réelle, avec refus sans écriture partielle pour chacun des cinq quotas.)_
+- [x] **MAH-147** — Ajouter concurrence globale, par tâche, par rôle et par serveur MCP. _(Quatre sémaphores équitables acquis dans un ordre fixe sous une même deadline ; plafonds configurables 32/4/8/16, conservation des permis jusqu'à l'arrêt réel et tests isolant chaque dimension.)_
+- [x] **MAH-148** — Interdire à une délégation enfant d'augmenter le budget reçu de son parent. _(Comparaison hôte composante par composante des tours, tokens, coût, délai et appels d'outils avant acceptation du DAG ; tests de refus indépendants sur les cinq dimensions.)_
+- [x] **MAH-149** — Réserver une part du budget au Reviewer et aux gates finaux. _(Deux enveloppes atomiques distinctes : le travail standard ne peut consommer la réserve de 10k/5k tokens, 10M coût, 6 tours et 32 appels ; Reviewer et gates policy/manifest/SCM utilisent exclusivement la voie de finalisation.)_
+- [x] **MAH-150** — Définir une condition d'arrêt stable pour budget épuisé, deadline ou absence de progression. _(Conditions typées communes `BUDGET_EXHAUSTED`, `DEADLINE_REACHED`, `NO_PROGRESS` et `SUCCESS_CRITERIA_MET`, distinctes des codes diagnostics ; quotas cumulés et contrat d'événement alignés.)_
+- [x] **MAH-151** — Étendre le kill switch aux rôles hiérarchiques et aux modes shadow/canary/active. _(Contrôles relus à chaud pour rôle, mode et couple rôle@mode ; propagation du mode à l'invocation agent et aux outils, validation du DAG avant exécution, valeurs inconnues refusées.)_
+- [x] **MAH-152** — Tester exhaustivement que chaque rôle refuse les outils des autres périmètres. _(Matrice exhaustive des 14 agents contre l'union de tous les outils catalogués, égalité stricte à leur surface déclarée, plus refus des rôles/outils inconnus dans les trois modes hiérarchiques.)_
+
+### Gate du lot 6
+
+- [x] Aucun agent ne peut élargir son autorité, son scope, son budget ou la profondeur de délégation. _(Preuves : `docs/qualification/multi-agents/gates/GATE-LOT-6-PERMISSIONS-BUDGETS.md` ; 241 tests orchestrateur réussis.)_
+
+## 11. Lot 7 — Scheduler de DAG et routage
+
+- [x] **MAH-160** — Implémenter `DelegationScheduler` au-dessus des Child Workflows Temporal. _(Frontière déterministe dédiée propriétaire de l'identité et du lancement des Child Workflows ; le workflow racine ne crée plus directement les délégations génériques.)_
+- [x] **MAH-161** — Vérifier acyclicité, dépendances satisfaites et unicité des identifiants avant exécution. _(Le scheduler valide en bloc lignée, unicité, références et cycles, calcule un ordre topologique stable puis revérifie les prérequis terminés avant chaque Child Workflow.)_
+- [x] **MAH-162** — Refuser les DAG dépassant profondeur, fan-out, coût prévisionnel ou durée maximale. _(Plafonds déterministes appliqués par le scheduler avant lancement : profondeur 2, fan-out 4, coût 70M et chemin critique 2700 s ; timeout explicite dans chaque budget Temporal.)_
+- [x] **MAH-163** — Exécuter en parallèle uniquement les nœuds indépendants et autorisés par les quotas. _(Le scheduler sélectionne des vagues de quatre nœuds au plus à partir d'un instantané des dépendances terminées, démarre tous leurs Child Workflows avant d'attendre les résultats et respecte également la capacité restante avant Continue-As-New.)_
+- [x] **MAH-164** — Garantir un ordre déterministe pour les nœuds de même priorité lors de la consolidation. _(Chaque délégation porte une priorité numérique compatible avec les anciens constructeurs ; les vagues éligibles sont ordonnées par priorité croissante puis par `nodeId`, et les résultats sont consolidés dans cet ordre indépendamment de leur instant de fin.)_
+- [x] **MAH-165** — Propager échec, timeout, annulation et résultat indéterminé aux dépendants. _(Le scheduler normalise les erreurs des Child Workflows en `FAILED`, `TIMED_OUT`, `CANCELLED` ou `INDETERMINATE`, refuse de lancer leurs dépendants et propage transitivement un statut `BLOCKED_BY_*` ; le workflow expose alors `DELEGATIONS_BLOCKED` et une chronologie explicite.)_
+- [x] **MAH-166** — Permettre au Supervisor un nombre borné de replans avec justification et nouveau digest du DAG. _(`DelegationReplanPolicy` réserve la proposition au rôle Supervisor, recalcule et lie les digests courant/remplaçant, refuse un plan inchangé et plafonne à deux replans acceptés ; contrat et prompt exigent les digests ainsi qu'une justification bornée.)_
+- [x] **MAH-167** — Détecter absence de progression, cycles de replan et délégations répétées. _(`DelegationReplanPolicy` refuse les digests déjà rencontrés, les remplacements sémantiquement identiques malgré un renommage et la réintroduction par identifiant ou signature d'un travail déclaré terminé ; l'intégrité de l'historique de replans est également vérifiée.)_
+- [x] **MAH-168** — Implémenter le chemin court pour changement simple, mono-module et faible risque. _(`ShortCodePathPlanner` applique la politique versionnée et ne produit que le blueprint borné Supervisor minimal, un Developer et Reviewer indépendant pour les cas R0/R1 mono-module/mono-domaine ; patch, tests, qualité, sécurité et manifeste restent des contrôles déterministes obligatoires.)_
+- [x] **MAH-169** — Implémenter le chemin complet pour changement multi-domaines ou à forte incertitude. _(`HierarchicalPathPlanner` applique les déclencheurs versionnés modules/domaines/scopes/impacts/décision ouverte et produit le DAG Supervisor → Architecture → Code → Tests/Sécurité → Reviewer indépendant, avec ce dernier conservé sous l'autorité du workflow et une gate `BEFORE_EXTERNAL_EFFECT` en R2.)_
+- [x] **MAH-170** — Enregistrer la raison de routage et permettre son évaluation a posteriori. _(`WorkflowRoutingService` applique la précédence hôte et produit une décision à identifiant déterministe contenant politique/version, modes, faits normalisés, règle, raisons, chemin, agents et gate ; `RoutingDecisionJournal` l'enregistre en append-only, par tâche et avec agrégation par chemin.)_
+
+### Gate du lot 7
+
+- [x] Le même DAG validé produit une séquence de coordination reproductible sous les mêmes événements externes. _(Preuves et verdict : `docs/qualification/multi-agents/gates/GATE-LOT-7-SCHEDULER-ROUTAGE.md`.)_
+
+## 12. Lot 8 — Worktrees, patches parallèles et intégration
+
+- [x] **MAH-180** — Créer un worktree ou snapshot isolé par délégation Code. _(`CodeWorkspaceManager` alloue hors du workspace source un worktree Git détaché à identifiant déterministe par tâche/tentative/nœud ; les contrats Code et Patch portent ce `worktree_id`, et `DeveloperAgent` refuse toute proposition issue d'une autre allocation.)_
+- [x] **MAH-181** — Épingler chaque worktree au même commit source vérifié. _(`CodeWorkspaceManager` crée chaque worktree détaché depuis le SHA-1 source validé, vérifie immédiatement son top-level et son `HEAD`, puis expose la même vérification avant usage ; toute identité falsifiée ou dérive vers un autre commit est bloquée.)_
+- [x] **MAH-182** — Définir les scopes par fichiers, répertoires ou modules avec règles de chevauchement. _(`code-task-v1` porte des règles typées `FILE`/`DIRECTORY`/`MODULE` et `READ`/`WRITE` ; `CodeScopePolicy` impose des chemins canoniques puis classe deux scopes en `DISJOINT`, `IDENTICAL`, `CONTAINS`, `CONTAINED_BY` ou `OVERLAPPING`.)_
+- [x] **MAH-183** — Refuser le parallélisme si les scopes ne peuvent pas être prouvés disjoints. _(`CodeScopePolicy.requireParallelizable` exige une disjonction d'écriture pair-à-pair pour deux à quatre délégations ; `CodeWorkspaceManager.createParallel` appelle cette preuve avant toute allocation et bloque identités, inclusions ou chevauchements.)_
+- [x] **MAH-184** — Faire retourner un artefact de patch et son digest, jamais une mutation du workspace d'intégration. _(`CodePatchArtifactPublisher` vérifie l'allocation, normalise et digeste le diff, le stocke via Evidence sous identité `workflow`, puis ne retourne que URI/digest/métadonnées liées au worktree ; aucun contenu ni chemin d'intégration n'est exposé.)_
+- [x] **MAH-185** — Valider le format, les chemins, la taille et le scope de chaque patch proposé. _(`PatchProposalValidator` normalise le diff, recalcule digest et taille UTF-8, extrait fichiers et opérations, exige leur égalité avec `files_touched` et réapplique limites et scope hôte ; seul son `ValidatedPatch` peut être publié.)_
+- [x] **MAH-186** — Détecter fichiers communs, hunks incompatibles, renommages et suppressions contradictoires. _(`PatchConflictDetector` compare chaque paire d'artefacts validés et produit un rapport stable distinguant `COMMON_FILE`, `INCOMPATIBLE_HUNK`, `RENAME_COLLISION` et `DELETE_COLLISION` avant intégration.)_
+- [x] **MAH-187** — Définir un ordre d'intégration déterministe dérivé du DAG. _(`PatchIntegrationPlanner` ignore l'ordre d'arrivée, rattache chaque artefact à un nœud Code, reprend l'ordre topologique priorité/`nodeId` du DAG validé, refuse les conflits puis produit un digest stable du plan d'application.)_
+- [x] **MAH-188** — Appliquer les patches uniquement via le workflow et le profil sandbox prévu. _(`PatchIntegrationWorkflow` reçoit uniquement l'ordre et les références Evidence, impose lui-même `patch-check-v1` puis `patch-apply-v1` et délègue l'effet à une activité sandbox idempotente ; celle-ci revérifie ordre, URI, type, digest et UTF-8 avant l'unique application consolidée via `PatchIntegrator`.)_
+- [x] **MAH-189** — Relancer `git diff --check`, tests et scans sur le patch consolidé, pas uniquement sur les patches unitaires. _(Le profil atomique `patch-apply-v1` termine l'application consolidée par `git diff --check` ; le workflow enchaîne ensuite trois activités sandbox séparées `TESTS`, `QUALITY` et `SECURITY`, chacune revérifiant le digest de `changes.patch` et ne retournant qu'un statut et un digest de preuve.)_
+- [x] **MAH-190** — Autoriser Patch Repair uniquement sur le conflit ou patch invalide ciblé. _(Les contrats imposent `PATCH_INVALID` ou `PATCH_CONFLICT`, un `failure_digest`, des `target_paths` et zéro ou exactement deux propositions en conflit ; `PatchRepairAgent` revérifie ces liens et la connaissance des deux propositions, tandis que `PatchScopeValidator` limite le diff réparé à la cible, pas au scope initial plus large.)_
+- [x] **MAH-191** — Borner réparations et intégrations ; escalader au-delà du seuil. _(`PatchAttemptPolicy` conserve un état immuable, autorise au plus deux réparations par proposition et trois intégrations par plan puis retourne `ESCALATE` ; Patch Repair et le workflow d'intégration exigent une autorisation liée à leur cible et essai, lequel entre aussi dans les identifiants d'activité idempotents.)_
+- [x] **MAH-192** — Nettoyer worktrees et données temporaires après succès, échec, timeout et annulation. _(`PatchIntegrationWorkflow` exécute une activité de nettoyage dans un scope d'annulation détaché en `finally` et classe les quatre issues ; `CodeWorkspaceManager` supprime/prune de façon idempotente uniquement les allocations dont chemin et identité concordent, tandis que les patches invalides et les données consolidées non livrables sont retirés.)_
+- [x] **MAH-193** — Tester deux patches disjoints, deux patches en conflit et une collision détectée avant exécution. _(`PatchIntegrationScenariosTest` traverse planification, lecture Evidence et application : deux fichiers disjoints donnent une application consolidée ; des hunks superposés ou des renommages divergents sont rejetés avec zéro validation et zéro application sandbox.)_
+
+### Gate du lot 8
+
+- [x] Aucun agent parallèle ne modifie l'espace d'intégration et aucun conflit n'est résolu silencieusement. _(Preuves et verdict : `docs/qualification/multi-agents/gates/GATE-LOT-8-WORKTREES-INTEGRATION.md`.)_
+
+## 13. Lot 9 — Consolidation, contradictions et décisions
+
+- [x] **MAH-200** — Formaliser l'ordre d'autorité : gate déterministe, politique, preuve, consensus spécialisé, Supervisor. _(Politique hôte versionnée `decision-authority-v1` : priorité stricte, résultats stables et escalade des conflits au niveau dominant.)_
+- [x] **MAH-201** — Détecter les contradictions entre Architecture, Code, Tests et Sécurité. _(`CrossPerimeterContradictionDetector` compare les assertions normalisées, liées aux preuves et à la tentative, et produit des candidats stables entre périmètres distincts.)_
+- [x] **MAH-202** — Classifier contradiction factuelle, scope incompatible, risque, test manquant ou recommandation divergente. _(`ContradictionClassifier` mappe une taxonomie fermée portée par les assertions vers les cinq types contractuels, sans heuristique textuelle.)_
+- [x] **MAH-203** — Résoudre automatiquement uniquement les contradictions couvertes par une règle déterministe. _(`DeterministicContradictionResolver` applique une matrice versionnée classification/autorité, reste ouvert par défaut et escalade les conflits de même autorité.)_
+- [x] **MAH-204** — Déclencher une délégation ciblée lorsque de nouvelles preuves peuvent résoudre la contradiction. _(`ContradictionEvidenceDelegator` planifie et lance un Child Workflow borné selon une matrice catégorie/preuve/rôle et refuse toute contradiction non ouverte ou hors tentative.)_
+- [x] **MAH-205** — Escalader à l'humain lorsqu'un choix produit, architecture, sécurité ou données reste ouvert. _(`HumanDecisionEscalator` matérialise les options et le rôle propriétaire ; le workflow exige un Signal lié au digest exact et au bon rôle d'approbateur.)_
+- [x] **MAH-206** — Empêcher le Supervisor d'annuler un échec de tests, qualité, sécurité ou politique. _(`SupervisorConsolidationGuard` impose les quatre gates déterministes et interdit `CONSOLIDATE` dès qu'un statut n'est pas `PASSED`.)_
+- [x] **MAH-207** — Enregistrer chaque arbitrage avec entrées, règle, décision, auteur et preuves. _(Port et journal append-only `ArbitrationJournal`, digest canonique dans `ArbitrationRecorder` et stockage PostgreSQL métadonnées-only V008.)_
+- [x] **MAH-208** — Produire une synthèse finale stable contenant décisions, risques résiduels et points humains. _(`FinalConsolidationSummaryBuilder` produit une vue canonique liée à la tentative, ordonnée et munie d'un digest reproductible.)_
+- [x] **MAH-209** — Faire exécuter l'Independent Reviewer après consolidation et avant création de l'effet en attente. _(Le workflow matérialise le checkpoint de consolidation, exécute le Reviewer racine puis seulement expose l'approbation ; le chemin hiérarchique refuse l'absence de review.)_
+- [x] **MAH-210** — Bloquer l'approbation si une contradiction requise reste ouverte ou si le manifeste a changé. _(Gate workflow fail-closed sur les contradictions `OPEN` et liaison exacte ID/URI/digest entre manifeste revu et manifeste soumis.)_
+
+### Gate du lot 9
+
+- [x] Toute divergence est résolue par une règle traçable ou présentée explicitement à un humain. _(Preuves et verdict : `docs/qualification/multi-agents/gates/GATE-LOT-9-CONSOLIDATION-DECISIONS.md`.)_
+
+## 14. Lot 10 — API, interface et expérience opérateur
+
+### API
+
+- [x] **MAH-220** — Étendre la vue de tâche avec mode, workflow run, version du DAG et budget global. _(`TaskView` expose des champs additifs et `TaskState.bindExecution` lie les métadonnées hiérarchiques et plafonds/consommations.)_
+- [x] **MAH-221** — Exposer les délégations, rôles, dépendances, statuts et raisons d'arrêt. _(`TaskView.delegations` fournit une projection structurée et `TaskState.recordDelegation` normalise les mises à jour par nœud.)_
+- [x] **MAH-222** — Exposer les artefacts uniquement par métadonnées et URI autorisées. _(`TaskView.artifacts` est métadonnées-only ; `TaskState` masque l'URI quand son autorisation n'est pas établie.)_
+- [x] **MAH-223** — Exposer contradictions, décisions et points nécessitant une action humaine. _(`TaskView` publie des projections compactes et validées pour les contradictions, arbitrages et demandes de décision humaine, sans exposer leurs contenus de travail internes.)_
+- [x] **MAH-224** — Ajouter endpoints ou commandes pour annuler, répondre à une décision et approuver. _(Les routes `POST /api/tasks/{id}/cancel` et `POST /api/tasks/{id}/decisions/{requestId}` complètent l'approbation existante ; digest, rôle, état terminal et courses asynchrones sont contrôlés.)_
+- [x] **MAH-225** — Garantir compatibilité API pour les consommateurs du pipeline actuel. _(Un manifeste REST 1.1 versionne les routes, statuts, champs et états historiques ; `PipelineRestContractTest` impose une évolution additive à chaque build.)_
+
+### Interface
+
+- [x] **MAH-226** — Remplacer ou compléter le stepper linéaire par une vue DAG parent/enfant. _(L'interface construit un arbre de délégations depuis `parentDelegationId`, affiche les dépendances et conserve le stepper pour la compatibilité pipeline.)_
+- [x] **MAH-227** — Distinguer visuellement Architecture, Code, Tests, Sécurité et Revue indépendante. _(Le DAG classe chaque rôle dans un périmètre nommé, matérialisé par un badge, une couleur et une légende accessible.)_
+- [x] **MAH-228** — Afficher état, durée, tours, tokens, coût et outils utilisés par délégation. _(La projection enrichie expose ces métriques et outils avec valeurs anciennes normalisées à zéro ; chaque nœud du DAG les rend sans masquer son état.)_
+- [x] **MAH-229** — Afficher scopes Code, fichiers touchés et collisions éventuelles. _(Un `codeImpact` validé et stable porte scopes, chemins touchés et collisions ; le DAG les affiche et signale explicitement toute collision.)_
+- [x] **MAH-230** — Afficher les preuves, leur statut et les digests sans contenu sensible par défaut. _(La section Preuves rend uniquement type, statut, classification, taille, SHA-256 et URI autorisée ; elle ne lit ni n'affiche aucun contenu.)_
+- [x] **MAH-231** — Présenter les contradictions et alternatives avant toute décision humaine. _(Chaque demande relie contradiction, sévérité et alternatives ordonnées avec conséquences/recommandation ; API et UI bloquent l'approbation tant qu'un choix reste en attente.)_
+- [x] **MAH-232** — Lier l'approbation au manifeste final et invalider l'écran si celui-ci change. _(La route hiérarchique exige l'ID et le digest affichés ; tout écart renvoie un conflit et l'UI recharge la tâche avant de permettre un nouvel essai.)_
+- [x] **MAH-233** — Ajouter les actions annuler, relancer un nœud autorisé et basculer vers le chemin de repli. _(L'UI pilote trois commandes serveur ; seules quatre causes récupérables autorisent une relance, et le fallback n'est accepté que depuis un mode hiérarchique non terminal.)_
+
+### Gate du lot 10
+
+- [x] Un opérateur peut expliquer la trajectoire complète, les coûts, les preuves et les décisions d'une tâche. _(Scénario, preuves et verdict : `docs/qualification/multi-agents/gates/GATE-LOT-10-EXPERIENCE-OPERATEUR.md`.)_
+
+## 15. Lot 11 — Observabilité, audit et exploitation
+
+- [x] **MAH-240** — Propager `trace_id`, `task_id`, `run_id`, `delegation_id` et `agent_run_id` de bout en bout. _(`ExecutionIdentity` lie des identifiants stables aux métadonnées Workflow/Activity, aux invocations d'agents et aux enveloppes MCP ; toute divergence Activity/agent est refusée.)_
+- [x] **MAH-241** — Créer un span pour workflow, Child Workflow, Activity, appel LLM et appel MCP. _(`ExecutionTracer` normalise les cinq familles de spans et leur corrélation ; l'intercepteur worker couvre workflows racine/enfant et Activities, les frontières runtime couvrent LLM et MCP.)_
+- [x] **MAH-242** — Désactiver la collecte du contenu des prompts, résultats et preuves par défaut. _(Politique Spring et Compose en opt-in explicite par canal ; les variables réservées à OpenTelemetry sont désactivées. Aucun exporteur OTLP n'est encore câblé.)_
+- [x] **MAH-243** — Mesurer tokens, coût, durée, tours, fan-out et profondeur par rôle. _(`AgentMetrics` publie compteurs, timers et distributions Micrometer aux frontières d'exécution et après validation du DAG ; le tag rôle est borné au catalogue.)_
+- [x] **MAH-244** — Mesurer temps d'attente des task queues et taux de saturation par périmètre. _(`TaskQueueMetrics` mesure le schedule-to-start Temporal et publie actifs/ratio de saturation pour chaque file déclarée, avec capacité worker configurable.)_
+- [x] **MAH-245** — Mesurer taux de succès, retries, réparations, replans, contradictions et escalades. _(Le taux de succès dérive des timers d'agents par outcome ; `ai_workflow_events` compte les cinq événements de fiabilité depuis leurs points de décision, avec tags fermés.)_
+- [x] **MAH-246** — Corréler jobs sandbox, digests, verdicts assurance et livraison SCM. _(`DeliveryCorrelationVerifier` refuse toute rupture job→preuve→assurance→manifeste→PR et ne produit l'identifiant de corrélation déterministe qu'après vérification complète.)_
+- [x] **MAH-247** — Rendre détectable localement l'altération des autorisations, refus, approbations et changements de mode. _(`HashChainedSecurityAuditJournal` signe par HMAC une chaîne append-only séquencée ; permissions, refus, approbations et fallback de mode y sont raccordés. La persistance WORM externe reste à faire.)_
+- [x] **MAH-248** — Créer dashboards global, Supervisor, agents, Temporal, MCP et sandbox. _(Six dashboards Grafana provisionnés couvrent santé globale, décisions/topologie, usage agents, moteur durable, appels MCP et jobs sandbox ; leurs JSON et requêtes sont testés.)_
+- [x] **MAH-249** — Définir alertes sur boucle, budget, coût, backlog, heartbeat, erreur de contrat et preuve altérée.
+- [x] **MAH-250** — Écrire les runbooks pour saturation, agent défaillant, Temporal indisponible, MCP compromis, rollback et incident canary/kill switch.
+
+### Gate du lot 11
+
+- [x] Chaque tâche est traçable de l'intention à la PR sans exposer de secret ou contenu sensible. _(Gate `PASS` : `docs/qualification/multi-agents/gates/GATE-LOT-11-OBSERVABILITE-AUDIT.md`.)_
+
+## 16. Lot 12 — Tests fonctionnels, sécurité et résilience
+
+### Tests unitaires et de contrats
+
+- [x] **MAH-260** — Tester validation du DAG, cycles, profondeur, fan-out, scopes et budgets. _(`DelegationPlanValidatorTest`, `DelegationValidatorTest` et `HierarchicalBudgetPolicyTest` couvrent les graphes invalides, plafonds hôte, scopes et cinq dimensions de budget.)_
+- [x] **MAH-261** — Tester tous les contrats d'agents avec sorties valides, invalides et surdimensionnées. _(`MultiAgentContractValidatorTest` parcourt les 18 contrats épinglés avec fixtures golden, champs supplémentaires/manquants, fuzzing et charge supérieure à 1 Mio.)_
+- [x] **MAH-262** — Tester routage chemin court versus hiérarchique. _(`WorkflowRoutingServiceTest` et les tests des deux planificateurs couvrent fixtures simples/multi-domaines, risques, impacts, shadow, fallback conservateur et décision idempotente.)_
+- [x] **MAH-263** — Tester règles d'arbitrage et impossibilité de contourner une gate. _(Les tests d'autorité, d'arbitrage, de consolidation et d'approbation imposent la priorité des gates déterministes, l'escalade des conflits et la liaison au manifeste courant.)_
+- [x] **MAH-264** — Tester déterminisme du code Workflow Temporal. _(`WorkflowDeterminismArchitectureTest` interdit les effets non déterministes dans les implémentations et rejoue avec `WorkflowReplayer` un historique racine réellement produit.)_
+
+### Tests d'intégration
+
+- [ ] **MAH-265** — Exécuter le workflow complet avec MCP simulés puis MCP réels.
+- [x] **MAH-266** — Tester parallélisme Architecture, Tests et Sécurité. _(`DelegationSchedulerTest` vérifie que les trois Child Workflows indépendants sont tous démarrés avant l'attente du premier résultat.)_
+- [x] **MAH-267** — Tester agents Code parallèles sur scopes disjoints. _(`CodeScopePolicyTest` prouve la disjonction paire à paire ; `CodeWorkspaceManagerTest` crée ensuite deux worktrees détachés et vérifie leur isolation d'écriture.)_
+- [x] **MAH-268** — Tester conflit de patches, réparation ciblée et escalade. _(Les scénarios détectent fichiers/hunks/renames incompatibles avant sandbox, bornent la réparation au worktree et aux propositions en conflit, puis escaladent après deux réparations ou trois intégrations.)_
+- [x] **MAH-269** — Tester approbation, refus, expiration et changement de manifeste. _(Le workflow termine désormais un refus correctement lié en `REJECTED` ; les suites couvrent aussi approbation, manifeste obsolète et expiration cryptographique de l'attestation SCM.)_
+- [x] **MAH-270** — Tester création idempotente d'une seule draft PR malgré retry ou redémarrage. _(`ScmDeliveryServiceTest` vérifie rejeu du résultat persistant, découverte de la branche/PR existante et récupération après timeout post-création avec un seul appel distant.)_
+
+### Tests de sécurité
+
+- [x] **MAH-271** — Injecter des instructions malveillantes dans ticket, code, plan, résultats et preuves. _(`PromptInjectionBoundaryTest` injecte une fermeture de balise et une instruction hostile dans chacun des cinq canaux, ainsi que les logs et résultats d'outil, et vérifie leur maintien dans une enveloppe non fiable.)_
+- [x] **MAH-272** — Vérifier qu'un sous-agent ne peut modifier rôle, parent, scope, budget ou outils. _(`AgentRuntimeTest` lie le rôle déclaré à l'invocation émise par l'hôte et vérifie que les contrats fermés rejettent toute injection de parent, scope, budget ou liste d'outils.)_
+- [x] **MAH-273** — Vérifier isolement cross-task et cross-worktree. _(`McpEvidenceRepositoryTest` bloque localement toute URI d'une autre tâche avant l'appel MCP ; `DeveloperAgentTest` et `CodeWorkspaceManagerTest` rejettent les worktrees étrangers et prouvent l'isolation d'écriture.)_
+- [x] **MAH-274** — Vérifier refus des outils à effet pour tous les agents et sous-agents. _(`ToolPermissionMatrixTest` parcourt chacun des 14 rôles hiérarchiques et tous les effets sandbox, assurance, evidence et SCM ; `AgentRuntimeTest` confirme le second refus au niveau du runtime.)_
+- [x] **MAH-275** — Vérifier absence de secrets dans prompts, résultats, traces, erreurs et artefacts. _(Le catalogue de prompts est scanné contre les credentials ; les tests `RepositoryContextToolsTest`, `SandboxJobServiceTest`, `ExecutionTracerTest`, `McpResponseValidatorTest`, `ProcessRunnerTest` et `TaskExecutionViewTest` couvrent respectivement redaction amont, résultats, traces, erreurs et artefacts.)_
+- [x] **MAH-276** — Simuler un Supervisor compromis, un spécialiste compromis et un serveur MCP compromis. _(`SupervisorAgentTest` bloque rôle inventé, effet et contournement de gate ; `AgentRuntimeTest` bloque l'auto-élévation du spécialiste ; `CompromisedMcpServerTest` bloque outil dynamique, schéma altéré, réponse surdimensionnée, URI externe et instruction injectée.)_
+- [x] **MAH-277** — Tester kill switch pendant une tâche et annulation des travaux enfants. _(`OperationalKillSwitchTest` active le contrôle entre deux tours d'un même agent et interdit le second appel ; `TemporalCascadeCancellationTest` observe l'annulation du Child Workflow puis de l'activité sandbox à heartbeat.)_
+
+### Tests de résilience et charge
+
+- [ ] **MAH-278** — Tuer et redémarrer workers, orchestrateur, Temporal et serveurs MCP à chaque phase critique.
+- [x] **MAH-279** — Tester latence, partition réseau, réponse tardive, doublon et saturation des queues. _(`TemporalFailureModesTest` couvre timeout, réponse tardive ignorée, livraison dupliquée idempotente et queue indisponible ; `ResilientMcpToolInvokerTest` couvre partition MCP, latence, circuit breaker et saturation globale/par serveur/par tâche/par rôle.)_
+- [x] **MAH-280** — Tester la capacité maximale et vérifier la backpressure plutôt qu'un fan-out incontrôlé. _(`DelegationSchedulerTest` plafonne les Child Workflows à quatre, `AgentToolLoopTest` borne les appels par tour, `ResilientMcpToolInvokerTest` refuse au-delà des sémaphores et `SandboxJobServiceTest` rejette au-delà des capacités active et en attente.)_
+- [x] **MAH-281** — Vérifier nettoyage, rétention et reprise des preuves après tous les états terminaux. _(`PatchIntegrationActivitiesImplTest` nettoie les worktrees pour SUCCESS, FAILED, TIMED_OUT et CANCELLED ; `EvidenceStoreTest` récupère une preuve chiffrée après redémarrage ; `ProjectionRebuilderTest` reconstruit les preuves vérifiées après APPROVED, REJECTED, CANCELLED, FAILED et TIMED_OUT.)_
+
+### Gate du lot 12
+
+- [ ] Les tests fonctionnels, de sécurité, résilience et charge sont reproductibles et sans contournement de gate.
+
+## 17. Lot 13 — Évaluations et qualification
+
+- [x] **MAH-290** — Ajouter une variante `hierarchical-shadow` au collecteur A/B existant. _(`AgentAbEvaluator` accepte désormais une paire de variantes explicite et collecte `HIERARCHICAL_SHADOW` sans casser l'API BASELINE/CANDIDATE existante.)_
+- [x] **MAH-291** — Comparer pipeline, agentique simple et hiérarchique sur les mêmes commits et tickets. _(`AgentAbEvaluator.compareAll` exige les trois variantes nommées sur chaque cas et refuse toute divergence de ticket ou de commit source.)_
+- [x] **MAH-292** — Mesurer précision du routage et pertinence des spécialistes sélectionnés. _(`RoutingEvaluation` calcule exactitude du chemin, précision et rappel des spécialistes à partir des décisions observées et des attentes de la suite de référence.)_
+- [x] **MAH-293** — Mesurer qualité des scopes, collisions évitées et contradictions détectées. _(`CoordinationEvaluation` agrège taux de scopes valides, collisions potentielles bloquées et rappel des contradictions, tout en rejetant les compteurs incohérents.)_
+- [x] **MAH-294** — Mesurer succès au premier patch, réparations, tests, review et acceptation humaine. _(`DeliveryOutcomeEvaluation` expose le funnel complet avec taux par étape et moyenne des réparations, sans confondre review indépendante et acceptation humaine.)_
+- [x] **MAH-295** — Mesurer tokens, coût complet, durée, compute sandbox et temps humain. _(`ResourceEvaluation` agrège totaux et moyennes des cinq dimensions, ainsi que le p95 de durée, avec compteurs non négatifs et additions protégées contre les dépassements.)_
+- [x] **MAH-296** — Mesurer sécurité : outils refusés, injections, dépassements, preuves invalides et effets tentés. _(`SecurityEvaluation` agrège tentatives et blocages par catégorie, refuse les compteurs incohérents et signale tout incident non contenu.)_
+- [x] **MAH-297** — Inclure un nombre représentatif de tâches simples, multi-domaines et adversariales. _(La suite contient 8 cas simples, 12 multi-domaines, 8 adversariaux et 8 de reprise ; `EvaluationSuiteCoverageTest` impose les minima de politique, 36 cas appariés, des identifiants uniques et au moins trois écosystèmes.)_
+- [x] **MAH-298** — Rejeter la qualification si le chemin hiérarchique est utilisé inutilement sur les tâches simples. _(`RoutingEvaluation` calcule ce taux sur le seul cohort simple et rend `REJECTED` dès qu'il dépasse le maximum de politique de 5 %.)_
+- [x] **MAH-299** — Exiger une télémétrie de coût exploitable avant verdict. _(`AgentAbEvaluator` exige `AVAILABLE` sur 100 % des observations avec devise, source, version de prix et modèles demandé/résolu identiques ; sinon le verdict reste `INCOMPLETE`.)_
+- [ ] **MAH-300** — Faire approuver le rapport de qualification par Produit, Architecture, Sécurité et Exploitation.
+- [x] **MAH-301** — Maintenir tous les rôles hiérarchiques désactivés si le verdict n'est pas `QUALIFIED`. _(`AgentActivationGuard`, appelé par `AgentRuntime`, refuse tout rôle canary/actif sans verdict qualifié et activation explicite ; le shadow reste limité aux rôles d'évaluation déclarés.)_
+
+### Gate du lot 13
+
+- [ ] Verdict `QUALIFIED`, aucune régression de sécurité et bénéfice mesurable sur les cas multi-domaines.
+
+## 18. Lot 14 — Bascule progressive
+
+### Phase A — Shadow
+
+- [ ] **MAH-310** — Déployer `HIERARCHICAL_SHADOW` sans que ses décisions n'influencent le pipeline.
+- [ ] **MAH-311** — Comparer DAG, analyses, coût et durée au résultat de référence.
+- [ ] **MAH-312** — Corriger contrats, routage, budgets et prompts jusqu'aux seuils convenus.
+
+### Phase B — Canary en lecture seule
+
+- [ ] **MAH-313** — Autoriser Supervisor, Architecture, Test Design et Threat Model sur un périmètre canary.
+- [ ] **MAH-314** — Conserver un seul Developer et toutes les actions déterministes du pipeline.
+- [ ] **MAH-315** — Vérifier pendant la fenêtre convenue qualité, coûts, saturation et incidents.
+
+### Phase C — Consolidation active
+
+- [ ] **MAH-316** — Utiliser les sorties spécialisées pour construire le plan consolidé.
+- [ ] **MAH-317** — Activer Test Evidence, Security Findings et Independent Reviewer sur le canary.
+- [ ] **MAH-318** — Conserver l'approbation humaine obligatoire et un rollback immédiat vers `PIPELINE`.
+
+### Phase D — Code parallèle borné
+
+- [ ] **MAH-319** — Autoriser deux Developer au maximum sur scopes prouvés disjoints.
+- [ ] **MAH-320** — Étendre progressivement concurrence et types de dépôts après observation réussie.
+- [ ] **MAH-321** — Désactiver automatiquement le parallélisme lors d'une collision ou dérive de coût.
+
+### Phase E — Généralisation
+
+- [ ] **MAH-322** — Étendre par dépôt, équipe et classe de risque, jamais par activation globale immédiate.
+- [ ] **MAH-323** — Réévaluer les seuils après chaque changement de modèle, prompt, outil ou politique.
+- [ ] **MAH-324** — Conserver `PIPELINE` comme mode de secours durant la période de stabilisation.
+- [ ] **MAH-325** — Retirer le chemin historique seulement après rollback testé et accord d'exploitation.
+
+### Gate du lot 14
+
+- [ ] Bascule générale approuvée, SLO tenus sur la fenêtre d'observation et rollback démontré.
+
+## 19. Lot 15 — Documentation et modèle opératoire
+
+- [x] **MAH-330** — Mettre à jour README, architecture du proto, workflow et diagrammes. _(README réaligné sur les quatre modes ; état, composants et diagrammes du workflow 1.2.0 dans `docs/archive/releases/1.2.0-archi-04/ETAT-PROTO-1.2.0.md`.)_
+- [x] **MAH-331** — Documenter rôles, sous-agents, permissions, contrats et propriétaires. _(Matrices de rôles, autorité, permissions, contrats et responsabilités dans `docs/architecture/agents/CATALOGUE-AGENTS-V1.md`.)_
+- [x] **MAH-332** — Documenter comment ajouter, modifier, évaluer, promouvoir et retirer un agent. _(Cycle complet, artefacts gouvernés, gates et retrait sûr dans `docs/architecture/agents/CYCLE-DE-VIE-AGENT.md`.)_
+- [x] **MAH-333** — Documenter le versionnement des workflows Temporal et les déploiements sûrs. _(Worker Versioning, pinning, patching, ramping, rollback et drainage dans `docs/qualification/multi-agents/policies-and-operations/POLITIQUE-VERSIONNEMENT-WORKFLOWS-TEMPORAL.md` ; tests Workflow et déterminisme au vert.)_
+- [x] **MAH-334** — Documenter Task Memory, Evidence MCP, rétention, restauration et audit. _(Sources d'autorité, opérations, cycle de vie, reconstruction et incidents dans `docs/qualification/multi-agents/policies-and-operations/TASK-MEMORY-EVIDENCE-OPERATIONS.md`.)_
+- [x] **MAH-335** — Documenter routage, replans, contradictions et décisions humaines. _(Chaîne de décision, plafonds, autorité, escalade et audit dans `docs/qualification/multi-agents/policies-and-operations/ROUTAGE-REPLANS-CONTRADICTIONS.md`.)_
+- [x] **MAH-336** — Documenter procédures de canary, kill switch, rollback et reprise après incident. _(Procédure intégrée dans `docs/operations/runbooks/CANARY-KILL-SWITCH-INCIDENT.md` et index de réponse dans `docs/operations/runbooks/README.md`.)_
+- [ ] **MAH-337** — Former Produit, Architecture, Sécurité, Développement et Exploitation à leurs responsabilités. _(Support, exercices et critères de validation prêts dans `docs/qualification/multi-agents/policies-and-operations/FORMATION-RESPONSABILITES.md` ; sessions et attestations réelles encore requises.)_
+- [x] **MAH-338** — Archiver les documents devenus obsolètes en conservant leur historique Git. _(Index et statut des archives dans `docs/archive/legacy/README.md` ; doublon racine retiré au profit de la copie canonique versionnée, contenu toujours accessible par Git.)_
+
+## 20. Dépendances entre lots
+
+```mermaid
+flowchart LR
+  L0[Lot 0<br/>Cadrage] --> L1[Lot 1<br/>Contrats]
+  L1 --> L2[Lot 2<br/>Découpage]
+  L2 --> L3[Lot 3<br/>Temporal]
+  L2 --> L4[Lot 4<br/>Mémoire et preuves]
+  L1 --> L5[Lot 5<br/>Agents]
+  L3 --> L7[Lot 7<br/>Scheduler DAG]
+  L4 --> L7
+  L5 --> L6[Lot 6<br/>Permissions et budgets]
+  L6 --> L7
+  L7 --> L8[Lot 8<br/>Intégration Code]
+  L7 --> L9[Lot 9<br/>Arbitrage]
+  L4 --> L10[Lot 10<br/>API et UI]
+  L3 --> L11[Lot 11<br/>Observabilité]
+  L8 --> L12[Lot 12<br/>Tests]
+  L9 --> L12
+  L10 --> L12
+  L11 --> L12
+  L12 --> L13[Lot 13<br/>Qualification]
+  L13 --> L14[Lot 14<br/>Bascule]
+  L14 --> L15[Lot 15<br/>Documentation]
+```
+
+Les lots 3, 4, 5 et une partie du lot 11 peuvent avancer en parallèle après stabilisation des contrats et des
+ports du lot 2. Les lots 8 et 9 ne doivent pas être activés avant validation du scheduler et des permissions.
+
+## 21. Ordre conseillé des premières itérations
+
+Cette checklist conserve l'ordre de mise en œuvre proposé à l'origine ; elle n'est pas le suivi d'avancement.
+Les cases faisant autorité sont celles des lots précédents. Plusieurs composants ci-dessous existent dans le code
+mais restent volontairement non activés tant que les lots 13 et 14 ne sont pas franchis.
+
+### Itération 1 — Préparer sans changer le comportement
+
+- [ ] Terminer les lots 0 et 1.
+- [ ] Extraire `WorkflowCoordinator`, `AgentRuntime`, `AgentCatalog` et `TaskMemory`.
+- [ ] Faire passer le pipeline existant par ces ports.
+- [ ] Prouver la parité fonctionnelle et conserver le mode `PIPELINE` par défaut.
+
+### Itération 2 — Durabilité et observation
+
+- [ ] Introduire Temporal et la projection de tâche.
+- [ ] Brancher Evidence MCP et produire le manifeste final.
+- [ ] Exécuter le pipeline déterministe comme workflow Temporal.
+- [ ] Tester reprise, approbation longue et annulation avant tout nouvel agent.
+
+### Itération 3 — Hiérarchie en shadow
+
+- [ ] Ajouter Supervisor et Architecture avec contrats stricts.
+- [ ] Ajouter Test Design et Threat Model en lecture seule.
+- [ ] Produire et afficher le DAG sans modifier la décision du pipeline.
+- [ ] Lancer une première campagne comparative et ajuster le routage.
+
+### Itération 4 — Consolidation active
+
+- [ ] Utiliser les contraintes spécialisées dans le plan donné au Developer unique.
+- [ ] Ajouter Test Evidence, Security Findings et Independent Reviewer.
+- [ ] Activer contradictions, replan borné et escalade humaine.
+- [ ] Qualifier ce mode avant d'introduire le Code parallèle.
+
+### Itération 5 — Code parallèle et canary
+
+- [ ] Ajouter worktrees, scopes et Patch Integrator.
+- [ ] Autoriser deux Developer sur cas multi-modules disjoints.
+- [ ] Exécuter le canary sur dépôts et classes de risque explicitement autorisés.
+- [ ] Généraliser uniquement après atteinte des SLO et validation du rollback.
+
+## 22. Définition de terminé globale
+
+- [ ] Le pipeline n'est plus codé comme une unique méthode séquentielle monolithique.
+- [ ] Le workflow durable reprend automatiquement après panne sans répéter un effet non idempotent.
+- [ ] Supervisor décompose, délègue et consolide via des contrats validés.
+- [ ] Architecture, Code, Tests et Sécurité disposent de rôles, sous-agents et permissions minimales.
+- [ ] Independent Reviewer est exécuté par le workflow racine après consolidation.
+- [ ] Les travaux parallèles respectent scopes, worktrees, budgets et limites de concurrence.
+- [ ] Aucun modèle ne peut lancer directement sandbox, assurance, stockage à effet ou livraison SCM.
+- [ ] Toute décision et approbation est liée au commit, au patch, au manifeste et aux preuves finales.
+- [ ] L'interface rend visibles DAG, rôles, décisions, coûts, preuves et actions humaines attendues.
+- [ ] Les tests de contrat, sécurité, résilience, charge et E2E sont automatisés.
+- [ ] La campagne A/B obtient `QUALIFIED` sans régression de sécurité.
+- [ ] Le canary et le rollback ont été exécutés avec succès en conditions représentatives.
+- [ ] Les runbooks, responsabilités, SLO, alertes et procédures d'incident sont approuvés.

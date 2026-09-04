@@ -1,42 +1,37 @@
-# Guide de lecture de la documentation
+# Documentation de l’AI Software Factory
 
-Ce répertoire mélange documentation courante, décisions d'architecture, dossiers de qualification et rapports
-historiques. Leur statut doit être pris en compte avant d'interpréter une affirmation au présent.
+Cette documentation est organisée par usage et par statut. Le code et la configuration exécutable restent la source de vérité pour le comportement actif.
 
-## Sources canoniques de l'état courant
+## Commencer ici
 
 | Besoin | Document |
 |---|---|
 | démarrer et utiliser le prototype | [`README.md`](../README.md) |
-| comprendre l'état réellement câblé | [`RETRODOCUMENTATION.md`](RETRODOCUMENTATION.md) |
-| connaître les écarts et prochaines actions | [`TODO.md`](TODO.md) |
-| comprendre le déploiement logique des agents | [`AGENTS.md`](AGENTS.md) |
-| vérifier la topologie locale | [`infrastructure/compose.yaml`](../infrastructure/compose.yaml) |
+| comprendre l’état réellement câblé | [`overview/current-state.md`](overview/current-state.md) |
+| obtenir une synthèse pour la décision | [`overview/executive-summary.md`](overview/executive-summary.md) |
+| suivre les écarts et prochaines actions | [`delivery/roadmap.md`](delivery/roadmap.md) |
+| intervenir sur un incident | [`operations/runbooks/README.md`](operations/runbooks/README.md) |
 
-En cas de contradiction sur le comportement actif, le code et la configuration exécutable prévalent, puis la
-rétrodocumentation. Une cible ou un gate passé ne prouve pas qu'une capacité est activée dans Compose.
+## Répertoires
 
-## Catégories documentaires
-
-| Répertoire | Nature | Règle de lecture |
+| Répertoire | Contenu | Statut de lecture |
 |---|---|---|
-| `adr/` | décisions acceptées | décrit un choix, qui peut être une cible non encore activée |
-| `agents/` | catalogue et cycle de vie | normatif pour les rôles, sous réserve de leur qualification/activation |
-| `mcp/` | conception, migration et qualification MCP | les rapports numérotés restent des preuves datées de leur lot |
-| `mcp/baselines/` | résultats de campagnes | instantanés historiques ; ne pas les mettre à jour avec l'état courant |
-| `multiagents/` | politiques, gates et qualification de l'architecture 04 | un verdict `PASS` valide le périmètre testé, pas la généralisation runtime |
-| `runbooks/` | procédures d'exploitation | certaines ne s'appliquent qu'aux modes hiérarchiques non activés par défaut |
-| `version-1.2.0-archi-04/` | cible, plan et état de la version 1.2 | distinguer code livré et chemin opérationnel actif |
-| `version-1.0.0*`, `version-1.1.0*` | archives versionnées | snapshots conservés sans mise à niveau vers la version courante |
-| `old/` | études remplacées | contexte historique uniquement, jamais une consigne de déploiement |
+| [`overview/`](overview/README.md) | synthèses, état courant et vue d’architecture | documents d’orientation courants |
+| [`architecture/`](architecture/README.md) | ADR, agents et conception MCP | décisions et conception de référence |
+| [`operations/`](operations/README.md) | maintenance et runbooks | procédures d’exploitation |
+| [`delivery/`](delivery/README.md) | roadmap et migrations | trajectoire de livraison |
+| [`qualification/`](qualification/README.md) | gates, politiques de qualification et rapports | validité limitée au périmètre testé |
+| [`evidence/`](evidence/README.md) | jeux de preuves et résultats horodatés | artefacts immuables, non réécrits |
+| [`archive/`](archive/README.md) | versions livrées et études remplacées | contexte historique, jamais une consigne active |
+| [`assets/`](assets/) | diagrammes et médias utilisés par les documents | ressources partagées |
 
 ## Vocabulaire de maturité
 
 - **Actif** : utilisé par `POST /api/tasks` avec la configuration Compose par défaut.
 - **Disponible** : code, contrat ou service présent, mais désactivé ou non relié de bout en bout.
 - **Cible** : architecture ou port préparatoire qui exige encore un adaptateur ou une qualification.
-- **Qualifié** : périmètre précis ayant satisfait un gate daté ; ce terme ne signifie pas automatiquement actif.
-- **Historique** : constat exact à la date du rapport, potentiellement remplacé depuis.
+- **Qualifié** : périmètre précis ayant satisfait un gate daté ; cela ne signifie pas automatiquement actif.
+- **Historique** : constat exact à la date du document, potentiellement remplacé depuis.
 
 ## Entretien
 
@@ -44,7 +39,7 @@ Toute modification d'architecture doit mettre à jour, dans cet ordre :
 
 1. le code, les contrats ou les politiques qui font autorité ;
 2. l'ADR ou le gate concerné ;
-3. `RETRODOCUMENTATION.md` et `README.md` si l'état actif change ;
-4. `TODO.md` pour fermer ou créer l'écart correspondant.
+3. l’état courant et les synthèses lorsque le comportement actif change ;
+4. la roadmap pour fermer ou créer l’écart correspondant.
 
 Les liens internes restent relatifs au dépôt. Les chemins absolus vers un poste de travail sont interdits.

@@ -95,7 +95,7 @@ seul autorisé à appliquer un patch, lancer les gates, écrire les preuves fais
 Les agents représentés ici ne sont pas des conteneurs Docker dédiés : `Supervisor`, spécialistes et
 `Independent Reviewer` sont des rôles chargés dans la JVM du service `orchestrator`. Compose sépare les capacités
 MCP, pas chaque agent. Une extraction en runtimes autonomes n'est proposée que pour la cible distribuée/GCP et par
-frontière de sécurité ou de montée en charge, comme détaillé dans la [rétrodocumentation](docs/RETRODOCUMENTATION.md#35-pertinence-de-modules-dagents-autonomes).
+frontière de sécurité ou de montée en charge, comme détaillé dans la [rétrodocumentation](docs/overview/current-state.md#35-pertinence-de-modules-dagents-autonomes).
 
 ### Architecture technique locale
 
@@ -649,9 +649,9 @@ ni une sandbox de production : ces limites restent bloquantes pour un usage entr
 ## Documentation complémentaire
 
 - [Guide de lecture et statut des documents](docs/README.md)
-- [Rétrodocumentation complète : fonctionnel, architecture, sécurité, données et packaging](docs/RETRODOCUMENTATION.md)
-- [État, architecture et workflow du prototype 1.2.0](docs/version-1.2.0-archi-04/ETAT-PROTO-1.2.0.md)
-- [Architecture cible multi-agent hiérarchique](docs/version-1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md)
-- [Plan de bascule](docs/version-1.2.0-archi-04/BASCULE-ARCHI-04-MULTI-AGENTS.md)
-- [Catalogue des agents](docs/agents/CATALOGUE-AGENTS-V1.md)
+- [Rétrodocumentation complète : fonctionnel, architecture, sécurité, données et packaging](docs/overview/current-state.md)
+- [État, architecture et workflow du prototype 1.2.0](docs/archive/releases/1.2.0-archi-04/ETAT-PROTO-1.2.0.md)
+- [Architecture cible multi-agent hiérarchique](docs/archive/releases/1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md)
+- [Plan de bascule](docs/archive/releases/1.2.0-archi-04/BASCULE-ARCHI-04-MULTI-AGENTS.md)
+- [Catalogue des agents](docs/architecture/agents/CATALOGUE-AGENTS-V1.md)
 - [Architecture, workflow et sécurité de la baseline 1.1.0](docs/version-1.1.0-archi-02-mcp/ETAT-PROTO-1.1.0.md)
