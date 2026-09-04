@@ -301,6 +301,146 @@ flowchart TB
   SEC --> SF[Security Findings<br/>A1]
 ```
 
+### Hiérarchie des agents, serveurs MCP et outils sous-jacents
+
+Le diagramme suivant détaille la chaîne complète entre agents, outils MCP typés et backends techniques. Les
+liens pleins depuis les agents représentent uniquement des lectures autorisées par l'hôte. Les actions à effet,
+représentées en pointillés, restent déclenchées exclusivement par le `WorkflowCoordinator`.
+
+```mermaid
+flowchart LR
+  COORD[Workflow Coordinator]
+  SUP[Supervisor Agent]
+
+  COORD --> SUP
+
+  subgraph AGENTS[HIERARCHIE DES AGENTS]
+    direction TB
+
+    subgraph A_ARCH[ARCHITECTURE]
+      direction TB
+      ARCH[Architecture Agent]
+      IMPACT[Impact Analysis Sub-agent]
+      CONTRACTS[Dependencies and Contracts Sub-agent]
+      ARCH --> IMPACT
+      ARCH --> CONTRACTS
+    end
+
+    subgraph A_CODE[CODE]
+      direction TB
+      CODE[Code Agent]
+      DEV_A[Developer Sub-agent A<br/>module or bounded scope]
+      DEV_B[Developer Sub-agent B<br/>module or bounded scope]
+      REPAIR[Patch Repair Sub-agent]
+      CODE --> DEV_A
+      CODE --> DEV_B
+      CODE --> REPAIR
+    end
+
+    subgraph A_TEST[TESTS]
+      direction TB
+      TEST[Test Agent]
+      TEST_DESIGN[Test Design Sub-agent]
+      TEST_EVIDENCE[Test Evidence Sub-agent]
+      TEST --> TEST_DESIGN
+      TEST --> TEST_EVIDENCE
+    end
+
+    subgraph A_SEC[SECURITE]
+      direction TB
+      SECURITY[Security Agent]
+      THREAT[Threat Model Sub-agent]
+      FINDINGS[Security Findings Sub-agent]
+      SECURITY --> THREAT
+      SECURITY --> FINDINGS
+    end
+
+    subgraph A_REVIEW[REVUE INDEPENDANTE]
+      direction TB
+      REVIEW[Independent Reviewer Agent]
+    end
+  end
+
+  SUP --> ARCH
+  SUP --> CODE
+  SUP --> TEST
+  SUP --> SECURITY
+  SUP -. synthèse consolidée .-> REVIEW
+  COORD --> REVIEW
+
+  subgraph MCP[MCP SERVERS]
+    direction TB
+    CTX_MCP[repository-context-mcp]
+    EVI_MCP[evidence-mcp]
+    SBX_MCP[sandbox-execution-mcp]
+    ASS_MCP[assurance-mcp]
+    SCM_MCP[scm-delivery-mcp]
+  end
+
+  subgraph TOOLS[OUTILS MCP TYPES]
+    direction TB
+    CTX_TOOLS[context.list_tree<br/>context.read_file<br/>context.search_code<br/>context.get_repository_rules<br/>context.get_dependencies<br/>context.get_symbols]
+    EVI_TOOLS[evidence.get_summary<br/>evidence.read<br/>evidence.store<br/>evidence.create_manifest]
+    SBX_TOOLS[sandbox.validate_patch<br/>sandbox.apply_patch<br/>sandbox.run_tests<br/>sandbox.run_quality<br/>sandbox.run_security<br/>sandbox.get_execution<br/>sandbox.cancel_execution]
+    ASS_TOOLS[assurance.evaluate_quality_gate<br/>assurance.normalize_findings<br/>assurance.evaluate_policy]
+    SCM_TOOLS[scm.get_repository<br/>scm.resolve_revision<br/>scm.create_draft_pull_request]
+  end
+
+  subgraph BACKENDS[OUTILS ET SYSTEMES SOUS-JACENTS]
+    direction TB
+    CTX_BACKEND[Workspace Git en lecture seule<br/>fichiers et manifests<br/>index tree-sitter optionnel]
+    EVI_BACKEND[Stockage local immuable<br/>puis GCS ou Object Storage<br/>SHA-256 et journal d'accès]
+    SBX_BACKEND[Docker local puis GKE Jobs<br/>git apply<br/>Maven / Gradle / npm]
+    ASS_BACKEND[Résultats SonarQube et Trivy<br/>schémas de findings<br/>politiques qualité et sécurité]
+    SCM_BACKEND[Git CLI<br/>API REST Gitea<br/>SCM entreprise cible]
+    SCANNERS[SonarQube<br/>Syft CycloneDX<br/>Trivy vulnérabilités et secrets]
+  end
+
+  IMPACT --> CTX_MCP
+  CONTRACTS --> CTX_MCP
+  DEV_A --> CTX_MCP
+  DEV_B --> CTX_MCP
+  REPAIR --> CTX_MCP
+  TEST_DESIGN --> CTX_MCP
+  THREAT --> CTX_MCP
+  SUP --> CTX_MCP
+
+  TEST_EVIDENCE --> EVI_MCP
+  FINDINGS --> EVI_MCP
+  REVIEW --> EVI_MCP
+  SUP --> EVI_MCP
+
+  COORD -. effets .-> SBX_MCP
+  COORD -. verdicts .-> ASS_MCP
+  COORD -. stockage .-> EVI_MCP
+  COORD -. livraison .-> SCM_MCP
+
+  CTX_MCP --> CTX_TOOLS --> CTX_BACKEND
+  EVI_MCP --> EVI_TOOLS --> EVI_BACKEND
+  SBX_MCP --> SBX_TOOLS --> SBX_BACKEND
+  SBX_BACKEND --> SCANNERS
+  ASS_MCP --> ASS_TOOLS --> ASS_BACKEND
+  SCM_MCP --> SCM_TOOLS --> SCM_BACKEND
+
+  classDef control fill:#ede7f6,stroke:#5e35b1,color:#24143f;
+  classDef architecture fill:#e3f2fd,stroke:#1565c0,color:#0d2b45;
+  classDef code fill:#e0f7fa,stroke:#00838f,color:#06383d;
+  classDef tests fill:#e8f5e9,stroke:#2e7d32,color:#102a12;
+  classDef security fill:#ffebee,stroke:#c62828,color:#4a1111;
+  classDef mcp fill:#fff3e0,stroke:#ef6c00,color:#4d2400;
+  classDef tool fill:#fffde7,stroke:#9e9d24,color:#363609;
+  classDef backend fill:#eceff1,stroke:#546e7a,color:#1c282e;
+
+  class COORD,SUP,REVIEW control;
+  class ARCH,IMPACT,CONTRACTS architecture;
+  class CODE,DEV_A,DEV_B,REPAIR code;
+  class TEST,TEST_DESIGN,TEST_EVIDENCE tests;
+  class SECURITY,THREAT,FINDINGS security;
+  class CTX_MCP,EVI_MCP,SBX_MCP,ASS_MCP,SCM_MCP mcp;
+  class CTX_TOOLS,EVI_TOOLS,SBX_TOOLS,ASS_TOOLS,SCM_TOOLS tool;
+  class CTX_BACKEND,EVI_BACKEND,SBX_BACKEND,ASS_BACKEND,SCM_BACKEND,SCANNERS backend;
+```
+
 ### Règles d’autorité
 
 - `A0` : composant déterministe ;
