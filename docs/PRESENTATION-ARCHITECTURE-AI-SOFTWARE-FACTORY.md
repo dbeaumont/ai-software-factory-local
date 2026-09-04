@@ -15,6 +15,33 @@
 > les composants disponibles mais non activés et la cible d’industrialisation. L’usine s’arrête à la création d’une
 > Pull Request brouillon : la fusion, la CI/CD aval et le déploiement applicatif sont hors périmètre.
 
+## Table des matières
+
+1. [En une phrase](#1-en-une-phrase)
+2. [Périmètre fonctionnel](#2-périmètre-fonctionnel)
+3. [Matrice de vérité de l’architecture](#3-matrice-de-vérité-de-larchitecture)
+4. [Vue contexte](#4-vue-contexte)
+5. [Vue conteneurs locale](#5-vue-conteneurs-locale)
+6. [Workflow actif](#6-workflow-actif)
+7. [Cycle de vie d’une tâche](#7-cycle-de-vie-dune-tâche)
+8. [Architecture logique multi-agent](#8-architecture-logique-multi-agent)
+9. [DAG, parallélisme et consolidation](#9-dag-parallélisme-et-consolidation)
+10. [Frontières MCP](#10-frontières-mcp)
+11. [Exécution du code non fiable](#11-exécution-du-code-non-fiable)
+12. [Modèle de confiance](#12-modèle-de-confiance)
+13. [Données, état et preuves](#13-données-état-et-preuves)
+14. [Réseaux et isolation](#14-réseaux-et-isolation)
+15. [Observabilité et exploitabilité](#15-observabilité-et-exploitabilité)
+16. [Budgets et garde-fous](#16-budgets-et-garde-fous)
+17. [Décisions d’architecture majeures](#17-décisions-darchitecture-majeures)
+18. [Principaux risques et dettes](#18-principaux-risques-et-dettes)
+19. [Cible d’industrialisation GCP](#19-cible-dindustrialisation-gcp)
+20. [Trajectoire de transformation](#20-trajectoire-de-transformation)
+21. [Promotion des modes](#21-promotion-des-modes)
+22. [Questions à soumettre au comité d’architecture](#22-questions-à-soumettre-au-comité-darchitecture)
+23. [Conclusion](#23-conclusion)
+24. [Références](#références)
+
 ---
 
 ## 1. En une phrase
