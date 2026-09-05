@@ -168,8 +168,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 7. Lot 2 — construire le client Temporal et les workers de production
 
-- [ ] **TEMP-030 — Créer les beans obligatoires.** Construire `WorkflowServiceStubs`, `WorkflowClient`,
-  `WorkerFactory` et les workers à chaque démarrage de l'orchestrateur post-bascule.
+- [x] **TEMP-030 — Créer les beans obligatoires.** Construire `WorkflowServiceStubs`, `WorkflowClient`,
+  `WorkerFactory` et les workers à chaque démarrage de l'orchestrateur post-bascule. _(Graphe SDK obligatoire
+  créé par `TemporalRuntimeConfiguration`, avec sept workers uniques détenus par `TemporalWorkerRegistry`.)_
 - [ ] **TEMP-031 — Implémenter la sécurité du client.** Charger TLS/mTLS et clé API depuis des fichiers montés,
   vérifier les permissions et ne jamais injecter les secrets dans les inputs de workflow.
 - [ ] **TEMP-032 — Enregistrer le workflow racine.** Enregistrer l'implémentation de production sur

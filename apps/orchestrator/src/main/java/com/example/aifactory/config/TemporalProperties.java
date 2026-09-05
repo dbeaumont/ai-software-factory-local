@@ -27,7 +27,8 @@ public record TemporalProperties(String target, String namespace, Duration names
         }
         if (!taskQueues.keySet().containsAll(REQUIRED_QUEUES)
                 || taskQueues.values().stream().anyMatch(queue -> queue == null
-                || !queue.matches("[a-z][a-z0-9-]{2,63}"))) {
+                || !queue.matches("[a-z][a-z0-9-]{2,63}"))
+                || taskQueues.values().stream().distinct().count() != taskQueues.size()) {
             throw new IllegalArgumentException("Temporal task queues are incomplete or invalid");
         }
         security = security == null ? new Security(false, "", "", "", "") : security;
