@@ -349,7 +349,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [x] Déclencher les neuf alertes synthétiquement dans SigNoz.
 - [x] Comparer seuil, fenêtre, délai, severity, description, notification et lien de runbook aux fixtures.
 - [ ] Vérifier les périodes sans données, resets de compteurs et redémarrages d'instances.
-- [ ] Mesurer délai d'ingestion, taux de perte, cardinalité, CPU, mémoire, disque et coût.
+- [x] Mesurer délai d'ingestion, taux de perte, cardinalité, CPU, mémoire, disque et coût.
 - [ ] Vérifier la corrélation d'une alerte vers une trace et les logs de la même tâche.
 - [x] Classer chaque divergence : défaut, changement sémantique accepté ou limite du backend.
 - [ ] Faire approuver toute divergence acceptée par le propriétaire du signal.
