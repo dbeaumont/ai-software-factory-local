@@ -14,6 +14,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     private String currentStep = "source";
     private SoftwareFactoryWorkflow.CancellationSignal cancellation;
     private SoftwareFactoryWorkflow.ApprovalSignal approval;
+    private final Map<String, SoftwareFactoryWorkflow.HumanDecisionSignal> humanDecisions = new LinkedHashMap<>();
     private final Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts =
             new LinkedHashMap<>();
 
@@ -96,6 +97,13 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         chronology.add("SOURCE_RESOLVED:" + resolved.sourceCommit());
         artifacts.keySet().forEach(name -> chronology.add("STEP_COMPLETED:" + name));
         chronology.addAll(coordinated.chronology());
+        coordinated.humanDecisions().keySet().stream().sorted().forEach(requestId -> {
+            SoftwareFactoryWorkflow.HumanDecisionSignal decision = humanDecisions.get(requestId);
+            pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordHumanDecision(
+                    new PipelineExecutionActivities.HumanDecision(request.taskId(), request.attemptId(),
+                            resolved.sourceCommit(), requestId, decision.decision(), decision.objectDigest(),
+                            decision.actor(), decision.actorRole(), decision.decidedAt()));
+        });
         if ("APPROVED".equals(coordinated.status())) {
             pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordApproval(
                     new PipelineExecutionActivities.Approval(request.taskId(), request.attemptId(),
@@ -228,7 +236,10 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         cancellation = signal;
         delegate.cancel(signal);
     }
-    @Override public void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal) { delegate.decide(signal); }
+    @Override public void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal) {
+        if (signal != null && signal.decisionId() != null) humanDecisions.put(signal.decisionId(), signal);
+        delegate.decide(signal);
+    }
     @Override public String status() { return "CREATED".equals(phase) ? delegate.status() : phase; }
     @Override public List<SoftwareFactoryWorkflow.DelegationView> dag() { return delegate.dag(); }
     @Override public Map<String, DelegationWorkflow.Budget> budgets() { return delegate.budgets(); }

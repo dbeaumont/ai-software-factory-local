@@ -194,6 +194,7 @@ class SourceResolutionActivitiesTest {
             }
             approvals++;
         }
+        @Override public void recordHumanDecision(HumanDecision decision) { }
 
         @Override
         public com.example.aifactory.workflow.EvidenceRepository.StoredManifest createApprovalManifest(

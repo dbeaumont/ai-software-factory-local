@@ -237,6 +237,24 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     }
 
     @Override
+    public void recordHumanDecision(HumanDecision decision) {
+        requireQueue("evidence");
+        if (decision == null) throw new IllegalArgumentException("Pipeline human decision is invalid");
+        try {
+            java.time.Instant.parse(decision.decidedAt());
+        } catch (RuntimeException invalid) {
+            throw new IllegalArgumentException("Pipeline human decision timestamp is invalid", invalid);
+        }
+        TaskState state = requireTask(decision.taskId(), decision.attemptId());
+        if (!decision.sourceCommit().equals(state.sourceCommit)) {
+            throw new SecurityException("Pipeline human decision is not source-bound");
+        }
+        state.answerHumanAction(decision.requestId(), decision.decision(), decision.objectDigest(),
+                decision.actor(), decision.actorRole());
+        memory.save(state);
+    }
+
+    @Override
     public EvidenceRepository.StoredManifest createApprovalManifest(ApprovalManifestRequest request) {
         requireQueue("evidence");
         TaskState state = requireTask(request.taskId(), request.attemptId());

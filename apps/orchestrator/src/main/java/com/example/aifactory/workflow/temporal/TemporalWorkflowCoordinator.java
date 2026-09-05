@@ -3,6 +3,7 @@ package com.example.aifactory.workflow.temporal;
 import com.example.aifactory.config.ScmDeliveryClientProperties;
 import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.model.TaskState;
+import com.example.aifactory.model.HumanDecisionResponse;
 import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.service.ScmDeliveryGateway;
 import com.example.aifactory.workflow.WorkflowCoordinator;
@@ -64,6 +65,18 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
         commands.approve(TemporalIds.workflow(task.id, attemptId), new SoftwareFactoryWorkflow.ApprovalSignal(
                 task.id, attemptId, task.pendingEffect.manifestId(), task.pendingEffect.manifestDigest(),
                 "APPROVE", scm.approver(), Instant.now().toString()));
+    }
+
+    @Override
+    public void answerHumanDecision(TaskState task, String requestId, HumanDecisionResponse response) {
+        requireTask(task);
+        if (response == null) throw new IllegalArgumentException("Human decision response is required");
+        task.requireHumanActionAnswer(requestId, response.decision(), response.objectDigest(),
+                response.actor(), response.actorRole());
+        String attemptId = PipelineStepContracts.INITIAL_ATTEMPT_ID;
+        commands.decide(TemporalIds.workflow(task.id, attemptId), new SoftwareFactoryWorkflow.HumanDecisionSignal(
+                task.id, attemptId, requestId, response.decision(), response.objectDigest(), response.actor(),
+                response.actorRole(), Instant.now().toString()));
     }
 
     private static void requireTask(TaskState task) {

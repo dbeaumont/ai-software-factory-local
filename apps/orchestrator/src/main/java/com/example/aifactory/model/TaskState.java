@@ -239,6 +239,15 @@ public class TaskState {
 
     public synchronized void answerHumanAction(String requestId, String decision, String objectDigest,
                                                String actor, String actorRole) {
+        TaskView.HumanActionView action = requireHumanActionAnswer(
+                requestId, decision, objectDigest, actor, actorRole);
+        humanActions.put(requestId, new TaskView.HumanActionView(action.requestId(), action.contradictionId(),
+                action.domain(), action.question(), action.objectDigest(), "ANSWERED", action.alternatives()));
+        recordDecision("human-" + requestId, action.contradictionId(), "human-decision", decision, actor);
+    }
+
+    public synchronized TaskView.HumanActionView requireHumanActionAnswer(
+            String requestId, String decision, String objectDigest, String actor, String actorRole) {
         TaskView.HumanActionView action = humanActions.get(requestId);
         if (action == null) throw new IllegalArgumentException("Unknown human decision request " + requestId);
         if (!"PENDING".equals(action.status())) {
@@ -254,9 +263,11 @@ public class TaskState {
                 || actor == null || actor.isBlank() || actor.length() > 256) {
             throw new IllegalArgumentException("Human decision response is invalid");
         }
-        humanActions.put(requestId, new TaskView.HumanActionView(action.requestId(), action.contradictionId(),
-                action.domain(), action.question(), action.objectDigest(), "ANSWERED", action.alternatives()));
-        recordDecision("human-" + requestId, action.contradictionId(), "human-decision", decision, actor);
+        if (!action.alternatives().isEmpty() && action.alternatives().stream()
+                .noneMatch(option -> decision.equals(option.optionId()))) {
+            throw new IllegalArgumentException("Human decision is not one of the proposed alternatives");
+        }
+        return action;
     }
 
     public synchronized boolean hasPendingHumanActions() {

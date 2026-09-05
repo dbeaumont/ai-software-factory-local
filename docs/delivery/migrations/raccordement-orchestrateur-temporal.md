@@ -271,8 +271,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   tentative, manifeste, digest, acteur et horodatage. _(La commande ne termine plus localement la tâche : elle
   signale le workflow V1. Celui-ci projette ensuite l'approbation via une activité Evidence, vérifie exactement le
   manifeste courant et son digest, puis seulement autorise l'activité SCM.)_
-- [ ] **TEMP-063 — Signaler les décisions humaines.** Vérifier domaine, rôle, options et object digest avant
-  émission du signal.
+- [x] **TEMP-063 — Signaler les décisions humaines.** Vérifier domaine, rôle, options et object digest avant
+  émission du signal. _(Le coordinateur valide la demande projetée, le rôle, le digest et l'option autorisée sans
+  modifier l'état ; le workflow reçoit un signal horodaté puis une activité Evidence applique la décision à la
+  projection, liée au commit source.)_
 - [ ] **TEMP-064 — Signaler l'annulation.** Rendre l'opération idempotente et retourner l'état projeté sans
   supposer que le workflow est déjà terminé.
 - [ ] **TEMP-065 — Implémenter retry opérateur.** Créer une nouvelle tentative Temporal liée à l'ancienne et

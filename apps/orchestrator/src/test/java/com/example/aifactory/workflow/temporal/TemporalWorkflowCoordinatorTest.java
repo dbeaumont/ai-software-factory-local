@@ -3,6 +3,7 @@ package com.example.aifactory.workflow.temporal;
 import com.example.aifactory.config.ScmDeliveryClientProperties;
 import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.model.LlmMode;
+import com.example.aifactory.model.HumanDecisionResponse;
 import com.example.aifactory.model.PendingEffect;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
@@ -75,6 +76,41 @@ class TemporalWorkflowCoordinatorTest {
         assertThatThrownBy(() -> coordinator.resumeAfterApproval(task()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("manifest-bound");
+    }
+
+    @Test
+    void validatesAndSignalsAHumanDecisionWithoutMutatingTheProjection() {
+        TaskState task = task();
+        String digest = "d".repeat(64);
+        task.recordHumanAction("architecture-1", "contradiction-1", "ARCHITECTURE", "Choose API", digest,
+                "PENDING", java.util.List.of(
+                        new com.example.aifactory.model.TaskView.DecisionOptionView(
+                                "REST", "REST", "Expose an HTTP API", true)));
+        ArgumentCaptor<SoftwareFactoryWorkflow.HumanDecisionSignal> signal =
+                ArgumentCaptor.forClass(SoftwareFactoryWorkflow.HumanDecisionSignal.class);
+
+        coordinator.answerHumanDecision(task, "architecture-1",
+                new HumanDecisionResponse("REST", digest, "architect@example.test", "ARCHITECTURE"));
+
+        verify(commands).decide(org.mockito.ArgumentMatchers.eq(
+                TemporalIds.workflow(task.id, PipelineStepContracts.INITIAL_ATTEMPT_ID)), signal.capture());
+        assertThat(signal.getValue().decisionId()).isEqualTo("architecture-1");
+        assertThat(signal.getValue().objectDigest()).isEqualTo(digest);
+        assertThat(signal.getValue().actorRole()).isEqualTo("ARCHITECTURE");
+        assertThat(task.humanActions.get("architecture-1").status()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void refusesAnUnauthorizedDecisionBeforeSignallingTemporal() {
+        TaskState task = task();
+        String digest = "d".repeat(64);
+        task.recordHumanAction("architecture-1", "contradiction-1", "ARCHITECTURE", "Choose API", digest,
+                "PENDING");
+
+        assertThatThrownBy(() -> coordinator.answerHumanDecision(task, "architecture-1",
+                new HumanDecisionResponse("REST", digest, "reviewer", "SECURITY")))
+                .isInstanceOf(SecurityException.class);
+        org.mockito.Mockito.verify(commands, org.mockito.Mockito.never()).decide(any(), any());
     }
 
     private static TaskState task() {

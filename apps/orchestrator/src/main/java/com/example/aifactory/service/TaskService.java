@@ -139,8 +139,7 @@ public class TaskService {
     public TaskView answerDecision(String id, String requestId, HumanDecisionResponse response) {
         if (response == null) throw new IllegalArgumentException("Human decision response is required");
         TaskState state = requireTask(id);
-        state.answerHumanAction(requestId, response.decision(), response.objectDigest(),
-                response.actor(), response.actorRole());
+        coordinator.answerHumanDecision(state, requestId, response);
         return state.view();
     }
 
