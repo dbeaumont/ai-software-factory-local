@@ -111,8 +111,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-013 — Valider la configuration de connexion.** Vérifier cible, namespace, rétention, task queues,
   TLS, certificat client, nom de serveur et fichier de clé API sans journaliser les secrets. _(Validation stricte
   des ports, queues, durées, combinaisons TLS et chemins absolus couverte par tests.)_
-- [ ] **TEMP-014 — Vérifier la compatibilité.** Tester et documenter la matrice entre le serveur Temporal 1.31.2,
-  le SDK Java 1.38.0 et les fonctionnalités utilisées, notamment Worker Versioning.
+- [x] **TEMP-014 — Vérifier la compatibilité.** Tester et documenter la matrice entre le serveur Temporal 1.31.2,
+  le SDK Java 1.38.0 et les fonctionnalités utilisées, notamment Worker Versioning. _(Matrice reproductible,
+  versions Compose épinglées, handshake serveur et API Worker Versioning qualifiés.)_
 - [ ] **TEMP-015 — Corriger l'accès à Temporal UI.** Vérifier que `127.0.0.1:8233` est réellement publié sur
   macOS malgré le réseau Compose interne, sans exposer le frontend gRPC Temporal sur l'hôte.
 - [ ] **TEMP-016 — Ajouter des cibles opérateur.** Fournir `make temporal-status`, `make temporal-logs` et

@@ -31,8 +31,10 @@ class TemporalComposeTest {
                 .contains("temporal-db-data:/var/lib/postgresql/data");
         assertThat(database.get("networks")).isEqualTo(List.of("workflow-internal"));
         assertThat(schema.get("image").toString()).startsWith("temporalio/admin-tools:").doesNotEndWith("latest");
+        assertThat(schema.get("image").toString()).startsWith("temporalio/admin-tools:1.31.2@");
         assertThat((Map<String, Object>) schema.get("depends_on")).containsKey("temporal-db");
         assertThat(temporal.get("image").toString()).startsWith("temporalio/server:").doesNotEndWith("latest");
+        assertThat(temporal.get("image").toString()).startsWith("temporalio/server:1.31.2@");
         assertThat(temporal).doesNotContainKey("ports");
         assertThat(temporal.get("networks")).isEqualTo(List.of("workflow-internal"));
         assertThat((Map<String, Object>) namespace.get("environment"))
