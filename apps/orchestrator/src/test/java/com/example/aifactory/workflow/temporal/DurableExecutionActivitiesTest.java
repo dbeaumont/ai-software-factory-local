@@ -68,7 +68,9 @@ class DurableExecutionActivitiesTest {
 
         assertThatThrownBy(() -> activities.invokeAgent(
                 new DurableExecutionActivities.AgentCall(metadata(), invocation)))
-                .hasMessageContaining("not bound");
+                .isInstanceOf(io.temporal.failure.ApplicationFailure.class)
+                .extracting(failure -> ((io.temporal.failure.ApplicationFailure) failure).getType())
+                .isEqualTo("CONTRACT_ERROR");
     }
 
     @Test

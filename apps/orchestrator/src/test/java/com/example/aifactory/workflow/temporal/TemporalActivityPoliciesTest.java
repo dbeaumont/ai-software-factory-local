@@ -30,6 +30,7 @@ class TemporalActivityPoliciesTest {
         assertThat(options.getScheduleToCloseTimeout()).isGreaterThan(timeout);
         assertThat(options.getRetryOptions().getMaximumAttempts()).isEqualTo(attempts);
         assertThat(options.getRetryOptions().getDoNotRetry())
-                .contains("INVALID_ARGUMENT", "PERMISSION_DENIED", "INCOMPATIBLE_SCHEMA", "POLICY_DENIED");
+                .contains("INVALID_ARGUMENT", "PERMISSION_DENIED", "INCOMPATIBLE_SCHEMA", "POLICY_DENIED",
+                        "BUSINESS_REJECTION", "CONTRACT_ERROR", "EFFECT_OUTCOME_UNKNOWN");
     }
 }

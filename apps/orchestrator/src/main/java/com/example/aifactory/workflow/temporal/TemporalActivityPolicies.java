@@ -10,7 +10,8 @@ import java.util.Map;
 /** Version 1 activity policies; workflow code selects a profile instead of constructing ad-hoc options. */
 public final class TemporalActivityPolicies {
     private static final String[] NON_RETRYABLE = {
-            "INVALID_ARGUMENT", "PERMISSION_DENIED", "INCOMPATIBLE_SCHEMA", "POLICY_DENIED"
+            "INVALID_ARGUMENT", "PERMISSION_DENIED", "INCOMPATIBLE_SCHEMA", "POLICY_DENIED",
+            "BUSINESS_REJECTION", "CONTRACT_ERROR", "EFFECT_OUTCOME_UNKNOWN"
     };
     private static final Map<Kind, ActivityOptions> OPTIONS = build();
 

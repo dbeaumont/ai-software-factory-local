@@ -147,8 +147,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   source commit et digest d'entrée ; rejeter une réutilisation avec un payload différent. _(Clé canonique
   `effect-<sha256>` généralisée aux activités, sandbox et livraison SCM ; les MCP persistants comparent le
   fingerprint complet et refusent toute collision de payload.)_
-- [ ] **TEMP-025 — Classer les erreurs.** Distinguer erreurs métier non retryables, erreurs de contrat, saturation,
-  timeout, dépendance indisponible et issue d'effet inconnue.
+- [x] **TEMP-025 — Classer les erreurs.** Distinguer erreurs métier non retryables, erreurs de contrat, saturation,
+  timeout, dépendance indisponible et issue d'effet inconnue. _(`TemporalFailureClassifier` produit des types
+  stables, politiques de retry explicites et un marqueur de réconciliation pour les effets incertains.)_
 - [ ] **TEMP-026 — Définir les politiques temporelles.** Fixer pour chaque activité start-to-close,
   schedule-to-close, heartbeat timeout, nombre de tentatives et backoff.
 - [ ] **TEMP-027 — Utiliser l'exécuteur local comme oracle avant coupure.** Recomposer temporairement le pipeline

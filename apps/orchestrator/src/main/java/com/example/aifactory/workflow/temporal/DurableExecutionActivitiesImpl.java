@@ -29,8 +29,12 @@ public final class DurableExecutionActivitiesImpl implements DurableExecutionAct
 
     @Override
     public AgentResult invokeAgent(AgentCall call) {
-        return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
-                "InvokeAgent", () -> invokeAgentObserved(call));
+        try {
+            return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
+                    "InvokeAgent", () -> invokeAgentObserved(call));
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        }
     }
 
     private AgentResult invokeAgentObserved(AgentCall call) {
@@ -46,8 +50,12 @@ public final class DurableExecutionActivitiesImpl implements DurableExecutionAct
 
     @Override
     public McpResult invokeMcp(McpCall call) {
-        return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
-                "InvokeMcpTool", () -> invokeMcpObserved(call));
+        try {
+            return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
+                    "InvokeMcpTool", () -> invokeMcpObserved(call));
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        }
     }
 
     private McpResult invokeMcpObserved(McpCall call) {
@@ -66,8 +74,12 @@ public final class DurableExecutionActivitiesImpl implements DurableExecutionAct
 
     @Override
     public EvidenceRepository.StoredEvidence storeEvidence(EvidenceCall call) {
-        return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
-                "StoreEvidence", () -> storeEvidenceObserved(call));
+        try {
+            return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
+                    "StoreEvidence", () -> storeEvidenceObserved(call));
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        }
     }
 
     private EvidenceRepository.StoredEvidence storeEvidenceObserved(EvidenceCall call) {
