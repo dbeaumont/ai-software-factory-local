@@ -429,7 +429,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester rejet de chaque gate et préservation des preuves partielles. _(Les gates test, qualité, sécurité et revue
   sont rejetés tour à tour ; chacun termine sans livraison, enregistre le gate exact et conserve dans le résultat et
   la query Evidence tous les artefacts complets produits auparavant.)_
-- [ ] Tester retries déterministes, heartbeat, timeout et activité non retryable.
+- [x] Tester retries déterministes, heartbeat, timeout et activité non retryable. _(Les tests embarqués imposent deux
+  tentatives après timeout en ignorant la réponse tardive, reprennent le même job sandbox via les détails de
+  heartbeat et prouvent qu'une erreur métier `nonRetryable` ne déclenche qu'une seule tentative.)_
 - [ ] Tester signaux reçus avant et pendant `Workflow.await`.
 - [ ] Tester annulation en clonage, LLM, sandbox, attente humaine et livraison.
 - [ ] Tester `continue-as-new` et propagation de l'état minimal.

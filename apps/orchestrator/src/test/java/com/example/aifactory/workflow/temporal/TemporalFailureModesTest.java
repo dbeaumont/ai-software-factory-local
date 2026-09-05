@@ -3,6 +3,7 @@ package com.example.aifactory.workflow.temporal;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.client.WorkflowFailedException;
 import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.failure.ApplicationFailure;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TemporalFailureModesTest {
     private static final String TASK_QUEUE = "failure-modes-test";
@@ -72,6 +74,24 @@ class TemporalFailureModesTest {
             assertThat(workflow.run("task-1-attempt-1-operation-1")).isEqualTo("effect-result");
             assertThat(attempts).hasValue(2);
             assertThat(externalEffects).as("the idempotency key protects the external side effect").hasValue(1);
+        }
+    }
+
+    @Test
+    void doesNotRetryAnExplicitlyNonRetryableActivityFailure() {
+        AtomicInteger attempts = new AtomicInteger();
+        DuplicateActivities activities = ignored -> {
+            attempts.incrementAndGet();
+            throw ApplicationFailure.newNonRetryableFailure("policy rejected", "POLICY_DENIED");
+        };
+
+        try (TestWorkflowEnvironment environment = environment(DuplicateWorkflowImpl.class, activities)) {
+            DuplicateWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(DuplicateWorkflow.class,
+                    options("non-retryable-activity"));
+
+            assertThatThrownBy(() -> workflow.run("non-retryable-operation"))
+                    .isInstanceOf(WorkflowFailedException.class);
+            assertThat(attempts).as("a non-retryable business failure is attempted once").hasValue(1);
         }
     }
 
