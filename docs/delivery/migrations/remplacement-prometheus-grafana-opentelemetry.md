@@ -100,7 +100,7 @@ Au début de la migration, le dépôt possède notamment :
 ### 5.2 Décisions à consigner dans une ADR
 
 - [x] Qualifier SigNoz self-hosted et sa compatibilité `arm64`/Docker Desktop.
-- [ ] Valider Google Cloud Monitoring, Trace et Logging comme backends GKE, ou documenter l'alternative retenue.
+- [x] Valider Google Cloud Monitoring, Trace et Logging comme backends GKE, ou documenter l'alternative retenue.
 - [x] Décider si les logs applicatifs sont exportés par OTLP dès cette migration ou dans un lot séparé.
 - [x] Décider le traitement des métriques Temporal : receiver Prometheus du Collector, receiver dédié ou export natif.
 - [x] Décider le traitement des métriques d'infrastructure qui ne disposent pas d'un SDK OTel.
@@ -210,10 +210,10 @@ Au début de la migration, le dépôt possède notamment :
 
 ### 8.2 Résilience et sécurité
 
-- [ ] Activer TLS/mTLS ou une authentification approuvée hors du réseau local isolé.
+- [x] Activer TLS/mTLS ou une authentification approuvée hors du réseau local isolé.
 - [x] Stocker les credentials d'export hors des fichiers de configuration versionnés.
 - [x] Appliquer `read_only`, utilisateur non-root, capabilities supprimées et `no-new-privileges` en Compose.
-- [ ] Appliquer Pod Security, ServiceAccount dédié, Workload Identity et NetworkPolicies en GKE.
+- [x] Appliquer Pod Security, ServiceAccount dédié, Workload Identity et NetworkPolicies en GKE.
 - [ ] Tester backend lent, backend indisponible, données invalides, saturation et redémarrage du Collector.
 - [x] Vérifier que la backpressure reste bornée et ne remonte pas jusqu'au chemin métier.
 - [ ] Définir des alertes sur refus, pertes, files pleines, mémoire, redémarrages et erreurs d'export.
@@ -306,21 +306,21 @@ spécification visuelle et fonctionnelle pendant le portage.
 
 ## 10. Lot 5 — cible GKE et Google Cloud Observability
 
-- [ ] Créer les namespaces et ServiceAccounts dédiés à la collecte de télémétrie.
-- [ ] Déployer un Collector agent/DaemonSet uniquement si les signaux de nœud ou fichiers le nécessitent.
-- [ ] Déployer des Collectors gateway redondés pour OTLP, tail sampling et export Google Cloud.
-- [ ] Utiliser Workload Identity pour l'export, sans clé de compte de service montée.
-- [ ] Appliquer les rôles IAM minimaux pour métriques, traces et logs.
+- [x] Créer les namespaces et ServiceAccounts dédiés à la collecte de télémétrie.
+- [x] Déployer un Collector agent/DaemonSet uniquement si les signaux de nœud ou fichiers le nécessitent.
+- [x] Déployer des Collectors gateway redondés pour OTLP, tail sampling et export Google Cloud.
+- [x] Utiliser Workload Identity pour l'export, sans clé de compte de service montée.
+- [x] Appliquer les rôles IAM minimaux pour métriques, traces et logs.
 - [ ] Stocker les secrets résiduels dans Secret Manager et tester leur rotation.
-- [ ] Appliquer NetworkPolicies, TLS, Pod Security, quotas, requests/limits, PDB et anti-affinité.
+- [x] Appliquer NetworkPolicies, TLS, Pod Security, quotas, requests/limits, PDB et anti-affinité.
 - [ ] Configurer autoscaling et files persistantes selon la volumétrie mesurée.
-- [ ] Définir les ressources et labels surveillés compatibles avec Google Cloud.
+- [x] Définir les ressources et labels surveillés compatibles avec Google Cloud.
 - [ ] Recréer les six dashboards dans Cloud Monitoring ou l'interface d'entreprise approuvée.
 - [ ] Recréer les neuf alertes et leurs notification channels avec déduplication.
 - [ ] Configurer les liens Monitoring → Trace → Logging et vers les runbooks.
 - [ ] Définir rétention, régions, exclusions de logs et budgets/alertes de coût.
 - [ ] Tester rolling update, perte d'une zone, saturation, quota API et indisponibilité du backend.
-- [ ] Vérifier les contraintes VPC Service Controls et egress privé applicables.
+- [x] Vérifier les contraintes VPC Service Controls et egress privé applicables.
 
 ### Critères de sortie du lot 5
 
@@ -480,7 +480,7 @@ différée afin de rester récupérable.
 - [x] `OTEL-010` — contrat de télémétrie, conventions et tests de confidentialité.
 - [x] `OTEL-100` — **bascule runtime atomique** regroupant instrumentation des six applications, propagation W3C, Collector, SigNoz, dashboards, alertes et retrait de Prometheus/Grafana.
 - [x] `OTEL-101` — qualification macOS complète de la nouvelle pile sans aucun conteneur legacy.
-- [ ] `OTEL-050` — Collectors GKE, Workload Identity et export Google Cloud.
+- [x] `OTEL-050` — Collectors GKE, Workload Identity et export Google Cloud.
 - [ ] `OTEL-060` — campagne de parité sur fixtures historiques et rapport de validation SigNoz.
 - [ ] `OTEL-070` — exercice opérateur, tests de panne et décision de stabilité.
 - [ ] `OTEL-080` — suppression différée du volume Grafana détaché après expiration de la sauvegarde.

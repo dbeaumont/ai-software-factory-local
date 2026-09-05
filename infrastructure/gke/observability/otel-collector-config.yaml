@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-gateway-config
+  namespace: ai-factory-observability
+data:
+  config.yaml: |
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+            max_recv_msg_size_mib: 4
+            tls:
+              cert_file: /var/run/otel-tls/tls.crt
+              key_file: /var/run/otel-tls/tls.key
+              client_ca_file: /var/run/otel-tls/ca.crt
+          http:
+            endpoint: 0.0.0.0:4318
+            max_request_body_size: 4194304
+            tls:
+              cert_file: /var/run/otel-tls/tls.crt
+              key_file: /var/run/otel-tls/tls.key
+              client_ca_file: /var/run/otel-tls/ca.crt
+      # Loopback-only receiver for the gateway's own OTLP metrics. It is never exposed by the Service.
+      otlp/self:
+        protocols:
+          http:
+            endpoint: 127.0.0.1:14318
+            max_request_body_size: 1048576
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 768
+        spike_limit_mib: 192
+      k8sattributes:
+        auth_type: serviceAccount
+        extract:
+          metadata: [k8s.namespace.name, k8s.deployment.name, k8s.statefulset.name, k8s.daemonset.name, k8s.pod.name, k8s.pod.uid, k8s.node.name]
+      transform/redact:
+        error_mode: ignore
+        trace_statements:
+          - context: span
+            statements:
+              - delete_key(span.attributes, "http.request.header.authorization")
+              - delete_key(span.attributes, "http.request.header.cookie")
+              - delete_key(span.attributes, "http.response.header.set_cookie")
+              - delete_key(span.attributes, "gen_ai.prompt")
+              - delete_key(span.attributes, "gen_ai.completion")
+              - delete_key(span.attributes, "ai.prompt")
+              - delete_key(span.attributes, "ai.result")
+              - delete_key(span.attributes, "ai.evidence")
+              - delete_key(span.attributes, "code")
+              - delete_key(span.attributes, "patch")
+              - delete_key(span.attributes, "url.full")
+              - delete_key(span.attributes, "url.query")
+              - delete_key(span.attributes, "http.url")
+              - delete_key(span.attributes, "http.target")
+              - delete_key(span.attributes, "db.statement")
+              - delete_key(span.attributes, "exception.message")
+              - delete_key(span.attributes, "exception.stacktrace")
+        log_statements:
+          - context: log
+            statements:
+              - delete_key(log.attributes, "authorization")
+              - delete_key(log.attributes, "cookie")
+              - delete_key(log.attributes, "gen_ai.prompt")
+              - delete_key(log.attributes, "gen_ai.completion")
+              - delete_key(log.attributes, "ai.evidence")
+              - delete_key(log.attributes, "code")
+              - delete_key(log.attributes, "patch")
+              - delete_key(log.attributes, "url.full")
+              - delete_key(log.attributes, "url.query")
+              - delete_key(log.attributes, "http.url")
+              - delete_key(log.attributes, "http.target")
+              - delete_key(log.attributes, "db.statement")
+              - delete_key(log.attributes, "exception.message")
+              - delete_key(log.attributes, "exception.stacktrace")
+        metric_statements:
+          - context: datapoint
+            statements:
+              - delete_key(datapoint.attributes, "authorization")
+              - delete_key(datapoint.attributes, "cookie")
+              - delete_key(datapoint.attributes, "gen_ai.prompt")
+              - delete_key(datapoint.attributes, "gen_ai.completion")
+              - delete_key(datapoint.attributes, "ai.prompt")
+              - delete_key(datapoint.attributes, "ai.result")
+              - delete_key(datapoint.attributes, "ai.evidence")
+              - delete_key(datapoint.attributes, "code")
+              - delete_key(datapoint.attributes, "patch")
+              - delete_key(datapoint.attributes, "url.full")
+              - delete_key(datapoint.attributes, "url.query")
+              - delete_key(datapoint.attributes, "http.url")
+              - delete_key(datapoint.attributes, "http.target")
+              - delete_key(datapoint.attributes, "db.statement")
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 50000
+        expected_new_traces_per_sec: 100
+        policies:
+          - name: errors
+            type: status_code
+            status_code: { status_codes: [ERROR] }
+          - name: slow
+            type: latency
+            latency: { threshold_ms: 5000 }
+          - name: baseline
+            type: probabilistic
+            probabilistic: { sampling_percentage: 10 }
+      batch:
+        send_batch_size: 512
+        send_batch_max_size: 1024
+        timeout: 5s
+    exporters:
+      googlecloud:
+        project: ${env:GOOGLE_CLOUD_PROJECT}
+        metric:
+          prefix: workload.googleapis.com
+        sending_queue:
+          enabled: true
+          num_consumers: 8
+          queue_size: 4096
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, transform/redact, tail_sampling, batch]
+          exporters: [googlecloud]
+        metrics:
+          receivers: [otlp, otlp/self]
+          processors: [memory_limiter, k8sattributes, transform/redact, batch]
+          exporters: [googlecloud]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, transform/redact, batch]
+          exporters: [googlecloud]
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          readers:
+            - periodic:
+                interval: 15000
+                exporter:
+                  otlp:
+                    protocol: http/protobuf
+                    endpoint: http://127.0.0.1:14318
+                    timeout: 5000
+                    insecure: true

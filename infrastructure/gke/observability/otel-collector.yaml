@@ -1,0 +1,200 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-factory-observability
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: observability-budget
+  namespace: ai-factory-observability
+spec:
+  hard:
+    pods: "10"
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "10"
+    limits.memory: 16Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: observability-defaults
+  namespace: ai-factory-observability
+spec:
+  limits:
+    - type: Container
+      defaultRequest: { cpu: 100m, memory: 128Mi }
+      default: { cpu: "1", memory: 1Gi }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-gateway
+  namespace: ai-factory-observability
+  annotations:
+    iam.gke.io/gcp-service-account: otel-collector@PROJECT_ID.iam.gserviceaccount.com
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ai-factory-otel-gateway
+rules:
+  - apiGroups: [""]
+    resources: [pods, namespaces, nodes]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [replicasets, deployments, statefulsets, daemonsets]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ai-factory-otel-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ai-factory-otel-gateway
+subjects:
+  - kind: ServiceAccount
+    name: otel-gateway
+    namespace: ai-factory-observability
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-gateway
+  namespace: ai-factory-observability
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  selector:
+    matchLabels: { app.kubernetes.io/name: otel-gateway }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: otel-gateway }
+    spec:
+      serviceAccountName: otel-gateway
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: otel-gateway }
+      containers:
+        - name: collector
+          image: otel/opentelemetry-collector-contrib:0.160.0@sha256:799dc6cf12c96192af37b5bdba804da8c10b3bc563b43cb90c3f3c58d9572ad6
+          args: ["--config=/etc/otelcol-contrib/config.yaml"]
+          env:
+            - name: GOOGLE_CLOUD_PROJECT
+              valueFrom:
+                configMapKeyRef: { name: otel-environment, key: project-id }
+          ports:
+            - { name: otlp-grpc, containerPort: 4317 }
+            - { name: otlp-http, containerPort: 4318 }
+            - { name: health, containerPort: 13133 }
+          readinessProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - { name: config, mountPath: /etc/otelcol-contrib, readOnly: true }
+            - { name: tls, mountPath: /var/run/otel-tls, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: config
+          configMap: { name: otel-gateway-config }
+        - name: tls
+          secret: { secretName: otel-gateway-tls }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-gateway
+  namespace: ai-factory-observability
+spec:
+  type: ClusterIP
+  selector: { app.kubernetes.io/name: otel-gateway }
+  ports:
+    - { name: otlp-grpc, port: 4317, targetPort: otlp-grpc }
+    - { name: otlp-http, port: 4318, targetPort: otlp-http }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: otel-gateway
+  namespace: ai-factory-observability
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: otel-gateway }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: otel-gateway
+  namespace: ai-factory-observability
+spec:
+  minReplicas: 2
+  maxReplicas: 6
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: otel-gateway }
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }
+    - type: Resource
+      resource:
+        name: memory
+        target: { type: Utilization, averageUtilization: 75 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: otel-gateway
+  namespace: ai-factory-observability
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: otel-gateway }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { telemetry.ai-factory.example/enabled: "true" }
+      ports:
+        - { protocol: TCP, port: 4317 }
+        - { protocol: TCP, port: 4318 }
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - to:
+        - ipBlock: { cidr: 199.36.153.8/30 }
+      ports:
+        - { protocol: TCP, port: 443 }

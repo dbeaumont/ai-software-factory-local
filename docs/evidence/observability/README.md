@@ -39,4 +39,5 @@ Cette fixture ne contient ni secret, ni prompt, ni résultat LLM, ni code source
 
 - `otel-100-runtime-cutover-2026-09-05.md` consigne les contrôles de la bascule atomique.
 - `otel-101-macos-qualification-2026-09-05.md` consigne la qualification Docker Desktop Apple Silicon.
+- `otel-050-gke-manifest-validation-2026-09-05.md` consigne la validation hors cluster de la gateway GKE.
 - `grafana-volume-backup-2026-09-05.md` consigne les sauvegardes récupérables et leur expiration.

@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - otel-collector-config.yaml
+  - otel-collector.yaml
+configMapGenerator:
+  - name: otel-environment
+    namespace: ai-factory-observability
+    literals:
+      - project-id=REPLACE_WITH_GCP_PROJECT_ID
+generatorOptions:
+  disableNameSuffixHash: true
