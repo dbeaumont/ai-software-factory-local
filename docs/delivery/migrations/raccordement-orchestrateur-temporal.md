@@ -374,8 +374,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   sensibles ; versionner leur création locale. _(Le schéma v1 ne contient que task ID, attempt ID, repository ID et
   mode d'exécution en `Keyword` ; une garde exige le jeu exact et des valeurs bornées, et le bootstrap local crée les
   attributs de façon idempotente depuis le manifeste versionné.)_
-- [ ] **TEMP-086 — Sauvegarder et restaurer.** Tester sauvegarde cohérente de `temporal-db`, `orchestrator-db` et
-  Evidence MCP, puis restauration dans l'ordre documenté.
+- [x] **TEMP-086 — Sauvegarder et restaurer.** Tester sauvegarde cohérente de `temporal-db`, `orchestrator-db` et
+  Evidence MCP, puis restauration dans l'ordre documenté. _(Les écrivains sont gelés avant les dumps et l'archive,
+  un manifeste SHA-256 protège le jeu ; le test restaure sans réseau et sans toucher les volumes actifs dans l'ordre
+  Evidence, autorité Temporal, puis projection orchestrateur.)_
 - [ ] **TEMP-087 — Tester la rétention.** Vérifier expiration des historiques, conservation légale des preuves et
   comportement de la projection lorsque l'historique n'est plus disponible.
 - [ ] **TEMP-088 — Mettre à jour les runbooks.** Compléter indisponibilité Temporal, worker défaillant, saturation,
