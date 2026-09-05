@@ -405,7 +405,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester validation des options client, namespace, queues, TLS et secrets par fichier. _(Les tests de propriétés,
   sécurité client, Compose et version SDK valident les bornes, les sept queues, TLS conditionnel et les fichiers de
   secrets owner-only sans exposer leur contenu.)_
-- [ ] Tester l'absence de routage `LOCAL`/`TEMPORAL` et le refus de démarrer ou d'admettre sans Temporal.
+- [x] Tester l'absence de routage `LOCAL`/`TEMPORAL` et le refus de démarrer ou d'admettre sans Temporal. _(Temporal
+  est le seul `@Component` du port de coordination ; readiness et admission échouent fermées si le worker, le service
+  ou le namespace ne répondent pas, sans branche de sélection de moteur.)_
 - [ ] Tester identifiants, clés d'idempotence, classification des erreurs et politiques de retry.
 - [ ] Interdire par test d'architecture réseau, filesystem, horloge système, thread, random et client MCP dans les
   implémentations de workflow.
