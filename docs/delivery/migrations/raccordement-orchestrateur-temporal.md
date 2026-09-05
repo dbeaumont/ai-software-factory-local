@@ -108,8 +108,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-012 — Aligner `.env.example`.** Fournir directement la configuration Temporal obligatoire et ne pas
   documenter de désactivation ou d'opt-in du moteur local. _(Configuration obligatoire et absence de fallback
   explicitées dans `.env.example` et `.env`.)_
-- [ ] **TEMP-013 — Valider la configuration de connexion.** Vérifier cible, namespace, rétention, task queues,
-  TLS, certificat client, nom de serveur et fichier de clé API sans journaliser les secrets.
+- [x] **TEMP-013 — Valider la configuration de connexion.** Vérifier cible, namespace, rétention, task queues,
+  TLS, certificat client, nom de serveur et fichier de clé API sans journaliser les secrets. _(Validation stricte
+  des ports, queues, durées, combinaisons TLS et chemins absolus couverte par tests.)_
 - [ ] **TEMP-014 — Vérifier la compatibilité.** Tester et documenter la matrice entre le serveur Temporal 1.31.2,
   le SDK Java 1.38.0 et les fonctionnalités utilisées, notamment Worker Versioning.
 - [ ] **TEMP-015 — Corriger l'accès à Temporal UI.** Vérifier que `127.0.0.1:8233` est réellement publié sur

@@ -33,6 +33,21 @@ class TemporalPropertiesTest {
                 .run(context -> assertThat(context).hasFailed());
     }
 
+    @Test
+    void rejectsAnOutOfRangeTargetPort() {
+        runner.withPropertyValues("ai-factory.temporal.target=temporal:70000")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void rejectsRelativeCredentialPaths() {
+        runner.withPropertyValues(
+                "ai-factory.temporal.security.tls-enabled=true",
+                "ai-factory.temporal.security.server-name=temporal.example.test",
+                "ai-factory.temporal.security.api-key-file=relative/temporal-token")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
     private static String[] valid() {
         return new String[]{"ai-factory.temporal.target=temporal:7233",
                 "ai-factory.temporal.namespace=ai-factory-local", "ai-factory.temporal.namespace-retention=P7D",
