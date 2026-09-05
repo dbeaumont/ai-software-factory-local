@@ -11,6 +11,7 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.time.Instant;
+import java.nio.file.attribute.FileTime;
 import tools.jackson.databind.ObjectMapper;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -121,5 +122,58 @@ class EvidenceStoreTest {
         assertArrayEquals(content, Base64.getDecoder().decode(recovered.contentBase64()));
         assertEquals(digest, recovered.digest());
         assertEquals("COMPLETE", recovered.status());
+    }
+
+    @Test
+    void legalHoldPreservesExpiredEvidenceUntilAuditedRelease(@TempDir Path root) throws Exception {
+        EvidenceStore store = new EvidenceStore(new EvidenceProperties(root, 1024),
+                new ObjectMapper(), new EvidencePolicy());
+        byte[] content = "legally retained proof".getBytes(StandardCharsets.UTF_8);
+        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        EvidenceStore.StoredEvidence stored = store.store("task-1", "attempt-1", "tests", "text/plain",
+                Base64.getEncoder().encodeToString(content), digest, "workflow");
+        Path artifact = root.resolve("task-1/attempt-1/tests-" + digest + ".bin");
+        java.nio.file.Files.setLastModifiedTime(artifact,
+                FileTime.from(Instant.now().minus(java.time.Duration.ofDays(91))));
+
+        EvidenceStore.LegalHold hold = store.placeLegalHold("task-1", "attempt-1", "legal-officer",
+                "regulatory investigation 2026-42", Instant.now().plus(java.time.Duration.ofDays(30)));
+        store.purgeExpired();
+
+        assertTrue(java.nio.file.Files.isRegularFile(artifact));
+        assertEquals(64, hold.reasonDigest().length());
+        assertFalse(java.nio.file.Files.readString(root.resolve("audit/legal-holds.jsonl"))
+                .contains("regulatory investigation"));
+        assertThrows(SecurityException.class, () -> store.releaseLegalHold(
+                "task-1", "attempt-1", "developer", "not authorized"));
+
+        store.releaseLegalHold("task-1", "attempt-1", "security-officer", "case closed");
+        store.purgeExpired();
+
+        assertFalse(java.nio.file.Files.exists(artifact));
+        String audit = java.nio.file.Files.readString(root.resolve("audit/legal-holds.jsonl"));
+        assertTrue(audit.contains("PLACED"));
+        assertTrue(audit.contains("RELEASED"));
+        assertTrue(audit.contains(stored.uri().substring(11, stored.uri().indexOf('/', 11))));
+    }
+
+    @Test
+    void malformedLegalHoldFailsClosedDuringPurge(@TempDir Path root) throws Exception {
+        EvidenceStore store = new EvidenceStore(new EvidenceProperties(root, 1024),
+                new ObjectMapper(), new EvidencePolicy());
+        byte[] content = "proof".getBytes(StandardCharsets.UTF_8);
+        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        store.store("task-1", "attempt-1", "tests", "text/plain",
+                Base64.getEncoder().encodeToString(content), digest, "workflow");
+        Path artifact = root.resolve("task-1/attempt-1/tests-" + digest + ".bin");
+        java.nio.file.Files.setLastModifiedTime(artifact,
+                FileTime.from(Instant.now().minus(java.time.Duration.ofDays(91))));
+        Path hold = root.resolve("legal-holds/task-1/attempt-1.json");
+        java.nio.file.Files.createDirectories(hold.getParent());
+        java.nio.file.Files.writeString(hold, "not-json");
+
+        store.purgeExpired();
+
+        assertTrue(java.nio.file.Files.isRegularFile(artifact));
     }
 }

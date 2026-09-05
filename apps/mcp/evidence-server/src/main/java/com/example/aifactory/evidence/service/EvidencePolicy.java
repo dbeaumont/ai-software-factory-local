@@ -5,6 +5,8 @@ import java.util.Map;
 
 @Service
 public class EvidencePolicy {
+    private static final java.util.Set<String> LEGAL_HOLD_ACTORS = java.util.Set.of(
+            "security-officer", "legal-officer");
     private static final java.util.Set<String> SUMMARY_ACTORS = java.util.Set.of(
             "workflow", "supervisor", "test-agent", "test-evidence", "security-agent",
             "security-findings", "independent-reviewer", "planner", "reviewer");
@@ -45,6 +47,12 @@ public class EvidencePolicy {
             throw new SecurityException("raw evidence read is not authorized");
         }
         return rule;
+    }
+
+    public void requireLegalHoldActor(String actor) {
+        if (!LEGAL_HOLD_ACTORS.contains(actor)) {
+            throw new SecurityException("actor cannot manage a legal hold");
+        }
     }
 
     public record Rule(String classification, int retentionDays) {}

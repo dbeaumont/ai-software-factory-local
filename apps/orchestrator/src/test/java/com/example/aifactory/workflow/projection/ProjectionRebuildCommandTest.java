@@ -62,4 +62,22 @@ class ProjectionRebuildCommandTest {
         assertThat(metrics.get("ai_factory_projection_rebuild_total").tag("outcome", "failure")
                 .counter().count()).isEqualTo(1);
     }
+
+    @Test
+    void exposesExpiredHistoryAsAStablePerTaskFailure() {
+        ProjectionRebuildCatalog catalog = (cursor, limit) -> List.of(
+                new ProjectionRebuildCatalog.Candidate("task-expired", "workflow-expired", "run-expired"));
+        ProjectionRebuilder rebuilder = mock(ProjectionRebuilder.class);
+        doThrow(new ProjectionHistoryUnavailableException("workflow-expired", "run-expired", null))
+                .when(rebuilder).rebuild("workflow-expired", "run-expired");
+        ProjectionRebuildCommand command = new ProjectionRebuildCommand(
+                catalog, rebuilder, mock(SecurityAuditJournal.class), new SimpleMeterRegistry());
+
+        ProjectionRebuildCommand.Result result = command.execute(
+                new ProjectionRebuildCommand.Request(false, 10, null, "operator"));
+
+        assertThat(result.succeeded()).isZero();
+        assertThat(result.failures()).containsExactly(new ProjectionRebuildCommand.Failure(
+                "task-expired", "ProjectionHistoryUnavailableException"));
+    }
 }

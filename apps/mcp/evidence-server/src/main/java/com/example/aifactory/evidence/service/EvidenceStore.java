@@ -106,6 +106,46 @@ public class EvidenceStore {
                 createdAt.plus(Duration.ofDays(rule.retentionDays())), createdAt);
     }
 
+    public synchronized LegalHold placeLegalHold(String taskId, String attemptId, String actor,
+                                                  String reason, Instant expiresAt) throws Exception {
+        validateScope(taskId, attemptId);
+        policy.requireLegalHoldActor(actor);
+        Instant now = Instant.now();
+        if (reason == null || reason.isBlank() || reason.length() > 1_024 || expiresAt == null
+                || !expiresAt.isAfter(now) || expiresAt.isAfter(now.plus(Duration.ofDays(3_650)))) {
+            throw new IllegalArgumentException("invalid legal hold");
+        }
+        Path marker = legalHoldPath(taskId, attemptId);
+        if (Files.isRegularFile(marker)) {
+            LegalHold current = mapper.readValue(Files.readAllBytes(marker), LegalHold.class);
+            if (current.expiresAt().isAfter(now) && expiresAt.isBefore(current.expiresAt())) {
+                throw new SecurityException("an active legal hold cannot be shortened");
+            }
+        }
+        LegalHold hold = new LegalHold(taskId, attemptId, actor, digest(reason.getBytes(StandardCharsets.UTF_8)),
+                expiresAt, now);
+        Files.createDirectories(marker.getParent());
+        Files.write(marker, mapper.writeValueAsBytes(hold), StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+        auditLegalHold("PLACED", hold, actor);
+        return hold;
+    }
+
+    public synchronized void releaseLegalHold(String taskId, String attemptId, String actor,
+                                               String reason) throws Exception {
+        validateScope(taskId, attemptId);
+        policy.requireLegalHoldActor(actor);
+        if (reason == null || reason.isBlank() || reason.length() > 1_024) {
+            throw new IllegalArgumentException("legal hold release reason is required");
+        }
+        Path marker = legalHoldPath(taskId, attemptId);
+        if (!Files.isRegularFile(marker)) throw new IllegalStateException("legal hold is absent");
+        LegalHold current = mapper.readValue(Files.readAllBytes(marker), LegalHold.class);
+        Files.delete(marker);
+        auditLegalHold("RELEASED", new LegalHold(taskId, attemptId, actor,
+                digest(reason.getBytes(StandardCharsets.UTF_8)), current.expiresAt(), Instant.now()), actor);
+    }
+
     private void verifyReference(String taskId, String attemptId, String type, EvidenceReference reference) {
         if (reference == null || reference.digest() == null || !reference.digest().matches("[0-9a-f]{64}")
                 || !("COMPLETE".equals(reference.status()) || "PARTIAL".equals(reference.status()))) {
@@ -152,21 +192,58 @@ public class EvidenceStore {
         if (!Files.isDirectory(root)) return;
         try (var files = Files.walk(root)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
-                if (file.startsWith(root.resolve("audit"))) continue;
+                if (file.startsWith(root.resolve("audit")) || file.startsWith(root.resolve("legal-holds"))) continue;
                 String name = file.getFileName().toString();
                 int separator = name.indexOf('-');
                 if (separator < 1) continue;
                 String type = name.startsWith("manifest-") ? "manifest" : name.substring(0, separator);
                 EvidencePolicy.Rule rule = policy.require(type);
-                if (Files.getLastModifiedTime(file).toInstant().plus(Duration.ofDays(rule.retentionDays())).isBefore(Instant.now())) Files.delete(file);
+                Path relative = root.relativize(file);
+                if (relative.getNameCount() < 3 || hasActiveLegalHold(
+                        relative.getName(0).toString(), relative.getName(1).toString())) continue;
+                if (Files.getLastModifiedTime(file).toInstant().plus(Duration.ofDays(rule.retentionDays()))
+                        .isBefore(Instant.now())) Files.delete(file);
             }
         }
+    }
+
+    private boolean hasActiveLegalHold(String taskId, String attemptId) {
+        Path marker = legalHoldPath(taskId, attemptId);
+        if (!Files.isRegularFile(marker)) return false;
+        try {
+            LegalHold hold = mapper.readValue(Files.readAllBytes(marker), LegalHold.class);
+            return hold.expiresAt() == null || hold.expiresAt().isAfter(Instant.now());
+        } catch (Exception malformed) {
+            return true; // Fail closed: corrupt hold metadata must never authorize deletion.
+        }
+    }
+
+    private Path legalHoldPath(String taskId, String attemptId) {
+        return root.resolve("legal-holds").resolve(taskId).resolve(attemptId + ".json").normalize();
+    }
+
+    private void auditLegalHold(String event, LegalHold hold, String actor) throws Exception {
+        Path audit = root.resolve("audit/legal-holds.jsonl");
+        Files.createDirectories(audit.getParent());
+        Map<String, Object> record = new LinkedHashMap<>();
+        record.put("event", event); record.put("task_id", hold.taskId());
+        record.put("attempt_id", hold.attemptId()); record.put("actor", actor);
+        record.put("reason_digest", hold.reasonDigest()); record.put("expires_at", hold.expiresAt().toString());
+        record.put("recorded_at", Instant.now().toString());
+        Files.writeString(audit, mapper.writeValueAsString(record) + System.lineSeparator(),
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE);
     }
 
     private Path attemptPath(String taskId, String attemptId) {
         Path attempt = root.resolve(taskId).resolve(attemptId).normalize();
         if (!attempt.startsWith(root)) throw new SecurityException("evidence path escapes storage root");
         return attempt;
+    }
+    private static void validateScope(String taskId, String attemptId) {
+        if (taskId == null || !taskId.matches("[A-Za-z0-9_-]{1,64}") || attemptId == null
+                || !attemptId.matches("[A-Za-z0-9_-]{1,128}")) {
+            throw new IllegalArgumentException("invalid evidence scope");
+        }
     }
     private byte[] encrypt(byte[] clear, byte[] associatedData) throws Exception {
         byte[] nonce = new byte[12]; random.nextBytes(nonce);
@@ -210,4 +287,6 @@ public class EvidenceStore {
                                  Instant retainUntil, Instant createdAt) {}
     public record ReadEvidence(String uri, String type, String digest, String status, String classification,
                                long sizeBytes, String contentBase64) {}
+    public record LegalHold(String taskId, String attemptId, String actor, String reasonDigest,
+                            Instant expiresAt, Instant placedAt) {}
 }

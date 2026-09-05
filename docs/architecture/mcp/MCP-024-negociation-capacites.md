@@ -20,7 +20,7 @@ Les valeurs initiales sont :
 | `sandbox-execution-mcp` | `0.1.0` | `sandbox.validate_patch`, `sandbox.apply_patch`, `sandbox.run_tests`, `sandbox.run_quality`, `sandbox.run_security`, `sandbox.get_execution`, `sandbox.cancel_execution` |
 | `scm-delivery-mcp` | `0.1.0` | `scm.get_repository`, `scm.resolve_revision`, `scm.create_draft_pull_request` |
 | `assurance-mcp` | `0.1.0` | `assurance.evaluate_quality_gate`, `assurance.normalize_findings`, `assurance.evaluate_policy` |
-| `evidence-mcp` | `0.1.0` | `evidence.store`, `evidence.create_manifest`, `evidence.get_summary`, `evidence.read` |
+| `evidence-mcp` | `0.1.0` | `evidence.store`, `evidence.create_manifest`, `evidence.get_summary`, `evidence.read`, `evidence.place_legal_hold`, `evidence.release_legal_hold` |
 
 Les versions de protocole acceptées sont `2025-11-25` puis `2025-06-18`, afin de couvrir la version négociée par le SDK courant et la révision précédente. Une modification de cette liste, d'une version serveur ou d'une allowlist est un changement de configuration contrôlé.
 

@@ -4,6 +4,7 @@ import com.example.aifactory.workflow.temporal.SoftwareFactoryWorkflow;
 import com.google.protobuf.Timestamp;
 import io.temporal.api.history.v1.HistoryEvent;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.common.WorkflowExecutionHistory;
 import io.temporal.common.converter.DataConverter;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.workflow.EvidenceRepository;
 import com.example.aifactory.workflow.temporal.PipelineExecutionActivities;
@@ -35,7 +38,17 @@ public final class TemporalProjectionHistorySource implements ProjectionHistoryS
 
     @Override
     public History read(String workflowId, String runId) {
-        WorkflowExecutionHistory history = client.fetchHistory(workflowId, runId);
+        WorkflowExecutionHistory history;
+        try {
+            history = client.fetchHistory(workflowId, runId);
+        } catch (WorkflowNotFoundException notFound) {
+            throw new ProjectionHistoryUnavailableException(workflowId, runId, notFound);
+        } catch (StatusRuntimeException status) {
+            if (status.getStatus().getCode() == Status.Code.NOT_FOUND) {
+                throw new ProjectionHistoryUnavailableException(workflowId, runId, status);
+            }
+            throw status;
+        }
         List<HistoryEvent> events = history.getEvents();
         HistoryEvent started = events.stream()
                 .filter(HistoryEvent::hasWorkflowExecutionStartedEventAttributes)

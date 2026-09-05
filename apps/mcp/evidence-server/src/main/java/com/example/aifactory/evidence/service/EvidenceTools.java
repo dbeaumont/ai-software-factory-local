@@ -80,6 +80,30 @@ public class EvidenceTools {
         }
     }
 
+    @Tool(name = "evidence.place_legal_hold", description = "Protect one task attempt from evidence expiry")
+    public LegalHold placeLegalHold(@ToolParam(description = "Contract version") String schema_version,
+                                    @ToolParam(description = "Task identifier") String task_id,
+                                    @ToolParam(description = "Attempt identifier") String attempt_id,
+                                    @ToolParam(description = "security-officer or legal-officer") String actor,
+                                    @ToolParam(description = "Required legal reason") String reason,
+                                    @ToolParam(description = "Required hold expiry") java.time.Instant expires_at)
+            throws Exception {
+        if (!"1".equals(schema_version)) throw new IllegalArgumentException("unsupported schema version");
+        EvidenceStore.LegalHold hold = store.placeLegalHold(task_id, attempt_id, actor, reason, expires_at);
+        return new LegalHold(hold.taskId(), hold.attemptId(), hold.actor(), hold.reasonDigest(),
+                hold.expiresAt(), hold.placedAt());
+    }
+
+    @Tool(name = "evidence.release_legal_hold", description = "Release one evidence legal hold with audit")
+    public void releaseLegalHold(@ToolParam(description = "Contract version") String schema_version,
+                                 @ToolParam(description = "Task identifier") String task_id,
+                                 @ToolParam(description = "Attempt identifier") String attempt_id,
+                                 @ToolParam(description = "security-officer or legal-officer") String actor,
+                                 @ToolParam(description = "Required release reason") String reason) throws Exception {
+        if (!"1".equals(schema_version)) throw new IllegalArgumentException("unsupported schema version");
+        store.releaseLegalHold(task_id, attempt_id, actor, reason);
+    }
+
     public record StoredEvidence(String uri, String digest, String status,
                                  @JsonProperty("media_type") String mediaType,
                                  @JsonProperty("size_bytes") long sizeBytes,
@@ -104,4 +128,10 @@ public class EvidenceTools {
     public record RawEvidence(String uri, String type, String digest, String status, String classification,
                               @JsonProperty("size_bytes") long sizeBytes,
                               @JsonProperty("content_base64") String contentBase64) {}
+    public record LegalHold(@JsonProperty("task_id") String taskId,
+                            @JsonProperty("attempt_id") String attemptId,
+                            String actor,
+                            @JsonProperty("reason_digest") String reasonDigest,
+                            @JsonProperty("expires_at") java.time.Instant expiresAt,
+                            @JsonProperty("placed_at") java.time.Instant placedAt) {}
 }
