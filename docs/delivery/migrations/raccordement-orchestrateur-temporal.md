@@ -222,8 +222,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   conserve toutes les preuves déjà produites. _(Seul `BUSINESS_REJECTION` devient `GATE_REJECTED:<étape>` ; une
   activité de projection enregistre l'état métier et la chronologie conserve les URI de preuves déjà produites,
   tandis que les pannes techniques restent des échecs Temporal.)_
-- [ ] **TEMP-044 — Intégrer le DAG multi-agent.** N'activer les child workflows hiérarchiques que pour les modes
-  autorisés ; conserver `PIPELINE` comme comportement initial du moteur Temporal.
+- [x] **TEMP-044 — Intégrer le DAG multi-agent.** N'activer les child workflows hiérarchiques que pour les modes
+  autorisés ; conserver `PIPELINE` comme comportement initial du moteur Temporal. _(`PIPELINE` est la valeur par
+  défaut et rejette toute délégation/revue enfant ; seul `HIERARCHICAL_ACTIVE` autorise le scheduler de child
+  workflows déjà couvert par les tests de DAG, sans couplage entre moteur Temporal et mode multi-agent.)_
 - [ ] **TEMP-045 — Intégrer la revue indépendante.** Lier la revue aux digests du plan, du patch, des tests, de la
   qualité, de la sécurité et du commit source.
 - [ ] **TEMP-046 — Attendre l'approbation sans thread bloqué.** Utiliser un signal Temporal et `Workflow.await`,

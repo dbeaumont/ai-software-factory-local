@@ -37,6 +37,21 @@ class SourceResolutionActivitiesTest {
     }
 
     @Test
+    void pipelineModeCannotLaunchHierarchicalChildren() {
+        var delegation = new DelegationWorkflow.Request("task-1", "attempt-1", "node-1", null,
+                "developer", "a".repeat(40), "implement", java.util.Set.of(),
+                new DelegationWorkflow.Budget(10, 1_000, 2));
+        var request = new SoftwareFactoryWorkflow.Request("task-1", "attempt-1", "acme/repo",
+                "UNRESOLVED", "change", List.of(delegation), null, List.of(), null, null, null,
+                new SoftwareFactoryWorkflow.SourceLocation(
+                        "http://gitea:3000/acme/repo.git", "main", "ai-factory-context"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> SoftwareFactoryExecutionWorkflowV1Impl.requireProductionExecutionMode(request))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void reusesTheCommitFromAnExistingIdempotentWorkspace() throws Exception {
         ProcessRunner runner = mock(ProcessRunner.class);
         AiFactoryProperties properties = mock(AiFactoryProperties.class);

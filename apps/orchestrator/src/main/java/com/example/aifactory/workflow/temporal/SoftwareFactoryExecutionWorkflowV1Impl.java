@@ -18,6 +18,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
     public SoftwareFactoryWorkflow.Result run(SoftwareFactoryWorkflow.Request request) {
+        requireProductionExecutionMode(request);
         SoftwareFactoryWorkflow.SourceLocation source = request == null ? null : request.sourceLocation();
         if (source == null) throw new IllegalArgumentException("Production workflow source location is required");
         SourceResolutionActivities activities = io.temporal.workflow.Workflow.newActivityStub(
@@ -86,6 +87,14 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     static boolean isBusinessGateFailure(Throwable failure) {
         return TemporalFailureClassifier.classify(failure).type()
                 == TemporalFailureClassifier.Type.BUSINESS_REJECTION;
+    }
+
+    static void requireProductionExecutionMode(SoftwareFactoryWorkflow.Request request) {
+        if (request == null) throw new IllegalArgumentException("Production workflow request is required");
+        if (request.executionMode() == SoftwareFactoryWorkflow.WorkflowExecutionMode.PIPELINE
+                && (!request.delegations().isEmpty() || request.independentReview() != null)) {
+            throw new IllegalArgumentException("PIPELINE mode cannot start hierarchical child workflows");
+        }
     }
 
     private void generateAndRepairPatch(SoftwareFactoryWorkflow.SourceLocation source,
