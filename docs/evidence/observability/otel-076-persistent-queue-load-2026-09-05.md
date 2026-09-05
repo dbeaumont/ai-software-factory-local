@@ -29,8 +29,10 @@ La validation syntaxique avec l'image Collector épinglée et `docker compose co
 ## Limites
 
 `./scripts/test-otel-saturation.sh` lance par ailleurs un Collector isolé, limité à une file de huit éléments, face
-à un backend retardant chaque réponse de deux secondes. Une charge concurrente de 1 800 enregistrements déclenche
-le signal de file pleine attendu ; le Collector reste actif et les deux conteneurs jetables sont supprimés.
+à un backend retardant chaque réponse de deux secondes. Sur 1 800 enregistrements acceptés par le receiver, 24 sont
+livrés et 1 776 sont refusés/perdus après saturation. Le signal de file pleine est présent, le Collector reste actif
+et les deux conteneurs jetables sont supprimés. Ces valeurs caractérisent volontairement la configuration de test
+sous-dimensionnée, pas la file de production à 2 048 éléments.
 
 La campagne mesure un débit court, la persistance après panne et le refus borné en saturation. Elle ne démontre pas
-encore le SLO sur une fenêtre longue, le nombre précis de points perdus, les délais par percentile, ni le coût GKE.
+encore le SLO sur une fenêtre longue, les délais par percentile de la pile nominale, ni le coût GKE.

@@ -33,7 +33,7 @@ done
 docker run --rm --network ai-factory-signoz-network \
   -v "$PWD/scripts/otel-load-generator.py:/opt/load.py:ro" \
   "$python_image" python /opt/load.py --endpoint "http://$collector:4318" --batches 300 --points 2 --workers 32 >/dev/null
-sleep 2
+sleep 25
 
 logs=$(docker logs "$collector" 2>&1)
 printf '%s' "$logs" | grep -Eq 'sending queue is full|sending_queue is full|Too Many Requests|non-retryable error' || {
@@ -41,4 +41,12 @@ printf '%s' "$logs" | grep -Eq 'sending queue is full|sending_queue is full|Too 
   exit 1
 }
 docker inspect "$collector" --format '{{.State.Running}}' | grep -qx true
-echo "Bounded saturation verified with a slow backend and an isolated eight-element queue."
+delivered=$(docker exec "$sink" python -c \
+  "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8080/count').read().decode())")
+accepted=1800
+[ "$delivered" -gt 0 ] && [ "$delivered" -lt "$accepted" ] || {
+  echo "Unexpected delivery count under saturation: $delivered/$accepted" >&2
+  exit 1
+}
+lost=$((accepted - delivered))
+echo "Bounded saturation verified: accepted=$accepted delivered=$delivered lost=$lost delay=2s queue=8."
