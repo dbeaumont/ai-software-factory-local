@@ -472,6 +472,11 @@ ouvrir la trace représentative puis les logs portant le même `trace_id`. Reche
 de l'application reste l'autorité de son état projeté. Les runbooks sont indexés dans
 [`docs/operations/runbooks`](runbooks/README.md).
 
+Chaque dashboard versionné expose les champs `task_id`, `role`, `operation`, `outcome`, `model` et `mcp_server` comme
+aide de recherche et des liens directs vers les explorateurs de traces/logs, Temporal UI, l'API
+`/api/tasks/$task_id` et l'index des runbooks. Ces identifiants servent aux pivots d'investigation ; `task_id` ne doit
+jamais être injecté dans une requête métrique ou transformé en label métrique.
+
 ### 9.4 SLO proposés, non encore contractuels
 
 | Indicateur | Cible initiale |

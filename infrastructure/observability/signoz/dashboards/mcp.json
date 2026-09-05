@@ -17,7 +17,80 @@
       "name": "AI Factory MCP",
       "description": "Appels, latence, retries et concurrence des serveurs MCP."
     },
-    "variables": [],
+    "variables": [
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "task_id",
+          "display": {
+            "name": "Task identifier",
+            "description": "Paste an ai.task.id value to pivot to traces, logs and the task API."
+          },
+          "value": "",
+          "constant": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "role",
+          "display": {
+            "name": "Agent role",
+            "description": "Bounded ai.agent.role or role value."
+          },
+          "value": "",
+          "constant": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "operation",
+          "display": {
+            "name": "Operation",
+            "description": "Bounded ai.operation value."
+          },
+          "value": "",
+          "constant": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "outcome",
+          "display": {
+            "name": "Result",
+            "description": "Bounded ai.outcome or outcome value."
+          },
+          "value": "",
+          "constant": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "model",
+          "display": {
+            "name": "LLM model",
+            "description": "Bounded gen_ai.request.model value."
+          },
+          "value": "",
+          "constant": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "mcp_server",
+          "display": {
+            "name": "MCP service",
+            "description": "Bounded server or mcp.server.name value."
+          },
+          "value": "",
+          "constant": false
+        }
+      }
+    ],
     "panels": {
       "7cf52f24-32b0-570a-9cb8-1f3c530e08e6": {
         "kind": "Panel",
@@ -85,7 +158,33 @@
               }
             }
           ],
-          "links": []
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
         }
       },
       "8e6e077a-56cf-5658-b266-fd79011dd7ed": {
@@ -154,7 +253,33 @@
               }
             }
           ],
-          "links": []
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
         }
       },
       "c12e115a-a5cf-5bdf-8a33-516fc1f665a3": {
@@ -234,7 +359,33 @@
               }
             }
           ],
-          "links": []
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
         }
       },
       "6c187c9d-301b-5007-8e56-e18c34edb5f2": {
@@ -303,7 +454,33 @@
               }
             }
           ],
-          "links": []
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
         }
       }
     },
@@ -354,6 +531,32 @@
     ],
     "duration": "6h",
     "refreshInterval": "30s",
-    "links": []
+    "links": [
+      {
+        "name": "Search traces",
+        "url": "/trace",
+        "renderVariables": true
+      },
+      {
+        "name": "Search logs",
+        "url": "/logs-explorer",
+        "renderVariables": true
+      },
+      {
+        "name": "Temporal UI",
+        "url": "http://localhost:8233",
+        "renderVariables": true
+      },
+      {
+        "name": "Task API",
+        "url": "http://localhost:8088/api/tasks/$task_id",
+        "renderVariables": true
+      },
+      {
+        "name": "Observability runbooks",
+        "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+        "renderVariables": true
+      }
+    ]
   }
 }

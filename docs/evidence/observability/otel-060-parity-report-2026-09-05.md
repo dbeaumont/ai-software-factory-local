@@ -20,6 +20,13 @@ sandbox et Temporal. Les panneaux peuvent consolider plusieurs expressions histo
 fonctionnelles reste supérieur ou égal à la référence. Un septième dashboard couvre le Collector. Les 51 requêtes
 uniques de dashboards et alertes passent l'API SigNoz v5.
 
+L'inspection des six JSON du commit de référence confirme qu'ils ne définissaient aucune variable, unité, valeur de
+seuil, légende personnalisée, lien, fenêtre ni fréquence de rafraîchissement. La cible conserve donc les unités
+neutres et l'absence de seuil de panneau, fixe explicitement une fenêtre de 6 h et un rafraîchissement de 30 s, puis
+ajoute six champs de recherche (`task_id`, rôle, opération, résultat, modèle et service MCP) et cinq liens de pivot
+vers traces, logs, Temporal UI, l'API de détail de tâche et les runbooks. Le contrôle
+`check-signoz-dashboard-parity.py` vérifie ces invariants et la conservation de chaque expression normalisée.
+
 ## Alertes
 
 Les neuf règles conservent nom, expression normalisée, seuil, fenêtre, severity, composant, résumé, description et

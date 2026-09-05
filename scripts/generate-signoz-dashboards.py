@@ -12,6 +12,31 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "infrastructure/observability/signoz/dashboards"
 NAMESPACE = uuid.UUID("6e2c58e1-8974-4d4b-83c5-3616b20aa0c6")
 
+SEARCH_VARIABLES = (
+    ("task_id", "Task identifier", "Paste an ai.task.id value to pivot to traces, logs and the task API."),
+    ("role", "Agent role", "Bounded ai.agent.role or role value."),
+    ("operation", "Operation", "Bounded ai.operation value."),
+    ("outcome", "Result", "Bounded ai.outcome or outcome value."),
+    ("model", "LLM model", "Bounded gen_ai.request.model value."),
+    ("mcp_server", "MCP service", "Bounded server or mcp.server.name value."),
+)
+
+OPERATIONAL_LINKS = (
+    {"name": "Search traces", "url": "/trace", "renderVariables": True},
+    {"name": "Search logs", "url": "/logs-explorer", "renderVariables": True},
+    {"name": "Temporal UI", "url": "http://localhost:8233", "renderVariables": True},
+    {
+        "name": "Task API",
+        "url": "http://localhost:8088/api/tasks/$task_id",
+        "renderVariables": True,
+    },
+    {
+        "name": "Observability runbooks",
+        "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+        "renderVariables": True,
+    },
+)
+
 DASHBOARDS = {
     "orchestrator": {
         "name": "AI Factory Global",
@@ -128,7 +153,19 @@ def panel(title: str, expressions: list[str]) -> dict:
                     },
                 }
             ],
-            "links": [],
+            "links": list(OPERATIONAL_LINKS),
+        },
+    }
+
+
+def text_variable(name: str, label: str, description: str) -> dict:
+    return {
+        "kind": "TextVariable",
+        "spec": {
+            "name": name,
+            "display": {"name": label, "description": description},
+            "value": "",
+            "constant": False,
         },
     }
 
@@ -155,12 +192,12 @@ def dashboard(slug: str, definition: dict) -> dict:
         "tags": [{"key": "project", "value": "ai-software-factory"}, {"key": "domain", "value": slug}],
         "spec": {
             "display": {"name": definition["name"], "description": definition["description"]},
-            "variables": [],
+            "variables": [text_variable(*definition) for definition in SEARCH_VARIABLES],
             "panels": panels,
             "layouts": [{"kind": "Grid", "spec": {"items": items}}],
             "duration": "6h",
             "refreshInterval": "30s",
-            "links": [],
+            "links": list(OPERATIONAL_LINKS),
         },
     }
 

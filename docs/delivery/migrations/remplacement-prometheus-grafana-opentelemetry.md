@@ -271,11 +271,11 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [x] Provisionner ou importer automatiquement le dashboard « Sandbox ».
 - [x] Provisionner ou importer automatiquement le dashboard « Temporal ».
 - [x] Créer le dashboard « OpenTelemetry Collector » à partir de sa télémétrie interne OTLP.
-- [ ] Reproduire variables, unités, seuils, fenêtres, légendes et liens des panneaux existants.
+- [x] Reproduire variables, unités, seuils, fenêtres, légendes et liens des panneaux existants.
 - [x] Utiliser les histogrammes OTLP pour p50, p95 et p99 sans recalcul incompatible.
-- [ ] Ajouter la recherche par `ai.task.id`, rôle, opération, résultat, modèle et service MCP.
+- [x] Ajouter la recherche par `ai.task.id`, rôle, opération, résultat, modèle et service MCP.
 - [x] Ajouter un parcours dashboard → trace → logs de la même tâche.
-- [ ] Ajouter des liens vers Temporal UI, le détail de tâche et les runbooks.
+- [x] Ajouter des liens vers Temporal UI, le détail de tâche et les runbooks.
 - [x] Exporter les définitions SigNoz après chaque modification et contrôler leur dérive en CI.
 
 ### 9.3 Alertes SigNoz
