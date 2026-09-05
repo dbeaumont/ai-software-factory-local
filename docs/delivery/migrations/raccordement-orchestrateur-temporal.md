@@ -238,8 +238,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   retry lorsque l'issue réseau est inconnue. _(La livraison ne part qu'après le signal approuvé, sur la file SCM ;
   clé liée au patch et `findExisting` côté SCM MCP réconcilient branche/PR avant création, et une absence d'accusé
   devient `EFFECT_OUTCOME_UNKNOWN` non retryable plutôt qu'une seconde création aveugle.)_
-- [ ] **TEMP-048 — Gérer annulation et compensation.** Annuler les activités cancellables, préserver les preuves
-  et ne jamais tenter d'annuler un effet SCM déjà confirmé.
+- [x] **TEMP-048 — Gérer annulation et compensation.** Annuler les activités cancellables, préserver les preuves
+  et ne jamais tenter d'annuler un effet SCM déjà confirmé. _(Le signal est contrôlé entre chaque activité et
+  avant SCM ; l'annulation est projetée idempotemment, les références Evidence sont conservées et la livraison ne
+  démarre que depuis `APPROVED`, de sorte qu'une PR confirmée n'est jamais compensée ou supprimée.)_
 - [ ] **TEMP-049 — Borner l'historique.** Utiliser `continue-as-new` avant les seuils d'événements ou de taille en
   transportant uniquement l'état minimal vérifié.
 - [ ] **TEMP-050 — Versionner le déterminisme.** Couvrir toute évolution incompatible par Worker Versioning,

@@ -12,6 +12,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     private final SoftwareFactoryWorkflow delegate = new SoftwareFactoryWorkflowImpl();
     private String phase = "CREATED";
     private String currentStep = "source";
+    private SoftwareFactoryWorkflow.CancellationSignal cancellation;
     private final Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts =
             new LinkedHashMap<>();
 
@@ -39,6 +40,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         context.bindSource(new PipelineExecutionActivities.SourceBinding(request.taskId(), request.attemptId(),
                 request.repositoryId(), resolved.sourceCommit(), resolved.workspace(), resolved.attestationDigest()));
         try {
+            throwIfCancelled();
             runStep(source, request, resolved, "plan", TemporalActivityPolicies.Kind.LLM,
                     Map.of("requirement", TemporalIds.sha256(request.requirement())));
             generateAndRepairPatch(source, request, resolved);
@@ -58,7 +60,11 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
             pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
                     new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
                             resolved.sourceCommit()));
+            throwIfCancelled();
         } catch (RuntimeException failure) {
+            if (failure instanceof RequestedCancellation) {
+                return cancelBeforeApproval(source, request, resolved);
+            }
             if (!isBusinessGateFailure(failure)) throw failure;
             phase = "GATE_REJECTED:" + currentStep;
             pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordGateRejection(
@@ -103,6 +109,28 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 coordinated.cancellationReason(), coordinated.independentReview());
     }
 
+    private SoftwareFactoryWorkflow.Result cancelBeforeApproval(SoftwareFactoryWorkflow.SourceLocation source,
+                                                                 SoftwareFactoryWorkflow.Request request,
+                                                                 SourceResolutionActivities.Result resolved) {
+        phase = "CANCELLED";
+        pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordCancellation(
+                new PipelineExecutionActivities.Cancellation(request.taskId(), request.attemptId(),
+                        resolved.sourceCommit(), cancellation.reason(), cancellation.actor()));
+        List<String> chronology = new java.util.ArrayList<>();
+        chronology.add("SOURCE_RESOLVED:" + resolved.sourceCommit());
+        artifacts.keySet().forEach(name -> chronology.add("EVIDENCE_PRESERVED:" + name));
+        chronology.add("CANCELLED");
+        return new SoftwareFactoryWorkflow.Result(request.taskId(), request.attemptId(), resolved.sourceCommit(),
+                "CANCELLED", chronology, List.of(), Map.of(), null, null, cancellation.reason(), null);
+    }
+
+    private void throwIfCancelled() {
+        if (cancellation != null && cancellation.reason() != null && !cancellation.reason().isBlank()
+                && cancellation.actor() != null && !cancellation.actor().isBlank()) {
+            throw new RequestedCancellation();
+        }
+    }
+
     static boolean isBusinessGateFailure(Throwable failure) {
         return TemporalFailureClassifier.classify(failure).type()
                 == TemporalFailureClassifier.Type.BUSINESS_REJECTION;
@@ -134,6 +162,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
             var validation = sandbox.validatePatchCandidate(
                     new PipelineExecutionActivities.StepRequest(validationCommand, resolved.workspace()));
             artifacts.putAll(validation.result().artifacts());
+            throwIfCancelled();
             if (validation.valid()) return;
             if (repairAttempt == 2) {
                 throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
@@ -145,6 +174,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
             var repaired = llm.repairPatchCandidate(new PipelineExecutionActivities.PatchRepairRequest(
                     repairCommand, resolved.workspace(), validation.validationError(), repairAttempt + 1));
             artifacts.putAll(repaired.artifacts());
+            throwIfCancelled();
         }
     }
 
@@ -166,6 +196,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         var result = pipeline(source, workerKind(step), kind).execute(
                 new PipelineExecutionActivities.StepRequest(command, resolved.workspace()));
         artifacts.putAll(result.artifacts());
+        throwIfCancelled();
     }
 
     private static String workerKind(String step) {
@@ -185,7 +216,10 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     }
 
     @Override public void approve(SoftwareFactoryWorkflow.ApprovalSignal signal) { delegate.approve(signal); }
-    @Override public void cancel(SoftwareFactoryWorkflow.CancellationSignal signal) { delegate.cancel(signal); }
+    @Override public void cancel(SoftwareFactoryWorkflow.CancellationSignal signal) {
+        cancellation = signal;
+        delegate.cancel(signal);
+    }
     @Override public void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal) { delegate.decide(signal); }
     @Override public String status() { return "CREATED".equals(phase) ? delegate.status() : phase; }
     @Override public List<SoftwareFactoryWorkflow.DelegationView> dag() { return delegate.dag(); }
@@ -198,4 +232,6 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     @Override public List<SoftwareFactoryWorkflow.PendingEffectView> pendingEffects() {
         return delegate.pendingEffects();
     }
+
+    private static final class RequestedCancellation extends RuntimeException {}
 }

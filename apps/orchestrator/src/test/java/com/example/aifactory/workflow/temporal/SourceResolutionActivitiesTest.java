@@ -183,6 +183,7 @@ class SourceResolutionActivitiesTest {
         }
 
         @Override public void recordGateRejection(GateRejection rejection) { }
+        @Override public void recordCancellation(Cancellation cancellation) { }
 
         @Override
         public com.example.aifactory.workflow.EvidenceRepository.StoredManifest createApprovalManifest(

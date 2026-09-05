@@ -195,6 +195,21 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     }
 
     @Override
+    public void recordCancellation(Cancellation cancellation) {
+        requireQueue("evidence");
+        if (cancellation == null || cancellation.reason() == null || cancellation.reason().isBlank()
+                || cancellation.actor() == null || cancellation.actor().isBlank()) {
+            throw new IllegalArgumentException("Pipeline cancellation is invalid");
+        }
+        TaskState state = requireTask(cancellation.taskId(), cancellation.attemptId());
+        if (!cancellation.sourceCommit().equals(state.sourceCommit)) {
+            throw new SecurityException("Pipeline cancellation is not source-bound");
+        }
+        state.cancel(cancellation.reason(), cancellation.actor());
+        memory.save(state);
+    }
+
+    @Override
     public EvidenceRepository.StoredManifest createApprovalManifest(ApprovalManifestRequest request) {
         requireQueue("evidence");
         TaskState state = requireTask(request.taskId(), request.attemptId());
