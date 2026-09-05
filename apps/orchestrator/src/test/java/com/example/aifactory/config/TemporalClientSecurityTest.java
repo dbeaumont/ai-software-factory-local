@@ -68,6 +68,7 @@ class TemporalClientSecurityTest {
 
     private static TemporalProperties properties(TemporalProperties.Security security) {
         return new TemporalProperties("temporal:7233", "ai-factory-local", java.time.Duration.ofDays(7),
+                "ai-factory-orchestrator", "0.1.0",
                 Map.of("workflow", "ai-factory-workflows", "context", "ai-factory-context",
                         "llm", "ai-factory-llm", "sandbox", "ai-factory-sandbox",
                         "assurance", "ai-factory-assurance", "evidence", "ai-factory-evidence",

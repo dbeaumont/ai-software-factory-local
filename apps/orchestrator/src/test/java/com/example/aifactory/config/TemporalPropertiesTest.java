@@ -21,6 +21,8 @@ class TemporalPropertiesTest {
             TemporalProperties properties = context.getBean(TemporalProperties.class);
             assertThat(properties.namespace()).isEqualTo("ai-factory-local");
             assertThat(properties.namespaceRetention()).isEqualTo(Duration.ofDays(7));
+            assertThat(properties.deploymentName()).isEqualTo("ai-factory-orchestrator");
+            assertThat(properties.buildId()).isEqualTo("0.1.0");
             assertThat(properties.taskQueues()).containsKeys(
                     "workflow", "context", "llm", "sandbox", "assurance", "evidence", "scm");
             assertThat(properties.security().tlsEnabled()).isFalse();
@@ -51,6 +53,8 @@ class TemporalPropertiesTest {
     private static String[] valid() {
         return new String[]{"ai-factory.temporal.target=temporal:7233",
                 "ai-factory.temporal.namespace=ai-factory-local", "ai-factory.temporal.namespace-retention=P7D",
+                "ai-factory.temporal.deployment-name=ai-factory-orchestrator",
+                "ai-factory.temporal.build-id=0.1.0",
                 "ai-factory.temporal.task-queues.workflow=ai-factory-workflows",
                 "ai-factory.temporal.task-queues.context=ai-factory-context",
                 "ai-factory.temporal.task-queues.llm=ai-factory-llm",

@@ -30,6 +30,7 @@ public class TemporalRuntimeConfiguration {
 
     @Bean
     TemporalWorkerRegistry temporalWorkerRegistry(WorkerFactory factory, TemporalProperties properties) {
-        return new TemporalWorkerRegistry(factory, properties.taskQueues());
+        return new TemporalWorkerRegistry(factory, properties.taskQueues(),
+                properties.deploymentName(), properties.buildId());
     }
 }

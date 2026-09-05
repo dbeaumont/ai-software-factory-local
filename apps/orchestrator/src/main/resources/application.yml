@@ -133,6 +133,8 @@ ai-factory:
     target: ${AI_FACTORY_TEMPORAL_TARGET:temporal:7233}
     namespace: ${AI_FACTORY_TEMPORAL_NAMESPACE:ai-factory-local}
     namespace-retention: ${AI_FACTORY_TEMPORAL_NAMESPACE_RETENTION:P7D}
+    deployment-name: ${AI_FACTORY_TEMPORAL_DEPLOYMENT_NAME:ai-factory-orchestrator}
+    build-id: ${AI_FACTORY_TEMPORAL_BUILD_ID:0.1.0}
     task-queues:
       workflow: ${AI_FACTORY_TEMPORAL_WORKFLOW_TASK_QUEUE:ai-factory-workflows}
       context: ${AI_FACTORY_TEMPORAL_CONTEXT_TASK_QUEUE:ai-factory-context}

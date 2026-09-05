@@ -9,6 +9,7 @@ import java.util.Set;
 
 @ConfigurationProperties(prefix = "ai-factory.temporal")
 public record TemporalProperties(String target, String namespace, Duration namespaceRetention,
+                                 String deploymentName, String buildId,
                                  Map<String, String> taskQueues, Security security) {
     private static final Set<String> REQUIRED_QUEUES = Set.of(
             "workflow", "context", "llm", "sandbox", "assurance", "evidence", "scm");
@@ -24,6 +25,10 @@ public record TemporalProperties(String target, String namespace, Duration names
         if (namespaceRetention == null || namespaceRetention.compareTo(Duration.ofDays(1)) < 0
                 || namespaceRetention.compareTo(Duration.ofDays(30)) > 0) {
             throw new IllegalArgumentException("Temporal namespace retention must be between 1 and 30 days");
+        }
+        if (deploymentName == null || !deploymentName.matches("[A-Za-z0-9._-]{1,64}")
+                || buildId == null || !buildId.matches("[A-Za-z0-9._-]{1,128}")) {
+            throw new IllegalArgumentException("Temporal worker deployment identity is invalid");
         }
         if (!taskQueues.keySet().containsAll(REQUIRED_QUEUES)
                 || taskQueues.values().stream().anyMatch(queue -> queue == null

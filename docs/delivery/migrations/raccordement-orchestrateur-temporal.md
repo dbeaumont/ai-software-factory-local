@@ -174,8 +174,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-031 — Implémenter la sécurité du client.** Charger TLS/mTLS et clé API depuis des fichiers montés,
   vérifier les permissions et ne jamais injecter les secrets dans les inputs de workflow. _(TLS système, mTLS
   PKCS#8 et clé API chargés au bootstrap ; fichiers bornés, non symboliques et secrets owner-only.)_
-- [ ] **TEMP-032 — Enregistrer le workflow racine.** Enregistrer l'implémentation de production sur
-  `ai-factory-workflows` avec un Build ID/version de déploiement explicite.
+- [x] **TEMP-032 — Enregistrer le workflow racine.** Enregistrer l'implémentation de production sur
+  `ai-factory-workflows` avec un Build ID/version de déploiement explicite. _(Type immuable
+  `SoftwareFactoryExecutionWorkflowV1` enregistré sur le worker racine ; Worker Deployment Version explicite et
+  comportement `PINNED` sur les sept workers.)_
 - [ ] **TEMP-033 — Enregistrer les child workflows.** Enregistrer délégations, intégration de patch et revue
   indépendante sur les task queues décidées par l'architecture.
 - [ ] **TEMP-034 — Enregistrer les activités.** Câbler les adaptateurs contexte, LLM, sandbox, assurance,
