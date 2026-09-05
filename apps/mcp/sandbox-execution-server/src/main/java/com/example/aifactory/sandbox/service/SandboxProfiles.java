@@ -21,8 +21,9 @@ final class SandboxProfiles {
                     List.of(), false, false);
             case RUN_TESTS -> throw new IllegalArgumentException("test profile selection requires a workspace");
             case RUN_QUALITY -> new Profile("quality-sonar-v1", "quality", Duration.ofMinutes(15),
-                    "mkdir -p \"$HOME/.m2/tmp\"; " +
+                    "mkdir -p \"$HOME/.m2/tmp\" \"$HOME/.m2/sonar\"; " +
                             "export MAVEN_OPTS=\"${MAVEN_OPTS:-} -Djansi.tmpdir=$HOME/.m2/tmp -Djansi.force=false\"; " +
+                            "export SONAR_USER_HOME=\"$HOME/.m2/sonar\"; " +
                             "if [ -z \"$SONAR_TOKEN\" ]; then echo 'Required Sonar token is unavailable'; exit 2; " +
                             "elif [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
                             "if [ -n \"$ARTIFACTORY_TOKEN\" ]; then " +
