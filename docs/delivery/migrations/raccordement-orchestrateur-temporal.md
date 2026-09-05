@@ -391,7 +391,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 - [x] Une tâche est navigable de l'interface vers SigNoz, Temporal UI, Evidence MCP et Gitea. _(La fiche expose des
   liens corrélés au task/workflow/run, un endpoint de métadonnées Evidence sans contenu brut et le dépôt Gitea.)_
-- [ ] Les alertes sont testées par injection de panne et reviennent automatiquement à l'état normal.
+- [x] Les alertes sont testées par injection de panne et reviennent automatiquement à l'état normal. _(La fixture
+  OTLP évalue les 15 règles métier/Temporal en état déclenché, injecte des compteurs stables et jauges saines après la
+  fenêtre PromQL maximale, puis exige que les 15 conditions ne retournent plus aucune série.)_
 - [ ] La restauration conserve l'idempotence et n'entraîne aucun rejeu SCM non autorisé.
 
 ## 12. Lot 7 — stratégie de tests

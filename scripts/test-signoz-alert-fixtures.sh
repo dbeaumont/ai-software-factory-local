@@ -59,6 +59,8 @@ trap 'curl -fsS -X DELETE "$base_url/api/v2/sessions" -H "Authorization: Bearer 
 
 start=$(((now - 600) * 1000))
 end=$(((now + 30) * 1000))
+expected=$(jq '[.[] | select(.labels.component != "observability")] | length' \
+  infrastructure/observability/signoz/rules/ai-factory.json)
 validated=0
 for attempt in {1..20}; do
   validated=0
@@ -72,13 +74,74 @@ for attempt in {1..20}; do
       validated=$((validated + 1))
     fi
   done < <(jq -r '.[] | select(.labels.component != "observability") | .condition.compositeQuery.queries[0].spec.query' infrastructure/observability/signoz/rules/ai-factory.json)
-  [ "$validated" -eq 15 ] && break
+  [ "$validated" -eq "$expected" ] && break
   sleep 1
 done
 
-[ "$validated" -eq 15 ] || {
-  echo "Only $validated/15 alert fixtures produced a positive query result" >&2
+[ "$validated" -eq "$expected" ] || {
+  echo "Only $validated/$expected alert fixtures produced a positive query result" >&2
   printf '%s\n' "$response" | jq . >&2
   exit 1
 }
-echo "Validated 15/15 SigNoz alert rules with deterministic OTLP metrics."
+
+# Move the same cumulative streams past the longest PromQL window with stable counters and healthy gauges.
+recovery_one="$((now + 1000))000000000"
+recovery_two="$((now + 1120))000000000"
+recovery_payload=$(jq -nc --arg one "$recovery_one" --arg two "$recovery_two" '
+  def a($key;$value): {key:$key,value:{stringValue:$value}};
+  def p($time;$value;$attrs): {timeUnixNano:$time,asDouble:$value,attributes:$attrs};
+  def counter($name;$value;$attrs): {name:$name,sum:{aggregationTemporality:2,isMonotonic:true,dataPoints:[p($one;$value;$attrs),p($two;$value;$attrs)]}};
+  def gauge($name;$value;$attrs): {name:$name,gauge:{dataPoints:[p($two;$value;$attrs)]}};
+  {resourceMetrics:[{
+    resource:{attributes:[a("service.name";"otel-alert-fixture"),a("service.namespace";"ai-software-factory"),a("deployment.environment.name";"ai-factory-local")]},
+    scopeMetrics:[{scope:{name:"ai-factory-alert-fixture",version:"1"},metrics:[
+      counter("ai_agent_failures";1;[a("reason";"repeated_call"),a("stop_condition";"LOOP_DETECTED")]),
+      counter("ai_agent_failures";1;[a("reason";"budget"),a("stop_condition";"BUDGET_EXHAUSTED")]),
+      counter("ai_agent_failures";1;[a("reason";"contract"),a("stop_condition";"CONTRACT_ERROR")]),
+      counter("ai_agent_cost_micros";6000001;[]),
+      gauge("ai_factory_sandbox_jobs_queued";0;[]),
+      gauge("ai_task_queue_saturation_ratio";0.1;[]),
+      counter("ai_factory_sandbox_heartbeat_invalid";1;[]),
+      counter("ai_factory_sandbox_jobs_failed";6;[]),
+      counter("ai_factory_sandbox_maintenance_failures";1;[]),
+      counter("ai_evidence_altered";1;[]),
+      gauge("ai_temporal_task_queue_pollers";1;[a("perimeter";"workflow"),a("task_type";"workflow")]),
+      gauge("ai_temporal_task_queue_pollers";1;[a("perimeter";"llm"),a("task_type";"activity")]),
+      gauge("ai_temporal_task_queue_backlog";0;[a("perimeter";"llm"),a("task_type";"activity")]),
+      counter("ai_temporal_workflow_nondeterministic";1;[]),
+      gauge("ai_temporal_projection_lag_seconds";0;[]),
+      counter("ai_temporal_timeouts";1;[]),
+      counter("ai_temporal_continue_as_new_requested";1;[]),
+      counter("temporal_workflow_continue_as_new";1;[])
+    ]}]
+  }]}' )
+
+"${compose[@]}" exec -T orchestrator curl -fsS \
+  -X POST http://otel-collector:4318/v1/metrics \
+  -H 'Content-Type: application/json' --data-binary "$recovery_payload" >/dev/null
+
+recovery_start=$(((now + 1000) * 1000))
+recovery_end=$(((now + 1150) * 1000))
+recovered=0
+for attempt in {1..20}; do
+  recovered=0
+  while IFS= read -r query; do
+    request=$(jq -nc --arg query "$query" --argjson start "$recovery_start" --argjson end "$recovery_end" \
+      '{schemaVersion:"v1",start:$start,end:$end,requestType:"time_series",compositeQuery:{queries:[{type:"promql",spec:{name:"A",query:$query,step:30}}]}}')
+    response=$(curl -fsS -X POST "$base_url/api/v5/query_range" \
+      -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data "$request")
+    if printf '%s' "$response" | jq -e \
+      '.status == "success" and ([.data.data.results[]?.aggregations[]?.series[]?] | length == 0)' >/dev/null; then
+      recovered=$((recovered + 1))
+    fi
+  done < <(jq -r '.[] | select(.labels.component != "observability") | .condition.compositeQuery.queries[0].spec.query' infrastructure/observability/signoz/rules/ai-factory.json)
+  [ "$recovered" -eq "$expected" ] && break
+  sleep 1
+done
+
+[ "$recovered" -eq "$expected" ] || {
+  echo "Only $recovered/$expected alert fixtures returned to a healthy query state" >&2
+  printf '%s\n' "$response" | jq . >&2
+  exit 1
+}
+echo "Validated $expected/$expected SigNoz alert rules firing and automatic recovery with deterministic OTLP metrics."
