@@ -656,7 +656,7 @@ services:
     volumes:
       - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
       interval: 10s
       timeout: 3s
       retries: 12
@@ -700,7 +700,7 @@ services:
       - sonar-logs:/opt/sonarqube/logs
       - sonar-extensions:/opt/sonarqube/extensions
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost:9000/api/system/status | grep -q 'UP'"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/api/system/status | grep -q 'UP'"]
       interval: 15s
       timeout: 5s
       retries: 40
