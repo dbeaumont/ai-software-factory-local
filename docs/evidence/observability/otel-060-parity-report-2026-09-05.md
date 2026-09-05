@@ -36,6 +36,18 @@ OTLP déterministe; les neuf expressions retournent ensuite un résultat positif
 Une divergence est acceptée et testée : `AiFactoryEvidenceAltered` avait une durée historique nulle et utilise
 désormais une fenêtre d'évaluation de 1 minute, cohérente avec la fréquence SigNoz et moins sensible aux transitoires.
 
+## Parité numérique et cas limites
+
+`./scripts/test-signoz-metric-semantics.sh` injecte une fixture OTLP cumulative bornée et interroge le moteur
+PromQL de SigNoz. La campagne du 5 septembre 2026 a obtenu, dans les tolérances déclarées : débit agrégé 100,
+erreurs 5, p50 0,1 s, p95 0,778 s et p99 1 s. Les quantiles attendus sont calculés depuis les bornes explicites
+`[0.1, 0.5, 1, 2, 5]` et les comptes non cumulatifs `[50, 40, 9, 1, 0, 0]`.
+
+La même fixture impose un changement de `startTimeUnixNano` au milieu d'un compteur cumulatif : `resets()` retourne
+1. `absent_over_time()` retourne également 1 pour une série volontairement absente. Les redémarrages réels du
+Collector et de `repository-context-mcp` sont couverts par les campagnes OTEL-070/076, avec livraison exacte après
+reprise ; les périodes sans données ne sont donc ni converties en zéro ni masquées par un doublon.
+
 ## Ressources ponctuelles macOS
 
 | Composant | CPU | Mémoire |

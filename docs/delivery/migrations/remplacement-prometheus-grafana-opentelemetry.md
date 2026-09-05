@@ -344,11 +344,11 @@ spécification visuelle et fonctionnelle pendant le portage.
 ### 11.2 Comparaisons
 
 - [x] Comparer présence, type, unité et dimensions de chaque métrique contractuelle.
-- [ ] Comparer valeurs agrégées et tolérances sur débit, erreurs, p50, p95 et p99.
+- [x] Comparer valeurs agrégées et tolérances sur débit, erreurs, p50, p95 et p99.
 - [x] Comparer les six dashboards SigNoz panneau par panneau aux captures et spécifications exportées.
 - [x] Déclencher les neuf alertes synthétiquement dans SigNoz.
 - [x] Comparer seuil, fenêtre, délai, severity, description, notification et lien de runbook aux fixtures.
-- [ ] Vérifier les périodes sans données, resets de compteurs et redémarrages d'instances.
+- [x] Vérifier les périodes sans données, resets de compteurs et redémarrages d'instances.
 - [x] Mesurer délai d'ingestion, taux de perte, cardinalité, CPU, mémoire, disque et coût.
 - [ ] Vérifier la corrélation d'une alerte vers une trace et les logs de la même tâche.
 - [x] Classer chaque divergence : défaut, changement sémantique accepté ou limite du backend.

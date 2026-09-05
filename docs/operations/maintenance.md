@@ -891,7 +891,8 @@ Avant chaque release modifiant instrumentation, Collector, dashboard ou alerte :
 - [ ] les six suites applicatives et les tests de contrat/confidentialité passent ;
 - [ ] `docker compose config --quiet`, la validation Collector et les manifests GKE passent ;
 - [ ] aucune image flottante, socket Docker, port OTLP public ou secret versionné n'est introduit ;
-- [ ] `check-signoz-telemetry.sh`, `validate-signoz-queries.sh` et `test-otel-redaction.sh` passent ;
+- [ ] `check-signoz-telemetry.sh`, `validate-signoz-queries.sh`, `check-signoz-dashboard-parity.py`,
+  `test-signoz-metric-semantics.sh` et `test-otel-redaction.sh` passent ;
 - [ ] les attributs nouveaux ont type, unité, cardinalité, rétention et propriétaire documentés ;
 - [ ] prompts, résultats, code, patchs, preuves, credentials et paramètres d'URL restent absents ;
 - [ ] dashboards, alertes, notifications, runbooks et liens sont cohérents avec la définition versionnée ;
@@ -932,6 +933,8 @@ make logs
 # Tests
 make test
 make test-sandbox-runtime
+./scripts/check-signoz-dashboard-parity.py
+./scripts/test-signoz-metric-semantics.sh
 
 # Régénérer/valider les jetons locaux
 make tokens
