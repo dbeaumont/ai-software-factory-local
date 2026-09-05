@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
@@ -458,10 +459,19 @@ public class SandboxJobService {
         try {
             refreshHeartbeats();
             pruneExpiredJobs();
-        } catch (RuntimeException exception) {
+            runtime.reconcileOrphans(activeExecutionIds());
+        } catch (Exception exception) {
             maintenanceFailures.increment();
             LOGGER.warn("Sandbox job maintenance failed; it will be retried", exception);
         }
+    }
+
+    private Set<String> activeExecutionIds() {
+        return jobs.values().stream().filter(job -> {
+            synchronized (job) {
+                return !terminal(job.status);
+            }
+        }).map(job -> job.executionId).collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     private void refreshHeartbeats() {
@@ -517,7 +527,7 @@ public class SandboxJobService {
 
     private void restorePersistedJobs() {
         try {
-            runtime.reconcileOrphans();
+            runtime.reconcileOrphans(Set.of());
         } catch (Exception exception) {
             throw new IllegalStateException("sandbox orphan reconciliation failed", exception);
         }

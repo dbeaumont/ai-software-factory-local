@@ -3,6 +3,7 @@ package com.example.aifactory.sandbox.service;
 import com.example.aifactory.sandbox.model.SandboxModels.Operation;
 
 import java.nio.file.Path;
+import java.util.Set;
 
 public interface SandboxRuntime {
     RuntimeResult execute(Operation operation, String executionId, Path workspace) throws Exception;
@@ -11,6 +12,10 @@ public interface SandboxRuntime {
 
     default void reconcileOrphans() throws Exception {
         // Runtimes without an external job backend have nothing to reconcile.
+    }
+
+    default void reconcileOrphans(Set<String> retainedExecutionIds) throws Exception {
+        reconcileOrphans();
     }
 
     record RuntimeResult(int exitCode, String output, boolean outputTruncated) {

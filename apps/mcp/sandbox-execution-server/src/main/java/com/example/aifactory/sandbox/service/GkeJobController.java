@@ -2,6 +2,7 @@ package com.example.aifactory.sandbox.service;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Port implemented by the future privileged GKE Job/Agent Sandbox controller.
@@ -13,6 +14,10 @@ public interface GkeJobController {
     void cancel(String executionId);
 
     void reconcileOrphans() throws Exception;
+
+    default void reconcileOrphans(Set<String> retainedExecutionIds) throws Exception {
+        reconcileOrphans();
+    }
 
     record JobRequest(
             String executionId,

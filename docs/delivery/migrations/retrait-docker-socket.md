@@ -141,7 +141,7 @@ cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir l
 - [x] Appliquer labels, annotations, délais, TTL et politique de redémarrage imposés par le contrôleur.
 - [x] Surveiller le Job jusqu'à un état terminal et récupérer des logs bornés.
 - [x] Implémenter l'annulation par suppression contrôlée du Job.
-- [ ] Réconcilier les Jobs orphelins au démarrage et périodiquement.
+- [x] Réconcilier les Jobs orphelins au démarrage et périodiquement.
 - [x] Gérer les indisponibilités temporaires de l'API Kubernetes avec retry borné et backoff.
 - [ ] Exporter métriques, traces et événements d'audit sans données sensibles.
 

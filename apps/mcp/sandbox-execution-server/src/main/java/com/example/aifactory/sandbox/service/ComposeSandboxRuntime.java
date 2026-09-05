@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
@@ -88,7 +89,7 @@ public class ComposeSandboxRuntime implements SandboxRuntime {
     }
 
     @Override
-    public void reconcileOrphans() throws Exception {
+    public void reconcileOrphans(Set<String> retainedExecutionIds) throws Exception {
         for (URI runner : runners) {
             HttpRequest request = HttpRequest.newBuilder(runner.resolve("/v1/executions"))
                     .timeout(Duration.ofSeconds(5))
@@ -101,7 +102,9 @@ public class ComposeSandboxRuntime implements SandboxRuntime {
             }
             ActiveExecutions active = objectMapper.readValue(response.body(), ActiveExecutions.class);
             for (String executionId : active.executionIds()) {
-                cancel(executionId);
+                if (!retainedExecutionIds.contains(executionId)) {
+                    cancel(executionId);
+                }
             }
         }
     }

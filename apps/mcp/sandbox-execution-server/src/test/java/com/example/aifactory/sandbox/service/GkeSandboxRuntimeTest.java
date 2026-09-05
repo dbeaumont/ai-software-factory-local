@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,6 +44,36 @@ class GkeSandboxRuntimeTest {
         assertEquals(512, request.pidsLimit());
         assertEquals("task-1", request.taskDirectory());
         assertTrue(request.environmentSecretNames().contains("HTTP_PROXY"));
+    }
+
+    @Test
+    void forwardsKnownActiveExecutionsDuringPeriodicReconciliation() throws Exception {
+        AtomicReference<Set<String>> retained = new AtomicReference<>();
+        GkeJobController controller = new GkeJobController() {
+            @Override
+            public SandboxRuntime.RuntimeResult run(JobRequest request) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void cancel(String executionId) {
+            }
+
+            @Override
+            public void reconcileOrphans() {
+            }
+
+            @Override
+            public void reconcileOrphans(Set<String> retainedExecutionIds) {
+                retained.set(Set.copyOf(retainedExecutionIds));
+            }
+        };
+        GkeSandboxRuntime runtime = new GkeSandboxRuntime(properties(), controller);
+        Set<String> active = Set.of("a".repeat(32));
+
+        runtime.reconcileOrphans(active);
+
+        assertEquals(active, retained.get());
     }
 
     private static SandboxExecutionProperties properties() {

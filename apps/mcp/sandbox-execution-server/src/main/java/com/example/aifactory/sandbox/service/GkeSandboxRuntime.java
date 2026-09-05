@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
+import java.util.Set;
 
 import static com.example.aifactory.sandbox.service.GkeJobController.JobRequest;
 
@@ -52,8 +53,8 @@ public class GkeSandboxRuntime implements SandboxRuntime {
     }
 
     @Override
-    public void reconcileOrphans() throws Exception {
-        controller.reconcileOrphans();
+    public void reconcileOrphans(Set<String> retainedExecutionIds) throws Exception {
+        controller.reconcileOrphans(retainedExecutionIds);
     }
 
     private static String networkPolicy(String network) {

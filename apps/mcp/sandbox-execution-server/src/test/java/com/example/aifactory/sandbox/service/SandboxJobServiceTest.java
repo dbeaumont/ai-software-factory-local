@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.HexFormat;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -211,6 +212,7 @@ class SandboxJobServiceTest {
         assertEquals(refreshed.heartbeatAt(), store.load().stream()
                 .filter(snapshot -> snapshot.executionId().equals(submitted.executionId()))
                 .findFirst().orElseThrow().heartbeatAt());
+        assertEquals(Set.of(submitted.executionId()), runtime.retainedExecutionIds);
         jobs.cancel("1", "task-1", commit, "workflow", TRACE_ID, submitted.executionId());
     }
 
@@ -460,6 +462,7 @@ class SandboxJobServiceTest {
         private volatile boolean block;
         private volatile String cancelledExecutionId;
         private volatile Operation lastOperation;
+        private volatile Set<String> retainedExecutionIds = Set.of();
 
         @Override
         public RuntimeResult execute(Operation operation, String executionId, Path workspace) throws Exception {
@@ -482,6 +485,12 @@ class SandboxJobServiceTest {
 
         @Override
         public void reconcileOrphans() {
+            reconciliations.incrementAndGet();
+        }
+
+        @Override
+        public void reconcileOrphans(Set<String> retainedExecutionIds) {
+            this.retainedExecutionIds = Set.copyOf(retainedExecutionIds);
             reconciliations.incrementAndGet();
         }
     }

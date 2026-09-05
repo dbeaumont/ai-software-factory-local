@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Kubernetes API implementation used in GKE. Requests are derived only from registered sandbox profiles. */
 @Service
@@ -95,6 +96,11 @@ public class KubernetesGkeJobController implements GkeJobController {
 
     @Override
     public void reconcileOrphans() throws Exception {
+        reconcileOrphans(Set.of());
+    }
+
+    @Override
+    public void reconcileOrphans(Set<String> retainedExecutionIds) throws Exception {
         URI uri = URI.create(jobsUri() + "?labelSelector="
                 + URLEncoder.encode(LABEL_SELECTOR, StandardCharsets.UTF_8));
         HttpResponse<byte[]> response = send("GET", uri, null);
@@ -104,7 +110,11 @@ public class KubernetesGkeJobController implements GkeJobController {
         for (JsonNode item : mapper.readTree(response.body()).path("items")) {
             JsonNode status = item.path("status");
             if (status.path("active").asInt() > 0) {
-                cancel(item.path("metadata").path("labels").path("ai-factory.io/execution-id").asText());
+                String executionId = item.path("metadata").path("labels")
+                        .path("ai-factory.io/execution-id").asText();
+                if (!retainedExecutionIds.contains(executionId)) {
+                    cancel(executionId);
+                }
             }
         }
     }
