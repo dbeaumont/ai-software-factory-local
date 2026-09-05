@@ -23,6 +23,8 @@
 | Artefacts | conforme | SBOM de 9 802 octets et rapport Trivy de 5 255 octets présents dans `.ai-factory/`. |
 | Redémarrage et réconciliation | conforme | une exécution Maven longue, active avant redémarrage du MCP, est annulée au redémarrage ; le runner retourne ensuite `execution_ids: []`. |
 | Isolation réseau | conforme | `make test-sandbox-network` refuse le metadata service depuis les quatre runners et refuse Sonar depuis le runner dépendances, tout en l'autorisant depuis le runner qualité. |
+| Workflow applicatif end-to-end | conforme, verdict bloquant attendu | La tâche `b7da9afc` (`AF-0001`) a exécuté clonage, planification, génération et application du patch, tests Maven, analyse Sonar et scan Trivy. Les tests (3/3) et le quality gate ont réussi ; le workflow s'est terminé `FAILED` uniquement parce que la politique de sécurité a correctement refusé les trois CVE critiques Tomcat déjà présentes dans le dépôt de démonstration. |
+| Arrêt propre | conforme | La pile de qualification neuve a été arrêtée avec `docker compose down -v` après les contrôles ; seuls ses volumes isolés ont été supprimés. La pile de développement a ensuite été redémarrée avec ses volumes préservés. |
 
 Un code `1` de Trivy est ici le résultat attendu du contrôle de sécurité : l'opération et
 l'infrastructure ont réussi, puis la politique a refusé un composant vulnérable. Les versions corrigées
@@ -53,5 +55,6 @@ développement originale a été redémarrée sur ses volumes préservés.
 ## Limites de cette preuve
 
 Cette qualification valide le backend Compose local et ses cinq profils. Elle ne vaut pas qualification GKE,
-ne remplace pas la campagne de sécurité sur cluster et ne clôt pas le test du workflow applicatif complet avec
-arrêt propre de toute la pile.
+et ne remplace pas la campagne de sécurité sur cluster. Le verdict bloquant du workflow applicatif est une
+décision fonctionnelle de la politique Trivy, pas une défaillance du runtime Compose ni de l'isolation sans
+socket.

@@ -15,9 +15,10 @@ macOS / local : orchestrator -> sandbox-execution-mcp -> sandbox-runner(s) Compo
 GKE / partagé : orchestrator -> sandbox-execution-mcp -> contrôleur GKE -> Job éphémère
 ```
 
-État au 5 septembre 2026 : l'implémentation, les tests hors cluster et la qualification des cinq profils Compose
-sont réalisés. Le workflow applicatif complet avec arrêt propre reste à qualifier ; les cases GKE nécessitent un
-cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir la
+État au 5 septembre 2026 : l'implémentation, les tests hors cluster, la qualification des cinq profils Compose
+et le workflow applicatif macOS avec arrêt propre sont réalisés. Le workflow end-to-end atteint correctement
+le contrôle Trivy, qui bloque le dépôt de démonstration en raison de trois CVE critiques existantes ; les cases
+GKE nécessitent un cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir la
 [preuve de qualification macOS](../../evidence/sandbox/compose-macos-2026-09-05.md).
 
 ## 2. Résultat attendu
@@ -248,7 +249,7 @@ cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir l
 - [x] Tests de lecture seule et d'écriture du workspace.
 - [x] Tests de refus réseau et d'absence d'accès au metadata service en mode Compose.
 - [ ] Tests de refus réseau et d'absence d'accès au metadata service en mode GKE.
-- [ ] Test end-to-end macOS : build, démarrage Compose, workflow complet et arrêt propre.
+- [x] Test end-to-end macOS : build, démarrage Compose, workflow complet et arrêt propre.
 - [ ] Test end-to-end GKE : workflow complet, collecte de preuves et nettoyage du Job.
 
 ## 12. Ordre recommandé et dépendances
