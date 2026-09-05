@@ -116,6 +116,22 @@ autorisée.
    réussis ni réexécutés par un autre moteur.
 6. L'opérateur peut fermer globalement les admissions, mais ne peut pas sélectionner un moteur alternatif.
 
+## Politique de rollback
+
+Le rollback est un rollback applicatif au sein de Temporal, jamais un changement de moteur.
+
+1. Fermer les admissions avant toute action de rollback.
+2. Inventorier les workflows ouverts, leurs types, Build IDs, phases et effets à issue inconnue.
+3. Redéployer l'image de worker précédemment qualifiée et compatible avec les historiques concernés.
+4. Conserver plusieurs Build IDs lorsque le drainage l'exige ; ne jamais déplacer arbitrairement un workflow
+   épinglé vers du code incompatible.
+5. Réconcilier les effets externes avec leur autorité avant tout retry.
+6. Préserver historiques, projections, preuves et workspaces jusqu'à clôture de l'incident.
+7. Garder les admissions fermées si aucune version compatible ne peut être restaurée.
+8. Une reprise fonctionnelle après stabilisation crée un nouvel `attemptId` sous Temporal.
+
+L'ancien coordinateur local est absent de la release de bascule et ne constitue donc pas une option de rollback.
+
 ## Vérification
 
 - aucun contrat public ne permet de choisir le moteur ;
