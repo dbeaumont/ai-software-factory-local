@@ -57,8 +57,10 @@ RUN --mount=type=secret,id=artifactory_token \
     --mount=type=cache,target=/root/.m2 \
   if [ -n "${MAVEN_MIRROR_URL}" ]; then \
     export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token); \
+    mvn test -Dtest=WorkflowDeterminismArchitectureTest -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dagents.directory=/src/external-agents; \
     mvn package -DskipTests -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dagents.directory=/src/external-agents; \
   else \
+    mvn test -Dtest=WorkflowDeterminismArchitectureTest -B -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dagents.directory=/src/external-agents; \
     mvn package -DskipTests -B -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dagents.directory=/src/external-agents; \
   fi
 

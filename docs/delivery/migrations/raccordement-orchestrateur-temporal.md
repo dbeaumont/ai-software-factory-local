@@ -459,7 +459,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester un ancien worker et un nouveau worker simultanément avec Build IDs compatibles. _(Deux registres
   coexistants exposent les sept mêmes task queues sous le même Worker Deployment, avec Build IDs immuables distincts
   et comportement `PINNED`, ce qui permet le drainage de l'ancien pendant l'activation du nouveau.)_
-- [ ] Refuser la livraison d'une image worker lorsque le replay échoue.
+- [x] Refuser la livraison d'une image worker lorsque le replay échoue. _(Le Dockerfile exécute le corpus de replay
+  avant tout `mvn package`, `make build` dépend d'une cible `temporal-replay`, et un test d'architecture verrouille
+  l'ordre de cette barrière fail-closed.)_
 
 ### 12.4 Tests d'intégration Docker Compose sur macOS
 

@@ -12,12 +12,13 @@ CYAN   := \033[0;36m
 RED    := \033[0;31m
 NC     := \033[0m
 COMPOSE := docker compose --env-file .env -f infrastructure/compose.yaml
+MAVEN_HOST_SETTINGS := $(if $(strip $(MAVEN_MIRROR_URL)),-s apps/orchestrator/.mvn/settings.xml,-s apps/orchestrator/.mvn/settings-direct.xml)
 
 define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -31,6 +32,7 @@ help:
 	@echo -e "  $(CYAN)make tokens$(NC)     - validate or regenerate local Gitea and SonarQube tokens"
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
+	@echo -e "  $(CYAN)make temporal-replay$(NC) - replay versioned histories before worker image build"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify the static Compose sandbox runner"
 	@echo -e "  $(CYAN)make test-sandbox-network$(NC) - verify Compose runner network isolation"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
@@ -55,7 +57,7 @@ init:
 	@./scripts/init-local-config.sh
 	@echo -e "$(GREEN).env and .vault ready$(NC)"
 
-build:
+build: temporal-replay
 	$(log-target)
 	@echo -e "$(BLUE)Building sandbox and orchestrator images...$(NC)"
 	@test -n "$(SYFT_VERSION)" || (echo "SYFT_VERSION must be defined in .env" >&2; exit 1)
@@ -125,6 +127,12 @@ test:
 	mvn -f apps/mcp/scm-delivery-server/pom.xml test
 	mvn -f apps/mcp/assurance-server/pom.xml test
 	mvn -f apps/mcp/evidence-server/pom.xml test
+
+temporal-replay:
+	$(log-target)
+	@echo -e "$(BLUE)Replaying versioned Temporal histories...$(NC)"
+	@if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=WorkflowDeterminismArchitectureTest; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=WorkflowDeterminismArchitectureTest; fi
+	@echo -e "$(GREEN)Temporal histories are replay-compatible.$(NC)"
 
 test-sandbox-runtime:
 	$(log-target)
