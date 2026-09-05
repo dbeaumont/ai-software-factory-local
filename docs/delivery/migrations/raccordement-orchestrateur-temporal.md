@@ -65,8 +65,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 4. Décisions d'architecture à figer
 
-- [ ] **TEMP-001 — Séparer moteur et mode d'exécution.** Faire de Temporal l'unique moteur de production, tout en
-  conservant `executionMode` comme caractéristique métier indépendante du workflow technique.
+- [x] **TEMP-001 — Séparer moteur et mode d'exécution.** Faire de Temporal l'unique moteur de production, tout en
+  conservant `executionMode` comme caractéristique métier indépendante du workflow technique. _(Décision consignée
+  dans `ADR-TEMP-001`.)_
 - [ ] **TEMP-002 — Définir l'autorité des données.** Temporal porte la chronologie et l'état de coordination ;
   PostgreSQL porte une projection reconstruisible ; Evidence MCP porte les artefacts et leurs digests ; Gitea
   reste l'autorité des effets SCM.
