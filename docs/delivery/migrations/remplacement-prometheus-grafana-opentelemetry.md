@@ -443,7 +443,7 @@ différée afin de rester récupérable.
 - [ ] Redémarrer application, Collector et backend pendant une charge contrôlée.
 - [x] Couper le Collector et vérifier que le workflow métier continue.
 - [ ] Saturer les files et mesurer précisément les pertes et délais.
-- [ ] Tester sauvegarde/restauration puis arrêt propre du backend local.
+- [x] Tester sauvegarde/restauration isolée puis arrêt propre du backend local.
 - [ ] Exécuter la même campagne sur un cluster GKE de validation.
 - [ ] Exécuter un replay Temporal et vérifier l'absence de spans incohérents ou dupliqués.
 

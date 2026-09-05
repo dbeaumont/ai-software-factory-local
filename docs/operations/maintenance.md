@@ -524,9 +524,9 @@ décrit le mode durable cible et ne remplace pas une sauvegarde opérationnelle 
 
 ### 11.1 Limite actuelle
 
-Le dépôt ne fournit pas de commande de sauvegarde ou de restauration intégrée. Les volumes Docker sont persistants,
-mais ne sont ni une sauvegarde, ni un stockage WORM, ni un PRA. Toute procédure locale doit être testée sur une
-copie isolée avant d’être déclarée exploitable.
+Le dépôt fournit une sauvegarde cohérente de SigNoz et une restauration de contrôle dans des volumes isolés. Les
+autres volumes restent couverts par la procédure manuelle ci-dessous. Un volume Docker persistant n'est ni une
+sauvegarde, ni un stockage WORM, ni un PRA.
 
 ### 11.2 Périmètre minimal de sauvegarde
 
@@ -567,6 +567,16 @@ données inutilisables.
 7. ne pas déduire l’état d’un effet externe depuis le seul workspace ;
 8. échantillonner des dépôts, analyses et preuves ;
 9. rouvrir d’abord un canary interne, puis les admissions après validation Exploitation/Sécurité.
+
+Pour SigNoz uniquement :
+
+```bash
+./scripts/backup-signoz.sh /chemin/vers/un-repertoire-vide
+./scripts/restore-signoz-backup-isolated.sh /chemin/vers/la-sauvegarde ai-factory-signoz-restore-validation
+./scripts/test-signoz-backup-restore.sh
+```
+
+La commande de restauration crée obligatoirement de nouveaux volumes et refuse d'écraser un volume existant.
 
 Dans la cible durable, Temporal est l’autorité de chronologie, Evidence MCP l’autorité des artefacts et PostgreSQL
 une projection reconstruisible. Cette organisation n’est pas encore câblée de bout en bout dans le chemin actif.
@@ -853,7 +863,7 @@ secrets, test de rollback et scénario complet jusqu’à `PR_CREATED`.
 
 - persister les tâches et relier la projection au workflow ;
 - monter et tester un kill switch exploitable atomiquement ;
-- éprouver sauvegarde/restauration SigNoz et les alertes techniques du Collector ;
+- étendre la restauration SigNoz isolée à un démarrage complet de la seconde pile ;
 - raccorder un canal d'astreinte approuvé hors environnement local ;
 - automatiser sauvegarde/restauration et tests de reprise ;
 - épingler toutes les images par digest ;
