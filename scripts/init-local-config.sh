@@ -33,6 +33,16 @@ write_value() {
   mv "$temporary" "$path"
 }
 
+remove_key() {
+  local path="$1"
+  local key="$2"
+  local temporary
+  temporary=$(mktemp "${TMPDIR:-/tmp}/ai-factory-config.XXXXXX")
+  awk -v key="$key" 'index($0, key "=") != 1 { print }' "$path" > "$temporary"
+  chmod 600 "$temporary"
+  mv "$temporary" "$path"
+}
+
 generate_hex() {
   local bytes="$1"
   openssl rand -hex "$bytes"
@@ -106,9 +116,14 @@ sync_optional_secret() {
 }
 
 ensure_env_secret ARTIFACTORY_DB_PASSWORD 24 1
+ensure_env_secret AI_FACTORY_SANDBOX_RUNNER_TOKEN 32 32
 ensure_shared_secret APPROVAL_ATTESTATION_KEY 32 32
 ensure_shared_secret JF_SHARED_SECURITY_MASTERKEY 16 32
 ensure_shared_secret JF_SHARED_SECURITY_JOINKEY 16 32
 sync_optional_secret GITEA_TOKEN 16
+
+# Existing local installations are migrated away from the legacy Docker socket runtime.
+write_value "$ENV_FILE" AI_FACTORY_SANDBOX_RUNTIME compose
+remove_key "$ENV_FILE" DOCKER_SOCKET_GID
 
 chmod 600 "$ENV_FILE" "$VAULT_FILE"

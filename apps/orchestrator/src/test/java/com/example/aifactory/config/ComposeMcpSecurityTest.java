@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ComposeMcpSecurityTest {
     @Test
     @SuppressWarnings("unchecked")
-    void dockerSocketAndSandboxSecretsAreAbsentFromTheOrchestrator() throws Exception {
+    void dockerSocketIsAbsentAndStaticRunnersAreHardened() throws Exception {
         Path compose = composeFile();
         Map<String, Object> root;
         try (InputStream input = Files.newInputStream(compose)) {
@@ -41,9 +41,8 @@ class ComposeMcpSecurityTest {
                 .map(service -> (List<String>) service.getOrDefault("volumes", List.of()))
                 .filter(volumes -> volumes.stream().anyMatch(volume -> volume.contains("docker.sock")))
                 .count();
-        assertEquals(1, socketHolders);
-        assertTrue(((List<String>) sandbox.get("volumes")).stream()
-                .anyMatch(volume -> volume.equals("/var/run/docker.sock:/var/run/docker.sock")));
+        assertEquals(0, socketHolders);
+        assertFalse(sandbox.containsKey("group_add"));
         assertEquals(Boolean.TRUE, sandbox.get("read_only"));
         assertEquals(List.of("ALL"), sandbox.get("cap_drop"));
         assertTrue(((List<String>) sandbox.get("security_opt")).contains("no-new-privileges:true"));
@@ -52,6 +51,18 @@ class ComposeMcpSecurityTest {
         assertEquals(List.of("mcp-internal"), assurance.get("networks"));
         assertEquals(Boolean.TRUE, assurance.get("read_only"));
         assertEquals(List.of("ALL"), assurance.get("cap_drop"));
+
+        for (String name : List.of("sandbox-runner-readonly", "sandbox-runner-write",
+                "sandbox-runner-dependency", "sandbox-runner-quality")) {
+            Map<String, Object> runner = services.get(name);
+            assertNotNull(runner, name + " must be declared");
+            assertFalse(runner.containsKey("ports"), name + " must not publish host ports");
+            assertFalse(runner.containsKey("privileged"), name + " must not be privileged");
+            assertFalse(runner.containsKey("group_add"), name + " must not acquire supplementary host groups");
+            assertEquals(Boolean.TRUE, runner.get("read_only"));
+            assertEquals(List.of("ALL"), runner.get("cap_drop"));
+            assertTrue(((List<String>) runner.get("security_opt")).contains("no-new-privileges:true"));
+        }
     }
 
     private static Path composeFile() {

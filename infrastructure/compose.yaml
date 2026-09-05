@@ -2,6 +2,17 @@ name: ai-software-factory
 
 # All application services share this private Docker network; only explicitly mapped ports are exposed to the host.
 services:
+  # Align named-volume ownership with the non-root orchestrator and sandbox runners.
+  sandbox-storage-init:
+    image: busybox:1.37
+    command: ["sh", "-c", "chown -R 10000:10000 /workspace /m2 /trivy"]
+    volumes:
+      - factory-workspace:/workspace
+      - sandbox-m2-cache:/m2
+      - sandbox-trivy-cache:/trivy
+    network_mode: none
+    restart: "no"
+
   # Durable workflow engine and its dedicated PostgreSQL persistence for local development.
   temporal-db:
     image: postgres:16-alpine
@@ -207,7 +218,7 @@ services:
       start_period: 10s
     networks: [mcp-internal]
 
-  # Privileged controller for fixed-profile sandbox jobs. The Docker socket is deliberately isolated here.
+  # Unprivileged controller dispatching fixed profiles to static local runners; it never controls Docker.
   sandbox-execution-mcp:
     build:
       context: ../apps/mcp/sandbox-execution-server
@@ -220,7 +231,7 @@ services:
       AI_FACTORY_SANDBOX_STATE_ROOT: /var/lib/ai-factory/sandbox-jobs
       AI_FACTORY_WORKSPACE_VOLUME: ${AI_FACTORY_WORKSPACE_VOLUME}
       AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
-      AI_FACTORY_SANDBOX_RUNTIME: ${AI_FACTORY_SANDBOX_RUNTIME:-docker}
+      AI_FACTORY_SANDBOX_RUNTIME: ${AI_FACTORY_SANDBOX_RUNTIME:-compose}
       AI_FACTORY_SANDBOX_NETWORK: ${AI_FACTORY_SANDBOX_NETWORK}
       AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS: ${AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS:-2}
       AI_FACTORY_SANDBOX_MAX_QUEUED_JOBS: ${AI_FACTORY_SANDBOX_MAX_QUEUED_JOBS:-32}
@@ -235,13 +246,9 @@ services:
       AI_FACTORY_SANDBOX_EGRESS_PROXY_URL: ${AI_FACTORY_SANDBOX_EGRESS_PROXY_URL:-http://sandbox-egress-proxy:3128}
       AI_FACTORY_SANDBOX_NO_PROXY: ${AI_FACTORY_SANDBOX_NO_PROXY:-artifactory,sonarqube,localhost,127.0.0.1}
       AI_FACTORY_SANDBOX_QUALITY_NETWORK: ${AI_FACTORY_SANDBOX_QUALITY_NETWORK:-ai-factory-sandbox-quality}
-      ARTIFACTORY_TOKEN: ${ARTIFACTORY_TOKEN}
-      AI_FACTORY_SONARQUBE_URL: ${AI_FACTORY_SONARQUBE_URL}
-      AI_FACTORY_SONAR_TOKEN: ${SONAR_TOKEN}
-    group_add:
-      - ${DOCKER_SOCKET_GID:-0}
+      AI_FACTORY_SANDBOX_RUNNER_TOKEN: ${AI_FACTORY_SANDBOX_RUNNER_TOKEN}
+      AI_FACTORY_DEPLOYMENT_ENVIRONMENT: local
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - factory-workspace:/workspace/tasks:ro
       - sandbox-job-state:/var/lib/ai-factory/sandbox-jobs
     read_only: true
@@ -256,7 +263,135 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
-    networks: [mcp-internal]
+    depends_on:
+      sandbox-runner-readonly: { condition: service_healthy }
+      sandbox-runner-write: { condition: service_healthy }
+      sandbox-runner-dependency: { condition: service_healthy }
+      sandbox-runner-quality: { condition: service_healthy }
+    networks: [mcp-internal, sandbox-control]
+
+  # Static local runners replace dynamic container creation. Their request API accepts profile IDs only.
+  sandbox-runner-readonly:
+    image: ${AI_FACTORY_SANDBOX_IMAGE}
+    entrypoint: ["python3", "/opt/ai-factory/runner.py"]
+    environment:
+      AI_FACTORY_SANDBOX_RUNNER_TOKEN: ${AI_FACTORY_SANDBOX_RUNNER_TOKEN}
+      AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
+      AI_FACTORY_RUNNER_ALLOWED_PROFILES: patch-check-v1
+      AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS: ${AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS:-65536}
+    volumes:
+      - factory-workspace:/factory-tasks:ro
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 2g
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    depends_on:
+      sandbox-storage-init: { condition: service_completed_successfully }
+    networks: [sandbox-control]
+
+  sandbox-runner-write:
+    image: ${AI_FACTORY_SANDBOX_IMAGE}
+    entrypoint: ["python3", "/opt/ai-factory/runner.py"]
+    environment:
+      AI_FACTORY_SANDBOX_RUNNER_TOKEN: ${AI_FACTORY_SANDBOX_RUNNER_TOKEN}
+      AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
+      AI_FACTORY_RUNNER_ALLOWED_PROFILES: patch-apply-v1
+      AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS: ${AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS:-65536}
+    volumes:
+      - factory-workspace:/factory-tasks
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 2g
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    depends_on:
+      sandbox-storage-init: { condition: service_completed_successfully }
+    networks: [sandbox-control]
+
+  sandbox-runner-dependency:
+    image: ${AI_FACTORY_SANDBOX_IMAGE}
+    entrypoint: ["python3", "/opt/ai-factory/runner.py"]
+    environment:
+      AI_FACTORY_SANDBOX_RUNNER_TOKEN: ${AI_FACTORY_SANDBOX_RUNNER_TOKEN}
+      AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
+      AI_FACTORY_RUNNER_ALLOWED_PROFILES: test-maven-v1,test-gradle-v1,test-node-v1,security-syft-trivy-v2
+      AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS: ${AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS:-65536}
+      MAVEN_MIRROR_URL: ${AI_FACTORY_SANDBOX_MAVEN_MIRROR_URL}
+      ARTIFACTORY_TOKEN: ${ARTIFACTORY_TOKEN}
+      NPM_CONFIG_REGISTRY: ${NPM_REGISTRY_URL:-https://registry.npmjs.org/}
+      HTTP_PROXY: ${AI_FACTORY_SANDBOX_EGRESS_PROXY_URL:-http://sandbox-egress-proxy:3128}
+      HTTPS_PROXY: ${AI_FACTORY_SANDBOX_EGRESS_PROXY_URL:-http://sandbox-egress-proxy:3128}
+      NO_PROXY: ${AI_FACTORY_SANDBOX_NO_PROXY:-artifactory,sonarqube,localhost,127.0.0.1}
+      SYFT_CHECK_FOR_APP_UPDATE: "false"
+      TRIVY_NO_PROGRESS: "true"
+    volumes:
+      - factory-workspace:/factory-tasks
+      - sandbox-m2-cache:/home/sandbox/.m2
+      - sandbox-trivy-cache:/home/sandbox/.cache/trivy/db
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 2g
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    depends_on:
+      sandbox-storage-init: { condition: service_completed_successfully }
+    networks: [sandbox-control, sandbox-egress]
+
+  sandbox-runner-quality:
+    image: ${AI_FACTORY_SANDBOX_IMAGE}
+    entrypoint: ["python3", "/opt/ai-factory/runner.py"]
+    environment:
+      AI_FACTORY_SANDBOX_RUNNER_TOKEN: ${AI_FACTORY_SANDBOX_RUNNER_TOKEN}
+      AI_FACTORY_SANDBOX_IMAGE: ${AI_FACTORY_SANDBOX_IMAGE}
+      AI_FACTORY_RUNNER_ALLOWED_PROFILES: quality-sonar-v1
+      AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS: ${AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS:-65536}
+      MAVEN_MIRROR_URL: ${AI_FACTORY_SANDBOX_MAVEN_MIRROR_URL}
+      ARTIFACTORY_TOKEN: ${ARTIFACTORY_TOKEN}
+      SONAR_HOST_URL: ${AI_FACTORY_SONARQUBE_URL}
+      SONAR_TOKEN: ${SONAR_TOKEN}
+      HTTP_PROXY: ${AI_FACTORY_SANDBOX_EGRESS_PROXY_URL:-http://sandbox-egress-proxy:3128}
+      HTTPS_PROXY: ${AI_FACTORY_SANDBOX_EGRESS_PROXY_URL:-http://sandbox-egress-proxy:3128}
+      NO_PROXY: ${AI_FACTORY_SANDBOX_NO_PROXY:-artifactory,sonarqube,localhost,127.0.0.1}
+    volumes:
+      - factory-workspace:/factory-tasks
+      - sandbox-m2-cache:/home/sandbox/.m2
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 2g
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    depends_on:
+      sandbox-storage-init: { condition: service_completed_successfully }
+    networks: [sandbox-control, sandbox-quality]
 
   scm-delivery-mcp:
     build:
@@ -476,6 +611,8 @@ services:
       retries: 30
       start_period: 30s
     depends_on:
+      sandbox-storage-init:
+        condition: service_completed_successfully
       gitea:
         condition: service_healthy
       litellm:
@@ -668,6 +805,10 @@ networks:
   mcp-internal:
     name: ai-factory-mcp-internal
     internal: true
+  # Local sandbox control channel; runners expose no host ports and cannot reach the public network through it.
+  sandbox-control:
+    name: ai-factory-sandbox-control
+    internal: true
   # Test-job containers join only this internal segment. They can reach
   # Artifactory and the allow-listed proxy, but no control-plane service or SonarQube.
   sandbox-egress:
@@ -687,6 +828,8 @@ volumes:
   factory-workspace:
     name: ${AI_FACTORY_WORKSPACE_VOLUME}
   sandbox-job-state:
+  sandbox-m2-cache:
+  sandbox-trivy-cache:
   context-registry-state:
   scm-delivery-state:
   evidence-state:

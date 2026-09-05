@@ -14,9 +14,9 @@ RUN --mount=type=secret,id=artifactory_token \
 
 FROM eclipse-temurin:25-jre
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates git docker.io \
+    && apt-get install -y --no-install-recommends curl ca-certificates git \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10002 --create-home --groups root sandbox-mcp \
+    && useradd --system --uid 10002 --create-home sandbox-mcp \
     && mkdir -p /var/lib/ai-factory/sandbox-jobs \
     && chown sandbox-mcp:sandbox-mcp /var/lib/ai-factory/sandbox-jobs
 WORKDIR /app

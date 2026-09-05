@@ -34,7 +34,7 @@ management:
 
 ai-factory:
   sandbox:
-    runtime: ${AI_FACTORY_SANDBOX_RUNTIME:docker}
+    runtime: ${AI_FACTORY_SANDBOX_RUNTIME:compose}
     workspace-root: ${AI_FACTORY_SANDBOX_WORKSPACE_ROOT:/workspace/tasks}
     state-root: ${AI_FACTORY_SANDBOX_STATE_ROOT:/var/lib/ai-factory/sandbox-jobs}
     workspace-volume: ${AI_FACTORY_WORKSPACE_VOLUME:ai-software-factory_factory-workspace}
@@ -53,6 +53,25 @@ ai-factory:
     artifactory-token: ${ARTIFACTORY_TOKEN:}
     sonarqube-url: ${AI_FACTORY_SONARQUBE_URL:http://sonarqube:9000}
     sonar-token: ${AI_FACTORY_SONAR_TOKEN:}
+    compose:
+      read-only-runner-url: ${AI_FACTORY_SANDBOX_READ_ONLY_RUNNER_URL:http://sandbox-runner-readonly:8088}
+      write-runner-url: ${AI_FACTORY_SANDBOX_WRITE_RUNNER_URL:http://sandbox-runner-write:8088}
+      dependency-runner-url: ${AI_FACTORY_SANDBOX_DEPENDENCY_RUNNER_URL:http://sandbox-runner-dependency:8088}
+      quality-runner-url: ${AI_FACTORY_SANDBOX_QUALITY_RUNNER_URL:http://sandbox-runner-quality:8088}
+      token: ${AI_FACTORY_SANDBOX_RUNNER_TOKEN:local-sandbox-runner-token-change-me-0000000000000000}
+      environment: ${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}
+    gke:
+      api-server: ${AI_FACTORY_GKE_API_SERVER:https://kubernetes.default.svc}
+      namespace: ${AI_FACTORY_GKE_SANDBOX_NAMESPACE:ai-factory-sandbox}
+      controller-service-account: ${AI_FACTORY_GKE_CONTROLLER_SERVICE_ACCOUNT:sa-sandbox-controller}
+      job-service-account: ${AI_FACTORY_GKE_JOB_SERVICE_ACCOUNT:sa-sandbox-job}
+      runtime-class-name: ${AI_FACTORY_GKE_RUNTIME_CLASS_NAME:gvisor}
+      workspace-claim: ${AI_FACTORY_GKE_WORKSPACE_CLAIM:factory-workspace}
+      environment-secret: ${AI_FACTORY_GKE_ENVIRONMENT_SECRET:sandbox-profile-environment}
+      token-file: ${AI_FACTORY_GKE_TOKEN_FILE:/var/run/secrets/kubernetes.io/serviceaccount/token}
+      ca-certificate-file: ${AI_FACTORY_GKE_CA_FILE:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt}
+      poll-interval: ${AI_FACTORY_GKE_POLL_INTERVAL:PT2S}
+      ttl-seconds-after-finished: ${AI_FACTORY_GKE_JOB_TTL_SECONDS:300}
   sandbox-dependencies:
     npm-registry-url: ${NPM_REGISTRY_URL:https://registry.npmjs.org/}
     egress-proxy-url: ${AI_FACTORY_SANDBOX_EGRESS_PROXY_URL:http://sandbox-egress-proxy:3128}

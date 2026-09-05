@@ -66,10 +66,11 @@ RUN --mount=type=secret,id=artifactory_token \
 # Runtime stage
 # ─────────────────────────────────────────────────────────────────────────────
 FROM eclipse-temurin:25-jre
-# The orchestrator starts isolated sandbox containers through the mounted Docker socket.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git curl ca-certificates docker.io \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends git curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --uid 10000 --create-home orchestrator
 WORKDIR /app
 COPY --from=build /src/target/ai-factory-orchestrator.jar app.jar
+USER 10000
 ENTRYPOINT ["java","-jar","/app/app.jar"]

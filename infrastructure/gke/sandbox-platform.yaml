@@ -1,0 +1,188 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-factory-sandbox
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-sandbox-controller
+  namespace: ai-factory-sandbox
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-sandbox-job
+  namespace: ai-factory-sandbox
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sandbox-job-controller
+  namespace: ai-factory-sandbox
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sandbox-job-controller
+  namespace: ai-factory-sandbox
+subjects:
+  - kind: ServiceAccount
+    name: sa-sandbox-controller
+    namespace: ai-factory-sandbox
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sandbox-job-controller
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sandbox-quota
+  namespace: ai-factory-sandbox
+spec:
+  hard:
+    count/jobs.batch: "32"
+    requests.cpu: "16"
+    requests.memory: 32Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sandbox-limits
+  namespace: ai-factory-sandbox
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "2"
+        memory: 2Gi
+      defaultRequest:
+        cpu: "2"
+        memory: 2Gi
+      max:
+        cpu: "2"
+        memory: 2Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sandbox-deny-all
+  namespace: ai-factory-sandbox
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ai-factory-sandbox-job
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sandbox-dns
+  namespace: ai-factory-sandbox
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ai-factory-sandbox-job
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sandbox-dependency-egress
+  namespace: ai-factory-sandbox
+spec:
+  podSelector:
+    matchLabels:
+      ai-factory.io/network-policy: sandbox-dependency-egress
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sandbox-egress-proxy
+      ports:
+        - { protocol: TCP, port: 3128 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sandbox-quality-egress
+  namespace: ai-factory-sandbox
+spec:
+  podSelector:
+    matchLabels:
+      ai-factory.io/network-policy: sandbox-quality-egress
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sandbox-egress-proxy
+      ports:
+        - { protocol: TCP, port: 3128 }
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              ai-factory.io/services: "true"
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sonarqube
+      ports:
+        - { protocol: TCP, port: 9000 }
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: sandbox-job-images-by-digest
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["batch"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["jobs"]
+  validations:
+    - expression: >-
+        object.metadata.namespace != 'ai-factory-sandbox' ||
+        object.spec.template.spec.containers.all(container,
+          container.image.matches('^([A-Za-z0-9._:/-]+@)?sha256:[0-9a-f]{64}$'))
+      message: Sandbox Job images must be immutable sha256 references.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: sandbox-job-images-by-digest
+spec:
+  policyName: sandbox-job-images-by-digest
+  validationActions: [Deny, Audit]

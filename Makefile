@@ -30,7 +30,7 @@ help:
 	@echo -e "  $(CYAN)make tokens$(NC)     - validate or regenerate local Gitea and SonarQube tokens"
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
-	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify effective Docker sandbox constraints"
+	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify the static Compose sandbox runner"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
 	@echo -e "  $(CYAN)make mcp-active-campaign$(NC) - run the role-scoped MCP_ACTIVE canary"
 	@echo -e "  $(CYAN)make mcp-shadow-report$(NC) - generate the MCP shadow campaign report"
@@ -106,6 +106,7 @@ demo:
 test:
 	$(log-target)
 	@echo -e "$(BLUE)Running orchestrator and MCP server tests...$(NC)"
+	./scripts/check-no-docker-socket.sh
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw -f apps/orchestrator/pom.xml test; else mvn -f apps/orchestrator/pom.xml test; fi
 	mvn -f apps/mcp/repository-context-server/pom.xml test
 	mvn -f apps/mcp/sandbox-execution-server/pom.xml test
@@ -115,9 +116,9 @@ test:
 
 test-sandbox-runtime:
 	$(log-target)
-	@echo -e "$(BLUE)Verifying effective Docker sandbox constraints...$(NC)"
-	AI_FACTORY_RUN_DOCKER_INTEGRATION_TESTS=true mvn -f apps/mcp/sandbox-execution-server/pom.xml -Dtest=DockerSandboxRuntimeIntegrationTest test
-	@echo -e "$(GREEN)Docker sandbox constraints verified!$(NC)"
+	@echo -e "$(BLUE)Verifying the static Compose sandbox runner...$(NC)"
+	python3 -m unittest infrastructure/sandbox/test_runner.py
+	@echo -e "$(GREEN)Compose sandbox runner verified!$(NC)"
 
 mcp-shadow-campaign:
 	$(log-target)
