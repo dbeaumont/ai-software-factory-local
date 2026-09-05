@@ -2,6 +2,7 @@ package com.example.aifactory.workflow.temporal;
 
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowExecutionAlreadyStarted;
 import io.temporal.client.WorkflowOptions;
 import org.springframework.stereotype.Component;
 
@@ -17,8 +18,13 @@ final class TemporalWorkflowCommands {
     ExecutionIdentity start(WorkflowOptions options, SoftwareFactoryWorkflow.Request request) {
         SoftwareFactoryExecutionWorkflowV1 workflow = client.newWorkflowStub(
                 SoftwareFactoryExecutionWorkflowV1.class, options);
-        WorkflowExecution execution = WorkflowClient.start(workflow::run, request);
-        return new ExecutionIdentity(execution.getWorkflowId(), execution.getRunId());
+        try {
+            WorkflowExecution execution = WorkflowClient.start(workflow::run, request);
+            return new ExecutionIdentity(execution.getWorkflowId(), execution.getRunId());
+        } catch (WorkflowExecutionAlreadyStarted existing) {
+            WorkflowExecution execution = existing.getExecution();
+            return new ExecutionIdentity(execution.getWorkflowId(), execution.getRunId());
+        }
     }
 
     void approve(String workflowId, SoftwareFactoryWorkflow.ApprovalSignal signal) {

@@ -46,6 +46,8 @@ class TemporalWorkflowCoordinatorTest {
         verify(commands).start(options.capture(), request.capture());
         assertThat(options.getValue().getWorkflowId()).isEqualTo(workflowId);
         assertThat(options.getValue().getTaskQueue()).isEqualTo("ai-factory-workflows");
+        assertThat(options.getValue().getWorkflowIdReusePolicy()).isEqualTo(
+                io.temporal.api.enums.v1.WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE);
         assertThat(request.getValue().attemptId()).isEqualTo("pipeline-1");
         assertThat(request.getValue().repositoryId()).isEqualTo("customer-api");
         assertThat(request.getValue().sourceCommit()).isEqualTo("UNRESOLVED");

@@ -58,6 +58,20 @@ class PostgresTaskMemoryTest {
                   UNIQUE (task_id, attempt_id, snapshot_uri, snapshot_digest)
                 )
                 """);
+        jdbc.execute("""
+                CREATE TABLE task_admission_outbox (
+                  task_id varchar(64) PRIMARY KEY REFERENCES tasks(task_id),
+                  attempt_id varchar(128) NOT NULL,
+                  workflow_id varchar(255) NOT NULL UNIQUE,
+                  status varchar(16) NOT NULL,
+                  retry_count integer NOT NULL DEFAULT 0,
+                  last_error_code varchar(128),
+                  next_attempt_at timestamp with time zone NOT NULL,
+                  created_at timestamp with time zone NOT NULL,
+                  updated_at timestamp with time zone NOT NULL,
+                  version bigint NOT NULL DEFAULT 0
+                )
+                """);
         evidence = new FakeEvidenceRepository();
         memory = new PostgresTaskMemory(jdbc,
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)),
@@ -112,6 +126,41 @@ class PostgresTaskMemoryTest {
         assertThatThrownBy(() -> memory.find(task.id))
                 .isInstanceOf(SecurityException.class)
                 .hasMessageContaining("failed Evidence verification");
+    }
+
+    @Test
+    void atomicallyRecordsAndClosesTheTemporalAdmissionIntent() {
+        TaskState task = task("task-admission");
+
+        memory.admit(task);
+
+        assertThat(memory.pendingAdmissions(10)).extracting(value -> value.id)
+                .containsExactly(task.id);
+        assertThat(jdbc.queryForObject("SELECT status FROM task_admission_outbox WHERE task_id = ?",
+                String.class, task.id)).isEqualTo("PENDING");
+
+        task.bindExecution("PIPELINE", "temporal-run-1", "pipeline-v1", 20_000, 50_000, 12);
+        memory.workflowStarted(task);
+
+        assertThat(memory.pendingAdmissions(10)).isEmpty();
+        assertThat(memory.find(task.id).orElseThrow().workflowRunId).isEqualTo("temporal-run-1");
+        assertThat(jdbc.queryForObject("SELECT status FROM task_admission_outbox WHERE task_id = ?",
+                String.class, task.id)).isEqualTo("STARTED");
+    }
+
+    @Test
+    void defersFailedAdmissionsWithoutPersistingTheFailureMessage() {
+        TaskState task = task("task-deferred");
+        memory.admit(task);
+
+        memory.admissionFailed(task, new IllegalStateException("secret endpoint details"));
+
+        assertThat(memory.pendingAdmissions(10)).isEmpty();
+        Map<String, Object> row = jdbc.queryForMap(
+                "SELECT retry_count, last_error_code FROM task_admission_outbox WHERE task_id = ?", task.id);
+        assertThat(((Number) row.get("RETRY_COUNT")).intValue()).isEqualTo(1);
+        assertThat(row.get("LAST_ERROR_CODE")).isEqualTo("IllegalStateException");
+        assertThat(row.toString()).doesNotContain("secret endpoint details");
     }
 
     private static TaskState task(String id) {

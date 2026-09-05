@@ -7,6 +7,7 @@ import com.example.aifactory.model.TaskView;
 import com.example.aifactory.service.ScmDeliveryGateway;
 import com.example.aifactory.workflow.EvidenceRepository;
 import com.example.aifactory.workflow.TaskMemory;
+import com.example.aifactory.workflow.temporal.TemporalIds;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -39,6 +40,65 @@ public final class PostgresTaskMemory implements TaskMemory {
 
     @Override
     public void save(TaskState state) {
+        EvidenceRepository.StoredEvidence snapshot = storeSnapshot(state);
+        transactions.executeWithoutResult(ignored -> persistMetadata(state, snapshot));
+    }
+
+    @Override
+    public void admit(TaskState state) {
+        EvidenceRepository.StoredEvidence snapshot = storeSnapshot(state);
+        transactions.executeWithoutResult(ignored -> {
+            persistMetadata(state, snapshot);
+            jdbc.update("INSERT INTO task_admission_outbox(task_id, attempt_id, workflow_id, status, "
+                            + "next_attempt_at, created_at, updated_at, version) "
+                            + "VALUES (?, ?, ?, 'PENDING', ?, ?, ?, 0)",
+                    state.id, state.workflowAttemptId, workflowId(state), Instant.now(), state.createdAt,
+                    state.updatedAt);
+        });
+    }
+
+    @Override
+    public void workflowStarted(TaskState state) {
+        EvidenceRepository.StoredEvidence snapshot = storeSnapshot(state);
+        transactions.executeWithoutResult(ignored -> {
+            persistMetadata(state, snapshot);
+            int updated = jdbc.update("UPDATE task_admission_outbox SET status = 'STARTED', updated_at = ?, "
+                            + "version = version + 1 WHERE task_id = ? AND attempt_id = ? AND status = 'PENDING'",
+                    Instant.now(), state.id, state.workflowAttemptId);
+            if (updated != 1) throw new IllegalStateException("Task admission intent is missing or already closed");
+        });
+    }
+
+    @Override
+    public List<TaskState> pendingAdmissions(int limit) {
+        if (limit < 1 || limit > 1_000) throw new IllegalArgumentException("Admission batch limit is invalid");
+        return jdbc.query("SELECT o.task_id, p.attempt_id, p.snapshot_uri, p.snapshot_digest, p.version "
+                        + "FROM task_admission_outbox o JOIN task_projection_snapshots p ON p.task_id = o.task_id "
+                        + "WHERE o.status = 'PENDING' AND o.next_attempt_at <= ? ORDER BY o.created_at LIMIT ?",
+                (row, index) -> restore(row.getString(1), new ProjectionReference(
+                        row.getString(2), row.getString(3), row.getString(4), row.getLong(5))),
+                Instant.now(), limit);
+    }
+
+    @Override
+    public void admissionFailed(TaskState state, RuntimeException failure) {
+        String errorCode = failure == null ? "UNKNOWN" : failure.getClass().getSimpleName();
+        transactions.executeWithoutResult(ignored -> {
+            List<Integer> retries = jdbc.query("SELECT retry_count FROM task_admission_outbox "
+                            + "WHERE task_id = ? AND attempt_id = ? AND status = 'PENDING' FOR UPDATE",
+                    (row, index) -> row.getInt(1), state.id, state.workflowAttemptId);
+            if (retries.isEmpty()) return;
+            int retry = retries.getFirst() + 1;
+            long delaySeconds = Math.min(300, 1L << Math.min(retry, 8));
+            jdbc.update("UPDATE task_admission_outbox SET retry_count = ?, last_error_code = ?, "
+                            + "next_attempt_at = ?, updated_at = ?, version = version + 1 "
+                            + "WHERE task_id = ? AND attempt_id = ? AND status = 'PENDING'",
+                    retry, errorCode.substring(0, Math.min(errorCode.length(), 128)),
+                    Instant.now().plusSeconds(delaySeconds), Instant.now(), state.id, state.workflowAttemptId);
+        });
+    }
+
+    private EvidenceRepository.StoredEvidence storeSnapshot(TaskState state) {
         if (state == null) throw new IllegalArgumentException("Task state is required");
         ProjectionSnapshot payload = new ProjectionSnapshot(
                 state.view(), state.workflowAttemptId, state.approvalExpiresAt);
@@ -49,9 +109,8 @@ public final class PostgresTaskMemory implements TaskMemory {
             throw new IllegalStateException("Task projection cannot be encoded", failure);
         }
         String digest = sha256(bytes);
-        EvidenceRepository.StoredEvidence snapshot = evidence.store(new EvidenceRepository.StoreRequest(
+        return evidence.store(new EvidenceRepository.StoreRequest(
                 state.id, state.workflowAttemptId, "metadata", "application/json", bytes, digest, "workflow"));
-        transactions.executeWithoutResult(ignored -> persistMetadata(state, snapshot));
     }
 
     private void persistMetadata(TaskState state, EvidenceRepository.StoredEvidence snapshot) {
@@ -182,6 +241,10 @@ public final class PostgresTaskMemory implements TaskMemory {
         } catch (Exception impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         }
+    }
+
+    private static String workflowId(TaskState state) {
+        return TemporalIds.workflow(state.id, state.workflowAttemptId);
     }
 
     record ProjectionSnapshot(TaskView view, String attemptId, Instant approvalExpiresAt) {}

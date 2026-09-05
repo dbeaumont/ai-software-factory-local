@@ -14,8 +14,10 @@ import com.example.aifactory.config.TaskQueueObservabilityProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 @EnableConfigurationProperties({AiFactoryProperties.class, McpFactoryProperties.class, McpClientProperties.class,
         ScmDeliveryClientProperties.class, AssuranceClientProperties.class, AgentToolingProperties.class,
         KillSwitchProperties.class, TemporalProperties.class, DelegationPolicyProperties.class,

@@ -157,4 +157,14 @@ class TaskMemorySchemaTest {
                 .contains("UNIQUE (task_id, attempt_id, snapshot_uri, snapshot_digest)")
                 .doesNotContain("snapshot_content", "content_base64", "raw_content", "patch_content");
     }
+
+    @Test
+    void admissionOutboxMakesTemporalStartRecoverableAndRetryable() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V011__task_admission_outbox.sql"));
+
+        assertThat(sql).contains("CREATE TABLE task_admission_outbox")
+                .contains("workflow_id", "PENDING", "STARTED", "retry_count", "next_attempt_at", "version")
+                .contains("PRIMARY KEY REFERENCES tasks(task_id)")
+                .doesNotContain("error_message", "request_content", "requirement");
+    }
 }

@@ -10,6 +10,7 @@ import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.service.ScmDeliveryGateway;
 import com.example.aifactory.workflow.WorkflowCoordinator;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -52,6 +53,7 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
         TemporalWorkflowCommands.ExecutionIdentity execution = commands.start(WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(properties.taskQueues().get("workflow"))
+                .setWorkflowIdReusePolicy(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build(), request);
         if (!workflowId.equals(execution.workflowId())) {
             throw new SecurityException("Temporal started an unexpected workflow identity");

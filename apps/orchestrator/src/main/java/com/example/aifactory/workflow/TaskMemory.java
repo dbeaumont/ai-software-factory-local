@@ -9,6 +9,26 @@ import java.util.Optional;
 public interface TaskMemory {
     void save(TaskState state);
 
+    /** Atomically records a task and the durable intent to start its Temporal workflow. */
+    default void admit(TaskState state) {
+        save(state);
+    }
+
+    /** Atomically persists the Temporal run identity and closes the corresponding admission intent. */
+    default void workflowStarted(TaskState state) {
+        save(state);
+    }
+
+    /** Returns a bounded set of admissions whose deterministic Temporal workflow still needs starting. */
+    default List<TaskState> pendingAdmissions(int limit) {
+        return List.of();
+    }
+
+    /** Defers a failed admission retry without persisting exception messages or request content. */
+    default void admissionFailed(TaskState state, RuntimeException failure) {
+        // Volatile adapters have no durable reconciliation queue.
+    }
+
     Optional<TaskState> find(String taskId);
 
     List<TaskState> list();

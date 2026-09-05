@@ -73,11 +73,17 @@ public class TaskService {
         if (!availability.available()) throw new IllegalStateException(availability.error());
         String id = UUID.randomUUID().toString().substring(0, 8);
         TaskState state = new TaskState(id, nextTicketNumber(), request);
-        memory.save(state);
+        memory.admit(state);
         submittedTasks.increment();
         log.info("Task {} ({}) accepted: mode={}, branch={}", id, state.ticketNumber,
                 request.effectiveLlmMode(), request.effectiveBranch());
-        coordinator.start(state);
+        try {
+            coordinator.start(state);
+            memory.workflowStarted(state);
+        } catch (RuntimeException failure) {
+            memory.admissionFailed(state, failure);
+            throw failure;
+        }
         return state.view();
     }
 
