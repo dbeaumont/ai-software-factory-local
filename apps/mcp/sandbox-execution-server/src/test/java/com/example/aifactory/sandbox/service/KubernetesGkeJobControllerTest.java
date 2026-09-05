@@ -48,6 +48,25 @@ class KubernetesGkeJobControllerTest {
         assertThrows(IllegalArgumentException.class, () -> KubernetesGkeJobController.jobName("../../job"));
     }
 
+    @Test
+    void boundsLogsAndReportsTruncation() {
+        String oversized = "x".repeat(65_537);
+
+        KubernetesGkeJobController.LogOutput output = KubernetesGkeJobController.bounded(oversized);
+
+        assertEquals(65_536, output.value().length());
+        assertTrue(output.truncated());
+        assertFalse(KubernetesGkeJobController.bounded("short").truncated());
+    }
+
+    @Test
+    void retriesOnlyTemporaryKubernetesFailures() {
+        assertTrue(KubernetesGkeJobController.transientStatus(429));
+        assertTrue(KubernetesGkeJobController.transientStatus(503));
+        assertFalse(KubernetesGkeJobController.transientStatus(400));
+        assertFalse(KubernetesGkeJobController.transientStatus(409));
+    }
+
     private static GkeControllerProperties properties() {
         return new GkeControllerProperties(URI.create("https://kubernetes.default.svc"),
                 "ai-factory-sandbox", "sa-sandbox-controller", "sa-sandbox-job", "gvisor",

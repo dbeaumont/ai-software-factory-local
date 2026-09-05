@@ -141,7 +141,7 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 - [x] Surveiller le Job jusqu'à un état terminal et récupérer des logs bornés.
 - [x] Implémenter l'annulation par suppression contrôlée du Job.
 - [ ] Réconcilier les Jobs orphelins au démarrage et périodiquement.
-- [ ] Gérer les indisponibilités temporaires de l'API Kubernetes avec retry borné et backoff.
+- [x] Gérer les indisponibilités temporaires de l'API Kubernetes avec retry borné et backoff.
 - [ ] Exporter métriques, traces et événements d'audit sans données sensibles.
 
 ### 7.2 Isolation GKE

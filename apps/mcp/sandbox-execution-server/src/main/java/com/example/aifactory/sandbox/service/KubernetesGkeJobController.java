@@ -10,6 +10,7 @@ import tools.jackson.databind.ObjectMapper;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.InputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -32,6 +33,8 @@ import java.util.Map;
 @ConditionalOnProperty(prefix = "ai-factory.sandbox", name = "runtime", havingValue = "gke")
 public class KubernetesGkeJobController implements GkeJobController {
     private static final String LABEL_SELECTOR = "app.kubernetes.io/name=ai-factory-sandbox-job";
+    private static final int MAX_API_ATTEMPTS = 3;
+    private static final int MAX_LOG_CHARS = 65_536;
     private final GkeControllerProperties properties;
     private final ObjectMapper mapper;
     private final HttpClient client;
@@ -61,16 +64,18 @@ public class KubernetesGkeJobController implements GkeJobController {
             }
             JsonNode status = mapper.readTree(response.body()).path("status");
             if (status.path("succeeded").asInt() > 0) {
-                return new SandboxRuntime.RuntimeResult(0, boundedLogs(name), false);
+                LogOutput logs = boundedLogs(name);
+                return new SandboxRuntime.RuntimeResult(0, logs.value(), logs.truncated());
             }
             if (status.path("failed").asInt() > 0) {
-                return new SandboxRuntime.RuntimeResult(1, boundedLogs(name), false);
+                LogOutput logs = boundedLogs(name);
+                return new SandboxRuntime.RuntimeResult(1, logs.value(), logs.truncated());
             }
             Thread.sleep(properties.pollInterval());
         }
-        String logs = boundedLogs(name);
+        LogOutput logs = boundedLogs(name);
         cancel(request.executionId());
-        throw new SandboxRuntime.RuntimeTimeoutException("GKE sandbox job timed out", logs, false);
+        throw new SandboxRuntime.RuntimeTimeoutException("GKE sandbox job timed out", logs.value(), logs.truncated());
     }
 
     @Override
@@ -172,25 +177,24 @@ public class KubernetesGkeJobController implements GkeJobController {
                         "template", Map.of("metadata", Map.of("labels", labels), "spec", podSpec)));
     }
 
-    private String boundedLogs(String jobName) throws Exception {
+    private LogOutput boundedLogs(String jobName) throws Exception {
         URI pods = URI.create(api("/api/v1/namespaces/" + properties.namespace() + "/pods")
                 + "?labelSelector=" + URLEncoder.encode("job-name=" + jobName, StandardCharsets.UTF_8));
         HttpResponse<byte[]> listed = send("GET", pods, null);
         if (listed.statusCode() != 200) {
-            return "";
+            return new LogOutput("", false);
         }
         JsonNode items = mapper.readTree(listed.body()).path("items");
         if (items.isEmpty()) {
-            return "";
+            return new LogOutput("", false);
         }
         String podName = items.get(0).path("metadata").path("name").asText();
         HttpResponse<byte[]> logs = send("GET", URI.create(api("/api/v1/namespaces/" + properties.namespace()
                 + "/pods/" + podName + "/log?container=sandbox")), null);
         if (logs.statusCode() != 200) {
-            return "";
+            return new LogOutput("", false);
         }
-        String output = new String(logs.body(), StandardCharsets.UTF_8);
-        return output.length() <= 65_536 ? output : output.substring(output.length() - 65_536);
+        return bounded(new String(logs.body(), StandardCharsets.UTF_8));
     }
 
     private HttpResponse<byte[]> send(String method, URI uri, byte[] body) throws Exception {
@@ -204,7 +208,31 @@ public class KubernetesGkeJobController implements GkeJobController {
             request.header("Content-Type", "application/json")
                     .method(method, HttpRequest.BodyPublishers.ofByteArray(body));
         }
-        return client.send(request.build(), HttpResponse.BodyHandlers.ofByteArray());
+        HttpRequest built = request.build();
+        for (int attempt = 1; attempt <= MAX_API_ATTEMPTS; attempt++) {
+            try {
+                HttpResponse<byte[]> response = client.send(built, HttpResponse.BodyHandlers.ofByteArray());
+                if (!transientStatus(response.statusCode()) || attempt == MAX_API_ATTEMPTS) {
+                    return response;
+                }
+            } catch (IOException exception) {
+                if (attempt == MAX_API_ATTEMPTS) {
+                    throw exception;
+                }
+            }
+            Thread.sleep(Duration.ofMillis(200L << (attempt - 1)));
+        }
+        throw new IllegalStateException("unreachable Kubernetes API retry state");
+    }
+
+    static boolean transientStatus(int statusCode) {
+        return statusCode == 429 || statusCode == 500 || statusCode == 502
+                || statusCode == 503 || statusCode == 504;
+    }
+
+    static LogOutput bounded(String output) {
+        boolean truncated = output.length() > MAX_LOG_CHARS;
+        return new LogOutput(truncated ? output.substring(output.length() - MAX_LOG_CHARS) : output, truncated);
     }
 
     private URI jobsUri() {
@@ -228,6 +256,9 @@ public class KubernetesGkeJobController implements GkeJobController {
 
     private static IllegalStateException failure(String operation, HttpResponse<byte[]> response) {
         return new IllegalStateException("Kubernetes " + operation + " failed with HTTP " + response.statusCode());
+    }
+
+    record LogOutput(String value, boolean truncated) {
     }
 
     private static HttpClient clusterClient(GkeControllerProperties properties) throws Exception {
