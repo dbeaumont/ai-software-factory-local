@@ -134,6 +134,7 @@ sync_optional_secret() {
 }
 
 ensure_env_secret ARTIFACTORY_DB_PASSWORD 24 1
+ensure_env_secret ORCHESTRATOR_DB_PASSWORD 24 24
 ensure_env_secret SIGNOZ_DB_PASSWORD 24 32
 ensure_complex_env_secret SIGNOZ_ROOT_PASSWORD
 ensure_env_secret AI_FACTORY_SANDBOX_RUNNER_TOKEN 32 32

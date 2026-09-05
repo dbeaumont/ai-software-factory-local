@@ -19,6 +19,27 @@ services:
     network_mode: none
     restart: "no"
 
+  # Rebuildable application projections; credentials and storage are isolated from Temporal persistence.
+  orchestrator-db:
+    image: postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2
+    environment:
+      POSTGRES_DB: ${ORCHESTRATOR_DB_NAME:-ai_factory}
+      POSTGRES_USER: ${ORCHESTRATOR_DB_USER:-ai_factory}
+      POSTGRES_PASSWORD: ${ORCHESTRATOR_DB_PASSWORD:?ORCHESTRATOR_DB_PASSWORD must be initialized by make init}
+    volumes:
+      - orchestrator-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1g }
+        reservations: { cpus: "0.10", memory: 128m }
+    networks: [workflow-internal]
+
   # Durable workflow engine and its dedicated PostgreSQL persistence for local development.
   temporal-db:
     image: postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2
@@ -658,6 +679,8 @@ services:
         condition: service_healthy
       evidence-mcp:
         condition: service_healthy
+      orchestrator-db:
+        condition: service_healthy
     networks: [factory, mcp-internal, workflow-internal]
 
   # Static frontend served internally; reverse-proxy exposes the public web entry point.
@@ -893,6 +916,7 @@ networks:
 volumes:
   # Persistent service state. `factory-workspace` is shared with ephemeral task sandboxes.
   temporal-db-data:
+  orchestrator-db-data:
   gitea-db-data:
   gitea-data:
   factory-workspace:

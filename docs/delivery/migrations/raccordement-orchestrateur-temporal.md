@@ -301,8 +301,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 10. Lot 5 — projection durable et reconstruction
 
-- [ ] **TEMP-070 — Ajouter une base applicative dédiée.** Déployer `orchestrator-db` dans Compose ; ne pas
-  réutiliser `temporal-db` ni ses identifiants.
+- [x] **TEMP-070 — Ajouter une base applicative dédiée.** Déployer `orchestrator-db` dans Compose ; ne pas
+  réutiliser `temporal-db` ni ses identifiants. _(PostgreSQL 16 possède son volume, son compte, son mot de passe,
+  son healthcheck et sa dépendance Compose propres sur le réseau workflow privé ; `make init` génère le secret.)_
 - [ ] **TEMP-071 — Versionner le schéma.** Créer les migrations pour tâches, tentatives, runs, transitions,
   délégations, artefacts, contradictions, décisions, actions humaines et effets en attente.
 - [ ] **TEMP-072 — Implémenter `PostgresTaskMemory`.** Fournir lectures et écritures transactionnelles avec
