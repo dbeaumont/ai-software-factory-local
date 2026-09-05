@@ -438,7 +438,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester annulation en clonage, LLM, sandbox, attente humaine et livraison. _(Des barrières synchronisées injectent
   l'annulation dans chaque phase : les quatre phases avant effet SCM terminent `CANCELLED` avec preuve persistée ;
   une livraison déjà démarrée finit exactement une fois et restitue `PR_CREATED` plutôt qu'un faux état annulé.)_
-- [ ] Tester `continue-as-new` et propagation de l'état minimal.
+- [x] Tester `continue-as-new` et propagation de l'état minimal. _(Trois délégations avec une limite d'une par run
+  traversent deux `continue-as-new` sans perte ni doublon ; le contrat transmis est verrouillé aux index/génération,
+  résultats compacts, chronologie et signaux reçus, sans exigence, URL, workspace ni contenu d'artefact.)_
 - [ ] Tester child workflows parallèles, échec en cascade et revue indépendante.
 - [ ] Tester l'unicité de l'effet SCM après perte d'accusé de réception.
 

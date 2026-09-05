@@ -281,6 +281,12 @@ class SoftwareFactoryWorkflowTest {
                     "WORKFLOW_STARTED", "DELEGATION_COMPLETED:node-1", "CONTINUED_AS_NEW:1",
                     "DELEGATION_COMPLETED:node-2", "CONTINUED_AS_NEW:2",
                     "DELEGATION_COMPLETED:node-3");
+            assertThat(java.util.Arrays.stream(
+                    SoftwareFactoryWorkflow.ContinuationState.class.getRecordComponents())
+                    .map(java.lang.reflect.RecordComponent::getName))
+                    .containsExactly("nextDelegationIndex", "generation", "delegations", "chronology",
+                            "receivedDecisions", "receivedApproval", "receivedCancellation")
+                    .doesNotContain("requirement", "repositoryUrl", "workspace", "artifactContent");
         }
     }
 
