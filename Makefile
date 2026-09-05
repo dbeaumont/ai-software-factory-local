@@ -17,7 +17,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap tokens demo test test-sandbox-runtime mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls down clean
+.PHONY: help init build up all bootstrap tokens demo test test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls down clean
 
 help:
 	$(log-target)
@@ -31,6 +31,7 @@ help:
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify the static Compose sandbox runner"
+	@echo -e "  $(CYAN)make test-sandbox-network$(NC) - verify Compose runner network isolation"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
 	@echo -e "  $(CYAN)make mcp-active-campaign$(NC) - run the role-scoped MCP_ACTIVE canary"
 	@echo -e "  $(CYAN)make mcp-shadow-report$(NC) - generate the MCP shadow campaign report"
@@ -119,6 +120,12 @@ test-sandbox-runtime:
 	@echo -e "$(BLUE)Verifying the static Compose sandbox runner...$(NC)"
 	python3 -m unittest infrastructure/sandbox/test_runner.py
 	@echo -e "$(GREEN)Compose sandbox runner verified!$(NC)"
+
+test-sandbox-network:
+	$(log-target)
+	@echo -e "$(BLUE)Verifying Compose sandbox network isolation...$(NC)"
+	./scripts/check-sandbox-network-isolation.sh
+	@echo -e "$(GREEN)Compose sandbox network isolation verified!$(NC)"
 
 mcp-shadow-campaign:
 	$(log-target)

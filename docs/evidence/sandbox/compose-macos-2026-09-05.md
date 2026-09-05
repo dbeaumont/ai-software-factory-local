@@ -22,6 +22,7 @@
 | Cache sécurité | conforme | la base Trivy est téléchargée dans le volume persistant inscriptible ; aucun épuisement du tmpfs de 64 Mio. |
 | Artefacts | conforme | SBOM de 9 802 octets et rapport Trivy de 5 255 octets présents dans `.ai-factory/`. |
 | Redémarrage et réconciliation | conforme | une exécution Maven longue, active avant redémarrage du MCP, est annulée au redémarrage ; le runner retourne ensuite `execution_ids: []`. |
+| Isolation réseau | conforme | `make test-sandbox-network` refuse le metadata service depuis les quatre runners et refuse Sonar depuis le runner dépendances, tout en l'autorisant depuis le runner qualité. |
 
 Un code `1` de Trivy est ici le résultat attendu du contrôle de sécurité : l'opération et
 l'infrastructure ont réussi, puis la politique a refusé un composant vulnérable. Les versions corrigées
@@ -31,6 +32,7 @@ indiquées par la base commencent à Tomcat `11.0.25`.
 
 - `make test` : suite complète réussie pour l'orchestrateur et les cinq serveurs MCP après réalignement des
   contrats d'alertes et de runbooks.
+- `make test-sandbox-network` : chemins interdits bloqués et chemin Sonar du profil qualité autorisé.
 - `python3 -W error::ResourceWarning -m unittest infrastructure/sandbox/test_runner.py` : 7 tests réussis.
 - `ComposeMcpSecurityTest` : réussi avec un dépôt Maven temporaire alimenté depuis Central, le miroir Maven
   configuré sur l'hôte étant momentanément indisponible.

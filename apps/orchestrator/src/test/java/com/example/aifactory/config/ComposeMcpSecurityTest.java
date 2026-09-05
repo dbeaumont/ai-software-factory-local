@@ -72,6 +72,16 @@ class ComposeMcpSecurityTest {
         assertTrue(dependencyVolumes.stream()
                 .anyMatch(volume -> volume.endsWith(":/home/sandbox/.cache")),
                 "security tools need a writable persistent cache outside the bounded tmpfs");
+        assertEquals(List.of("sandbox-control"), services.get("sandbox-runner-readonly").get("networks"));
+        assertEquals(List.of("sandbox-control"), services.get("sandbox-runner-write").get("networks"));
+        assertEquals(List.of("sandbox-control", "sandbox-egress"),
+                services.get("sandbox-runner-dependency").get("networks"));
+        assertEquals(List.of("sandbox-control", "sandbox-quality"),
+                services.get("sandbox-runner-quality").get("networks"));
+        Map<String, Map<String, Object>> networks = (Map<String, Map<String, Object>>) root.get("networks");
+        assertEquals(Boolean.TRUE, networks.get("sandbox-control").get("internal"));
+        assertEquals(Boolean.TRUE, networks.get("sandbox-egress").get("internal"));
+        assertEquals(Boolean.TRUE, networks.get("sandbox-quality").get("internal"));
     }
 
     private static Path composeFile() {

@@ -246,7 +246,8 @@ cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir l
 - [x] Tests de reprise du MCP et de réconciliation des jobs/runners.
 - [x] Tests de bornage et de redaction des logs.
 - [x] Tests de lecture seule et d'écriture du workspace.
-- [ ] Tests de refus réseau et d'absence d'accès au metadata service.
+- [x] Tests de refus réseau et d'absence d'accès au metadata service en mode Compose.
+- [ ] Tests de refus réseau et d'absence d'accès au metadata service en mode GKE.
 - [ ] Test end-to-end macOS : build, démarrage Compose, workflow complet et arrêt propre.
 - [ ] Test end-to-end GKE : workflow complet, collecte de preuves et nettoyage du Job.
 
