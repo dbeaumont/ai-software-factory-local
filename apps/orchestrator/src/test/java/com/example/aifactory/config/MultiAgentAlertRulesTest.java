@@ -25,9 +25,12 @@ class MultiAgentAlertRulesTest {
         JsonNode rules = new ObjectMapper().readTree(Files.readString(
                 root.resolve("infrastructure/observability/signoz/rules/ai-factory.json")));
 
-        assertThat(StreamSupport.stream(rules.spliterator(), false)
-                .map(rule -> rule.path("alert").asText()).collect(Collectors.toSet()))
-                .isEqualTo(REQUIRED_ALERTS);
+        Set<String> names = StreamSupport.stream(rules.spliterator(), false)
+                .map(rule -> rule.path("alert").asText()).collect(Collectors.toSet());
+        assertThat(names).containsAll(REQUIRED_ALERTS).hasSize(15);
+        assertThat(names).contains("AiFactoryCollectorExportFailures", "AiFactoryCollectorQueueSaturation",
+                "AiFactoryTelemetryIngestionAbsent", "AiFactoryCollectorRestart",
+                "AiFactoryCollectorMemoryPressure", "AiFactoryCollectorReceiverRefused");
         StreamSupport.stream(rules.spliterator(), false).forEach(rule -> {
             assertThat(rule.path("schemaVersion").asText()).isEqualTo("v2alpha1");
             assertThat(rule.path("condition").path("compositeQuery").path("queries").path(0)

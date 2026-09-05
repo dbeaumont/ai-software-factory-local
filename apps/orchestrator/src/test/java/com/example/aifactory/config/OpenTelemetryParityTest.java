@@ -25,7 +25,7 @@ class OpenTelemetryParityTest {
         Map<String, JsonNode> targetByName = new HashMap<>();
         target.forEach(rule -> targetByName.put(rule.path("alert").asText(), rule));
 
-        assertThat(targetByName).hasSize(9);
+        assertThat(targetByName).hasSize(15);
         for (JsonNode source : baseline.path("alertRules")) {
             JsonNode rule = targetByName.get(source.path("name").asText());
             assertThat(rule).isNotNull();

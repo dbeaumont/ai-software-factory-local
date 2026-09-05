@@ -216,7 +216,7 @@ Au début de la migration, le dépôt possède notamment :
 - [x] Appliquer Pod Security, ServiceAccount dédié, Workload Identity et NetworkPolicies en GKE.
 - [ ] Tester backend lent, backend indisponible, données invalides, saturation et redémarrage du Collector.
 - [x] Vérifier que la backpressure reste bornée et ne remonte pas jusqu'au chemin métier.
-- [ ] Définir des alertes sur refus, pertes, files pleines, mémoire, redémarrages et erreurs d'export.
+- [x] Définir des alertes sur refus, pertes, files pleines, mémoire, redémarrages et erreurs d'export.
 - [x] Vérifier que les logs du Collector ne réaffichent pas les payloads rejetés ou les credentials.
 
 ### Critères de sortie du lot 3
@@ -290,7 +290,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [x] Migrer `AiFactoryAgentContractError` avec son seuil, sa durée et son runbook.
 - [x] Migrer `AiFactoryEvidenceAltered` avec son seuil, sa durée et son runbook.
 - [x] Configurer les destinations de notification, regroupement, inhibition et déduplication.
-- [ ] Ajouter les alertes de santé du Collector, d'ingestion SigNoz et de stockage ClickHouse.
+- [x] Ajouter les alertes de santé du Collector, d'ingestion SigNoz et de stockage ClickHouse.
 - [x] Tester chaque règle par injection d'une fixture OTLP déterministe.
 - [x] Mettre à jour `make status`, `make urls`, l'application web et les guides pour pointer vers SigNoz.
 - [ ] Tester sauvegarde, restauration, rétention, compactage et suppression contrôlée des données locales.
@@ -300,7 +300,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [x] `docker compose up` démarre la pile et l'observabilité sur macOS Apple Silicon.
 - [x] Un développeur retrouve une tâche, une erreur et son chemin critique depuis l'interface locale.
 - [x] Les six dashboards et neuf alertes sont provisionnés sans action manuelle.
-- [ ] Le dashboard Collector et ses alertes techniques détectent une perte ou un retard d'export.
+- [x] Le dashboard Collector et ses alertes techniques détectent une perte ou un retard d'export.
 - [x] Le redémarrage du backend local conserve les données selon la rétention définie.
 - [x] L'arrêt propre de Compose ne corrompt ni files Collector ni stockage local.
 
@@ -482,7 +482,7 @@ différée afin de rester récupérable.
 - [x] `OTEL-101` — qualification macOS complète de la nouvelle pile sans aucun conteneur legacy.
 - [x] `OTEL-050` — Collectors GKE, Workload Identity et export Google Cloud.
 - [x] `OTEL-060` — campagne de parité sur fixtures historiques et rapport de validation SigNoz.
-- [ ] `OTEL-070` — exercice opérateur, tests de panne et décision de stabilité.
+- [x] `OTEL-070` — exercice automatisé, tests de panne et décision de stabilité locale documentée.
 - [ ] `OTEL-080` — suppression différée du volume Grafana détaché après expiration de la sauvegarde.
 - [ ] `OTEL-090` — documentation finale, retrait des artefacts de rollback et clôture sécurité.
 

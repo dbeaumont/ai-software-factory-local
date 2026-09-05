@@ -386,7 +386,7 @@ déploiement sont hors périmètre.
 - vérifier `make status` et les healthchecks ;
 - contrôler l’espace disque et la mémoire de l’hôte ;
 - vérifier les services, ingestion et files du Collector dans SigNoz ;
-- consulter les neuf alertes et les sept dashboards SigNoz ;
+- consulter les neuf alertes métier, les six alertes techniques et les sept dashboards SigNoz ;
 - contrôler les files sandbox, tâches bloquées et erreurs récentes ;
 - vérifier qu’aucun mode ou rôle hiérarchique n’a été activé sans changement approuvé ;
 - confirmer que la capture du contenu des prompts, résultats et preuves reste désactivée.

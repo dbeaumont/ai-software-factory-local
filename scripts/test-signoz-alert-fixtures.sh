@@ -62,7 +62,7 @@ for attempt in {1..20}; do
       '.status == "success" and ([.data.data.results[].aggregations[].series[]] | length > 0)' >/dev/null; then
       validated=$((validated + 1))
     fi
-  done < <(jq -r '.[].condition.compositeQuery.queries[0].spec.query' infrastructure/observability/signoz/rules/ai-factory.json)
+  done < <(jq -r '.[] | select(.labels.component != "observability") | .condition.compositeQuery.queries[0].spec.query' infrastructure/observability/signoz/rules/ai-factory.json)
   [ "$validated" -eq 9 ] && break
   sleep 1
 done

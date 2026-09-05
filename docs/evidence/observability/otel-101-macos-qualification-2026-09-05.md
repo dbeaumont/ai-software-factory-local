@@ -22,7 +22,8 @@
 - Les logs du workflow sont exportés sans prompt ni réponse. Un log d'accès actif porte le
   `trace_id=9191ebd9aeb48cf1de27b3d0f27f2e7b` et le `span_id=e5e50d9aa11edc4d`, démontrant la navigation
   log → trace lorsqu'un contexte est actif.
-- Sept dashboards et neuf alertes sont provisionnés de façon idempotente; leurs 51 requêtes uniques sont valides.
+- Sept dashboards, neuf alertes métier et six alertes techniques sont provisionnés de façon idempotente; leurs
+  57 requêtes uniques sont valides.
 
 ## Persistance et résilience
 

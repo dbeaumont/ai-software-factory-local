@@ -26,7 +26,7 @@ dashboard_count=$(printf '%s' "$dashboards" | jq '[.data.dashboards[] | select(.
 
 rules=$(curl -fsS "$base_url/api/v2/rules" "${auth[@]}")
 rule_count=$(printf '%s' "$rules" | jq '[.data[] | select(.labels.managed_by == "ai-software-factory")] | length')
-[ "$rule_count" -eq 9 ] || { echo "Expected 9 managed rules, got $rule_count" >&2; exit 1; }
+[ "$rule_count" -eq 15 ] || { echo "Expected 9 parity and 6 technical rules, got $rule_count" >&2; exit 1; }
 
 metrics_retention=$(curl -fsS --get "$base_url/api/v1/settings/ttl" "${auth[@]}" --data-urlencode 'type=metrics' | jq -er '.metrics_ttl_duration_hrs')
 traces_retention=$(curl -fsS --get "$base_url/api/v1/settings/ttl" "${auth[@]}" --data-urlencode 'type=traces' | jq -er '.traces_ttl_duration_hrs')

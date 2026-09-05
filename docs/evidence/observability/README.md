@@ -41,4 +41,5 @@ Cette fixture ne contient ni secret, ni prompt, ni résultat LLM, ni code source
 - `otel-101-macos-qualification-2026-09-05.md` consigne la qualification Docker Desktop Apple Silicon.
 - `otel-050-gke-manifest-validation-2026-09-05.md` consigne la validation hors cluster de la gateway GKE.
 - `otel-060-parity-report-2026-09-05.md` compare métriques, dashboards et alertes aux fixtures historiques.
+- `otel-070-resilience-stability-2026-09-05.md` consigne les pannes Collector/backend, la récupération et la décision de stabilité locale.
 - `grafana-volume-backup-2026-09-05.md` consigne les sauvegardes récupérables et leur expiration.

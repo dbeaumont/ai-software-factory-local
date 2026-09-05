@@ -619,5 +619,419 @@
       "description": "Evidence MCP metadata, content or digest diverged from its workflow binding.",
       "runbook_url": "/docs/operations/runbooks/MCP-COMPROMIS.md"
     }
+  },
+  {
+    "alert": "AiFactoryCollectorExportFailures",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The Collector cannot deliver metrics or traces to the local backend.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "sum(increase(otelcol_exporter_send_failed_metric_points[5m])) + sum(increase(otelcol_exporter_send_failed_spans[5m])) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "observability",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Collector exports are failing",
+      "description": "The Collector cannot deliver metrics or traces to the local backend.",
+      "runbook_url": "/docs/operations/runbooks/COLLECTOR-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryCollectorQueueSaturation",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The bounded export queue exceeds 1500 pending items.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "max(otelcol_exporter_queue_size) > 1500",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "2m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "observability",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Collector export queue is saturating",
+      "description": "The bounded export queue exceeds 1500 pending items.",
+      "runbook_url": "/docs/operations/runbooks/COLLECTOR-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryTelemetryIngestionAbsent",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "No accepted metric point has been observed for ten minutes.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "absent_over_time(otelcol_receiver_accepted_metric_points[10m])",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "2m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "observability",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Collector metric ingestion is absent",
+      "description": "No accepted metric point has been observed for ten minutes.",
+      "runbook_url": "/docs/operations/runbooks/TELEMETRIE-ABSENTE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryCollectorRestart",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "Collector uptime reset during the last ten minutes.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "resets(otelcol_process_uptime[10m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "observability",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Collector restarted",
+      "description": "Collector uptime reset during the last ten minutes.",
+      "runbook_url": "/docs/operations/runbooks/COLLECTOR-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryCollectorMemoryPressure",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "Collector RSS exceeds 450 MB under a 512 MB Compose limit.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "max(otelcol_process_memory_rss) > 450000000",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "5m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "observability",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Collector memory is near its limit",
+      "description": "Collector RSS exceeds 450 MB under a 512 MB Compose limit.",
+      "runbook_url": "/docs/operations/runbooks/COUT-OBSERVABILITE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryCollectorReceiverRefused",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The Collector rejected one or more log, metric or span records.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "sum(increase(otelcol_receiver_refused_log_records[5m])) + sum(increase(otelcol_receiver_refused_metric_points[5m])) + sum(increase(otelcol_receiver_refused_spans[5m])) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "observability",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Collector refused telemetry",
+      "description": "The Collector rejected one or more log, metric or span records.",
+      "runbook_url": "/docs/operations/runbooks/TELEMETRIE-ABSENTE.md"
+    }
   }
 ]

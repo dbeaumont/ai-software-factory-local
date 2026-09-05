@@ -868,7 +868,8 @@ dispose pas encore d'un export OTLP retenu : le Collector collecte donc son endp
 compatibilité, sans serveur Prometheus autonome. SigNoz stocke et présente les trois signaux.
 
 Sept dashboards versionnés couvrent Temporal, MCP, orchestrateur, agents, sandbox, Supervisor et le Collector.
-Les neuf alertes SigNoz sont provisionnées de façon idempotente et routées localement vers un sink interne borné.
+Les neuf alertes métier et six alertes techniques SigNoz sont provisionnées de façon idempotente et routées
+localement vers un sink interne borné.
 
 ### 9.2 Alertes présentes
 

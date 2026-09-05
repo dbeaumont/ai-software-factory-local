@@ -66,8 +66,9 @@ les quotas et budgets de coût doivent être approuvés avant déploiement.
 ## Dashboards et alertes
 
 Les six dashboards Grafana sont portés vers SigNoz : global, Supervisor, agents, MCP, sandbox et Temporal. Un
-septième dashboard surveille le Collector. Les neuf alertes sont recréées avec leurs seuils, délais, severities,
-notifications et liens de runbook, puis déclenchées avec des fixtures OTLP.
+septième dashboard surveille le Collector. Les neuf alertes historiques sont recréées avec leurs seuils, délais,
+severities, notifications et liens de runbook, puis déclenchées avec des fixtures OTLP. Six règles supplémentaires
+surveillent refus, export, files, absence d'ingestion, mémoire et redémarrage du Collector.
 
 ## Sauvegarde et retour arrière
 

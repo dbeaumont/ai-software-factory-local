@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the SigNoz alert rules that replace the Prometheus rule group."""
+"""Generate the SigNoz business-parity and OpenTelemetry health alert rules."""
 
 from __future__ import annotations
 
@@ -20,6 +20,12 @@ RULES = [
     ("AiFactorySandboxMaintenanceFailure", "increase(ai_factory_sandbox_maintenance_failures[10m]) > 0", 0, "2m", "critical", "sandbox", "Sandbox cleanup or retention maintenance is failing", "The sandbox controller could not maintain persisted jobs or clean expired state.", "/docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md"),
     ("AiFactoryAgentContractError", 'increase(ai_agent_failures{stop_condition="CONTRACT_ERROR"}[5m]) > 0', 0, "1m", "warning", "contracts", "Agent output contract validation failed", "An agent emitted a malformed final turn or a result outside its declared output contract.", "/docs/operations/runbooks/AGENT-DEFAILLANT.md"),
     ("AiFactoryEvidenceAltered", "increase(ai_evidence_altered[5m]) > 0", 0, "1m", "critical", "evidence", "Evidence integrity verification failed", "Evidence MCP metadata, content or digest diverged from its workflow binding.", "/docs/operations/runbooks/MCP-COMPROMIS.md"),
+    ("AiFactoryCollectorExportFailures", "sum(increase(otelcol_exporter_send_failed_metric_points[5m])) + sum(increase(otelcol_exporter_send_failed_spans[5m])) > 0", 0, "1m", "critical", "observability", "Collector exports are failing", "The Collector cannot deliver metrics or traces to the local backend.", "/docs/operations/runbooks/COLLECTOR-INDISPONIBLE.md"),
+    ("AiFactoryCollectorQueueSaturation", "max(otelcol_exporter_queue_size) > 1500", 0, "2m", "warning", "observability", "Collector export queue is saturating", "The bounded export queue exceeds 1500 pending items.", "/docs/operations/runbooks/COLLECTOR-INDISPONIBLE.md"),
+    ("AiFactoryTelemetryIngestionAbsent", "absent_over_time(otelcol_receiver_accepted_metric_points[10m])", 0, "2m", "critical", "observability", "Collector metric ingestion is absent", "No accepted metric point has been observed for ten minutes.", "/docs/operations/runbooks/TELEMETRIE-ABSENTE.md"),
+    ("AiFactoryCollectorRestart", "resets(otelcol_process_uptime[10m]) > 0", 0, "1m", "warning", "observability", "Collector restarted", "Collector uptime reset during the last ten minutes.", "/docs/operations/runbooks/COLLECTOR-INDISPONIBLE.md"),
+    ("AiFactoryCollectorMemoryPressure", "max(otelcol_process_memory_rss) > 450000000", 0, "5m", "warning", "observability", "Collector memory is near its limit", "Collector RSS exceeds 450 MB under a 512 MB Compose limit.", "/docs/operations/runbooks/COUT-OBSERVABILITE.md"),
+    ("AiFactoryCollectorReceiverRefused", "sum(increase(otelcol_receiver_refused_log_records[5m])) + sum(increase(otelcol_receiver_refused_metric_points[5m])) + sum(increase(otelcol_receiver_refused_spans[5m])) > 0", 0, "1m", "critical", "observability", "Collector refused telemetry", "The Collector rejected one or more log, metric or span records.", "/docs/operations/runbooks/TELEMETRIE-ABSENTE.md"),
 ]
 
 
