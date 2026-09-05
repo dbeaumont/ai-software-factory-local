@@ -93,7 +93,7 @@ public class ScmDeliveryGateway {
         return proof;
     }
 
-    static String repositoryId(String repositoryUrl) {
+    public static String repositoryId(String repositoryUrl) {
         URI uri = URI.create(repositoryUrl);
         String path = uri.getPath();
         if (uri.getHost() == null || path == null || path.isBlank()) {

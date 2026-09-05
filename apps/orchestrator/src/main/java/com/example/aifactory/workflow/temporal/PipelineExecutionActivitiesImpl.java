@@ -155,6 +155,31 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     }
 
     @Override
+    public String deliver(DeliveryRequest request) {
+        requireQueue("scm");
+        TaskState state = requireTask(request.taskId(), request.attemptId());
+        if (!request.sourceCommit().equals(state.sourceCommit) || !state.humanApproved) {
+            throw new SecurityException("SCM delivery is not source-bound and approved");
+        }
+        try {
+            PipelineStepContracts.Command command = command("delivery", request.taskId(), request.attemptId(),
+                    com.example.aifactory.service.ScmDeliveryGateway.repositoryId(state.request.repositoryUrl()),
+                    request.sourceCommit(), Map.of("patch", TemporalIds.sha256(state.patch)));
+            PipelineProjectionEvent.StepExecution execution = steps.deliver(state, command);
+            applyAndSave(state, execution);
+            state.transition(TaskStatus.PR_CREATED, "Pull request created by Temporal SCM activity");
+            memory.save(state);
+            return state.pullRequestUrl;
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new TemporalFailureClassifier.EffectOutcomeUnknownException(
+                            "SCM acknowledgement was not confirmed; reconciliation is required", failure));
+        }
+    }
+
+    @Override
     public void recordGateRejection(GateRejection rejection) {
         requireQueue("evidence");
         if (rejection == null || rejection.gate() == null

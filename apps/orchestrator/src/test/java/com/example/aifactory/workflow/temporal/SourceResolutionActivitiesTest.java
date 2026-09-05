@@ -114,15 +114,17 @@ class SourceResolutionActivitiesTest {
                     .getResult(SoftwareFactoryWorkflow.Result.class);
 
             assertThat(result.sourceCommit()).isEqualTo("c".repeat(40));
-            assertThat(result.status()).isEqualTo("APPROVED");
+            assertThat(result.status()).isEqualTo("PR_CREATED");
             assertThat(result.chronology()).contains("STEP_COMPLETED:plan", "STEP_COMPLETED:review");
             assertThat(pipeline.repairs).isEqualTo(1);
+            assertThat(pipeline.deliveries).isEqualTo(1);
         }
     }
 
     private static final class CompactPipelineActivities implements PipelineExecutionActivities {
         private int validations;
         private int repairs;
+        private int deliveries;
 
         @Override
         public com.example.aifactory.service.PipelineStepContracts.Result bindSource(SourceBinding binding) {
@@ -173,6 +175,11 @@ class SourceResolutionActivitiesTest {
         public com.example.aifactory.model.PendingEffect prepareDelivery(DeliveryRequest request) {
             return new com.example.aifactory.model.PendingEffect("scm.create_draft_pull_request", Map.of(),
                     "draft PR", "ALLOW", true);
+        }
+
+        @Override public String deliver(DeliveryRequest request) {
+            deliveries++;
+            return "http://gitea:3000/acme/customer-api/pulls/1";
         }
 
         @Override public void recordGateRejection(GateRejection rejection) { }

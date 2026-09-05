@@ -234,8 +234,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   avec manifeste immuable et vérification de l'approbateur côté activité/hôte. _(Le manifeste digest-bound est
   créé sur la file Evidence après les gates ; le workflow V1 attend le signal validé sans thread et conserve aussi
   un signal reçu pendant les activités, avant l'entrée dans `Workflow.await`.)_
-- [ ] **TEMP-047 — Encadrer l'effet SCM.** Livrer par une activité idempotente, puis réconcilier Gitea avant tout
-  retry lorsque l'issue réseau est inconnue.
+- [x] **TEMP-047 — Encadrer l'effet SCM.** Livrer par une activité idempotente, puis réconcilier Gitea avant tout
+  retry lorsque l'issue réseau est inconnue. _(La livraison ne part qu'après le signal approuvé, sur la file SCM ;
+  clé liée au patch et `findExisting` côté SCM MCP réconcilient branche/PR avant création, et une absence d'accusé
+  devient `EFFECT_OUTCOME_UNKNOWN` non retryable plutôt qu'une seconde création aveugle.)_
 - [ ] **TEMP-048 — Gérer annulation et compensation.** Annuler les activités cancellables, préserver les preuves
   et ne jamais tenter d'annuler un effet SCM déjà confirmé.
 - [ ] **TEMP-049 — Borner l'historique.** Utiliser `continue-as-new` avant les seuils d'événements ou de taille en

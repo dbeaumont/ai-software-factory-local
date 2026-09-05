@@ -89,8 +89,16 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         chronology.add("SOURCE_RESOLVED:" + resolved.sourceCommit());
         artifacts.keySet().forEach(name -> chronology.add("STEP_COMPLETED:" + name));
         chronology.addAll(coordinated.chronology());
+        if ("APPROVED".equals(coordinated.status())) {
+            currentStep = "delivery";
+            pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).deliver(
+                    new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
+                            resolved.sourceCommit()));
+            phase = "PR_CREATED";
+            chronology.add("DELIVERY_COMPLETED");
+        }
         return new SoftwareFactoryWorkflow.Result(coordinated.taskId(), coordinated.attemptId(),
-                coordinated.sourceCommit(), coordinated.status(), chronology, coordinated.delegations(),
+                coordinated.sourceCommit(), phase, chronology, coordinated.delegations(),
                 coordinated.humanDecisions(), coordinated.approvedManifestId(), coordinated.approvedBy(),
                 coordinated.cancellationReason(), coordinated.independentReview());
     }

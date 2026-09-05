@@ -28,6 +28,9 @@ public interface PipelineExecutionActivities {
     @ActivityMethod(name = "PreparePipelineDelivery")
     PendingEffect prepareDelivery(DeliveryRequest request);
 
+    @ActivityMethod(name = "DeliverPipelinePullRequest")
+    String deliver(DeliveryRequest request);
+
     @ActivityMethod(name = "RecordPipelineGateRejection")
     void recordGateRejection(GateRejection rejection);
 
