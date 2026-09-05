@@ -43,20 +43,39 @@ public final class PipelineStepContracts {
         }
     }
 
+    public record ArtifactReference(String uri, String digest, long sizeBytes, String status, String verdict) {
+        public ArtifactReference {
+            if (uri == null || !uri.startsWith("evidence://") || uri.length() > 1_024
+                    || digest == null || !digest.matches("[0-9a-f]{64}") || sizeBytes < 0
+                    || !"COMPLETE".equals(status)
+                    || verdict == null || !verdict.matches("[A-Z][A-Z0-9_-]{0,63}")) {
+                throw new IllegalArgumentException("Pipeline artifact reference is invalid");
+            }
+        }
+    }
+
     public record Result(int schemaVersion, String step, String taskId, String attemptId, String sourceCommit,
-                         Map<String, String> outputDigests) {
+                         Map<String, ArtifactReference> artifacts) {
         public Result {
             requireVersion(schemaVersion);
             requireToken("step", step, 64);
             requireToken("taskId", taskId, 128);
             requireToken("attemptId", attemptId, 128);
             requireSourceCommit(sourceCommit);
-            outputDigests = immutableDigests(outputDigests, 32);
+            if (artifacts == null || artifacts.size() > 32 || artifacts.entrySet().stream().anyMatch(entry -> {
+                try {
+                    requireToken("artifact name", entry.getKey(), 64);
+                    return entry.getValue() == null;
+                } catch (IllegalArgumentException exception) {
+                    return true;
+                }
+            })) throw new IllegalArgumentException("Pipeline artifacts are invalid");
+            artifacts = Map.copyOf(new TreeMap<>(artifacts));
         }
 
-        public static Result from(Command command, String sourceCommit, Map<String, String> outputs) {
+        public static Result from(Command command, String sourceCommit, Map<String, ArtifactReference> artifacts) {
             return new Result(SCHEMA_VERSION, command.step(), command.taskId(), command.attemptId(), sourceCommit,
-                    digestValues(outputs));
+                    artifacts);
         }
     }
 

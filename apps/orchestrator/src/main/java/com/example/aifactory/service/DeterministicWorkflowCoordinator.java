@@ -5,6 +5,7 @@ import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.workflow.WorkflowCoordinator;
+import com.example.aifactory.workflow.EvidenceRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
@@ -50,9 +51,10 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
                                      SandboxExecutor sandbox, PatchIntegrator patchIntegrator,
                                      AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
                                      MeterRegistry metrics, ObjectMapper objectMapper,
-                                     AgentToolingProperties agentTooling, AgentContextToolHost agentTools) {
+                                     AgentToolingProperties agentTooling, AgentContextToolHost agentTools,
+                                     EvidenceRepository evidence) {
         this(new PipelineStepService(props, runner, contextService, prompts, llm, agentResponses, sandbox,
-                patchIntegrator, assurance, scmDelivery, metrics, objectMapper, agentTooling, agentTools),
+                patchIntegrator, assurance, scmDelivery, metrics, objectMapper, agentTooling, agentTools, evidence),
                 metrics, AsyncTaskTracer.noop());
     }
 

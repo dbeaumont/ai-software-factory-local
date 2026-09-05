@@ -51,11 +51,16 @@ class PipelineStepContractsTest {
         state.sourceCommit = "a".repeat(40);
         var command = PipelineStepContracts.Command.forTask(state, "review", Map.of("patch", "diff"));
 
-        var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("review", "accepted"));
+        var reference = new PipelineStepContracts.ArtifactReference(
+                "evidence://task-1/pipeline-1/review/" + "c".repeat(64), "c".repeat(64), 8,
+                "COMPLETE", "ACCEPT");
+        var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("review", reference));
 
         assertThat(result.step()).isEqualTo("review");
         assertThat(result.taskId()).isEqualTo(command.taskId());
         assertThat(result.attemptId()).isEqualTo(command.attemptId());
-        assertThat(result.outputDigests().get("review")).matches("[0-9a-f]{64}");
+        assertThat(result.artifacts().get("review")).isEqualTo(reference);
+        assertThat(java.util.Arrays.stream(PipelineStepContracts.Result.class.getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName)).doesNotContain("content");
     }
 }

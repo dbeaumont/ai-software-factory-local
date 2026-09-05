@@ -5,6 +5,7 @@ import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskView;
+import com.example.aifactory.workflow.EvidenceRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,6 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,6 +32,8 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class PipelineCompatibilityTest {
@@ -65,13 +69,22 @@ class PipelineCompatibilityTest {
         AssuranceGateway assurance = mock(AssuranceGateway.class);
         when(assurance.requireQualityGate(anyString(), anyString(), anyString()))
                 .thenReturn(mapper.readTree("{\"verdict\":\"PASSED\"}"));
+        EvidenceRepository evidence = mock(EvidenceRepository.class);
+        when(evidence.store(any(EvidenceRepository.StoreRequest.class))).thenAnswer(invocation -> {
+            EvidenceRepository.StoreRequest request = invocation.getArgument(0);
+            return new EvidenceRepository.StoredEvidence(
+                    "evidence://" + request.taskId() + '/' + request.attemptId() + '/'
+                            + request.type() + '/' + request.digest(),
+                    request.digest(), "COMPLETE", request.mediaType(), request.content().length,
+                    "INTERNAL", Instant.parse("2030-01-01T00:00:00Z"), Instant.EPOCH);
+        });
         DeterministicWorkflowCoordinator coordinator = new DeterministicWorkflowCoordinator(
                 new AiFactoryProperties(null, null, "baseline-model", true, workspaces.toString(), null,
                         null, null, null, null, null, null, null),
                 runner, context, prompts, llm, responses, sandbox, new PatchIntegrator(sandbox), assurance,
                 mock(ScmDeliveryGateway.class), new SimpleMeterRegistry(), mapper,
                 new AgentToolingProperties(Set.of(), "INCOMPLETE", 0, false, false, Set.of()),
-                mock(AgentContextToolHost.class));
+                mock(AgentContextToolHost.class), evidence);
         TaskState state = new TaskState("task-1", "AF-0001", new TaskRequest(
                 "https://example.test/repo.git", "main", "change", null));
 
@@ -84,6 +97,7 @@ class PipelineCompatibilityTest {
         }
         assertThat(expected.get("baselineCommit")).isEqualTo("45e72011a8cc2c81006a5ff7b8b3a3f725db5174");
         assertThat(snapshot(state)).isEqualTo(withoutMetadata(expected));
+        verify(evidence, times(7)).store(any(EvidenceRepository.StoreRequest.class));
     }
 
     private static Map<String, Object> snapshot(TaskState state) {

@@ -136,8 +136,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-021 — Définir des commandes/résultats immuables.** Chaque étape reçoit un payload versionné borné à
   `taskId`, `attemptId`, `sourceCommit`, digests d'entrées et identité d'exécution. _(`PipelineStepContracts`
   valide et fige identité, workflow ID, repository ID et digests ; chaque frontière d'étape l'exige.)_
-- [ ] **TEMP-022 — Rendre les sorties persistables.** Éviter de transporter de gros logs ou documents dans
+- [x] **TEMP-022 — Rendre les sorties persistables.** Éviter de transporter de gros logs ou documents dans
   l'historique Temporal ; stocker les contenus dans Evidence MCP et retourner URI, digest, taille et verdict.
+  _(Plans, patchs, tests, qualité, sécurité, SBOM et revues sont stockés par `EvidenceRepository` ; les résultats
+  d'étape ne contiennent que des `ArtifactReference` compactes.)_
 - [ ] **TEMP-023 — Retirer les écritures implicites dans `TaskState`.** Faire retourner aux étapes des événements
   métier explicites appliqués ensuite à la projection.
 - [ ] **TEMP-024 — Formaliser l'idempotence.** Dériver les clés des effets depuis workflow ID, étape, séquence,

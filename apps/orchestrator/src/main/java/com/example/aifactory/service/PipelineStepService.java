@@ -4,6 +4,7 @@ import com.example.aifactory.config.AgentToolingProperties;
 import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.PendingEffect;
 import com.example.aifactory.model.TaskState;
+import com.example.aifactory.workflow.EvidenceRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
@@ -45,6 +46,7 @@ public class PipelineStepService {
     private final ObjectMapper objectMapper;
     private final AgentToolingProperties agentTooling;
     private final AgentContextToolHost agentTools;
+    private final EvidenceRepository evidence;
     private final WorkflowOperationalMetrics operationalMetrics;
     private final Counter plannerContractRetries;
 
@@ -54,7 +56,8 @@ public class PipelineStepService {
                                SandboxExecutor sandbox, PatchIntegrator patchIntegrator,
                                AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
                                MeterRegistry metrics, ObjectMapper objectMapper,
-                               AgentToolingProperties agentTooling, AgentContextToolHost agentTools) {
+                               AgentToolingProperties agentTooling, AgentContextToolHost agentTools,
+                               EvidenceRepository evidence) {
         this.props = props;
         this.runner = runner;
         this.contextService = contextService;
@@ -68,6 +71,7 @@ public class PipelineStepService {
         this.objectMapper = objectMapper;
         this.agentTooling = agentTooling;
         this.agentTools = agentTools;
+        this.evidence = evidence;
         this.operationalMetrics = new WorkflowOperationalMetrics(metrics);
         this.plannerContractRetries = Counter.builder("ai_factory_planner_contract_retries")
                 .description("Planner calls retried once after an invalid response contract")
@@ -95,8 +99,7 @@ public class PipelineStepService {
         writeRunMetadata(workspace, state);
         log.info("Task {} ({}) cloned source commit {} using model {}", state.id, state.ticketNumber,
                 state.sourceCommit, state.model);
-        return PipelineStepContracts.Result.from(command, state.sourceCommit,
-                Map.of("sourceCommit", state.sourceCommit));
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of());
     }
 
     public PipelineStepContracts.Result plan(TaskState state, Path workspace,
@@ -110,7 +113,8 @@ public class PipelineStepService {
         agentResponses.requireImplementablePlan(state.plan);
         Files.writeString(workspace.resolve(".ai-plan.md"), state.plan);
         writeRunMetadata(workspace, state);
-        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("plan", state.plan));
+        var artifact = persist(command, "plan", "text/markdown", state.plan, "IMPLEMENTABLE");
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("plan", artifact));
     }
 
     public PipelineStepContracts.Result generateAndRepairPatch(TaskState state, Path workspace,
@@ -121,7 +125,8 @@ public class PipelineStepService {
                 + untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", developerContext));
         writeRunMetadata(workspace, state);
         state.patch = validateAndRepairPatch(state, workspace, rawPatch);
-        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch", state.patch));
+        var artifact = persist(command, "patch", "text/x-diff", state.patch, "VALID");
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch", artifact));
     }
 
     public PipelineStepContracts.Result applyPatch(TaskState state, Path workspace,
@@ -129,8 +134,7 @@ public class PipelineStepService {
         command.requireStep("apply-patch");
         patchIntegrator.apply(workspace, state.id, state.sourceCommit,
                 new PatchIntegrator.IntegratedPatch(state.patch, PatchIntegrator.digestFor(state.patch)));
-        return PipelineStepContracts.Result.from(command, state.sourceCommit,
-                Map.of("appliedPatch", state.patch));
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of());
     }
 
     public PipelineStepContracts.Result test(TaskState state, Path workspace,
@@ -146,9 +150,9 @@ public class PipelineStepService {
         state.testsPassed = true;
         Files.createDirectories(workspace.resolve(".ai-factory"));
         Files.writeString(workspace.resolve(".ai-factory/test.txt"), state.testSummary);
-        state.assuranceResults.put("tests", evidenceResult(state, "tests", "PASSED", deterministicTests));
-        return PipelineStepContracts.Result.from(command, state.sourceCommit,
-                Map.of("testSummary", state.testSummary));
+        var artifact = persist(command, "tests", "text/plain", state.testSummary, "PASSED");
+        state.assuranceResults.put("tests", evidenceResult(command, artifact));
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("tests", artifact));
     }
 
     public PipelineStepContracts.Result quality(TaskState state, Path workspace,
@@ -157,22 +161,25 @@ public class PipelineStepService {
         state.qualitySummary = tail(sandbox.quality(workspace, state.id, state.sourceCommit), 12_000);
         JsonNode result = assurance.requireQualityGate(state.id, state.sourceCommit, state.qualitySummary);
         state.assuranceResults.put("quality", objectMapper.convertValue(result, Map.class));
-        return PipelineStepContracts.Result.from(command, state.sourceCommit,
-                Map.of("qualitySummary", state.qualitySummary));
+        var artifact = persist(command, "quality", "text/plain", state.qualitySummary, "PASSED");
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("quality", artifact));
     }
 
     public PipelineStepContracts.Result security(TaskState state, Path workspace,
                                                  PipelineStepContracts.Command command) throws Exception {
         command.requireStep("security");
         state.securitySummary = tail(sandbox.security(workspace, state.id, state.sourceCommit), 12_000);
-        state.assuranceResults.put("security", evidenceResult(state, "security", "PASSED", state.securitySummary));
+        var securityArtifact = persist(command, "security", "text/plain", state.securitySummary, "PASSED");
+        state.assuranceResults.put("security", evidenceResult(command, securityArtifact));
         Path sbom = workspace.resolve(".ai-factory/sbom.cdx.json");
+        byte[] sbomContent = Files.readAllBytes(sbom);
+        var sbomArtifact = persist(command, "sbom", "application/vnd.cyclonedx+json", sbomContent, "COMPLETE");
         state.assuranceResults.put("sbom", Map.of("schema_version", "1", "task_id", state.id,
                 "attempt_id", "pipeline-1", "source_commit", state.sourceCommit, "format", "CYCLONEDX_JSON",
-                "uri", "evidence://" + state.id + "/pipeline-1/sbom", "digest", sha256(Files.readAllBytes(sbom)),
+                "uri", sbomArtifact.uri(), "digest", sbomArtifact.digest(),
                 "status", "COMPLETE"));
         return PipelineStepContracts.Result.from(command, state.sourceCommit,
-                Map.of("securitySummary", state.securitySummary));
+                Map.of("security", securityArtifact, "sbom", sbomArtifact));
     }
 
     public PipelineStepContracts.Result review(TaskState state, Path workspace,
@@ -187,7 +194,8 @@ public class PipelineStepService {
         state.reviewAccepted = true;
         Files.writeString(workspace.resolve(".ai-review.md"), state.review);
         writeRunMetadata(workspace, state);
-        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("review", state.review));
+        var artifact = persist(command, "review", "application/json", state.review, summary.decision());
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("review", artifact));
     }
 
     public void prepareDelivery(TaskState state) {
@@ -205,8 +213,7 @@ public class PipelineStepService {
         Path workspace = Path.of(state.workspace);
         state.pullRequestUrl = scmDelivery.createDraftPullRequest(workspace, state.request.repositoryUrl(),
                 state.request.effectiveBranch(), state.id, state.sourceCommit, state.request.requirement());
-        return PipelineStepContracts.Result.from(command, state.sourceCommit,
-                Map.of("pullRequestUrl", state.pullRequestUrl));
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of());
     }
 
     private String validateAndRepairPatch(TaskState state, Path workspace, String rawPatch) throws Exception {
@@ -385,11 +392,27 @@ public class PipelineStepService {
         return value.length() <= max ? value : "...[truncated]...\n" + value.substring(value.length() - max);
     }
 
-    private static Map<String, Object> evidenceResult(TaskState state, String type, String verdict, String content) {
-        return Map.of("schema_version", "1", "task_id", state.id, "attempt_id", "pipeline-1",
-                "source_commit", state.sourceCommit, "type", type, "verdict", verdict,
-                "evidence", Map.of("uri", "evidence://" + state.id + "/pipeline-1/" + type,
-                        "digest", sha256(content.getBytes(StandardCharsets.UTF_8)), "status", "COMPLETE"));
+    private PipelineStepContracts.ArtifactReference persist(PipelineStepContracts.Command command, String type,
+                                                            String mediaType, String content, String verdict) {
+        return persist(command, type, mediaType, content.getBytes(StandardCharsets.UTF_8), verdict);
+    }
+
+    private PipelineStepContracts.ArtifactReference persist(PipelineStepContracts.Command command, String type,
+                                                            String mediaType, byte[] content, String verdict) {
+        String digest = sha256(content);
+        EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
+                command.taskId(), command.attemptId(), type, mediaType, content, digest, "workflow"));
+        return new PipelineStepContracts.ArtifactReference(stored.uri(), stored.digest(), stored.sizeBytes(),
+                stored.status(), verdict);
+    }
+
+    private static Map<String, Object> evidenceResult(PipelineStepContracts.Command command,
+                                                      PipelineStepContracts.ArtifactReference artifact) {
+        return Map.of("schema_version", "1", "task_id", command.taskId(),
+                "attempt_id", command.attemptId(), "source_commit", command.sourceCommit(),
+                "type", command.step(), "verdict", artifact.verdict(),
+                "evidence", Map.of("uri", artifact.uri(), "digest", artifact.digest(),
+                        "size_bytes", artifact.sizeBytes(), "status", artifact.status()));
     }
 
     private static String sha256(byte[] value) {
