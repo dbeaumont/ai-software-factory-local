@@ -52,11 +52,11 @@ class KubernetesGkeJobControllerTest {
 
     @Test
     void boundsLogsAndReportsTruncation() {
-        String oversized = "x".repeat(65_537);
+        String oversized = "x".repeat(1_048_577);
 
         KubernetesGkeJobController.LogOutput output = KubernetesGkeJobController.bounded(oversized);
 
-        assertEquals(65_536, output.value().length());
+        assertEquals(1_048_576, output.value().length());
         assertTrue(output.truncated());
         assertFalse(KubernetesGkeJobController.bounded("short").truncated());
     }

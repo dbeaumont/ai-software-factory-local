@@ -43,7 +43,7 @@ public class KubernetesGkeJobController implements GkeJobController {
     private static final Logger LOGGER = LoggerFactory.getLogger(KubernetesGkeJobController.class);
     private static final String LABEL_SELECTOR = "app.kubernetes.io/name=ai-factory-sandbox-job";
     private static final int MAX_API_ATTEMPTS = 3;
-    private static final int MAX_LOG_CHARS = 65_536;
+    private static final int MAX_LOG_CHARS = 1_048_576;
     private final GkeControllerProperties properties;
     private final ObjectMapper mapper;
     private final HttpClient client;

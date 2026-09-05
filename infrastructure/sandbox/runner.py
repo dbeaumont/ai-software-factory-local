@@ -23,7 +23,7 @@ WORKSPACE_ROOT = Path(os.environ.get("AI_FACTORY_RUNNER_WORKSPACE_ROOT", "/facto
 TOKEN = os.environ.get("AI_FACTORY_SANDBOX_RUNNER_TOKEN", "")
 EXPECTED_IMAGE = os.environ.get("AI_FACTORY_SANDBOX_IMAGE", "")
 EXPECTED_DIGEST = EXPECTED_IMAGE.rsplit("sha256:", 1)[-1] if "sha256:" in EXPECTED_IMAGE else ""
-MAX_OUTPUT = int(os.environ.get("AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS", "65536"))
+MAX_OUTPUT = int(os.environ.get("AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS", "1048576"))
 PORT = int(os.environ.get("AI_FACTORY_RUNNER_PORT", "8088"))
 ALLOWED = frozenset(filter(None, os.environ.get("AI_FACTORY_RUNNER_ALLOWED_PROFILES", "").split(",")))
 

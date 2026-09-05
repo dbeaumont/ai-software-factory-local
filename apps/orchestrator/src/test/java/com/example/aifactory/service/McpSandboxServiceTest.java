@@ -134,6 +134,9 @@ class McpSandboxServiceTest {
                 () -> service.test(workspace, "task-1", "a".repeat(40)));
 
         assertTrue(error.getMessage().contains("partial evidence"));
+        assertTrue(error.getMessage().contains("evidence_status=PARTIAL"));
+        assertTrue(error.getMessage().contains("output_truncated=true"));
+        assertTrue(error.getMessage().contains("retained_chars=16"));
     }
 
     @Test

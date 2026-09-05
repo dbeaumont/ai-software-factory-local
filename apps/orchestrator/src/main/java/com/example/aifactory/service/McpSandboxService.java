@@ -213,8 +213,13 @@ public class McpSandboxService implements SandboxExecutor {
         if (!actualDigest.equals(expectedDigest)) {
             throw new IllegalStateException("Malformed sandbox MCP response: output digest mismatch");
         }
-        if (!evidenceStatus.equals("COMPLETE") || execution.path("output_truncated").asBoolean(true)) {
-            throw new IllegalStateException("Sandbox execution returned partial evidence");
+        boolean outputTruncated = execution.path("output_truncated").asBoolean(true);
+        if (!evidenceStatus.equals("COMPLETE") || outputTruncated) {
+            throw new IllegalStateException("Sandbox execution returned partial evidence"
+                    + " (evidence_status=" + evidenceStatus
+                    + ", output_truncated=" + outputTruncated
+                    + ", retained_chars=" + output.length()
+                    + ", reported_total_chars=" + execution.path("output_total_chars").asText("unknown") + ')');
         }
     }
 

@@ -548,7 +548,7 @@ ces limites. La politique faisant foi est
 | Jobs exécutés / en attente | 2 / 32 | `AI_FACTORY_SANDBOX_MAX_CONCURRENT_JOBS`, `AI_FACTORY_SANDBOX_MAX_QUEUED_JOBS` |
 | Jobs actifs par tâche | 2 | `AI_FACTORY_SANDBOX_MAX_ACTIVE_JOBS_PER_TASK` |
 | États de jobs conservés | 500 pendant 7 jours | `AI_FACTORY_SANDBOX_MAX_JOBS`, `AI_FACTORY_SANDBOX_JOB_RETENTION` |
-| Sortie conservée / patch accepté | 65 536 caractères / 1 MiB | `AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS`, `AI_FACTORY_SANDBOX_MAX_PATCH_BYTES` |
+| Sortie conservée / patch accepté | 1 MiB / 1 MiB | `AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS`, `AI_FACTORY_SANDBOX_MAX_PATCH_BYTES` |
 | Ressources d'un conteneur | 2 CPU, 2 Gio, 512 PID | profil serveur immuable |
 | Validation / application d'un patch | 3 min / 3 min | profil serveur immuable |
 | Tests / qualité / sécurité | 15 min / 15 min / 10 min | profil serveur immuable |
