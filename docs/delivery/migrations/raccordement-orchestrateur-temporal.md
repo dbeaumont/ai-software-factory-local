@@ -423,7 +423,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### 12.2 Tests Temporal embarqués
 
-- [ ] Tester le parcours nominal jusqu'à l'approbation et la livraison.
+- [x] Tester le parcours nominal jusqu'à l'approbation et la livraison. _(Le workflow V1 de production traverse les
+  sept task queues avec des Activities embarquées, attend le manifeste exact, reçoit le signal d'approbation et
+  termine `PR_CREATED` avec une seule livraison et uniquement des URI Evidence.)_
 - [ ] Tester rejet de chaque gate et préservation des preuves partielles.
 - [ ] Tester retries déterministes, heartbeat, timeout et activité non retryable.
 - [ ] Tester signaux reçus avant et pendant `Workflow.await`.
