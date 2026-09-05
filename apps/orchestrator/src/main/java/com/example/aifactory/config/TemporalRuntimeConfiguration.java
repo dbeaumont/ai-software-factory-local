@@ -2,6 +2,8 @@ package com.example.aifactory.config;
 
 import com.example.aifactory.workflow.temporal.TemporalWorkerRegistry;
 import com.example.aifactory.workflow.temporal.TemporalActivityAdapters;
+import com.example.aifactory.workflow.temporal.TemporalTraceContextPropagator;
+import com.example.aifactory.workflow.temporal.TemporalWorkerTracingInterceptor;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -19,19 +21,23 @@ public class TemporalRuntimeConfiguration {
     }
 
     @Bean
-    WorkflowClient temporalWorkflowClient(WorkflowServiceStubs service, TemporalProperties properties) {
+    WorkflowClient temporalWorkflowClient(WorkflowServiceStubs service, TemporalProperties properties,
+                                          TemporalTraceContextPropagator traceContext) {
         return WorkflowClient.newInstance(service, WorkflowClientOptions.newBuilder()
                 .setNamespace(properties.namespace())
+                .setContextPropagators(java.util.List.of(traceContext))
                 .build());
     }
 
     @Bean(destroyMethod = "shutdown")
-    WorkerFactory temporalWorkerFactory(WorkflowClient client, TemporalProperties properties) {
+    WorkerFactory temporalWorkerFactory(WorkflowClient client, TemporalProperties properties,
+                                        TemporalWorkerTracingInterceptor tracingInterceptor) {
         TemporalProperties.Capacity capacity = properties.capacity();
         WorkerFactoryOptions options = WorkerFactoryOptions.newBuilder()
                 .setWorkflowCacheSize(capacity.workflowCacheSize())
                 .setMaxWorkflowThreadCount(capacity.maxWorkflowThreads())
                 .setShutdownCheckInterval(java.time.Duration.ofSeconds(1))
+                .setWorkerInterceptors(tracingInterceptor)
                 .build();
         return WorkerFactory.newInstance(client, options);
     }

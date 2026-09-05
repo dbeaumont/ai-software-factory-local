@@ -187,8 +187,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-035 — Configurer la capacité.** Fixer concurrence des pollers et activités, débit, cache workflows,
   graceful shutdown et durée maximale de drainage. _(Bornes validées au démarrage et valeurs Compose explicites :
   cache/threads, pollers, concurrences, débit, drainage sticky et arrêt gracieux.)_
-- [ ] **TEMP-036 — Ajouter les interceptors.** Propager `traceparent`/baggage validés, identité d'exécution et
-  métriques sans produire de spans lors d'un replay.
+- [x] **TEMP-036 — Ajouter les interceptors.** Propager `traceparent`/baggage validés, identité d'exécution et
+  métriques sans produire de spans lors d'un replay. _(Propagateur W3C Temporal borné branché au client ;
+  interceptor worker branché à la factory avec corrélation d'identité, métriques de file et garde de replay.)_
 - [ ] **TEMP-037 — Exposer la readiness.** Considérer l'orchestrateur prêt en mode Temporal seulement si le
   namespace est accessible et si les workers requis sont démarrés.
 - [ ] **TEMP-038 — Gérer le cycle de vie.** Démarrer la factory après l'enregistrement complet et l'arrêter avec
