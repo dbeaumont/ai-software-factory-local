@@ -23,7 +23,8 @@ class PostgresUiProjectionStoreTest {
         dataSource.setURL("jdbc:h2:mem:ui-projection-" + System.nanoTime()
                 + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
         jdbc = new JdbcTemplate(dataSource);
-        jdbc.execute("CREATE TABLE tasks(task_id varchar PRIMARY KEY, repository_id varchar, "
+        jdbc.execute("CREATE SEQUENCE task_ticket_number_seq START WITH 1");
+        jdbc.execute("CREATE TABLE tasks(task_id varchar PRIMARY KEY, ticket_number varchar UNIQUE, repository_id varchar, "
                 + "current_attempt_id varchar, source_commit varchar, requirement_digest varchar, status varchar, "
                 + "created_at timestamp with time zone, updated_at timestamp with time zone, version bigint)");
         jdbc.execute("CREATE TABLE workflow_runs(workflow_run_id varchar PRIMARY KEY, workflow_id varchar, "
@@ -60,6 +61,8 @@ class PostgresUiProjectionStoreTest {
 
         assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE task_id = 'task-1'", String.class))
                 .isEqualTo("APPROVED");
+        assertThat(jdbc.queryForObject("SELECT ticket_number FROM tasks WHERE task_id = 'task-1'", String.class))
+                .isEqualTo("AF-0001");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM workflow_runs", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM delegations", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForMap("SELECT verification, information_kind FROM evidence_refs"))

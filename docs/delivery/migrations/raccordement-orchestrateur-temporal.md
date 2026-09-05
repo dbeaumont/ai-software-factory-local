@@ -332,8 +332,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   réentrante avec mode dry-run. _(La commande `POST /api/operations/projections/rebuild` traite au plus 100 tâches
   courantes, accepte un curseur de reprise, propose une validation sans écriture, isole les erreurs par tâche et
   publie compteurs et audit sans contenu sensible ; relancer une page remplace les mêmes lignes atomiquement.)_
-- [ ] **TEMP-078 — Persister la séquence des tickets.** Remplacer le compteur JVM `AF-xxxx` par une séquence
-  durable sans collision après redémarrage.
+- [x] **TEMP-078 — Persister la séquence des tickets.** Remplacer le compteur JVM `AF-xxxx` par une séquence
+  durable sans collision après redémarrage. _(PostgreSQL alloue désormais chaque numéro via
+  `task_ticket_number_seq` et impose unicité, format et non-nullité ; la migration numérote aussi les lignes
+  existantes, tandis que le générateur mémoire n'est conservé que pour les services construits en test unitaire.)_
 - [ ] **TEMP-079 — Migrer les tâches locales utiles.** Utiliser `LegacyTaskMigrator`, marquer la provenance et ne
   pas fabriquer d'historique Temporal pour une ancienne exécution locale.
 

@@ -177,4 +177,15 @@ class TaskMemorySchemaTest {
                 .contains("PRIMARY KEY (task_id, attempt_id, event_id)")
                 .doesNotContain("event_payload", "snapshot_content", "raw_content");
     }
+
+    @Test
+    void ticketNumbersUseADurableUniqueDatabaseSequence() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V013__durable_ticket_numbers.sql"));
+
+        assertThat(sql).contains("CREATE SEQUENCE task_ticket_number_seq")
+                .contains("ADD COLUMN ticket_number")
+                .contains("UNIQUE (ticket_number)")
+                .contains("nextval('task_ticket_number_seq')")
+                .contains("^AF-[0-9]{4,}$");
+    }
 }

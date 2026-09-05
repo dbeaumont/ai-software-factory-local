@@ -38,9 +38,10 @@ public final class PostgresUiProjectionStore implements UiProjectionStore {
             jdbc.update("DELETE FROM " + table + " WHERE task_id = ?", task.taskId());
         }
         if (count("tasks", "task_id", task.taskId()) == 0) {
-            jdbc.update("INSERT INTO tasks(task_id, repository_id, current_attempt_id, source_commit, "
+            jdbc.update("INSERT INTO tasks(task_id, ticket_number, repository_id, current_attempt_id, source_commit, "
                             + "requirement_digest, status, created_at, updated_at, version) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                            + "VALUES (?, 'AF-' || to_char(nextval('task_ticket_number_seq'), 'FM0000'), "
+                            + "?, ?, ?, ?, ?, ?, ?, 0)",
                     task.taskId(), task.repositoryId(), task.attemptId(), task.sourceCommit(),
                     task.requirementDigest(), task.status(), task.createdAt(), task.updatedAt());
         } else {

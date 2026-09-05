@@ -37,6 +37,7 @@ class PostgresTaskMemoryTest {
         jdbc.execute("""
                 CREATE TABLE tasks (
                   task_id varchar(64) PRIMARY KEY,
+                  ticket_number varchar(32) NOT NULL UNIQUE,
                   repository_id varchar(63) NOT NULL,
                   current_attempt_id varchar(128) NOT NULL,
                   source_commit char(40) NOT NULL,

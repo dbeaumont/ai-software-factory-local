@@ -23,13 +23,11 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /** Owns task admission, lookup and commands; execution belongs to {@link WorkflowCoordinator}. */
 @Service
 public class TaskService {
     private static final Logger log = LoggerFactory.getLogger(TaskService.class);
-    private final AtomicInteger ticketSequence = new AtomicInteger(1);
     private final AiFactoryProperties props;
     private final LlmGatewayClient llm;
     private final WorkflowCoordinator coordinator;
@@ -37,10 +35,17 @@ public class TaskService {
     private final Counter submittedTasks;
     private final SecurityAuditJournal audit;
     private final TicketAdmissionGate admissionGate;
+    private final TicketNumberGenerator ticketNumbers;
 
-    @Autowired
     public TaskService(AiFactoryProperties props, LlmGatewayClient llm, WorkflowCoordinator coordinator, TaskMemory memory,
                        MeterRegistry metrics, SecurityAuditJournal audit, TicketAdmissionGate admissionGate) {
+        this(props, llm, coordinator, memory, metrics, audit, admissionGate, new InMemoryTicketNumberGenerator());
+    }
+
+    @Autowired
+    public TaskService(AiFactoryProperties props, LlmGatewayClient llm, WorkflowCoordinator coordinator,
+                       TaskMemory memory, MeterRegistry metrics, SecurityAuditJournal audit,
+                       TicketAdmissionGate admissionGate, TicketNumberGenerator ticketNumbers) {
         this.props = props;
         this.llm = llm;
         this.coordinator = coordinator;
@@ -49,6 +54,7 @@ public class TaskService {
                 .description("Tasks submitted to the factory").register(metrics);
         this.audit = audit;
         this.admissionGate = admissionGate;
+        this.ticketNumbers = ticketNumbers;
     }
 
     public Mono<TaskView> create(TaskRequest request) {
@@ -200,7 +206,7 @@ public class TaskService {
     }
 
     String nextTicketNumber() {
-        return "AF-%04d".formatted(ticketSequence.getAndIncrement());
+        return ticketNumbers.next();
     }
 
     private TaskState requireTask(String id) {

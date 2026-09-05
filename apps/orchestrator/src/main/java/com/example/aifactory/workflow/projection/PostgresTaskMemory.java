@@ -192,10 +192,10 @@ public final class PostgresTaskMemory implements TaskMemory {
         String requirementDigest = sha256(state.request.requirement().getBytes(StandardCharsets.UTF_8));
         if (versions.isEmpty()) {
             try {
-                jdbc.update("INSERT INTO tasks(task_id, repository_id, current_attempt_id, source_commit, "
+                jdbc.update("INSERT INTO tasks(task_id, ticket_number, repository_id, current_attempt_id, source_commit, "
                                 + "requirement_digest, status, created_at, updated_at, version) "
-                                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
-                        state.id, ScmDeliveryGateway.repositoryId(state.request.repositoryUrl()),
+                                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                        state.id, state.ticketNumber, ScmDeliveryGateway.repositoryId(state.request.repositoryUrl()),
                         state.workflowAttemptId, sourceCommit, requirementDigest, state.status.name(),
                         state.createdAt, state.updatedAt);
                 jdbc.update("INSERT INTO task_projection_snapshots(task_id, attempt_id, snapshot_uri, "
