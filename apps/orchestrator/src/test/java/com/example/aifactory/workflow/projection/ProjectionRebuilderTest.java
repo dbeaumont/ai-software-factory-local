@@ -109,6 +109,28 @@ class ProjectionRebuilderTest {
         assertThat(store.replacements).isZero();
     }
 
+    @Test
+    void verifiesArtifactPointersRecoveredFromActivityHistory() {
+        String artifactUri = "evidence://task-rebuild/attempt-1/tests/" + "e".repeat(64);
+        SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
+                "task-rebuild", "attempt-1", "sample-repository", COMMIT, "secure the endpoint",
+                List.of(), null, List.of(), null, null, null);
+        ProjectionHistorySource source = (workflowId, runId) -> new ProjectionHistorySource.History(
+                workflowId, runId, Instant.parse("2026-09-02T10:00:00Z"),
+                Instant.parse("2026-09-02T10:01:00Z"), "COMPLETED", request,
+                new SoftwareFactoryWorkflow.Result("task-rebuild", "attempt-1", COMMIT, "COMPLETED",
+                        List.of(), List.of(), java.util.Map.of(), null, null, null),
+                List.of(new ProjectionHistorySource.EvidencePointer(artifactUri, "e".repeat(64))));
+
+        UiProjectionSnapshot restored = new ProjectionRebuilder(source, evidence("e".repeat(64)),
+                new RecordingProjectionStore()).rebuild("workflow-1", "run-1");
+
+        assertThat(restored.evidence()).singleElement().satisfies(projected -> {
+            assertThat(projected.uri()).isEqualTo(artifactUri);
+            assertThat(projected.digest()).isEqualTo("e".repeat(64));
+        });
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"APPROVED", "REJECTED", "CANCELLED", "FAILED", "TIMED_OUT"})
     void rebuildsVerifiedEvidenceAfterEveryRootTerminalStatus(String terminalStatus) {

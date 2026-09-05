@@ -324,8 +324,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   potentiellement obsolète sans inventer un succès. _(L'API `/api/tasks/{id}/projection` expose tentative,
   curseur, event ID, instant et âge ; le seuil est configurable, et l'interface affiche un avertissement explicite
   lorsque la vue est potentiellement obsolète ou lorsque sa fraîcheur ne peut pas être déterminée.)_
-- [ ] **TEMP-076 — Reconstruire une tâche.** Rejouer l'historique Temporal et vérifier les digests Evidence avant
-  remplacement atomique de la projection.
+- [x] **TEMP-076 — Reconstruire une tâche.** Rejouer l'historique Temporal et vérifier les digests Evidence avant
+  remplacement atomique de la projection. _(La source SDK retrouve l'entrée, le commit résolu et les références
+  produites par les activités ; le rebuilder refuse toute divergence de lignée, URI, digest ou statut, puis le store
+  PostgreSQL remplace en une transaction la tâche, le run, les délégations et les métadonnées Evidence vérifiées.)_
 - [ ] **TEMP-077 — Reconstruire toutes les projections.** Ajouter une commande opérateur bornée, observable et
   réentrante avec mode dry-run.
 - [ ] **TEMP-078 — Persister la séquence des tickets.** Remplacer le compteur JVM `AF-xxxx` par une séquence

@@ -132,7 +132,7 @@ public interface SoftwareFactoryWorkflow {
                     attemptLineage);
         }
 
-        Request withResolvedSource(String commit) {
+        public Request withResolvedSource(String commit) {
             return new Request(taskId, attemptId, repositoryId, commit, requirement, delegations, approvalRequest,
                     humanDecisionRequests, executionPolicy, continuationState, independentReview, sourceLocation,
                     executionMode, attemptLineage);

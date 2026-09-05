@@ -11,8 +11,10 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.stereotype.Service;
 
 /** Rebuilds metadata projections from authoritative Temporal history and verified Evidence MCP summaries. */
+@Service
 public final class ProjectionRebuilder {
     private final ProjectionHistorySource histories;
     private final EvidenceRepository evidenceRepository;
@@ -40,7 +42,7 @@ public final class ProjectionRebuilder {
                         completed.getOrDefault(item.nodeId(), "PENDING")))
                 .toList();
 
-        List<EvidenceExpectation> expectations = evidenceExpectations(request);
+        List<EvidenceExpectation> expectations = evidenceExpectations(request, history.evidence());
         List<UiProjectionSnapshot.Evidence> verifiedEvidence = new ArrayList<>();
         for (int index = 0; index < expectations.size(); index++) {
             EvidenceExpectation expected = expectations.get(index);
@@ -82,8 +84,11 @@ public final class ProjectionRebuilder {
                 item.budget().maxTokens(), item.budget().maxCostMicros(), item.budget().maxTurns());
     }
 
-    private static List<EvidenceExpectation> evidenceExpectations(SoftwareFactoryWorkflow.Request request) {
+    private static List<EvidenceExpectation> evidenceExpectations(
+            SoftwareFactoryWorkflow.Request request, List<ProjectionHistorySource.EvidencePointer> historyEvidence) {
         Map<String, EvidenceExpectation> unique = new LinkedHashMap<>();
+        historyEvidence.forEach(pointer -> unique.put(pointer.uri(),
+                new EvidenceExpectation(pointer.uri(), pointer.digest())));
         request.humanDecisionRequests().forEach(decision -> decision.evidenceUris().forEach(uri ->
                 unique.putIfAbsent(uri, new EvidenceExpectation(uri, null))));
         if (request.approvalRequest() != null) {
