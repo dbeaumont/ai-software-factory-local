@@ -19,7 +19,7 @@ class MultiAgentRunbooksTest {
     @Test
     void providesFiveActionableOperationalRunbooks() throws Exception {
         Path root = repositoryRoot();
-        Path directory = root.resolve("docs/runbooks");
+        Path directory = root.resolve("docs/operations/runbooks");
         for (String name : RUNBOOKS) {
             String runbook = Files.readString(directory.resolve(name));
             assertThat(runbook).as(name).contains(REQUIRED_SECTIONS.toArray(String[]::new));
@@ -27,13 +27,14 @@ class MultiAgentRunbooksTest {
 
         String alerts = Files.readString(
                 root.resolve("infrastructure/observability/alerts/multiagents.yml"));
-        assertThat(alerts).contains("/docs/runbooks/SATURATION.md", "/docs/runbooks/AGENT-DEFAILLANT.md",
-                "/docs/runbooks/MCP-COMPROMIS.md");
+        assertThat(alerts).contains("/docs/operations/runbooks/SATURATION.md",
+                "/docs/operations/runbooks/AGENT-DEFAILLANT.md",
+                "/docs/operations/runbooks/MCP-COMPROMIS.md");
     }
 
     private static Path repositoryRoot() {
         Path cwd = Path.of(System.getProperty("user.dir")).toAbsolutePath();
-        if (Files.isDirectory(cwd.resolve("docs/runbooks"))) return cwd;
+        if (Files.isDirectory(cwd.resolve("docs/operations/runbooks"))) return cwd;
         return cwd.resolve("../..").normalize();
     }
 }

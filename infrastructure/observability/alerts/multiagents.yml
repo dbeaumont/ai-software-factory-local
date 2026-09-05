@@ -11,7 +11,7 @@ groups:
         annotations:
           summary: Agent loop or turn limit detected
           description: An agent stopped after repeating an identical call or exhausting its turn limit.
-          runbook_url: /docs/runbooks/AGENT-DEFAILLANT.md
+          runbook_url: /docs/operations/runbooks/AGENT-DEFAILLANT.md
 
       - alert: AiFactoryAgentBudgetExhausted
         expr: increase(ai_agent_failures_total{stop_condition="BUDGET_EXHAUSTED"}[5m]) > 0
@@ -22,7 +22,7 @@ groups:
         annotations:
           summary: Agent execution budget exhausted
           description: A host-enforced token, cost, turn or fan-out budget stopped an agent.
-          runbook_url: /docs/runbooks/AGENT-DEFAILLANT.md
+          runbook_url: /docs/operations/runbooks/AGENT-DEFAILLANT.md
 
       - alert: AiFactoryAgentCostSpike
         expr: sum(increase(ai_agent_cost_micros_total[15m])) > 5000000
@@ -33,7 +33,7 @@ groups:
         annotations:
           summary: Aggregate agent cost exceeds the operational threshold
           description: Agent usage exceeded 5,000,000 cost micros over fifteen minutes.
-          runbook_url: /docs/runbooks/AGENT-DEFAILLANT.md
+          runbook_url: /docs/operations/runbooks/AGENT-DEFAILLANT.md
 
       - alert: AiFactoryTaskQueueBacklog
         expr: max(ai_factory_sandbox_jobs_queued) > 20 or max(ai_task_queue_saturation_ratio) > 0.9
@@ -44,7 +44,7 @@ groups:
         annotations:
           summary: Worker backlog or saturation is sustained
           description: More than twenty sandbox jobs are queued or a worker perimeter remains above 90 percent saturation.
-          runbook_url: /docs/runbooks/SATURATION.md
+          runbook_url: /docs/operations/runbooks/SATURATION.md
 
       - alert: AiFactorySandboxHeartbeatInvalid
         expr: increase(ai_factory_sandbox_heartbeat_invalid_total[5m]) > 0
@@ -55,7 +55,7 @@ groups:
         annotations:
           summary: Sandbox execution heartbeat is absent, invalid or stale
           description: The orchestrator rejected a sandbox heartbeat and failed the execution closed.
-          runbook_url: /docs/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
+          runbook_url: /docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
 
       - alert: AiFactorySandboxExecutionFailures
         expr: increase(ai_factory_sandbox_jobs_failed_total[10m]) > 5
@@ -66,7 +66,7 @@ groups:
         annotations:
           summary: Sandbox executions are repeatedly failing
           description: More than five sandbox executions failed, timed out or were cancelled in ten minutes.
-          runbook_url: /docs/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
+          runbook_url: /docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
 
       - alert: AiFactorySandboxMaintenanceFailure
         expr: increase(ai_factory_sandbox_maintenance_failures_total[10m]) > 0
@@ -77,7 +77,7 @@ groups:
         annotations:
           summary: Sandbox cleanup or retention maintenance is failing
           description: The sandbox controller could not maintain persisted jobs or clean expired state.
-          runbook_url: /docs/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
+          runbook_url: /docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
 
       - alert: AiFactoryAgentContractError
         expr: increase(ai_agent_failures_total{stop_condition="CONTRACT_ERROR"}[5m]) > 0
@@ -88,7 +88,7 @@ groups:
         annotations:
           summary: Agent output contract validation failed
           description: An agent emitted a malformed final turn or a result outside its declared output contract.
-          runbook_url: /docs/runbooks/AGENT-DEFAILLANT.md
+          runbook_url: /docs/operations/runbooks/AGENT-DEFAILLANT.md
 
       - alert: AiFactoryEvidenceAltered
         expr: increase(ai_evidence_altered_total[5m]) > 0
@@ -99,4 +99,4 @@ groups:
         annotations:
           summary: Evidence integrity verification failed
           description: Evidence MCP metadata, content or digest diverged from its workflow binding.
-          runbook_url: /docs/runbooks/MCP-COMPROMIS.md
+          runbook_url: /docs/operations/runbooks/MCP-COMPROMIS.md

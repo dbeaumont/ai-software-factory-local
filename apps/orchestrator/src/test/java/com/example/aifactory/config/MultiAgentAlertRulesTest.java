@@ -16,11 +16,12 @@ class MultiAgentAlertRulesTest {
     private static final Set<String> REQUIRED_ALERTS = Set.of(
             "AiFactoryAgentLoopDetected", "AiFactoryAgentBudgetExhausted", "AiFactoryAgentCostSpike",
             "AiFactoryTaskQueueBacklog", "AiFactorySandboxHeartbeatInvalid",
+            "AiFactorySandboxExecutionFailures", "AiFactorySandboxMaintenanceFailure",
             "AiFactoryAgentContractError", "AiFactoryEvidenceAltered");
 
     @Test
     @SuppressWarnings("unchecked")
-    void definesAndMountsSevenActionableMultiAgentAlerts() throws Exception {
+    void definesAndMountsNineActionableMultiAgentAlerts() throws Exception {
         Path root = repositoryRoot();
         Map<String, Object> document;
         try (var input = Files.newInputStream(
