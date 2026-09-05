@@ -13,6 +13,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -63,5 +65,71 @@ class AsyncTaskTracerTest {
         assertThat(currentInWorker.get()).isNotNull();
         assertThat(currentInWorker.get().getContextView().getName()).isEqualTo("ai.factory.task");
         assertThat(parentSeenByChild.get()).isSameAs(currentInWorker.get());
+    }
+
+    @Test
+    void runsParallelTasksAsOverlappingSiblingsOfTheSameParent() throws Exception {
+        ObservationRegistry registry = ObservationRegistry.create();
+        List<Observation.Context> startedTasks = new CopyOnWriteArrayList<>();
+        List<Observation.Context> stoppedTasks = new CopyOnWriteArrayList<>();
+        CountDownLatch bothStarted = new CountDownLatch(2);
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch completed = new CountDownLatch(2);
+        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+            @Override
+            public boolean supportsContext(Observation.Context context) {
+                return true;
+            }
+
+            @Override
+            public void onStart(Observation.Context context) {
+                if ("ai.factory.task".equals(context.getName())) {
+                    startedTasks.add(context);
+                }
+            }
+
+            @Override
+            public void onStop(Observation.Context context) {
+                if ("ai.factory.task".equals(context.getName())) {
+                    stoppedTasks.add(context);
+                }
+            }
+        });
+        AsyncTaskTracer tracer = new AsyncTaskTracer(registry);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        Observation http = Observation.start("http.server.requests", registry);
+        Runnable overlappingWork = () -> {
+            bothStarted.countDown();
+            try {
+                if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("parallel test timed out");
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(exception);
+            } finally {
+                completed.countDown();
+            }
+        };
+
+        try (Observation.Scope ignored = http.openScope()) {
+            tracer.submit(executor, task("task-1"), "execute", overlappingWork);
+            tracer.submit(executor, task("task-2"), "execute", overlappingWork);
+            assertThat(bothStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(startedTasks).hasSize(2);
+            assertThat(stoppedTasks).isEmpty();
+            assertThat(startedTasks).allSatisfy(context -> assertThat(context.getParentObservation()).isSameAs(http));
+            release.countDown();
+            assertThat(completed.await(5, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            http.stop();
+            executor.shutdownNow();
+        }
+
+        for (int attempt = 0; attempt < 50 && stoppedTasks.size() < 2; attempt++) Thread.sleep(10);
+        assertThat(stoppedTasks).containsExactlyInAnyOrderElementsOf(startedTasks);
+    }
+
+    private static TaskState task(String id) {
+        return new TaskState(id, "AF-0001",
+                new TaskRequest("https://example.invalid/repository.git", "main", "requirement", null));
     }
 }

@@ -32,6 +32,11 @@ pipeline, LLM et MCP créés par `ExecutionTracer` héritent donc du même paren
 du span actif au lieu de fabriquer une nouvelle racine. `AsyncTaskTracerTest` vérifie explicitement la parenté
 HTTP → tâche asynchrone → enfant LLM à travers le changement de thread.
 
+Le même test lance aussi deux observations de tâche sur les deux workers disponibles, bloque leur travail sur une
+barrière commune et vérifie que les deux spans sont démarrés avant que l'un ou l'autre soit arrêté. Ils portent le
+même parent HTTP tout en restant deux enfants distincts : le fan-out parallèle est donc représenté par des spans
+frères réellement superposés, et non par une chaîne séquentielle artificielle.
+
 ## Résilience observée
 
 - L'arrêt complet du Collector n'a interrompu aucune des six applications ; l'ingestion a repris après son

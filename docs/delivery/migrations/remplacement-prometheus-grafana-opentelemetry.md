@@ -174,7 +174,7 @@ Au début de la migration, le dépôt possède notamment :
 - [x] Instrumenter soumission, attente, timeout, annulation et résultat des jobs sandbox Compose/GKE.
 - [x] Rendre l'instrumentation Temporal sûre face aux replays, retries, child workflows et `continue-as-new`.
 - [ ] Utiliser des `Span Link` lorsqu'une relation n'est pas une parenté stricte.
-- [ ] Vérifier que les tâches parallèles produisent des spans frères réellement superposés.
+- [x] Vérifier que les tâches parallèles produisent des spans frères réellement superposés.
 
 ### 7.3 Métriques et logs
 
