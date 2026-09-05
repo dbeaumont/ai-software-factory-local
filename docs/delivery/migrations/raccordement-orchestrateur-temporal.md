@@ -408,7 +408,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester l'absence de routage `LOCAL`/`TEMPORAL` et le refus de démarrer ou d'admettre sans Temporal. _(Temporal
   est le seul `@Component` du port de coordination ; readiness et admission échouent fermées si le worker, le service
   ou le namespace ne répondent pas, sans branche de sélection de moteur.)_
-- [ ] Tester identifiants, clés d'idempotence, classification des erreurs et politiques de retry.
+- [x] Tester identifiants, clés d'idempotence, classification des erreurs et politiques de retry. _(Les identités sont
+  déterministes et bornées, les effets survivent à un store recréé, les erreurs pilotent retry/non-retry et les profils
+  par périmètre valident délais, heartbeat et tentatives.)_
 - [ ] Interdire par test d'architecture réseau, filesystem, horloge système, thread, random et client MCP dans les
   implémentations de workflow.
 - [ ] Tester la taille maximale des inputs/résultats et l'externalisation des contenus vers Evidence MCP.
