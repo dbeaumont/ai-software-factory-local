@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
@@ -52,13 +53,23 @@ public class TaskService {
         this.audit = audit;
     }
 
-    public TaskView create(TaskRequest request) {
+    public Mono<TaskView> create(TaskRequest request) {
+        return Mono.defer(() -> {
+            validateSubmission(request);
+            return llm.cloudAvailabilityAsync().map(availability -> accept(request, availability));
+        });
+    }
+
+    private void validateSubmission(TaskRequest request) {
+        if (request == null) throw new IllegalArgumentException("Task request is required");
         if (request.repositoryUrl() == null || request.repositoryUrl().isBlank())
             throw new IllegalArgumentException("repositoryUrl is required");
         if (request.requirement() == null || request.requirement().isBlank())
             throw new IllegalArgumentException("requirement is required");
         if (!props.cloudEnabled()) throw new IllegalArgumentException("Cloud LLM is disabled by configuration");
-        CloudAvailability availability = llm.cloudAvailability();
+    }
+
+    private TaskView accept(TaskRequest request, CloudAvailability availability) {
         if (!availability.available()) throw new IllegalStateException(availability.error());
         String id = UUID.randomUUID().toString().substring(0, 8);
         TaskState state = new TaskState(id, nextTicketNumber(), request);

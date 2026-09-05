@@ -75,10 +75,6 @@ public class LlmGatewayClient {
                 .doOnNext(this::cacheReachableCloudAvailability);
     }
 
-    public CloudAvailability cloudAvailability() {
-        return cloudAvailabilityAsync().block(Duration.ofSeconds(25));
-    }
-
     private void cacheReachableCloudAvailability(CloudAvailability availability) {
         if (availability.available()) {
             cachedCloudAvailability = availability;
