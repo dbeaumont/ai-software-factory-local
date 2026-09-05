@@ -26,13 +26,16 @@ class TaskSubmissionTest {
     private final LlmGatewayClient llm = mock(LlmGatewayClient.class);
     private final WorkflowCoordinator coordinator = mock(WorkflowCoordinator.class);
     private final InMemoryTaskMemory memory = new InMemoryTaskMemory();
+    private final TicketAdmissionGate admissionGate = mock(TicketAdmissionGate.class);
     private final TaskService service = new TaskService(properties, llm, coordinator, memory,
-            new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), mock(SecurityAuditJournal.class),
+            admissionGate);
     private final TaskRequest request = new TaskRequest(
             "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD);
 
     @Test
     void admitsATaskThroughTheNonBlockingAvailabilityProbe() {
+        when(admissionGate.verifyActive()).thenReturn(Mono.empty());
         when(properties.cloudEnabled()).thenReturn(true);
         when(llm.cloudAvailabilityAsync()).thenReturn(Mono.just(CloudAvailability.reachable()));
 
@@ -51,6 +54,7 @@ class TaskSubmissionTest {
 
     @Test
     void rejectsATaskWhenTheReactiveAvailabilityProbeFails() {
+        when(admissionGate.verifyActive()).thenReturn(Mono.empty());
         when(properties.cloudEnabled()).thenReturn(true);
         when(llm.cloudAvailabilityAsync()).thenReturn(Mono.just(CloudAvailability.unavailable("cloud unavailable")));
 
@@ -64,6 +68,7 @@ class TaskSubmissionTest {
 
     @Test
     void canAdmitATaskFromAReactorNonBlockingThread() {
+        when(admissionGate.verifyActive()).thenReturn(Mono.empty());
         AtomicBoolean admittedOnNonBlockingThread = new AtomicBoolean();
         when(properties.cloudEnabled()).thenReturn(true);
         when(llm.cloudAvailabilityAsync()).thenReturn(Mono.just(CloudAvailability.reachable()));
@@ -78,5 +83,19 @@ class TaskSubmissionTest {
 
         assertThat(task).isNotNull();
         assertThat(admittedOnNonBlockingThread).isTrue();
+    }
+
+    @Test
+    void doesNotProbeLlmOrPersistWhenTemporalAdmissionIsSuspended() {
+        when(properties.cloudEnabled()).thenReturn(true);
+        when(admissionGate.verifyActive()).thenReturn(Mono.error(
+                new com.example.aifactory.workflow.temporal.TemporalAdmissionUnavailableException("suspended")));
+
+        assertThatThrownBy(() -> service.create(request).block(Duration.ofSeconds(1)))
+                .isInstanceOf(com.example.aifactory.workflow.temporal.TemporalAdmissionUnavailableException.class);
+
+        verify(llm, never()).cloudAvailabilityAsync();
+        verify(coordinator, never()).start(org.mockito.ArgumentMatchers.any());
+        assertThat(memory.list()).isEmpty();
     }
 }

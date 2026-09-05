@@ -35,15 +35,11 @@ public class TaskService {
     private final TaskMemory memory;
     private final Counter submittedTasks;
     private final SecurityAuditJournal audit;
-
-    public TaskService(AiFactoryProperties props, LlmGatewayClient llm, WorkflowCoordinator coordinator, TaskMemory memory,
-                       MeterRegistry metrics) {
-        this(props, llm, coordinator, memory, metrics, null);
-    }
+    private final TicketAdmissionGate admissionGate;
 
     @Autowired
     public TaskService(AiFactoryProperties props, LlmGatewayClient llm, WorkflowCoordinator coordinator, TaskMemory memory,
-                       MeterRegistry metrics, SecurityAuditJournal audit) {
+                       MeterRegistry metrics, SecurityAuditJournal audit, TicketAdmissionGate admissionGate) {
         this.props = props;
         this.llm = llm;
         this.coordinator = coordinator;
@@ -51,12 +47,15 @@ public class TaskService {
         this.submittedTasks = Counter.builder("ai_factory_tasks_submitted")
                 .description("Tasks submitted to the factory").register(metrics);
         this.audit = audit;
+        this.admissionGate = admissionGate;
     }
 
     public Mono<TaskView> create(TaskRequest request) {
         return Mono.defer(() -> {
             validateSubmission(request);
-            return llm.cloudAvailabilityAsync().map(availability -> accept(request, availability));
+            return admissionGate.verifyActive()
+                    .then(Mono.defer(llm::cloudAvailabilityAsync))
+                    .map(availability -> accept(request, availability));
         });
     }
 

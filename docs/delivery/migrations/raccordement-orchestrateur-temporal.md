@@ -103,8 +103,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-010 — Supprimer le sélecteur de moteur.** Déprécier puis retirer `AI_FACTORY_TEMPORAL_ENABLED` : une
   version post-bascule de l'orchestrateur exige Temporal et ne possède aucun mode `local`. _(Propriété supprimée
   du code, de Compose et des fichiers d'environnement.)_
-- [ ] **TEMP-011 — Refuser une fausse activation.** Faire échouer la readiness et suspendre les admissions tant que
-  le client et tous les workers requis ne sont pas enregistrés.
+- [x] **TEMP-011 — Refuser une fausse activation.** Faire échouer la readiness et suspendre les admissions tant que
+  le client et tous les workers requis ne sont pas enregistrés. _(Gate réactive fail-closed avant persistance :
+  workers et namespace obligatoires, probe gRPC borné hors thread Reactor, refus HTTP 503 sans fallback local.)_
 - [x] **TEMP-012 — Aligner `.env.example`.** Fournir directement la configuration Temporal obligatoire et ne pas
   documenter de désactivation ou d'opt-in du moteur local. _(Configuration obligatoire et absence de fallback
   explicitées dans `.env.example` et `.env`.)_

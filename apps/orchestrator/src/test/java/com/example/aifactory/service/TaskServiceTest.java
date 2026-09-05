@@ -259,7 +259,8 @@ class TaskServiceTest {
             super(null, null, new WorkflowCoordinator() {
                 @Override public void start(TaskState task) {}
                 @Override public void resumeAfterApproval(TaskState task) {}
-            }, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+            }, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), null,
+                    reactor.core.publisher.Mono::empty);
             this.memory = memory;
         }
 
@@ -267,7 +268,8 @@ class TaskServiceTest {
             super(null, null, new WorkflowCoordinator() {
                 @Override public void start(TaskState task) {}
                 @Override public void resumeAfterApproval(TaskState task) {}
-            }, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), audit);
+            }, memory, new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), audit,
+                    reactor.core.publisher.Mono::empty);
             this.memory = memory;
         }
     }
