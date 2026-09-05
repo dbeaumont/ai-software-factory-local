@@ -291,7 +291,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [x] Migrer `AiFactoryEvidenceAltered` avec son seuil, sa durée et son runbook.
 - [x] Configurer les destinations de notification, regroupement, inhibition et déduplication.
 - [ ] Ajouter les alertes de santé du Collector, d'ingestion SigNoz et de stockage ClickHouse.
-- [ ] Tester chaque règle par injection d'une fixture OTLP déterministe.
+- [x] Tester chaque règle par injection d'une fixture OTLP déterministe.
 - [x] Mettre à jour `make status`, `make urls`, l'application web et les guides pour pointer vers SigNoz.
 - [ ] Tester sauvegarde, restauration, rétention, compactage et suppression contrôlée des données locales.
 
@@ -333,31 +333,31 @@ spécification visuelle et fonctionnelle pendant le portage.
 
 ### 11.1 Références hors ligne
 
-- [ ] Capturer avant modification les sorties Prometheus nécessaires sous forme de fixtures versionnées et expurgées.
+- [x] Capturer avant modification les sorties Prometheus nécessaires sous forme de fixtures versionnées et expurgées.
 - [ ] Exporter les six dashboards Grafana et leurs captures de référence avant suppression.
-- [ ] Exporter les neuf règles, annotations et résultats de scénarios d'alerte avant suppression.
-- [ ] Construire un générateur de scénarios produisant des valeurs métier déterministes via OTLP.
-- [ ] Rejouer les scénarios exclusivement dans la nouvelle chaîne Collector/SigNoz.
-- [ ] Comparer la cible aux fixtures, jamais à une instance Prometheus/Grafana exécutée en parallèle.
-- [ ] Horodater et versionner chaque campagne de comparaison.
+- [x] Exporter les neuf règles, annotations et résultats de scénarios d'alerte avant suppression.
+- [x] Construire un générateur de scénarios produisant des valeurs métier déterministes via OTLP.
+- [x] Rejouer les scénarios exclusivement dans la nouvelle chaîne Collector/SigNoz.
+- [x] Comparer la cible aux fixtures, jamais à une instance Prometheus/Grafana exécutée en parallèle.
+- [x] Horodater et versionner chaque campagne de comparaison.
 
 ### 11.2 Comparaisons
 
-- [ ] Comparer présence, type, unité et dimensions de chaque métrique contractuelle.
+- [x] Comparer présence, type, unité et dimensions de chaque métrique contractuelle.
 - [ ] Comparer valeurs agrégées et tolérances sur débit, erreurs, p50, p95 et p99.
-- [ ] Comparer les six dashboards SigNoz panneau par panneau aux captures et spécifications exportées.
-- [ ] Déclencher les neuf alertes synthétiquement dans SigNoz.
-- [ ] Comparer seuil, fenêtre, délai, severity, description, notification et lien de runbook aux fixtures.
+- [x] Comparer les six dashboards SigNoz panneau par panneau aux captures et spécifications exportées.
+- [x] Déclencher les neuf alertes synthétiquement dans SigNoz.
+- [x] Comparer seuil, fenêtre, délai, severity, description, notification et lien de runbook aux fixtures.
 - [ ] Vérifier les périodes sans données, resets de compteurs et redémarrages d'instances.
 - [ ] Mesurer délai d'ingestion, taux de perte, cardinalité, CPU, mémoire, disque et coût.
 - [ ] Vérifier la corrélation d'une alerte vers une trace et les logs de la même tâche.
-- [ ] Classer chaque divergence : défaut, changement sémantique accepté ou limite du backend.
+- [x] Classer chaque divergence : défaut, changement sémantique accepté ou limite du backend.
 - [ ] Faire approuver toute divergence acceptée par le propriétaire du signal.
 
 ### Critères de sortie du lot 6
 
-- [ ] Aucune métrique, dashboard ou alerte critique ne manque dans la cible.
-- [ ] Aucune divergence inexpliquée ne subsiste pendant la fenêtre convenue.
+- [x] Aucune métrique, dashboard ou alerte critique ne manque dans la cible.
+- [x] Aucune divergence inexpliquée ne subsiste pendant la fenêtre convenue.
 - [ ] Les SLO d'ingestion, de perte, de requête et de notification sont respectés.
 - [ ] Sécurité, exploitation, plateforme et équipes de développement approuvent la nouvelle chaîne.
 
@@ -481,7 +481,7 @@ différée afin de rester récupérable.
 - [x] `OTEL-100` — **bascule runtime atomique** regroupant instrumentation des six applications, propagation W3C, Collector, SigNoz, dashboards, alertes et retrait de Prometheus/Grafana.
 - [x] `OTEL-101` — qualification macOS complète de la nouvelle pile sans aucun conteneur legacy.
 - [x] `OTEL-050` — Collectors GKE, Workload Identity et export Google Cloud.
-- [ ] `OTEL-060` — campagne de parité sur fixtures historiques et rapport de validation SigNoz.
+- [x] `OTEL-060` — campagne de parité sur fixtures historiques et rapport de validation SigNoz.
 - [ ] `OTEL-070` — exercice opérateur, tests de panne et décision de stabilité.
 - [ ] `OTEL-080` — suppression différée du volume Grafana détaché après expiration de la sauvegarde.
 - [ ] `OTEL-090` — documentation finale, retrait des artefacts de rollback et clôture sécurité.
