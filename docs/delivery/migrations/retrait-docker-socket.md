@@ -15,16 +15,17 @@ macOS / local : orchestrator -> sandbox-execution-mcp -> sandbox-runner(s) Compo
 GKE / partagé : orchestrator -> sandbox-execution-mcp -> contrôleur GKE -> Job éphémère
 ```
 
-État au 5 septembre 2026 : l'implémentation et les tests hors cluster sont réalisés. La validation end-to-end
-Compose reste en attente d'un téléchargement de l'image Maven (timeout du registre Docker), et les cases de
-qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secrets de la plateforme cible.
+État au 5 septembre 2026 : l'implémentation, les tests hors cluster et la qualification des cinq profils Compose
+sont réalisés. Le workflow applicatif complet avec arrêt propre reste à qualifier ; les cases GKE nécessitent un
+cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir la
+[preuve de qualification macOS](../../evidence/sandbox/compose-macos-2026-09-05.md).
 
 ## 2. Résultat attendu
 
 - [x] Aucun service Compose ne monte `/var/run/docker.sock`.
 - [x] Aucun processus applicatif ne lance `docker run`, `docker ps`, `docker inspect` ou `docker rm`.
-- [ ] `docker compose up` permet toujours de démarrer et tester la pile complète sur macOS.
-- [ ] Les opérations `validate_patch`, `apply_patch`, `run_tests`, `run_quality` et `run_security` fonctionnent en local.
+- [x] `docker compose up` permet toujours de démarrer et tester la pile complète sur macOS.
+- [x] Les opérations `validate_patch`, `apply_patch`, `run_tests`, `run_quality` et `run_security` fonctionnent en local.
 - [ ] Le mode partagé utilise des Jobs GKE isolés et ne possède aucun fallback implicite vers Docker.
 - [x] Les appels MCP et leurs schémas de réponse restent compatibles.
 - [x] Les limites de sécurité du mode Compose sont documentées et ne peuvent pas être activées par erreur en production.
@@ -125,8 +126,8 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 
 ### Critères de sortie du lot 2
 
-- [ ] `docker compose up --build` démarre toute la pile sur macOS.
-- [ ] Les cinq opérations sandbox passent dans le mode `compose`.
+- [x] `docker compose up --build` démarre toute la pile sur macOS.
+- [x] Les cinq opérations sandbox passent dans le mode `compose`.
 - [ ] Timeout, annulation et redémarrage du MCP ne laissent aucun processus de job actif.
 - [x] Aucun service local ne monte la socket Docker.
 - [x] Le runner ne reçoit jamais de commande libre depuis le réseau.
@@ -260,7 +261,7 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 
 ## 13. Définition de terminé
 
-- [ ] Le développement quotidien sur macOS fonctionne avec les commandes Docker Compose documentées.
+- [x] Le développement quotidien sur macOS fonctionne avec les commandes Docker Compose documentées.
 - [x] Docker Compose ne sert qu'à démarrer des services connus à l'avance et n'est jamais piloté par une application.
 - [x] Aucun composant du projet n'accède au daemon Docker de l'hôte.
 - [x] Le runtime Compose est techniquement et explicitement impossible à activer en production.
