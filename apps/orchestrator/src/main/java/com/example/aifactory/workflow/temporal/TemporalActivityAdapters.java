@@ -21,7 +21,7 @@ public final class TemporalActivityAdapters {
                 "llm", new Object[]{new LlmAdapter(durable), pipeline},
                 "sandbox", new Object[]{new SandboxAdapter(durable), patchIntegration, pipeline},
                 "assurance", new Object[]{new AssuranceAdapter(durable), pipeline},
-                "evidence", new Object[]{new EvidenceAdapter(durable)},
+                "evidence", new Object[]{new EvidenceAdapter(durable), pipeline},
                 "scm", new Object[]{new ScmAdapter(durable), pipeline});
     }
 

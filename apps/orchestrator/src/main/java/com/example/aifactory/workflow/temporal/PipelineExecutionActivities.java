@@ -25,6 +25,9 @@ public interface PipelineExecutionActivities {
     @ActivityMethod(name = "PreparePipelineDelivery")
     PendingEffect prepareDelivery(DeliveryRequest request);
 
+    @ActivityMethod(name = "RecordPipelineGateRejection")
+    void recordGateRejection(GateRejection rejection);
+
     record SourceBinding(String taskId, String attemptId, String repositoryId, String sourceCommit,
                          String workspace, String attestationDigest) {}
 
@@ -37,4 +40,6 @@ public interface PipelineExecutionActivities {
                                  PipelineStepContracts.ArtifactReference validationError) {}
 
     record DeliveryRequest(String taskId, String attemptId, String sourceCommit) {}
+
+    record GateRejection(String taskId, String attemptId, String sourceCommit, String gate) {}
 }

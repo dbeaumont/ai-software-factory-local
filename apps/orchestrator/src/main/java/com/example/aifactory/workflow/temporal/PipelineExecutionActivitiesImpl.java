@@ -151,6 +151,21 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         return prepared.pendingEffect();
     }
 
+    @Override
+    public void recordGateRejection(GateRejection rejection) {
+        requireQueue("evidence");
+        if (rejection == null || rejection.gate() == null
+                || !rejection.gate().matches("[a-z][a-z0-9-]{1,63}")) {
+            throw new IllegalArgumentException("Pipeline gate rejection is invalid");
+        }
+        TaskState state = requireTask(rejection.taskId(), rejection.attemptId());
+        if (!rejection.sourceCommit().equals(state.sourceCommit)) {
+            throw new SecurityException("Pipeline gate rejection is not source-bound");
+        }
+        state.transition(TaskStatus.GATE_REJECTED, "Gate rejected: " + rejection.gate());
+        memory.save(state);
+    }
+
     private TaskState requireTask(String taskId, String attemptId) {
         if (!PipelineStepContracts.INITIAL_ATTEMPT_ID.equals(attemptId)) {
             throw new IllegalArgumentException("Unknown pipeline attempt");

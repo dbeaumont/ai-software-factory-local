@@ -27,6 +27,16 @@ class SourceResolutionActivitiesTest {
     @TempDir Path root;
 
     @Test
+    void onlyBusinessRejectionsBecomeGateResults() {
+        assertThat(SoftwareFactoryExecutionWorkflowV1Impl.isBusinessGateFailure(
+                io.temporal.failure.ApplicationFailure.newNonRetryableFailure("denied", "BUSINESS_REJECTION")))
+                .isTrue();
+        assertThat(SoftwareFactoryExecutionWorkflowV1Impl.isBusinessGateFailure(
+                io.temporal.failure.ApplicationFailure.newFailure("offline", "DEPENDENCY_UNAVAILABLE")))
+                .isFalse();
+    }
+
+    @Test
     void reusesTheCommitFromAnExistingIdempotentWorkspace() throws Exception {
         ProcessRunner runner = mock(ProcessRunner.class);
         AiFactoryProperties properties = mock(AiFactoryProperties.class);
@@ -70,6 +80,7 @@ class SourceResolutionActivitiesTest {
             environment.newWorker("ai-factory-llm").registerActivitiesImplementations(pipeline);
             environment.newWorker("ai-factory-sandbox").registerActivitiesImplementations(pipeline);
             environment.newWorker("ai-factory-assurance").registerActivitiesImplementations(pipeline);
+            environment.newWorker("ai-factory-evidence").registerActivitiesImplementations(pipeline);
             environment.newWorker("ai-factory-scm").registerActivitiesImplementations(pipeline);
             environment.start();
             SoftwareFactoryExecutionWorkflowV1 workflow = environment.getWorkflowClient().newWorkflowStub(
@@ -144,6 +155,8 @@ class SourceResolutionActivitiesTest {
             return new com.example.aifactory.model.PendingEffect("scm.create_draft_pull_request", Map.of(),
                     "draft PR", "ALLOW", true);
         }
+
+        @Override public void recordGateRejection(GateRejection rejection) { }
 
         private static String artifactName(String step) {
             return switch (step) {

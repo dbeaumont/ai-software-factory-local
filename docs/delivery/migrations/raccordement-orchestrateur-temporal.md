@@ -218,8 +218,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   déterministe et observable, sans retry d'activité aveugle sur une erreur de patch. _(Génération LLM, validation
   sandbox et réparation sont trois activités ; le workflow conserve candidat/erreur par digest, borne à deux
   réparations et termine en `BUSINESS_REJECTION` non retryable si le patch reste invalide.)_
-- [ ] **TEMP-043 — Intégrer les gates.** Une gate refusée termine la tentative avec un état métier explicite et
-  conserve toutes les preuves déjà produites.
+- [x] **TEMP-043 — Intégrer les gates.** Une gate refusée termine la tentative avec un état métier explicite et
+  conserve toutes les preuves déjà produites. _(Seul `BUSINESS_REJECTION` devient `GATE_REJECTED:<étape>` ; une
+  activité de projection enregistre l'état métier et la chronologie conserve les URI de preuves déjà produites,
+  tandis que les pannes techniques restent des échecs Temporal.)_
 - [ ] **TEMP-044 — Intégrer le DAG multi-agent.** N'activer les child workflows hiérarchiques que pour les modes
   autorisés ; conserver `PIPELINE` comme comportement initial du moteur Temporal.
 - [ ] **TEMP-045 — Intégrer la revue indépendante.** Lier la revue aux digests du plan, du patch, des tests, de la

@@ -83,8 +83,9 @@ class TemporalWorkerRegistryTest {
         assertThat(adapters.forWorker("assurance")).hasSize(2)
                 .anyMatch(TemporalActivityAdapters.AssuranceActivities.class::isInstance)
                 .anyMatch(PipelineExecutionActivities.class::isInstance);
-        assertThat(adapters.forWorker("evidence")).hasSize(1)
-                .allMatch(TemporalActivityAdapters.EvidenceActivities.class::isInstance);
+        assertThat(adapters.forWorker("evidence")).hasSize(2)
+                .anyMatch(TemporalActivityAdapters.EvidenceActivities.class::isInstance)
+                .anyMatch(PipelineExecutionActivities.class::isInstance);
         assertThat(adapters.forWorker("scm")).hasSize(2)
                 .anyMatch(TemporalActivityAdapters.ScmActivities.class::isInstance)
                 .anyMatch(PipelineExecutionActivities.class::isInstance);

@@ -11,6 +11,7 @@ import java.util.Map;
 public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFactoryExecutionWorkflowV1 {
     private final SoftwareFactoryWorkflow delegate = new SoftwareFactoryWorkflowImpl();
     private String phase = "CREATED";
+    private String currentStep = "source";
     private final Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts =
             new LinkedHashMap<>();
 
@@ -36,24 +37,40 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         PipelineExecutionActivities context = pipeline(source, "context", TemporalActivityPolicies.Kind.READ);
         context.bindSource(new PipelineExecutionActivities.SourceBinding(request.taskId(), request.attemptId(),
                 request.repositoryId(), resolved.sourceCommit(), resolved.workspace(), resolved.attestationDigest()));
-        runStep(source, request, resolved, "plan", TemporalActivityPolicies.Kind.LLM,
-                Map.of("requirement", TemporalIds.sha256(request.requirement())));
-        generateAndRepairPatch(source, request, resolved);
-        runStep(source, request, resolved, "apply-patch", TemporalActivityPolicies.Kind.SANDBOX,
-                Map.of("patch", artifacts.get("patch").digest()));
-        runStep(source, request, resolved, "test", TemporalActivityPolicies.Kind.SANDBOX,
-                Map.of("patch", artifacts.get("patch").digest()));
-        runStep(source, request, resolved, "quality", TemporalActivityPolicies.Kind.ASSURANCE,
-                Map.of("tests", artifacts.get("tests").digest()));
-        runStep(source, request, resolved, "security", TemporalActivityPolicies.Kind.ASSURANCE,
-                Map.of("quality", artifacts.get("quality").digest()));
-        runStep(source, request, resolved, "review", TemporalActivityPolicies.Kind.LLM, Map.of(
-                "plan", artifacts.get("plan").digest(), "patch", artifacts.get("patch").digest(),
-                "tests", artifacts.get("tests").digest(), "quality", artifacts.get("quality").digest(),
-                "security", artifacts.get("security").digest()));
-        pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
-                new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
-                        resolved.sourceCommit()));
+        try {
+            runStep(source, request, resolved, "plan", TemporalActivityPolicies.Kind.LLM,
+                    Map.of("requirement", TemporalIds.sha256(request.requirement())));
+            generateAndRepairPatch(source, request, resolved);
+            runStep(source, request, resolved, "apply-patch", TemporalActivityPolicies.Kind.SANDBOX,
+                    Map.of("patch", artifacts.get("patch").digest()));
+            runStep(source, request, resolved, "test", TemporalActivityPolicies.Kind.SANDBOX,
+                    Map.of("patch", artifacts.get("patch").digest()));
+            runStep(source, request, resolved, "quality", TemporalActivityPolicies.Kind.ASSURANCE,
+                    Map.of("tests", artifacts.get("tests").digest()));
+            runStep(source, request, resolved, "security", TemporalActivityPolicies.Kind.ASSURANCE,
+                    Map.of("quality", artifacts.get("quality").digest()));
+            runStep(source, request, resolved, "review", TemporalActivityPolicies.Kind.LLM, Map.of(
+                    "plan", artifacts.get("plan").digest(), "patch", artifacts.get("patch").digest(),
+                    "tests", artifacts.get("tests").digest(), "quality", artifacts.get("quality").digest(),
+                    "security", artifacts.get("security").digest()));
+            currentStep = "prepare-delivery";
+            pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
+                    new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
+                            resolved.sourceCommit()));
+        } catch (RuntimeException failure) {
+            if (!isBusinessGateFailure(failure)) throw failure;
+            phase = "GATE_REJECTED:" + currentStep;
+            pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordGateRejection(
+                    new PipelineExecutionActivities.GateRejection(request.taskId(), request.attemptId(),
+                            resolved.sourceCommit(), currentStep));
+            List<String> chronology = new java.util.ArrayList<>();
+            chronology.add("SOURCE_RESOLVED:" + resolved.sourceCommit());
+            artifacts.keySet().forEach(name -> chronology.add("EVIDENCE_PRESERVED:" + name));
+            chronology.add("GATE_REJECTED:" + currentStep);
+            return new SoftwareFactoryWorkflow.Result(request.taskId(), request.attemptId(),
+                    resolved.sourceCommit(), phase, chronology, List.of(), Map.of(),
+                    null, null, null, null);
+        }
         phase = "WAITING_APPROVAL";
         SoftwareFactoryWorkflow.Result coordinated = delegate.run(request.withResolvedSource(resolved.sourceCommit()));
         List<String> chronology = new java.util.ArrayList<>();
@@ -66,9 +83,15 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 coordinated.cancellationReason(), coordinated.independentReview());
     }
 
+    static boolean isBusinessGateFailure(Throwable failure) {
+        return TemporalFailureClassifier.classify(failure).type()
+                == TemporalFailureClassifier.Type.BUSINESS_REJECTION;
+    }
+
     private void generateAndRepairPatch(SoftwareFactoryWorkflow.SourceLocation source,
                                         SoftwareFactoryWorkflow.Request request,
                                         SourceResolutionActivities.Result resolved) {
+        currentStep = "generate-patch";
         PipelineExecutionActivities llm = pipeline(source, "llm", TemporalActivityPolicies.Kind.LLM);
         PipelineExecutionActivities sandbox = pipeline(source, "sandbox", TemporalActivityPolicies.Kind.SANDBOX);
         var generated = command(request, resolved, "generate-patch-candidate",
@@ -110,6 +133,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                          SourceResolutionActivities.Result resolved, String step,
                          TemporalActivityPolicies.Kind kind, Map<String, String> inputDigests) {
         phase = "RUNNING_" + step.toUpperCase(java.util.Locale.ROOT).replace('-', '_');
+        currentStep = step;
         var command = command(request, resolved, step, inputDigests);
         var result = pipeline(source, workerKind(step), kind).execute(
                 new PipelineExecutionActivities.StepRequest(command, resolved.workspace()));
