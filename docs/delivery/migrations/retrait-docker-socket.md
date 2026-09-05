@@ -128,7 +128,7 @@ cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir l
 
 - [x] `docker compose up --build` démarre toute la pile sur macOS.
 - [x] Les cinq opérations sandbox passent dans le mode `compose`.
-- [ ] Timeout, annulation et redémarrage du MCP ne laissent aucun processus de job actif.
+- [x] Timeout, annulation et redémarrage du MCP ne laissent aucun processus de job actif.
 - [x] Aucun service local ne monte la socket Docker.
 - [x] Le runner ne reçoit jamais de commande libre depuis le réseau.
 

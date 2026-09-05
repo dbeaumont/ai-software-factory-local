@@ -21,6 +21,7 @@
 | `run_security` | conforme, verdict bloquant | Syft produit un SBOM CycloneDX ; Trivy termine le scan avec le code métier `1` après avoir détecté trois vulnérabilités critiques dans Tomcat `11.0.24`. |
 | Cache sécurité | conforme | la base Trivy est téléchargée dans le volume persistant inscriptible ; aucun épuisement du tmpfs de 64 Mio. |
 | Artefacts | conforme | SBOM de 9 802 octets et rapport Trivy de 5 255 octets présents dans `.ai-factory/`. |
+| Redémarrage et réconciliation | conforme | une exécution Maven longue, active avant redémarrage du MCP, est annulée au redémarrage ; le runner retourne ensuite `execution_ids: []`. |
 
 Un code `1` de Trivy est ici le résultat attendu du contrôle de sécurité : l'opération et
 l'infrastructure ont réussi, puis la politique a refusé un composant vulnérable. Les versions corrigées
@@ -37,6 +38,7 @@ indiquées par la base commencent à Tomcat `11.0.25`.
 - `git diff --check` : aucun défaut de whitespace.
 - Les tests de contrat partagés Compose/GKE couvrent le mapping des opérations, les résultats normalisés,
   les timeouts et le refus des profils non autorisés.
+- Les tests de cycle de vie couvrent l'annulation et la suppression du groupe de processus complet au timeout.
 
 ## Limites de cette preuve
 
