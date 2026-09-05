@@ -19,3 +19,13 @@ orchestrateur
 
 Les runners persistants restent réservés au développement local. Les environnements partagés utilisent
 `GkeSandboxRuntime` et `KubernetesGkeJobController` avec Jobs GKE/gVisor.
+
+
+A voir :
+- voir pour avoir un contexte d'architecture sous forme de PDF, DOCX, etc
+- Voir pour reprise des projets existants
+  . Proposition de refonte dans les résultats
+- Mise en place de OpenTelemetry à la place de Prométheus + grafana?
+- Mise en place d'acrans de supervision :
+  . fonctionnelle :   ajouter des opérations de maintenance (logs, stop, retry, continue, ...)
+  . technique : performances, finops
