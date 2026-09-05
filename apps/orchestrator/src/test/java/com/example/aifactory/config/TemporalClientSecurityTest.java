@@ -25,6 +25,16 @@ class TemporalClientSecurityTest {
     }
 
     @Test
+    void attachesTheMetricsScopeToTheTemporalServiceClient() {
+        var scope = new com.uber.m3.tally.NoopScope();
+
+        var options = TemporalClientSecurity.build(
+                properties(new TemporalProperties.Security(false, "", "", "", "")), scope);
+
+        assertThat(options.getMetricsScope()).isSameAs(scope);
+    }
+
+    @Test
     void rejectsSecretsReadableByGroupOrOthers() throws Exception {
         Path key = root.resolve("api-key");
         Files.writeString(key, "temporal-secret-token");

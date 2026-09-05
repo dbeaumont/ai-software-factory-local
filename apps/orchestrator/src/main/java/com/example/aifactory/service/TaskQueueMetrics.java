@@ -5,6 +5,7 @@ import com.example.aifactory.config.TemporalProperties;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.temporal.failure.TimeoutFailure;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -51,10 +53,17 @@ public final class TaskQueueMetrics {
     }
 
     public Lease start(String taskQueue, long scheduledTimestampMillis, long startedTimestampMillis) {
+        return start(taskQueue, scheduledTimestampMillis, startedTimestampMillis, 1);
+    }
+
+    public Lease start(String taskQueue, long scheduledTimestampMillis, long startedTimestampMillis, int attempt) {
         String perimeter = perimeterByQueue.getOrDefault(taskQueue, "unknown");
         long waitMillis = Math.max(0, startedTimestampMillis - scheduledTimestampMillis);
         Timer.builder("ai_task_queue_wait").tag("perimeter", perimeter)
                 .register(registry).record(waitMillis, TimeUnit.MILLISECONDS);
+        if (attempt > 1) {
+            registry.counter("ai_temporal_activity_retries", "perimeter", perimeter).increment();
+        }
         AtomicInteger active = activeByPerimeter.get(perimeter);
         if (active == null) return () -> { };
         active.incrementAndGet();
@@ -62,6 +71,20 @@ public final class TaskQueueMetrics {
         return () -> {
             if (closed.compareAndSet(false, true)) active.decrementAndGet();
         };
+    }
+
+    public void recordWorkflowFailure(String taskQueue, Throwable failure) {
+        if (isTimeout(failure)) {
+            registry.counter("ai_temporal_timeouts", "perimeter",
+                    perimeterByQueue.getOrDefault(taskQueue, "unknown")).increment();
+        }
+    }
+
+    private static boolean isTimeout(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            if (current instanceof TimeoutFailure || current instanceof TimeoutException) return true;
+        }
+        return false;
     }
 
     @FunctionalInterface

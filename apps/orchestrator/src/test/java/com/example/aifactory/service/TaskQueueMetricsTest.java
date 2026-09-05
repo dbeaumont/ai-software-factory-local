@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,5 +39,20 @@ class TaskQueueMetricsTest {
 
         assertThat(registry.find("ai_task_queue_active").tag("perimeter", "task-controlled-name").gauge())
                 .isNull();
+    }
+
+    @Test
+    void countsRetriedActivityAttemptsAndTerminalTimeouts() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        TaskQueueMetrics metrics = new TaskQueueMetrics(registry, Map.of("llm", "ai-factory-llm"), 4);
+
+        metrics.start("ai-factory-llm", 1_000, 1_010, 1).close();
+        metrics.start("ai-factory-llm", 2_000, 2_020, 2).close();
+        metrics.recordWorkflowFailure("ai-factory-llm", new RuntimeException(new TimeoutException("late")));
+
+        assertThat(registry.get("ai_temporal_activity_retries").tag("perimeter", "llm")
+                .counter().count()).isEqualTo(1);
+        assertThat(registry.get("ai_temporal_timeouts").tag("perimeter", "llm")
+                .counter().count()).isEqualTo(1);
     }
 }

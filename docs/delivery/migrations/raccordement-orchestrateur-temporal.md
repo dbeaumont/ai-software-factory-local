@@ -353,8 +353,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   type et activity type aux traces, métriques et logs selon les règles de cardinalité. _(L'intercepteur enrichit
   chaque observation et le MDC avec les huit dimensions Temporal ; namespace, queue et types restent des tags
   métriques bornés, tandis que task, attempt, workflow et run IDs sont réservés à la corrélation haute cardinalité.)_
-- [ ] **TEMP-081 — Mesurer les files.** Collecter backlog, schedule-to-start, retries, timeouts, pollers,
-  saturation et workflows bloqués en attente humaine.
+- [x] **TEMP-081 — Mesurer les files.** Collecter backlog, schedule-to-start, retries, timeouts, pollers,
+  saturation et workflows bloqués en attente humaine. _(Le reporter Micrometer natif du SDK publie pollers, slots,
+  erreurs et latences schedule-to-start ; une sonde bornée `DescribeTaskQueue` complète backlog et pollers par
+  périmètre/type, l'intercepteur compte retries et timeouts, et PostgreSQL alimente la jauge d'attente humaine.)_
 - [ ] **TEMP-082 — Compléter le dashboard SigNoz Temporal.** Ajouter santé client/worker, files par périmètre,
   erreurs d'activités et liens profonds vers Temporal UI.
 - [ ] **TEMP-083 — Ajouter les alertes.** Couvrir absence de poller, backlog durable, erreur non déterministe,

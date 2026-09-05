@@ -47,10 +47,15 @@ public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBas
                         bounded(info.getWorkflowId()), bounded(info.getRunId()), bounded(info.getWorkflowId()),
                         bounded(info.getWorkflowType()));
                 Correlation correlation = correlation(info.getRootWorkflowId().orElse(info.getWorkflowId()));
-                return tracer.traceTemporal(kind, identity, info.getWorkflowType(),
-                        new ExecutionTracer.TemporalContext(info.getNamespace(), info.getTaskQueue(),
-                                info.getWorkflowType(), "none", correlation.taskId(), correlation.attemptId(),
-                                info.getWorkflowId(), info.getRunId()), () -> super.execute(input));
+                try {
+                    return tracer.traceTemporal(kind, identity, info.getWorkflowType(),
+                            new ExecutionTracer.TemporalContext(info.getNamespace(), info.getTaskQueue(),
+                                    info.getWorkflowType(), "none", correlation.taskId(), correlation.attemptId(),
+                                    info.getWorkflowId(), info.getRunId()), () -> super.execute(input));
+                } catch (RuntimeException failure) {
+                    queueMetrics.recordWorkflowFailure(info.getTaskQueue(), failure);
+                    throw failure;
+                }
             }
         };
     }
@@ -73,7 +78,7 @@ public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBas
                         bounded(info.getWorkflowId()), bounded(info.getWorkflowRunId()),
                         bounded(info.getActivityId()), bounded(info.getActivityRunId()));
                 try (TaskQueueMetrics.Lease ignored = queueMetrics.start(info.getActivityTaskQueue(),
-                        info.getCurrentAttemptScheduledTimestamp(), info.getStartedTimestamp())) {
+                        info.getCurrentAttemptScheduledTimestamp(), info.getStartedTimestamp(), info.getAttempt())) {
                     Correlation correlation = correlation(info.getWorkflowId());
                     return tracer.traceTemporal(ExecutionTracer.SpanKind.ACTIVITY, identity,
                             info.getActivityType(), new ExecutionTracer.TemporalContext(

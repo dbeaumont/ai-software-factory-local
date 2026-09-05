@@ -2,6 +2,7 @@ package com.example.aifactory.config;
 
 import io.temporal.serviceclient.SimpleSslContextBuilder;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
+import com.uber.m3.tally.Scope;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -21,8 +22,13 @@ final class TemporalClientSecurity {
     private TemporalClientSecurity() {}
 
     static WorkflowServiceStubsOptions build(TemporalProperties properties) {
+        return build(properties, null);
+    }
+
+    static WorkflowServiceStubsOptions build(TemporalProperties properties, Scope metricsScope) {
         WorkflowServiceStubsOptions.Builder builder = WorkflowServiceStubsOptions.newBuilder()
                 .setTarget(properties.target());
+        if (metricsScope != null) builder.setMetricsScope(metricsScope);
         TemporalProperties.Security security = properties.security();
         if (!security.tlsEnabled()) return builder.build();
 

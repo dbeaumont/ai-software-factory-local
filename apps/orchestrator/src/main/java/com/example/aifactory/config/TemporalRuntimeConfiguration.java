@@ -4,6 +4,11 @@ import com.example.aifactory.workflow.temporal.TemporalWorkerRegistry;
 import com.example.aifactory.workflow.temporal.TemporalActivityAdapters;
 import com.example.aifactory.workflow.temporal.TemporalTraceContextPropagator;
 import com.example.aifactory.workflow.temporal.TemporalWorkerTracingInterceptor;
+import com.uber.m3.tally.RootScopeBuilder;
+import com.uber.m3.tally.Scope;
+import com.uber.m3.util.Duration;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.temporal.common.reporter.MicrometerClientStatsReporter;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -15,9 +20,16 @@ import org.springframework.context.annotation.Configuration;
 /** Mandatory production Temporal SDK graph. Worker polling starts only through the lifecycle gate. */
 @Configuration(proxyBeanMethods = false)
 public class TemporalRuntimeConfiguration {
+    @Bean(destroyMethod = "close")
+    Scope temporalMetricsScope(MeterRegistry registry) {
+        return new RootScopeBuilder()
+                .reporter(new MicrometerClientStatsReporter(registry))
+                .reportEvery(Duration.ofSeconds(10));
+    }
+
     @Bean(destroyMethod = "shutdown")
-    WorkflowServiceStubs temporalWorkflowServiceStubs(TemporalProperties properties) {
-        return WorkflowServiceStubs.newServiceStubs(TemporalClientSecurity.build(properties));
+    WorkflowServiceStubs temporalWorkflowServiceStubs(TemporalProperties properties, Scope temporalMetricsScope) {
+        return WorkflowServiceStubs.newServiceStubs(TemporalClientSecurity.build(properties, temporalMetricsScope));
     }
 
     @Bean
