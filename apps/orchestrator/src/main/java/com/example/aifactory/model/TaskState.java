@@ -37,6 +37,7 @@ public class TaskState {
     public boolean humanApproved;
     public String review;
     public PendingEffect pendingEffect;
+    public Instant approvalExpiresAt;
     public String pullRequestUrl;
     public String error;
     public final List<AgentStep> steps = new ArrayList<>();
@@ -285,6 +286,7 @@ public class TaskState {
         pendingEffect = new PendingEffect(pendingEffect.tool(), pendingEffect.safeArguments(), pendingEffect.impact(),
                 pendingEffect.policyDecision(), pendingEffect.confirmationRequired(), manifestId, manifestUri,
                 manifestDigest);
+        approvalExpiresAt = Instant.now().plus(java.time.Duration.ofHours(1));
         updatedAt = Instant.now();
     }
 
@@ -348,6 +350,7 @@ public class TaskState {
         humanApproved = false;
         review = null;
         pendingEffect = null;
+        approvalExpiresAt = null;
         pullRequestUrl = null;
         error = null;
         artifacts.clear();

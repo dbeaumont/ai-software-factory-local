@@ -12,6 +12,7 @@ import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.model.TaskView;
 import com.example.aifactory.workflow.WorkflowCoordinator;
 import com.example.aifactory.workflow.TaskMemory;
+import com.example.aifactory.workflow.temporal.TemporalCommandConflictException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
@@ -104,16 +105,28 @@ public class TaskService {
         }
         TaskState state = requireTask(id);
         synchronized (state) {
-            if (state.pendingEffect == null || state.pendingEffect.manifestId() == null
-                    || !state.pendingEffect.manifestId().equals(request.manifestId())
+            if (state.pendingEffect == null || state.pendingEffect.manifestId() == null) {
+                throw new TemporalCommandConflictException(
+                        TemporalCommandConflictException.Reason.PROJECTION_LAG,
+                        "Approval manifest is not projected yet; reload the task");
+            }
+            if (!state.pendingEffect.manifestId().equals(request.manifestId())
                     || !state.pendingEffect.manifestDigest().equals(request.manifestDigest())) {
-                throw new IllegalStateException("Approval manifest changed; reload the task before approving");
+                throw new TemporalCommandConflictException(TemporalCommandConflictException.Reason.STALE_DIGEST,
+                        "Approval manifest changed; reload the task before approving");
+            }
+            if (state.approvalExpiresAt != null && !state.approvalExpiresAt.isAfter(java.time.Instant.now())) {
+                throw new TemporalCommandConflictException(TemporalCommandConflictException.Reason.APPROVAL_EXPIRED,
+                        "Approval manifest has expired; request a new attempt");
             }
             return approve(state);
         }
     }
 
     private TaskView approve(TaskState state) {
+        if (state.humanApproved && (state.status == TaskStatus.APPROVED || state.status == TaskStatus.PR_CREATED)) {
+            return state.view();
+        }
         if (state.status != TaskStatus.WAITING_APPROVAL)
             throw new IllegalStateException("Task is not waiting for approval");
         if (state.hasPendingHumanActions())

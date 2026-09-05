@@ -22,15 +22,41 @@ final class TemporalWorkflowCommands {
     }
 
     void approve(String workflowId, SoftwareFactoryWorkflow.ApprovalSignal signal) {
-        client.newWorkflowStub(SoftwareFactoryExecutionWorkflowV1.class, workflowId).approve(signal);
+        signal(workflowId, workflow -> workflow.approve(signal));
     }
 
     void decide(String workflowId, SoftwareFactoryWorkflow.HumanDecisionSignal signal) {
-        client.newWorkflowStub(SoftwareFactoryExecutionWorkflowV1.class, workflowId).decide(signal);
+        signal(workflowId, workflow -> workflow.decide(signal));
     }
 
     void cancel(String workflowId, SoftwareFactoryWorkflow.CancellationSignal signal) {
-        client.newWorkflowStub(SoftwareFactoryExecutionWorkflowV1.class, workflowId).cancel(signal);
+        signal(workflowId, workflow -> workflow.cancel(signal));
+    }
+
+    private void signal(String workflowId, java.util.function.Consumer<SoftwareFactoryExecutionWorkflowV1> signal) {
+        try {
+            signal.accept(client.newWorkflowStub(SoftwareFactoryExecutionWorkflowV1.class, workflowId));
+        } catch (RuntimeException failure) {
+            TemporalCommandConflictException.Reason reason = classifySignalFailure(failure);
+            if (reason == TemporalCommandConflictException.Reason.WORKFLOW_ABSENT)
+                throw new TemporalCommandConflictException(reason, "Temporal workflow does not exist", failure);
+            if (reason == TemporalCommandConflictException.Reason.WORKFLOW_TERMINATED)
+                throw new TemporalCommandConflictException(reason,
+                        "Temporal workflow is no longer accepting commands", failure);
+            throw failure;
+        }
+    }
+
+    static TemporalCommandConflictException.Reason classifySignalFailure(RuntimeException failure) {
+        String type = failure.getClass().getSimpleName();
+        String message = String.valueOf(failure.getMessage()).toLowerCase(java.util.Locale.ROOT);
+        if (type.contains("WorkflowNotFound") || message.contains("not found")) {
+            return TemporalCommandConflictException.Reason.WORKFLOW_ABSENT;
+        }
+        if (message.contains("closed") || message.contains("completed") || message.contains("terminated")) {
+            return TemporalCommandConflictException.Reason.WORKFLOW_TERMINATED;
+        }
+        return null;
     }
 
     record ExecutionIdentity(String workflowId, String runId) {

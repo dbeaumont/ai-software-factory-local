@@ -67,6 +67,10 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
                 || task.pendingEffect.manifestDigest() == null) {
             throw new IllegalStateException("A manifest-bound human approval is required");
         }
+        if (task.approvalExpiresAt != null && !task.approvalExpiresAt.isAfter(Instant.now())) {
+            throw new TemporalCommandConflictException(TemporalCommandConflictException.Reason.APPROVAL_EXPIRED,
+                    "Approval manifest has expired; request a new attempt");
+        }
         String attemptId = task.workflowAttemptId;
         commands.approve(TemporalIds.workflow(task.id, attemptId), new SoftwareFactoryWorkflow.ApprovalSignal(
                 task.id, attemptId, task.pendingEffect.manifestId(), task.pendingEffect.manifestDigest(),
@@ -77,6 +81,18 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
     public void answerHumanDecision(TaskState task, String requestId, HumanDecisionResponse response) {
         requireTask(task);
         if (response == null) throw new IllegalArgumentException("Human decision response is required");
+        com.example.aifactory.model.TaskView.HumanActionView action = task.humanActions.get(requestId);
+        if (action == null) {
+            throw new TemporalCommandConflictException(TemporalCommandConflictException.Reason.PROJECTION_LAG,
+                    "Human decision request is not projected yet; reload the task");
+        }
+        if ("ANSWERED".equals(action.status())) {
+            com.example.aifactory.model.TaskView.DecisionView applied = task.decisions.get("human-" + requestId);
+            if (applied != null && response.decision().equals(applied.decision())
+                    && response.actor().equals(applied.author())) return;
+            throw new TemporalCommandConflictException(TemporalCommandConflictException.Reason.STALE_DIGEST,
+                    "Human decision was already answered differently");
+        }
         task.requireHumanActionAnswer(requestId, response.decision(), response.objectDigest(),
                 response.actor(), response.actorRole());
         String attemptId = task.workflowAttemptId;

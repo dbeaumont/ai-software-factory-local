@@ -284,8 +284,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   _(Le retry autorisé ouvre `pipeline-N` avec un nouveau Workflow ID et un payload de filiation contenant la
   tentative précédente et le digest du motif. L'idempotence SCM inclut le nouvel attempt ID ; la route, le bouton
   et la mutation de fallback local sont supprimés.)_
-- [ ] **TEMP-066 — Gérer les conflits de commande.** Définir les réponses pour workflow absent, terminé,
-  approbation expirée, digest périmé, signal dupliqué et projection en retard.
+- [x] **TEMP-066 — Gérer les conflits de commande.** Définir les réponses pour workflow absent, terminé,
+  approbation expirée, digest périmé, signal dupliqué et projection en retard. _(Une erreur applicative 409 expose
+  un code stable pour chaque conflit ; approbation, décision et annulation identiques sont idempotentes une fois
+  projetées, tandis que les divergences et expirations ferment la commande avant signal.)_
 - [ ] **TEMP-067 — Auditer les commandes.** Journaliser l'intention et le résultat avec corrélation, sans contenu
   sensible ni secret.
 

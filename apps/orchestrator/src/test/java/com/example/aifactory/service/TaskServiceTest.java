@@ -226,6 +226,22 @@ class TaskServiceTest {
     }
 
     @Test
+    void distinguishesProjectionLagFromAStaleApprovalDigest() {
+        TestableTaskService service = new TestableTaskService();
+        TaskState state = new TaskState("task-178", "AF-0178", new TaskRequest(
+                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
+        state.status = TaskStatus.WAITING_APPROVAL;
+        service.memory.save(state);
+
+        var lag = assertThrows(com.example.aifactory.workflow.temporal.TemporalCommandConflictException.class,
+                () -> service.approveManifest(state.id,
+                        new ManifestApprovalRequest("a".repeat(64), "b".repeat(64))));
+
+        assertEquals(com.example.aifactory.workflow.temporal.TemporalCommandConflictException.Reason.PROJECTION_LAG,
+                lag.reason());
+    }
+
+    @Test
     void auditsApprovalIntent() {
         HashChainedSecurityAuditJournal journal = new HashChainedSecurityAuditJournal(new byte[32]);
         TestableTaskService service = new TestableTaskService(new InMemoryTaskMemory(), journal);

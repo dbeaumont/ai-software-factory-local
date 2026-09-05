@@ -164,6 +164,44 @@ class TemporalWorkflowCoordinatorTest {
         assertThat(task.delegations.get("code-1").status()).isEqualTo("RETRY_REQUESTED");
     }
 
+    @Test
+    void treatsAnAlreadyProjectedIdenticalHumanDecisionAsIdempotent() {
+        TaskState task = task();
+        String digest = "d".repeat(64);
+        task.recordHumanAction("architecture-1", "contradiction-1", "ARCHITECTURE", "Choose API", digest,
+                "PENDING");
+        task.answerHumanAction("architecture-1", "REST", digest, "architect@example.test", "ARCHITECTURE");
+
+        coordinator.answerHumanDecision(task, "architecture-1",
+                new HumanDecisionResponse("REST", digest, "architect@example.test", "ARCHITECTURE"));
+
+        org.mockito.Mockito.verify(commands, org.mockito.Mockito.never()).decide(any(), any());
+    }
+
+    @Test
+    void rejectsAnExpiredApprovalBeforeSignallingTemporal() {
+        TaskState task = task();
+        task.pendingEffect = new PendingEffect("scm.create_draft_pull_request", Map.of(), "Create draft PR",
+                "ALLOW", true, "a".repeat(64), "evidence://manifest/a", "b".repeat(64));
+        task.approvalExpiresAt = java.time.Instant.parse("2000-01-01T00:00:00Z");
+
+        assertThatThrownBy(() -> coordinator.resumeAfterApproval(task))
+                .isInstanceOf(TemporalCommandConflictException.class)
+                .extracting(error -> ((TemporalCommandConflictException) error).reason())
+                .isEqualTo(TemporalCommandConflictException.Reason.APPROVAL_EXPIRED);
+        org.mockito.Mockito.verify(commands, org.mockito.Mockito.never()).approve(any(), any());
+    }
+
+    @Test
+    void classifiesAbsentAndClosedWorkflowSignalFailures() {
+        assertThat(TemporalWorkflowCommands.classifySignalFailure(
+                new IllegalStateException("workflow not found")))
+                .isEqualTo(TemporalCommandConflictException.Reason.WORKFLOW_ABSENT);
+        assertThat(TemporalWorkflowCommands.classifySignalFailure(
+                new IllegalStateException("workflow execution already completed")))
+                .isEqualTo(TemporalCommandConflictException.Reason.WORKFLOW_TERMINATED);
+    }
+
     private static TaskState task() {
         return new TaskState("task-1", "AF-0001", new TaskRequest(
                 "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
