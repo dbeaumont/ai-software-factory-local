@@ -455,8 +455,8 @@ différée afin de rester récupérable.
 - [x] Interdire un rollback partiel qui mélangerait export OTLP et ancienne configuration applicative.
 - [x] Arrêter Collector/SigNoz avant de redéployer la version Prometheus/Grafana précédente.
 - [x] Documenter la restauration des notifications historiques sans doublons.
-- [ ] Tester le rollback après panne Collector, défaut backend, perte de métrique et alerte manquante.
-- [ ] Vérifier que le rollback ne réactive aucune capture de donnée sensible.
+- [x] Tester le rollback après panne Collector, défaut backend, perte de métrique et alerte manquante.
+- [x] Vérifier que le rollback ne réactive aucune capture de donnée sensible.
 - [x] Définir l'autorité pouvant déclencher le rollback et le délai de décision.
 - [ ] Supprimer sauvegardes et tag de rollback uniquement après approbation formelle de la stabilité.
 
