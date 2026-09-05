@@ -441,7 +441,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester `continue-as-new` et propagation de l'état minimal. _(Trois délégations avec une limite d'une par run
   traversent deux `continue-as-new` sans perte ni doublon ; le contrat transmis est verrouillé aux index/génération,
   résultats compacts, chronologie et signaux reçus, sans exigence, URL, workspace ni contenu d'artefact.)_
-- [ ] Tester child workflows parallèles, échec en cascade et revue indépendante.
+- [x] Tester child workflows parallèles, échec en cascade et revue indépendante. _(Les tests démarrent tous les
+  enfants prêts avant toute attente, propagent transitivement l'échec aux seuls dépendants, annulent enfant et
+  activité avec la racine, et imposent une revue indépendante lancée par la racine après consolidation.)_
 - [ ] Tester l'unicité de l'effet SCM après perte d'accusé de réception.
 
 ### 12.3 Tests de replay et compatibilité
