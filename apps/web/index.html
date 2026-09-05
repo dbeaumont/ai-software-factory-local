@@ -20,6 +20,7 @@
       .topnav-submenu { position: absolute; top: calc(100% - 1px); left: 0; min-width: 150px; padding: 5px 0; border: 1px solid var(--line); background: #fff; box-shadow: 0 4px 10px #091e4226; }
       .topnav-submenu a { display: block; padding: 10px 14px; white-space: nowrap; }
       .topnav-submenu a:hover { background: var(--blue-soft); }
+      .projection-warning { margin: 12px 0; padding: 9px; border-left: 3px solid #f5a623; color: var(--amber); background: #fff7d6; font-size: 12px; line-height: 1.45; }
       .tools-launcher { position: relative; display: flex; align-items: stretch; }
       .tools-launcher summary { display: grid; width: 52px; place-items: center; color: var(--navy); cursor: pointer; list-style: none; }
       .tools-launcher summary::-webkit-details-marker { display: none; }
@@ -82,6 +83,7 @@
               <div class="status-topline"><span id="status-indicator" class="status-indicator"></span><span id="status-label">QUEUED</span><span id="task-llm-mode" class="task-llm-mode">CLOUD</span><span id="task-id" class="task-id"></span></div>
               <h2 id="task-summary"></h2>
               <p id="task-detail" class="status-detail"></p>
+              <p id="projection-warning" class="projection-warning" role="alert" hidden></p>
               <div id="operator-actions" class="operator-actions" hidden><button id="cancel-task-button" type="button">Annuler</button></div>
               <div class="pipeline-summary"><span id="pipeline-progress">0/9 opérations terminées</span><span>PIPELINE</span></div>
               <div class="progress-line"><span id="progress-bar"></span></div>

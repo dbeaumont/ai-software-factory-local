@@ -9,6 +9,8 @@ import com.example.aifactory.workflow.EvidenceRepository;
 import com.example.aifactory.workflow.TaskMemory;
 import com.example.aifactory.workflow.temporal.TemporalIds;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -17,6 +19,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
@@ -29,13 +32,25 @@ public final class PostgresTaskMemory implements TaskMemory {
     private final TransactionTemplate transactions;
     private final EvidenceRepository evidence;
     private final ObjectMapper mapper;
+    private final Duration staleAfter;
 
+    @Autowired
     public PostgresTaskMemory(JdbcTemplate jdbc, TransactionTemplate transactions,
-                              EvidenceRepository evidence, ObjectMapper mapper) {
+                              EvidenceRepository evidence, ObjectMapper mapper,
+                              @Value("${ai-factory.temporal.projection-stale-after:PT30S}") Duration staleAfter) {
         this.jdbc = jdbc;
         this.transactions = transactions;
         this.evidence = evidence;
         this.mapper = mapper;
+        if (staleAfter == null || staleAfter.isNegative() || staleAfter.isZero()) {
+            throw new IllegalArgumentException("Projection stale threshold must be positive");
+        }
+        this.staleAfter = staleAfter;
+    }
+
+    PostgresTaskMemory(JdbcTemplate jdbc, TransactionTemplate transactions,
+                       EvidenceRepository evidence, ObjectMapper mapper) {
+        this(jdbc, transactions, evidence, mapper, Duration.ofSeconds(30));
     }
 
     @Override
@@ -125,6 +140,19 @@ public final class PostgresTaskMemory implements TaskMemory {
                         + "WHERE task_id = ? AND attempt_id = ? AND event_id = ?",
                 Integer.class, taskId, attemptId, eventId);
         return count != null && count > 0;
+    }
+
+    @Override
+    public Optional<ProjectionStatus> projectionStatus(String taskId) {
+        List<ProjectionStatus> status = jdbc.query("SELECT task_id, attempt_id, last_event_position, "
+                        + "last_event_id, projected_at FROM task_projection_snapshots WHERE task_id = ?",
+                (row, index) -> {
+                    Instant projectedAt = row.getObject(5, java.time.OffsetDateTime.class).toInstant();
+                    long age = Math.max(0, Duration.between(projectedAt, Instant.now()).toMillis());
+                    return new ProjectionStatus(row.getString(1), row.getString(2), row.getLong(3),
+                            row.getString(4), projectedAt, age, age > staleAfter.toMillis());
+                }, taskId);
+        return status.stream().findFirst();
     }
 
     private EvidenceRepository.StoredEvidence storeSnapshot(TaskState state) {

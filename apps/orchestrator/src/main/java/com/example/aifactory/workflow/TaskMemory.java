@@ -4,6 +4,7 @@ import com.example.aifactory.model.TaskState;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 /** Persistence-neutral port for workflow task state. */
 public interface TaskMemory {
@@ -39,7 +40,14 @@ public interface TaskMemory {
         return false;
     }
 
+    default Optional<ProjectionStatus> projectionStatus(String taskId) {
+        return Optional.empty();
+    }
+
     Optional<TaskState> find(String taskId);
 
     List<TaskState> list();
+
+    record ProjectionStatus(String taskId, String attemptId, long position, String eventId,
+                            Instant projectedAt, long ageMillis, boolean potentiallyStale) {}
 }

@@ -142,6 +142,7 @@ ai-factory:
     max-depth: ${AI_FACTORY_DELEGATION_MAX_DEPTH:2}
     max-fan-out: ${AI_FACTORY_DELEGATION_MAX_FAN_OUT:4}
   temporal:
+    projection-stale-after: ${AI_FACTORY_TEMPORAL_PROJECTION_STALE_AFTER:30s}
     target: ${AI_FACTORY_TEMPORAL_TARGET:temporal:7233}
     namespace: ${AI_FACTORY_TEMPORAL_NAMESPACE:ai-factory-local}
     namespace-retention: ${AI_FACTORY_TEMPORAL_NAMESPACE_RETENTION:P7D}

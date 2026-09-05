@@ -320,8 +320,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   idempotentes ou depuis l'historique Temporal avec un curseur durable. _(Toutes les activités projettent via leur
   activity ID stable ; PostgreSQL committe atomiquement snapshot vérifié, clé d'idempotence et position monotone,
   de sorte qu'un retry déjà appliqué ne modifie ni état, ni compteurs, ni transitions.)_
-- [ ] **TEMP-075 — Détecter le retard.** Exposer l'âge et la position de projection et signaler une vue
-  potentiellement obsolète sans inventer un succès.
+- [x] **TEMP-075 — Détecter le retard.** Exposer l'âge et la position de projection et signaler une vue
+  potentiellement obsolète sans inventer un succès. _(L'API `/api/tasks/{id}/projection` expose tentative,
+  curseur, event ID, instant et âge ; le seuil est configurable, et l'interface affiche un avertissement explicite
+  lorsque la vue est potentiellement obsolète ou lorsque sa fraîcheur ne peut pas être déterminée.)_
 - [ ] **TEMP-076 — Reconstruire une tâche.** Rejouer l'historique Temporal et vérifier les digests Evidence avant
   remplacement atomique de la projection.
 - [ ] **TEMP-077 — Reconstruire toutes les projections.** Ajouter une commande opérateur bornée, observable et

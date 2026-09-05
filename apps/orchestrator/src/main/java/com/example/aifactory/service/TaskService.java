@@ -96,6 +96,12 @@ public class TaskService {
         return memory.list().stream().map(TaskState::view).toList();
     }
 
+    public TaskMemory.ProjectionStatus projectionStatus(String id) {
+        requireTask(id);
+        return memory.projectionStatus(id)
+                .orElseThrow(() -> new IllegalStateException("Task projection status is unavailable"));
+    }
+
     public TaskView approve(String id) {
         TaskState state = requireTask(id);
         if (state.pendingEffect != null && state.pendingEffect.manifestId() != null) {

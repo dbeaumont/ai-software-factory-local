@@ -31,6 +31,11 @@ public class TaskController {
     @GetMapping("/{id}")
     public TaskView get(@PathVariable String id) { return tasks.get(id); }
 
+    @GetMapping("/{id}/projection")
+    public com.example.aifactory.workflow.TaskMemory.ProjectionStatus projection(@PathVariable String id) {
+        return tasks.projectionStatus(id);
+    }
+
     @PostMapping("/{id}/approve")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public TaskView approve(@PathVariable String id) { return tasks.approve(id); }

@@ -198,6 +198,24 @@ class PostgresTaskMemoryTest {
                 String.class, task.id)).isEqualTo("activity/task-event/plan/1");
     }
 
+    @Test
+    void exposesCursorAgeAndPotentialStalenessWithoutChangingTaskStatus() {
+        TaskState task = task("task-lag");
+        memory.save(task);
+        jdbc.update("UPDATE task_projection_snapshots SET projected_at = ? WHERE task_id = ?",
+                Instant.now().minusSeconds(60), task.id);
+
+        com.example.aifactory.workflow.TaskMemory.ProjectionStatus status =
+                memory.projectionStatus(task.id).orElseThrow();
+
+        assertThat(status.taskId()).isEqualTo(task.id);
+        assertThat(status.attemptId()).isEqualTo("pipeline-1");
+        assertThat(status.position()).isZero();
+        assertThat(status.ageMillis()).isGreaterThanOrEqualTo(59_000);
+        assertThat(status.potentiallyStale()).isTrue();
+        assertThat(memory.find(task.id).orElseThrow().status).isEqualTo(TaskStatus.QUEUED);
+    }
+
     private static TaskState task(String id) {
         return new TaskState(id, "AF-0001",
                 new TaskRequest("https://gitea.example/aiadmin/customer-api.git", "main",

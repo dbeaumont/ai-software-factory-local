@@ -10,6 +10,7 @@ const ticketKey = document.querySelector('#ticket-key');
 const ticketTitle = document.querySelector('#ticket-title');
 const taskSummary = document.querySelector('#task-summary');
 const taskDetail = document.querySelector('#task-detail');
+const projectionWarning = document.querySelector('#projection-warning');
 const progressBar = document.querySelector('#progress-bar');
 const steps = document.querySelector('#steps');
 const pipelineProgress = document.querySelector('#pipeline-progress');
@@ -164,6 +165,8 @@ function resetTicketDraft() {
   ticketTitle.textContent = "Créer un ticket pour l'usine";
   taskSummary.textContent = '';
   taskDetail.textContent = '';
+  projectionWarning.hidden = true;
+  projectionWarning.textContent = '';
   progressBar.style.width = '8%';
   pipelineProgress.textContent = '0/9 opérations terminées';
   steps.replaceChildren();
@@ -327,6 +330,7 @@ function renderExecutionList(tasks) {
     row.addEventListener('click', () => {
       activeTaskId = task.id;
       renderTask(task);
+      refreshProjectionStatus();
       showView('ticket');
       clearInterval(pollTimer);
       if (!isFinished(task.status)) pollTimer = setInterval(refreshTask, 3000);
@@ -669,6 +673,22 @@ function renderTask(task) {
   if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);
 }
 
+async function refreshProjectionStatus() {
+  if (!activeTaskId) return;
+  try {
+    const response = await fetch(`/api/tasks/${activeTaskId}/projection`);
+    if (!response.ok) throw new Error('Projection status unavailable');
+    const projection = await response.json();
+    projectionWarning.hidden = !projection.potentiallyStale;
+    projectionWarning.textContent = projection.potentiallyStale
+      ? `Vue potentiellement obsolète · curseur ${projection.position} · dernière projection il y a ${Math.ceil(projection.ageMillis / 1000)} s.`
+      : '';
+  } catch (_) {
+    projectionWarning.hidden = false;
+    projectionWarning.textContent = 'Fraîcheur de la projection inconnue. Aucun succès ne peut être déduit de cette vue.';
+  }
+}
+
 function renderPendingEffect(effect, visible) {
   effectConfirmation.hidden = !visible || !effect;
   effectArguments.replaceChildren();
@@ -832,6 +852,7 @@ async function refreshTask() {
     if (!response.ok) throw new Error('Impossible de suivre cette tâche.');
     const task = await readApiResponse(response);
     renderTask(task);
+    refreshProjectionStatus();
     loadExecutions();
     if (isFinished(task.status)) clearInterval(pollTimer);
   } catch (error) {
@@ -894,6 +915,7 @@ form.addEventListener('submit', async (event) => {
     if (!response.ok) throw new Error(task.error || 'La création du ticket a échoué.');
     activeTaskId = task.id;
     renderTask(task);
+    refreshProjectionStatus();
     clearInterval(pollTimer);
     pollTimer = setInterval(refreshTask, 3000);
     message.textContent = `Ticket ${displayTicketNumber(task)} envoyé.`;

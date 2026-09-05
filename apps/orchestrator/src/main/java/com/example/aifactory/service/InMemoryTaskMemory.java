@@ -6,6 +6,8 @@ import com.example.aifactory.workflow.TaskMemory;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -28,5 +30,14 @@ public final class InMemoryTaskMemory implements TaskMemory {
         return tasks.values().stream()
                 .sorted(Comparator.comparing(state -> state.createdAt))
                 .toList();
+    }
+
+    @Override
+    public Optional<ProjectionStatus> projectionStatus(String taskId) {
+        return find(taskId).map(state -> {
+            long age = Math.max(0, Duration.between(state.updatedAt, Instant.now()).toMillis());
+            return new ProjectionStatus(state.id, state.workflowAttemptId, state.projectionVersion, null,
+                    state.updatedAt, age, age > Duration.ofSeconds(30).toMillis());
+        });
     }
 }
