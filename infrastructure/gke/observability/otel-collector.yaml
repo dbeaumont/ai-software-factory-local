@@ -66,14 +66,16 @@ subjects:
     namespace: ai-factory-observability
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: otel-gateway
   namespace: ai-factory-observability
 spec:
+  serviceName: otel-gateway-headless
+  podManagementPolicy: Parallel
   replicas: 2
-  strategy:
-    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  updateStrategy:
+    type: RollingUpdate
   selector:
     matchLabels: { app.kubernetes.io/name: otel-gateway }
   template:
@@ -83,6 +85,9 @@ spec:
       serviceAccountName: otel-gateway
       securityContext:
         runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
         seccompProfile: { type: RuntimeDefault }
       topologySpreadConstraints:
         - maxSkew: 1
@@ -119,6 +124,7 @@ spec:
             - { name: config, mountPath: /etc/otelcol-contrib, readOnly: true }
             - { name: tls, mountPath: /var/run/otel-tls, readOnly: true }
             - { name: tmp, mountPath: /tmp }
+            - { name: queue, mountPath: /var/lib/otelcol }
       volumes:
         - name: config
           configMap: { name: otel-gateway-config }
@@ -126,6 +132,26 @@ spec:
           secret: { secretName: otel-gateway-tls }
         - name: tmp
           emptyDir: { sizeLimit: 64Mi }
+  volumeClaimTemplates:
+    - metadata:
+        name: queue
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: standard-rwo
+        resources:
+          requests: { storage: 5Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-gateway-headless
+  namespace: ai-factory-observability
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: { app.kubernetes.io/name: otel-gateway }
+  ports:
+    - { name: otlp-grpc, port: 4317, targetPort: otlp-grpc }
 ---
 apiVersion: v1
 kind: Service
@@ -157,7 +183,7 @@ metadata:
 spec:
   minReplicas: 2
   maxReplicas: 6
-  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: otel-gateway }
+  scaleTargetRef: { apiVersion: apps/v1, kind: StatefulSet, name: otel-gateway }
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300

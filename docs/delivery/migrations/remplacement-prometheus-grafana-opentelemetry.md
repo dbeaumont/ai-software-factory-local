@@ -313,7 +313,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [x] Appliquer les rôles IAM minimaux pour métriques, traces et logs.
 - [ ] Stocker les secrets résiduels dans Secret Manager et tester leur rotation.
 - [x] Appliquer NetworkPolicies, TLS, Pod Security, quotas, requests/limits, PDB et anti-affinité.
-- [ ] Configurer autoscaling et files persistantes selon la volumétrie mesurée.
+- [x] Configurer autoscaling et files persistantes selon la volumétrie mesurée.
 - [x] Définir les ressources et labels surveillés compatibles avec Google Cloud.
 - [ ] Recréer les six dashboards dans Cloud Monitoring ou l'interface d'entreprise approuvée.
 - [ ] Recréer les neuf alertes et leurs notification channels avec déduplication.

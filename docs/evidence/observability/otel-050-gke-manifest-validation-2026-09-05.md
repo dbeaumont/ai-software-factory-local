@@ -10,7 +10,10 @@
 - `kubectl kustomize` valide le rendu local ; `kubectl apply --dry-run` reste volontairement non validé faute de
   serveur d'API Kubernetes configuré dans cet environnement.
 - La configuration embarquée passe `otelcol-contrib 0.160.0 validate` avec le digest versionné.
-- Deux gateways, rolling update sans indisponibilité, PDB, répartition par zone et HPA 2–6 sont déclarés.
+- Deux gateways StatefulSet, rolling update, PDB, répartition par zone et HPA 2–6 sont déclarés.
+- Chaque replica possède une PVC `standard-rwo` de 5 Gio pour la file `file_storage`. La taille mémoire 4 096 et
+  le débit de tail sampling 400 traces/s couvrent la mesure locale de
+  10 400 traces drainées en 32 s avec marge, sans présenter cette extrapolation comme un SLO GKE.
 - Les endpoints OTLP exigent un certificat client signé par la CA montée depuis `otel-gateway-tls`.
 - Pod Security `restricted`, ServiceAccount dédié, RBAC de lecture, NetworkPolicy, ressources bornées, filesystem
   en lecture seule, seccomp et suppression des capabilities sont déclarés.
