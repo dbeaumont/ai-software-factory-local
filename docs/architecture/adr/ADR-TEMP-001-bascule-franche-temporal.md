@@ -132,6 +132,18 @@ Le rollback est un rollback applicatif au sein de Temporal, jamais un changement
 
 L'ancien coordinateur local est absent de la release de bascule et ne constitue donc pas une option de rollback.
 
+## Propriété et réconciliation des opérations
+
+| Opération | Propriétaire | Clé stable | Réconciliation avant retry |
+|---|---|---|---|
+| Résolution/clonage SCM | Repository Context MCP | tentative + commit demandé | Relire la référence Gitea et vérifier le commit attesté. |
+| Invocation LLM | Agent Runtime | tentative + délégation + invocation | Retrouver l'usage et la preuve de réponse ; ne pas facturer deux fois silencieusement. |
+| Validation/tests/qualité/sécurité | Sandbox MCP | `execution_id` déterministe | Consulter le job et son digest de résultat avant resoumission. |
+| Écriture de preuve | Evidence MCP | URI + digest + idempotency key | Lire les métadonnées et accepter uniquement un contenu identique. |
+| Approbation/décision | Workflow Temporal | identifiant de demande + object digest | Lire l'historique et ignorer le signal identique déjà appliqué. |
+| Branche/commit/PR | SCM Delivery MCP | tentative + source commit + manifest | Rechercher branche, commit et PR dans Gitea avant toute nouvelle mutation. |
+| Projection de lecture | PostgreSQL applicatif | événement Temporal + numéro d'événement | Vérifier le curseur et appliquer l'événement une seule fois. |
+
 ## Vérification
 
 - aucun contrat public ne permet de choisir le moteur ;

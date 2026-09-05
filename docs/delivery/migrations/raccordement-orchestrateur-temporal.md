@@ -93,10 +93,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### Critères de sortie du cadrage
 
-- [ ] L'ADR précise autorités, identifiants, versionnement, retry, timeout, annulation et rollback.
-- [ ] Temporal est présenté comme moteur unique sans être confondu avec le mode multi-agent dans les modèles,
+- [x] L'ADR précise autorités, identifiants, versionnement, retry, timeout, annulation et rollback.
+- [x] Temporal est présenté comme moteur unique sans être confondu avec le mode multi-agent dans les modèles,
   métriques ou écrans.
-- [ ] Chaque opération à effet possède un propriétaire, une clé d'idempotence et une procédure de réconciliation.
+- [x] Chaque opération à effet possède un propriétaire, une clé d'idempotence et une procédure de réconciliation.
 
 ## 5. Lot 0 — remettre la configuration en état fail-closed
 
