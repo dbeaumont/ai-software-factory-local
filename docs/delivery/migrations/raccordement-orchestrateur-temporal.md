@@ -178,8 +178,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   `ai-factory-workflows` avec un Build ID/version de déploiement explicite. _(Type immuable
   `SoftwareFactoryExecutionWorkflowV1` enregistré sur le worker racine ; Worker Deployment Version explicite et
   comportement `PINNED` sur les sept workers.)_
-- [ ] **TEMP-033 — Enregistrer les child workflows.** Enregistrer délégations, intégration de patch et revue
-  indépendante sur les task queues décidées par l'architecture.
+- [x] **TEMP-033 — Enregistrer les child workflows.** Enregistrer délégations, intégration de patch et revue
+  indépendante sur les task queues décidées par l'architecture. _(Les quatre workflows de coordination sont
+  enregistrés ensemble sur la file `workflow` ; les effets seront routés vers les six files spécialisées.)_
 - [ ] **TEMP-034 — Enregistrer les activités.** Câbler les adaptateurs contexte, LLM, sandbox, assurance,
   evidence et SCM sur leurs files respectives.
 - [ ] **TEMP-035 — Configurer la capacité.** Fixer concurrence des pollers et activités, débit, cache workflows,

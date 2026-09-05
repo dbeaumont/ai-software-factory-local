@@ -73,6 +73,11 @@ Les règles suivantes s'appliquent :
    drainage complet ;
 5. chaque release rejoue les historiques versionnés avant publication de l'image worker.
 
+Le workflow racine, les délégations, l'intégration de patch et la revue indépendante sont des workflows de
+coordination enregistrés sur la file `workflow`. Les child workflows héritent explicitement de cette file ; leurs
+effets sont, eux, routés vers les files d'activités spécialisées `context`, `llm`, `sandbox`, `assurance`,
+`evidence` et `scm`.
+
 Ce choix évite de donner une autorité de production rétroactive au workflow expérimental déjà présent et permet
 de conserver ses historiques de test comme fixtures indépendantes.
 

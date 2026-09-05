@@ -35,7 +35,10 @@ public final class TemporalWorkerRegistry {
         REQUIRED.stream().sorted().forEach(kind -> registered.put(kind,
                 factory.newWorker(taskQueues.get(kind), options)));
         registered.get("workflow").registerWorkflowImplementationTypes(
-                SoftwareFactoryExecutionWorkflowV1Impl.class);
+                SoftwareFactoryExecutionWorkflowV1Impl.class,
+                DelegationWorkflowImpl.class,
+                PatchIntegrationWorkflowImpl.class,
+                IndependentReviewWorkflowImpl.class);
         this.workers = Map.copyOf(registered);
         this.taskQueues = Map.copyOf(taskQueues);
     }
