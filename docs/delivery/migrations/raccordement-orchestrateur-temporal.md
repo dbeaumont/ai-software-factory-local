@@ -11,7 +11,8 @@ La migration doit préserver :
 - les gates de tests, qualité, sécurité, revue et approbation humaine ;
 - l'idempotence des opérations MCP et SCM ;
 - le développement local sur macOS avec Docker Compose ;
-- un retour arrière explicite pour les nouvelles admissions, sans réinterpréter les workflows déjà démarrés.
+- une bascule franche vers Temporal, suivie d'un rollback de version Temporal possible sans réinterpréter les
+  workflows déjà démarrés.
 
 ```text
 API / UI
@@ -53,17 +54,19 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   tables internes de Temporal.
 - [ ] Le pipeline fonctionnel actuel est découpé en activités idempotentes et reprend à la dernière étape validée.
 - [ ] Les effets externes passent exclusivement par les MCP autorisés et utilisent une clé d'idempotence stable.
-- [ ] Une approbation, une décision, une annulation ou un fallback est transmis au workflow par un signal validé.
+- [ ] Une approbation, une décision ou une annulation est transmise au workflow par un signal validé ; le fallback
+  vers le moteur local est supprimé.
 - [ ] Un redémarrage de l'orchestrateur ou d'un worker ne perd ni tâche, ni preuve, ni état d'effet.
 - [ ] Docker Compose permet de développer, tester, observer et rejouer Temporal sur macOS.
-- [ ] Le mode actif peut être désactivé pour les nouvelles admissions sans abandonner les workflows existants.
-- [ ] Aucun fallback automatique vers l'exécuteur local n'est effectué lorsque Temporal est indisponible.
+- [ ] À la date de coupure, toutes les nouvelles admissions utilisent Temporal, sans routage mixte, shadow ou
+  canary.
+- [ ] Lorsque Temporal est indisponible, les admissions sont suspendues ; aucun fallback vers l'exécuteur local
+  n'est possible.
 
 ## 4. Décisions d'architecture à figer
 
-- [ ] **TEMP-001 — Séparer moteur et mode d'exécution.** Ajouter un axe `workflowEngine` (`LOCAL`, `TEMPORAL`)
-  distinct de `executionMode` (`PIPELINE`, `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY`,
-  `HIERARCHICAL_ACTIVE`).
+- [ ] **TEMP-001 — Séparer moteur et mode d'exécution.** Faire de Temporal l'unique moteur de production, tout en
+  conservant `executionMode` comme caractéristique métier indépendante du workflow technique.
 - [ ] **TEMP-002 — Définir l'autorité des données.** Temporal porte la chronologie et l'état de coordination ;
   PostgreSQL porte une projection reconstruisible ; Evidence MCP porte les artefacts et leurs digests ; Gitea
   reste l'autorité des effets SCM.
@@ -76,33 +79,34 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   `ai-factory/{taskId}/{attemptId}`, avec une politique de réutilisation qui refuse les doublons non terminés.
 - [ ] **TEMP-006 — Définir les Run IDs et tentatives.** Ne jamais utiliser un Run ID aléatoire comme clé métier ;
   conserver `taskId`, `attemptId`, `sourceCommit` et `repositoryId` dans chaque entrée, activité et preuve.
-- [ ] **TEMP-007 — Définir le fail-closed.** Si Temporal est sélectionné et indisponible, refuser ou mettre en
-  attente l'admission ; ne pas lancer implicitement `DeterministicWorkflowCoordinator`.
-- [ ] **TEMP-008 — Définir le rollback.** Le rollback change le moteur des nouvelles admissions uniquement ; les
-  workflows Temporal en cours restent servis par des workers compatibles jusqu'à drainage.
+- [ ] **TEMP-007 — Définir le fail-closed.** Si Temporal est indisponible, refuser ou mettre en attente
+  l'admission ; ne jamais lancer implicitement `DeterministicWorkflowCoordinator`.
+- [ ] **TEMP-008 — Définir le rollback.** Le rollback redéploie une version compatible des workers Temporal ; il ne
+  réactive jamais le coordinateur local et les workflows en cours restent servis jusqu'à drainage.
 
 ### Critères de sortie du cadrage
 
 - [ ] L'ADR précise autorités, identifiants, versionnement, retry, timeout, annulation et rollback.
-- [ ] Le moteur de workflow et le mode multi-agent ne sont plus confondus dans les modèles, métriques ou écrans.
+- [ ] Temporal est présenté comme moteur unique sans être confondu avec le mode multi-agent dans les modèles,
+  métriques ou écrans.
 - [ ] Chaque opération à effet possède un propriétaire, une clé d'idempotence et une procédure de réconciliation.
 
 ## 5. Lot 0 — remettre la configuration en état fail-closed
 
-- [ ] **TEMP-010 — Remplacer le booléen ambigu.** Introduire `AI_FACTORY_WORKFLOW_ENGINE=local|temporal` et garder
-  temporairement `AI_FACTORY_TEMPORAL_ENABLED` comme alias déprécié avec avertissement explicite.
-- [ ] **TEMP-011 — Refuser une fausse activation.** Tant que le client et les workers ne sont pas enregistrés,
-  faire échouer le démarrage lorsque le moteur demandé vaut `temporal`.
-- [ ] **TEMP-012 — Conserver `.env.example` en mode sûr.** Laisser `local` comme valeur par défaut et documenter
-  l'opt-in local après qualification.
+- [ ] **TEMP-010 — Supprimer le sélecteur de moteur.** Déprécier puis retirer `AI_FACTORY_TEMPORAL_ENABLED` : une
+  version post-bascule de l'orchestrateur exige Temporal et ne possède aucun mode `local`.
+- [ ] **TEMP-011 — Refuser une fausse activation.** Faire échouer la readiness et suspendre les admissions tant que
+  le client et tous les workers requis ne sont pas enregistrés.
+- [ ] **TEMP-012 — Aligner `.env.example`.** Fournir directement la configuration Temporal obligatoire et ne pas
+  documenter de désactivation ou d'opt-in du moteur local.
 - [ ] **TEMP-013 — Valider la configuration de connexion.** Vérifier cible, namespace, rétention, task queues,
   TLS, certificat client, nom de serveur et fichier de clé API sans journaliser les secrets.
 - [ ] **TEMP-014 — Vérifier la compatibilité.** Tester et documenter la matrice entre le serveur Temporal 1.31.2,
   le SDK Java 1.38.0 et les fonctionnalités utilisées, notamment Worker Versioning.
 - [ ] **TEMP-015 — Corriger l'accès à Temporal UI.** Vérifier que `127.0.0.1:8233` est réellement publié sur
   macOS malgré le réseau Compose interne, sans exposer le frontend gRPC Temporal sur l'hôte.
-- [ ] **TEMP-016 — Ajouter des cibles opérateur.** Fournir `make temporal-status`, `make temporal-logs`,
-  `make temporal-ui`, `make temporal-enable-local` et `make temporal-disable-local` sans afficher de secret.
+- [ ] **TEMP-016 — Ajouter des cibles opérateur.** Fournir `make temporal-status`, `make temporal-logs` et
+  `make temporal-ui` sans commande d'activation/désactivation du moteur et sans afficher de secret.
 
 ### Critères de sortie du lot 0
 
@@ -127,10 +131,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   timeout, dépendance indisponible et issue d'effet inconnue.
 - [ ] **TEMP-026 — Définir les politiques temporelles.** Fixer pour chaque activité start-to-close,
   schedule-to-close, heartbeat timeout, nombre de tentatives et backoff.
-- [ ] **TEMP-027 — Conserver l'exécuteur local.** Recomposer le pipeline historique avec les nouveaux services afin
-  de disposer d'une baseline et d'un rollback fonctionnel pendant la migration.
-- [ ] **TEMP-028 — Supprimer l'ordonnancement caché.** Remplacer le pool interne de
-  `DeterministicWorkflowCoordinator` par un port d'exécution explicite contrôlé par le moteur sélectionné.
+- [ ] **TEMP-027 — Utiliser l'exécuteur local comme oracle avant coupure.** Recomposer temporairement le pipeline
+  historique avec les nouveaux services pour qualifier la parité, sans prévoir son maintien après bascule.
+- [ ] **TEMP-028 — Supprimer l'ordonnancement local à la coupure.** Retirer le pool interne et
+  `DeterministicWorkflowCoordinator` dans le même lot de livraison que l'activation du coordinateur Temporal.
 
 ### Critères de sortie du lot 1
 
@@ -140,8 +144,8 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 7. Lot 2 — construire le client Temporal et les workers de production
 
-- [ ] **TEMP-030 — Créer les beans conditionnels.** Construire `WorkflowServiceStubs`, `WorkflowClient`,
-  `WorkerFactory` et les workers uniquement lorsque `workflowEngine=temporal`.
+- [ ] **TEMP-030 — Créer les beans obligatoires.** Construire `WorkflowServiceStubs`, `WorkflowClient`,
+  `WorkerFactory` et les workers à chaque démarrage de l'orchestrateur post-bascule.
 - [ ] **TEMP-031 — Implémenter la sécurité du client.** Charger TLS/mTLS et clé API depuis des fichiers montés,
   vérifier les permissions et ne jamais injecter les secrets dans les inputs de workflow.
 - [ ] **TEMP-032 — Enregistrer le workflow racine.** Enregistrer l'implémentation de production sur
@@ -162,7 +166,7 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 ### Critères de sortie du lot 2
 
 - [ ] Les task queues attendues possèdent chacune au moins un poller visible dans Temporal.
-- [ ] Aucun worker n'est créé lorsque le moteur vaut `local`.
+- [ ] L'application ne peut pas démarrer en mode opérationnel sans client et workers Temporal.
 - [ ] Une erreur TLS, namespace ou task queue empêche clairement la readiness en mode Temporal.
 
 ## 8. Lot 3 — implémenter le workflow racine de production
@@ -199,17 +203,17 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 ## 9. Lot 4 — commandes applicatives et signaux
 
 - [ ] **TEMP-060 — Créer un `TemporalWorkflowCoordinator`.** Implémenter `start` et `resumeAfterApproval` avec des
-  stubs typés et des options de démarrage déterministes.
-- [ ] **TEMP-061 — Router par configuration hôte.** Sélectionner le coordinateur local ou Temporal au démarrage ;
-  un ticket ou une sortie de modèle ne peut jamais augmenter le mode.
+  stubs typés et des options de démarrage déterministes ; en faire l'unique bean `WorkflowCoordinator`.
+- [ ] **TEMP-061 — Supprimer le routage de moteur.** Retirer toute sélection `LOCAL`/`TEMPORAL` et vérifier qu'un
+  ticket ou une sortie de modèle ne peut modifier que le mode métier autorisé, jamais le moteur.
 - [ ] **TEMP-062 — Signaler l'approbation.** Transformer `approve`/`approve-manifest` en signal lié à task,
   tentative, manifeste, digest, acteur et horodatage.
 - [ ] **TEMP-063 — Signaler les décisions humaines.** Vérifier domaine, rôle, options et object digest avant
   émission du signal.
 - [ ] **TEMP-064 — Signaler l'annulation.** Rendre l'opération idempotente et retourner l'état projeté sans
   supposer que le workflow est déjà terminé.
-- [ ] **TEMP-065 — Implémenter retry et fallback opérateur.** Créer une nouvelle tentative liée à l'ancienne ; ne
-  jamais changer le moteur ou répéter un effet au milieu du même historique.
+- [ ] **TEMP-065 — Implémenter retry opérateur.** Créer une nouvelle tentative Temporal liée à l'ancienne et
+  supprimer le fallback vers le pipeline local ; ne jamais répéter un effet au milieu du même historique.
 - [ ] **TEMP-066 — Gérer les conflits de commande.** Définir les réponses pour workflow absent, terminé,
   approbation expirée, digest périmé, signal dupliqué et projection en retard.
 - [ ] **TEMP-067 — Auditer les commandes.** Journaliser l'intention et le résultat avec corrélation, sans contenu
@@ -217,7 +221,7 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### Critères de sortie du lot 4
 
-- [ ] Toutes les routes de commande existantes fonctionnent sur les deux moteurs.
+- [ ] Toutes les routes de commande existantes fonctionnent exclusivement via Temporal.
 - [ ] Un signal dupliqué ne change pas deux fois l'état et ne déclenche pas deux effets.
 - [ ] L'API distingue acceptation de commande, application au workflow et mise à jour de projection.
 
@@ -282,7 +286,7 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 ### 12.1 Tests unitaires et d'architecture
 
 - [ ] Tester validation des options client, namespace, queues, TLS et secrets par fichier.
-- [ ] Tester le routage `LOCAL`/`TEMPORAL` et le refus de fallback implicite.
+- [ ] Tester l'absence de routage `LOCAL`/`TEMPORAL` et le refus de démarrer ou d'admettre sans Temporal.
 - [ ] Tester identifiants, clés d'idempotence, classification des erreurs et politiques de retry.
 - [ ] Interdire par test d'architecture réseau, filesystem, horloge système, thread, random et client MCP dans les
   implémentations de workflow.
@@ -325,45 +329,61 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [ ] Tester une attente humaine supérieure à un redémarrage et à une rotation de worker.
 - [ ] Tester rétention, purge et reconstruction sur un jeu représentatif.
 
-## 13. Lot 8 — bascule progressive
+## 13. Lot 8 — bascule franche et complète
 
-- [ ] **TEMP-100 — Capturer la baseline locale.** Versionner résultats, coûts, durées, digests et états du pipeline
-  local sur un corpus de tickets fixe.
-- [ ] **TEMP-101 — Activer le shadow sans effet.** Faire produire au workflow Temporal une chronologie/projection
-  à partir d'entrées et preuves capturées, sans doubler LLM, sandbox ou SCM.
-- [ ] **TEMP-102 — Comparer automatiquement.** Comparer transitions, verdicts, digests, erreurs, coût et durée ;
-  classer toute divergence.
-- [ ] **TEMP-103 — Passer en canary.** Autoriser Temporal pour une allow-list de dépôts et un pourcentage stable,
-  avec kill switch et budget dédiés.
-- [ ] **TEMP-104 — Qualifier les pannes.** Exécuter redémarrages, latence, partition réseau, saturation, doublons de
-  signaux et issues d'effets inconnues.
-- [ ] **TEMP-105 — Obtenir la gate.** Exiger validation produit, architecture, sécurité et exploitation avant le
-  passage actif.
-- [ ] **TEMP-106 — Activer localement.** Définir `AI_FACTORY_WORKFLOW_ENGINE=temporal` dans `.env` uniquement après
-  succès de la campagne macOS.
-- [ ] **TEMP-107 — Étendre progressivement.** Augmenter le canary par paliers observés avant de déclarer Temporal
-  moteur par défaut.
-- [ ] **TEMP-108 — Drainer l'ancien chemin.** Conserver le moteur local jusqu'à expiration de la fenêtre de retour
-  arrière, puis retirer son ordonnancement asynchrone.
+La bascule est réalisée en une seule fenêtre de changement. Aucun ticket n'est routé en shadow, en canary ou vers
+deux moteurs simultanément. La qualification complète est terminée avant la coupure ; après réouverture, Temporal
+est immédiatement l'unique moteur de toutes les admissions.
 
-### Critères de promotion
+- [ ] **TEMP-100 — Capturer la baseline avant coupure.** Versionner résultats, coûts, durées, digests et états du
+  pipeline local sur un corpus fixe, uniquement comme preuve de comparaison hors production.
+- [ ] **TEMP-101 — Geler le périmètre.** Interdire tout changement de workflow, activité, contrat, prompt, modèle
+  ou infrastructure entre la qualification finale et la fin de la fenêtre de bascule.
+- [ ] **TEMP-102 — Qualifier la release complète hors trafic.** Exécuter tests fonctionnels, replay, charge,
+  redémarrages, partitions réseau, sauvegarde, restauration et rollback sur l'artefact exact à déployer.
+- [ ] **TEMP-103 — Obtenir l'autorisation de coupure.** Exiger les validations produit, architecture, sécurité et
+  exploitation sur la matrice de preuves complète.
+- [ ] **TEMP-104 — Fermer toutes les admissions.** Refuser temporairement `POST /api/tasks`, afficher la maintenance
+  dans l'interface et attendre la fin ou l'annulation contrôlée de chaque tâche locale active.
+- [ ] **TEMP-105 — Sauvegarder les autorités.** Sauvegarder Gitea, Evidence MCP, configuration, workspaces utiles et
+  bases ; vérifier la restauration avant de poursuivre.
+- [ ] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,
+  coordinateur, projection PostgreSQL, migrations, API, interface, dashboards et alertes.
+- [ ] **TEMP-107 — Retirer le chemin local.** Supprimer `DeterministicWorkflowCoordinator`, son pool de threads,
+  les flags de sélection et toute route de fallback dans la release de bascule.
+- [ ] **TEMP-108 — Vérifier avant réouverture.** Contrôler schémas, namespace, Build IDs, pollers, task queues,
+  readiness, projection, Evidence MCP, SigNoz et Temporal UI.
+- [ ] **TEMP-109 — Exécuter un smoke test de coupure.** Soumettre un ticket synthétique pendant la maintenance,
+  vérifier le parcours complet et supprimer uniquement ses artefacts explicitement jetables.
+- [ ] **TEMP-110 — Ouvrir toutes les admissions.** Autoriser simultanément tous les dépôts et toutes les catégories
+  de tickets sur Temporal, sans pourcentage, allow-list transitoire ou double exécution.
+- [ ] **TEMP-111 — Surveiller la fenêtre renforcée.** Maintenir l'équipe de rollback disponible et appliquer les
+  seuils d'arrêt globaux, sans router une partie du trafic vers l'ancien moteur.
 
-- [ ] Zéro divergence de verdict ou d'effet inexpliquée sur le corpus apparié.
-- [ ] Zéro PR, commit ou preuve dupliquée pendant les tests de panne.
-- [ ] Tous les historiques de référence sont rejouables par l'image candidate.
-- [ ] Les SLO de disponibilité, reprise, latence, coût et backlog sont respectés sur deux fenêtres stables.
-- [ ] Sauvegarde, restauration et rollback ont été exécutés, pas seulement documentés.
+### Critères de coupure
 
-## 14. Procédure de rollback
+- [ ] Toutes les preuves obligatoires sont validées avant fermeture des admissions.
+- [ ] Aucune tâche locale active ne subsiste au moment du déploiement.
+- [ ] Zéro PR, commit ou preuve dupliquée pendant les tests de panne et de restauration.
+- [ ] Tous les historiques de référence sont rejouables par l'image exacte déployée.
+- [ ] Le smoke test post-déploiement passe avant la réouverture générale.
+- [ ] Après réouverture, 100 % des nouvelles tâches possèdent un workflow ID Temporal et aucune ne possède un run
+  local.
 
-- [ ] Fermer les nouvelles admissions Temporal ou sélectionner `workflowEngine=local` pour les nouvelles tâches.
+## 14. Procédure de rollback de version Temporal
+
+- [ ] Fermer immédiatement toutes les nouvelles admissions.
 - [ ] Identifier tous les workflows Temporal ouverts, leur Build ID, leur phase et leurs effets en attente.
-- [ ] Conserver les workers compatibles nécessaires au drainage des workflows existants.
-- [ ] Ne jamais relancer localement une tentative Temporal avec le même `attemptId`.
-- [ ] Créer une nouvelle tentative liée lorsque le pipeline local doit reprendre une demande.
+- [ ] Redéployer la dernière image de workers Temporal compatible avec les historiques ouverts.
+- [ ] Conserver simultanément les Build IDs nécessaires au drainage lorsque plusieurs versions ont déjà exécuté
+  des workflows.
+- [ ] Ne jamais relancer une tentative Temporal dans un coordinateur local supprimé.
+- [ ] Créer une nouvelle tentative Temporal liée lorsqu'une demande doit être reprise après stabilisation.
 - [ ] Réconcilier toute activité SCM à issue inconnue avec Gitea avant une nouvelle commande.
 - [ ] Préserver `temporal-db-data`, `orchestrator-db-data`, Evidence MCP et workspaces pendant l'incident.
 - [ ] Vérifier la cohérence de la projection après stabilisation et reconstruire uniquement depuis les autorités.
+- [ ] Garder les admissions fermées si aucune version worker compatible ne peut être restaurée ; ne jamais réactiver
+  l'ancien moteur pour contourner l'incident.
 - [ ] Documenter cause, périmètre, tâches affectées, décision de reprise et preuves du rollback.
 
 ## 15. Ordre d'exécution et dépendances
@@ -387,7 +407,7 @@ TEMP-060..067 commandes et signaux
                 |
 TEMP-080..088 exploitation
                 |
-TEMP-100..108 shadow, canary, actif
+TEMP-100..111 coupure franche et ouverture générale
 ```
 
 - [ ] Traiter chaque ticket dans un commit dédié de la forme `feat(temporal): TEMP-xxx ...`.
@@ -399,20 +419,20 @@ TEMP-100..108 shadow, canary, actif
 
 ## 16. Matrice de preuves obligatoire
 
-| Preuve | Local | Shadow | Canary | Actif |
-|---|---:|---:|---:|---:|
-| Tests unitaires et architecture | [ ] | [ ] | [ ] | [ ] |
-| Tests Temporal embarqués | [ ] | [ ] | [ ] | [ ] |
-| Replay des historiques versionnés | [ ] | [ ] | [ ] | [ ] |
-| Parcours Docker Compose macOS | [ ] | [ ] | [ ] | [ ] |
-| Reprise après arrêt orchestrateur | [ ] | [ ] | [ ] | [ ] |
-| Reprise après arrêt worker | [ ] | [ ] | [ ] | [ ] |
-| Signaux humains idempotents | [ ] | [ ] | [ ] | [ ] |
-| Effet SCM exactement une fois observable | [ ] | [ ] | [ ] | [ ] |
-| Reconstruction PostgreSQL | [ ] | [ ] | [ ] | [ ] |
-| Sauvegarde et restauration | [ ] | [ ] | [ ] | [ ] |
-| Dashboards et alertes SigNoz | [ ] | [ ] | [ ] | [ ] |
-| Rollback exécuté | [ ] | [ ] | [ ] | [ ] |
+| Preuve | Qualification avant coupure | Fenêtre de coupure | Validation après coupure |
+|---|---:|---:|---:|
+| Tests unitaires et architecture | [ ] | [ ] | [ ] |
+| Tests Temporal embarqués | [ ] | [ ] | [ ] |
+| Replay des historiques versionnés | [ ] | [ ] | [ ] |
+| Parcours Docker Compose macOS | [ ] | [ ] | [ ] |
+| Reprise après arrêt orchestrateur | [ ] | [ ] | [ ] |
+| Reprise après arrêt worker | [ ] | [ ] | [ ] |
+| Signaux humains idempotents | [ ] | [ ] | [ ] |
+| Effet SCM exactement une fois observable | [ ] | [ ] | [ ] |
+| Reconstruction PostgreSQL | [ ] | [ ] | [ ] |
+| Sauvegarde et restauration | [ ] | [ ] | [ ] |
+| Dashboards et alertes SigNoz | [ ] | [ ] | [ ] |
+| Rollback de version Temporal exécuté | [ ] | [ ] | [ ] |
 
 ## 17. Définition de terminé
 
@@ -425,7 +445,9 @@ TEMP-100..108 shadow, canary, actif
 - [ ] Les files, retries, timeouts, pollers, projections et attentes humaines sont observables dans SigNoz.
 - [ ] Temporal UI est disponible localement sans exposer le frontend gRPC au réseau hôte.
 - [ ] Le parcours complet est qualifié sur macOS avec Docker Compose.
-- [ ] Le rollback vers le moteur local a été exécuté sans perte ni double effet.
+- [ ] La coupure ouvre directement 100 % des admissions sur Temporal, sans phase intermédiaire.
+- [ ] Le rollback vers une version compatible des workers Temporal a été exécuté sans perte ni double effet.
+- [ ] Le coordinateur local, ses flags et ses routes de fallback ont été supprimés.
 - [ ] La documentation d'état courant ne présente plus Temporal comme seulement disponible ou non câblé.
 
 ## 18. Hors périmètre de cette migration
@@ -435,4 +457,4 @@ TEMP-100..108 shadow, canary, actif
 - [ ] Ne pas activer le mode hiérarchique simplement parce que le moteur Temporal est actif.
 - [ ] Ne pas exposer Temporal gRPC publiquement pour faciliter le diagnostic local.
 - [ ] Ne pas considérer le succès des tests embarqués comme une qualification de production.
-- [ ] Ne pas supprimer le moteur local avant la fin de la fenêtre de stabilisation et le test du rollback.
+- [ ] Ne pas conserver de shadow, canary, routage mixte ou coordinateur local après la coupure.
