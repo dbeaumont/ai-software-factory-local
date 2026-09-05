@@ -40,6 +40,14 @@ indiquées par la base commencent à Tomcat `11.0.25`.
   les timeouts et le refus des profils non autorisés.
 - Les tests de cycle de vie couvrent l'annulation et la suppression du groupe de processus complet au timeout.
 
+## Installation neuve isolée
+
+Une seconde pile a été créée avec le projet Compose `ai-factory-socket-fresh`, un workspace dédié et tous les
+autres volumes vierges. Le démarrage a construit les images, initialisé les stockages, puis rendu sains
+l'orchestrateur, le MCP sandbox et les quatre runners sans socket Docker, `group_add` ni `DOCKER_SOCKET_GID`.
+La pile temporaire a ensuite été arrêtée avec succès et ses seuls volumes ont été supprimés. La pile de
+développement originale a été redémarrée sur ses volumes préservés.
+
 ## Limites de cette preuve
 
 Cette qualification valide le backend Compose local et ses cinq profils. Elle ne vaut pas qualification GKE,
