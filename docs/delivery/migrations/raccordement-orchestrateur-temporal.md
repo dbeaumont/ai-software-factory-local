@@ -230,8 +230,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   qualité, de la sécurité et du commit source. _(Le bundle est déjà lié au task/attempt/commit/manifeste ; en
   production hiérarchique il exige désormais les cinq digests exacts et les compare aux références Evidence
   réellement produites avant de lancer le child workflow indépendant.)_
-- [ ] **TEMP-046 — Attendre l'approbation sans thread bloqué.** Utiliser un signal Temporal et `Workflow.await`,
-  avec manifeste immuable et vérification de l'approbateur côté activité/hôte.
+- [x] **TEMP-046 — Attendre l'approbation sans thread bloqué.** Utiliser un signal Temporal et `Workflow.await`,
+  avec manifeste immuable et vérification de l'approbateur côté activité/hôte. _(Le manifeste digest-bound est
+  créé sur la file Evidence après les gates ; le workflow V1 attend le signal validé sans thread et conserve aussi
+  un signal reçu pendant les activités, avant l'entrée dans `Workflow.await`.)_
 - [ ] **TEMP-047 — Encadrer l'effet SCM.** Livrer par une activité idempotente, puis réconcilier Gitea avant tout
   retry lorsque l'issue réseau est inconnue.
 - [ ] **TEMP-048 — Gérer annulation et compensation.** Annuler les activités cancellables, préserver les preuves

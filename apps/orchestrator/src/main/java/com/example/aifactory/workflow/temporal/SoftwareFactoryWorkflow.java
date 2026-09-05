@@ -124,6 +124,12 @@ public interface SoftwareFactoryWorkflow {
                     humanDecisionRequests, executionPolicy, continuationState, independentReview, sourceLocation,
                     executionMode);
         }
+
+        Request withApprovalRequest(ApprovalRequest approval) {
+            return new Request(taskId, attemptId, repositoryId, sourceCommit, requirement, delegations, approval,
+                    humanDecisionRequests, executionPolicy, continuationState, independentReview, sourceLocation,
+                    executionMode);
+        }
     }
 
     enum WorkflowExecutionMode { PIPELINE, HIERARCHICAL_ACTIVE }

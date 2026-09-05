@@ -107,10 +107,14 @@ class SourceResolutionActivitiesTest {
                     new SoftwareFactoryWorkflow.SourceLocation(
                             "http://gitea:3000/acme/customer-api.git", "main", "ai-factory-context"));
 
-            SoftwareFactoryWorkflow.Result result = workflow.run(request);
+            io.temporal.client.WorkflowClient.start(workflow::run, request);
+            workflow.approve(new SoftwareFactoryWorkflow.ApprovalSignal("task-1", "attempt-1",
+                    "a".repeat(64), "b".repeat(64), "APPROVE", "operator", "2026-09-05T20:00:00Z"));
+            SoftwareFactoryWorkflow.Result result = io.temporal.client.WorkflowStub.fromTyped(workflow)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
 
             assertThat(result.sourceCommit()).isEqualTo("c".repeat(40));
-            assertThat(result.status()).isEqualTo("WAITING_APPROVAL");
+            assertThat(result.status()).isEqualTo("APPROVED");
             assertThat(result.chronology()).contains("STEP_COMPLETED:plan", "STEP_COMPLETED:review");
             assertThat(pipeline.repairs).isEqualTo(1);
         }
@@ -172,6 +176,15 @@ class SourceResolutionActivitiesTest {
         }
 
         @Override public void recordGateRejection(GateRejection rejection) { }
+
+        @Override
+        public com.example.aifactory.workflow.EvidenceRepository.StoredManifest createApprovalManifest(
+                ApprovalManifestRequest request) {
+            return new com.example.aifactory.workflow.EvidenceRepository.StoredManifest(
+                    "a".repeat(64), "evidence://task-1/pipeline-1/manifest/" + "a".repeat(64),
+                    "b".repeat(64), "COMPLETE", "INTERNAL", java.time.Instant.parse("2027-01-01T00:00:00Z"),
+                    java.time.Instant.parse("2026-09-05T20:00:00Z"));
+        }
 
         private static String artifactName(String step) {
             return switch (step) {

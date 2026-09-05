@@ -2,8 +2,11 @@ package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.model.PendingEffect;
 import com.example.aifactory.service.PipelineStepContracts;
+import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
+
+import java.util.Map;
 
 @ActivityInterface
 public interface PipelineExecutionActivities {
@@ -28,6 +31,9 @@ public interface PipelineExecutionActivities {
     @ActivityMethod(name = "RecordPipelineGateRejection")
     void recordGateRejection(GateRejection rejection);
 
+    @ActivityMethod(name = "CreatePipelineApprovalManifest")
+    EvidenceRepository.StoredManifest createApprovalManifest(ApprovalManifestRequest request);
+
     record SourceBinding(String taskId, String attemptId, String repositoryId, String sourceCommit,
                          String workspace, String attestationDigest) {}
 
@@ -42,4 +48,11 @@ public interface PipelineExecutionActivities {
     record DeliveryRequest(String taskId, String attemptId, String sourceCommit) {}
 
     record GateRejection(String taskId, String attemptId, String sourceCommit, String gate) {}
+
+    record ApprovalManifestRequest(String taskId, String attemptId, String repositoryId, String sourceCommit,
+                                   Map<String, PipelineStepContracts.ArtifactReference> artifacts) {
+        public ApprovalManifestRequest {
+            artifacts = artifacts == null ? Map.of() : Map.copyOf(artifacts);
+        }
+    }
 }

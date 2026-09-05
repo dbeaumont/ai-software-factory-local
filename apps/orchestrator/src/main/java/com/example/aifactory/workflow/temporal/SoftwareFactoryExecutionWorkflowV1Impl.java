@@ -72,18 +72,25 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                     resolved.sourceCommit(), phase, chronology, List.of(), Map.of(),
                     null, null, null, null);
         }
+        var storedManifest = pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE)
+                .createApprovalManifest(new PipelineExecutionActivities.ApprovalManifestRequest(
+                        request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(), artifacts));
+        SoftwareFactoryWorkflow.ApprovalRequest approvalRequest = new SoftwareFactoryWorkflow.ApprovalRequest(
+                storedManifest.manifestId(), storedManifest.uri(), storedManifest.digest());
         phase = "WAITING_APPROVAL";
         if (request.executionMode() == SoftwareFactoryWorkflow.WorkflowExecutionMode.HIERARCHICAL_ACTIVE
                 && request.independentReview() != null) {
             request.independentReview().bundle().requireProductionArtifactBinding(artifacts);
         }
-        SoftwareFactoryWorkflow.Result coordinated = delegate.run(request.withResolvedSource(resolved.sourceCommit()));
+        SoftwareFactoryWorkflow.Result coordinated = delegate.run(
+                request.withResolvedSource(resolved.sourceCommit()).withApprovalRequest(approvalRequest));
+        phase = coordinated.status();
         List<String> chronology = new java.util.ArrayList<>();
         chronology.add("SOURCE_RESOLVED:" + resolved.sourceCommit());
         artifacts.keySet().forEach(name -> chronology.add("STEP_COMPLETED:" + name));
         chronology.addAll(coordinated.chronology());
         return new SoftwareFactoryWorkflow.Result(coordinated.taskId(), coordinated.attemptId(),
-                coordinated.sourceCommit(), phase, chronology, coordinated.delegations(),
+                coordinated.sourceCommit(), coordinated.status(), chronology, coordinated.delegations(),
                 coordinated.humanDecisions(), coordinated.approvedManifestId(), coordinated.approvedBy(),
                 coordinated.cancellationReason(), coordinated.independentReview());
     }

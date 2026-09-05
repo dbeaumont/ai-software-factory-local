@@ -204,7 +204,10 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                 != request.continuationState().nextDelegationIndex()
                 || request.delegations().stream().anyMatch(delegation ->
                 "independent-reviewer".equals(delegation.role()))
-                || request.approvalRequest() != null && !"legacy".equals(request.repositoryId())
+                || request.approvalRequest() != null
+                && !"legacy".equals(request.repositoryId())
+                && (request.sourceLocation() == null
+                || request.executionMode() == SoftwareFactoryWorkflow.WorkflowExecutionMode.HIERARCHICAL_ACTIVE)
                 && request.independentReview() == null
                 || !reviewMatchesRoot(request) || !approvalMatchesReview(request)) {
             throw new IllegalArgumentException("Software factory workflow request is invalid");
@@ -303,9 +306,8 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     }
 
     private void restoreContinuationState(ContinuationState state) {
-        receivedApproval = state.receivedApproval();
-        receivedCancellation = state.receivedCancellation();
-        receivedDecisions.clear();
+        if (state.receivedApproval() != null) receivedApproval = state.receivedApproval();
+        if (state.receivedCancellation() != null) receivedCancellation = state.receivedCancellation();
         receivedDecisions.putAll(state.receivedDecisions());
         completedDelegations.clear();
         state.delegations().forEach(result -> completedDelegations.put(result.nodeId(), result));

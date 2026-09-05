@@ -8,6 +8,7 @@ import com.example.aifactory.service.PipelineProjectionEvent;
 import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.service.PipelineStepService;
 import com.example.aifactory.workflow.TaskMemory;
+import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.Activity;
 import org.springframework.stereotype.Component;
 
@@ -24,12 +25,14 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     private final PipelineStepService steps;
     private final TaskMemory memory;
     private final Map<String, String> taskQueues;
+    private final EvidenceRepository evidence;
 
     public PipelineExecutionActivitiesImpl(PipelineStepService steps, TaskMemory memory,
-                                           TemporalProperties properties) {
+                                           TemporalProperties properties, EvidenceRepository evidence) {
         this.steps = steps;
         this.memory = memory;
         this.taskQueues = properties.taskQueues();
+        this.evidence = evidence;
     }
 
     @Override
@@ -164,6 +167,29 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         }
         state.transition(TaskStatus.GATE_REJECTED, "Gate rejected: " + rejection.gate());
         memory.save(state);
+    }
+
+    @Override
+    public EvidenceRepository.StoredManifest createApprovalManifest(ApprovalManifestRequest request) {
+        requireQueue("evidence");
+        TaskState state = requireTask(request.taskId(), request.attemptId());
+        if (!request.sourceCommit().equals(state.sourceCommit)
+                || request.artifacts().get("patch") == null) {
+            throw new SecurityException("Approval manifest is not bound to the completed pipeline");
+        }
+        Map<String, EvidenceRepository.EvidenceReference> references = new java.util.LinkedHashMap<>();
+        Map<String, String> digests = new java.util.LinkedHashMap<>();
+        request.artifacts().forEach((name, artifact) -> {
+            references.put(name, new EvidenceRepository.EvidenceReference(
+                    artifact.uri(), artifact.digest(), artifact.status()));
+            digests.put(name, artifact.digest());
+        });
+        EvidenceRepository.PolicyDecision policy = new EvidenceRepository.PolicyDecision(
+                "1", request.taskId(), request.attemptId(), "pipeline-gates", "1", "ALLOW", java.util.List.of(),
+                Map.copyOf(digests), java.time.Instant.now());
+        return evidence.createManifest(new EvidenceRepository.ManifestRequest(request.taskId(), request.attemptId(),
+                request.repositoryId(), request.sourceCommit(), request.artifacts().get("patch").digest(),
+                Map.copyOf(references), policy, "workflow"));
     }
 
     private TaskState requireTask(String taskId, String attemptId) {
