@@ -204,7 +204,7 @@ les valeurs partagées entre `.env` et `.vault`. Elle refuse d’écraser deux v
 | Qualité | `SONAR_TOKEN` | Régénéré/validé par `make tokens` |
 | Preuves | `APPROVAL_ATTESTATION_KEY` | Stable tant que les preuves associées doivent être lues |
 | Artifactory | `JF_SHARED_SECURITY_MASTERKEY`, `JF_SHARED_SECURITY_JOINKEY`, mot de passe DB | Ne jamais changer tant que les volumes existants sont réutilisés sans procédure de rotation |
-| Modes | `AI_FACTORY_TEMPORAL_ENABLED`, rôles, qualification | Conserver les valeurs fail-closed par défaut |
+| Modes | Temporal obligatoire, rôles, qualification | Conserver les rôles en fail-closed par défaut |
 
 Le code LiteLLM accepte `OPENAI_API_KEY` et, par compatibilité, `VAULT_OPENAI_API_KEY`. Le modèle `.vault.example`
 utilise `OPENAI_API_KEY`; cette forme est donc la référence à privilégier.
@@ -212,7 +212,6 @@ utilise `OPENAI_API_KEY`; cette forme est donc la référence à privilégier.
 ### 5.3 Baseline sûre
 
 ```dotenv
-AI_FACTORY_TEMPORAL_ENABLED=false
 AI_FACTORY_AGENT_TOOL_ROLES=
 AI_FACTORY_AGENT_TOOL_QUALIFICATION=INCOMPLETE
 AI_FACTORY_AGENT_TOOL_SECURITY_PASSED=false
@@ -668,8 +667,7 @@ Conserver les anciennes images jusqu’à validation de la fenêtre de retour ar
 
 ### 13.4 Compatibilité Temporal
 
-Tant que `AI_FACTORY_TEMPORAL_ENABLED=false`, ne pas présenter le redémarrage local comme un déploiement durable.
-Après activation, tout changement de code Workflow modifiant l’historique exige Worker Versioning ou
+Tout changement de code Workflow modifiant l’historique exige Worker Versioning ou
 `Workflow.getVersion`. Un rolling update sans l’un de ces mécanismes est interdit. Les anciens workers restent
 disponibles jusqu’au drainage des workflows épinglés et expiration de la période de retour arrière.
 
@@ -776,8 +774,7 @@ le confinement local disponible.
 
 ### 14.11 Temporal indisponible
 
-Le chemin actif n’en dépend pas tant que `AI_FACTORY_TEMPORAL_ENABLED=false`. Après activation : préserver
-`temporal-db-data`, restaurer PostgreSQL avant Temporal, vérifier le namespace et les pollers, puis redémarrer les
+Préserver `temporal-db-data`, restaurer PostgreSQL avant Temporal, vérifier le namespace et les pollers, puis redémarrer les
 workers compatibles. Ne jamais terminer massivement les workflows ni les forcer sur un code incompatible.
 
 ### 14.12 Perte de l’orchestrateur

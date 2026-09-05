@@ -53,12 +53,11 @@ L'API de création ne permet pas de sélectionner directement un mode hiérarchi
 [`TaskRequest.java`](../../apps/orchestrator/src/main/java/com/example/aifactory/model/TaskRequest.java) force aujourd'hui
 le mode LLM cloud et ne porte pas de mode d'exécution multi-agent.
 
-### P1 — Temporal est démarré mais désactivé côté orchestrateur
+### P1 — Temporal est démarré et son raccordement reste à terminer
 
 `make up` démarre Temporal et sa base. Cependant :
 
-- `AI_FACTORY_TEMPORAL_ENABLED` vaut `false` par défaut dans
-  [`compose.yaml`](../../infrastructure/compose.yaml) ;
+- le sélecteur historique `AI_FACTORY_TEMPORAL_ENABLED` a été retiré afin d'imposer un moteur unique ;
 - le démarrage de l'orchestrateur en mode pipeline ne dépend volontairement pas de la readiness Temporal ;
 - [`DeterministicWorkflowCoordinator`](../../apps/orchestrator/src/main/java/com/example/aifactory/service/DeterministicWorkflowCoordinator.java)
   reste l'implémentation active de `WorkflowCoordinator`.

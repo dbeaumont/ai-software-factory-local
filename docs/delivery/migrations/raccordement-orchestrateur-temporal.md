@@ -40,8 +40,8 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   production ne les enregistre.
 - Aucun bean de production ne construit `WorkflowServiceStubs`, `WorkflowClient`, `WorkerFactory` ou `Worker`.
 - `DeterministicWorkflowCoordinator` est l'unique implémentation Spring active de `WorkflowCoordinator`.
-- `AI_FACTORY_TEMPORAL_ENABLED=true` est actuellement transmis à l'orchestrateur local, mais ce flag ne modifie
-  pas encore le chemin d'exécution des tickets.
+- Le sélecteur historique `AI_FACTORY_TEMPORAL_ENABLED` est retiré : la branche de migration doit raccorder
+  Temporal comme dépendance obligatoire avant sa release de coupure.
 - `TaskMemory` utilise `InMemoryTaskMemory` : un redémarrage efface la vue API et le lien avec les tâches actives.
 - Les commandes d'approbation, de décision, d'annulation et de fallback modifient directement `TaskState` au lieu
   d'émettre des signaux Temporal.
@@ -100,8 +100,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 5. Lot 0 — remettre la configuration en état fail-closed
 
-- [ ] **TEMP-010 — Supprimer le sélecteur de moteur.** Déprécier puis retirer `AI_FACTORY_TEMPORAL_ENABLED` : une
-  version post-bascule de l'orchestrateur exige Temporal et ne possède aucun mode `local`.
+- [x] **TEMP-010 — Supprimer le sélecteur de moteur.** Déprécier puis retirer `AI_FACTORY_TEMPORAL_ENABLED` : une
+  version post-bascule de l'orchestrateur exige Temporal et ne possède aucun mode `local`. _(Propriété supprimée
+  du code, de Compose et des fichiers d'environnement.)_
 - [ ] **TEMP-011 — Refuser une fausse activation.** Faire échouer la readiness et suspendre les admissions tant que
   le client et tous les workers requis ne sont pas enregistrés.
 - [ ] **TEMP-012 — Aligner `.env.example`.** Fournir directement la configuration Temporal obligatoire et ne pas

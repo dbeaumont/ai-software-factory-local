@@ -69,7 +69,7 @@ Cette distinction est indispensable pour lire le dépôt sans confondre code pr�
 | État des tâches | Actif, volatile | `InMemoryTaskMemory` repose sur un `ConcurrentHashMap` |
 | Appels LLM | Actif, cloud uniquement | `TaskRequest.effectiveLlmMode()` force le mode `CLOUD`, via LiteLLM |
 | Serveurs MCP | Actifs | Contexte, sandbox, SCM, assurance et evidence sont démarrés par Compose |
-| Temporal | Disponible, désactivé par défaut | services Compose et classes de workflow présents ; `AI_FACTORY_TEMPORAL_ENABLED=false` |
+| Temporal | Disponible, raccordement en cours | services Compose et classes de workflow présents ; sélecteur historique retiré |
 | Agents hiérarchiques | Disponible, non qualifié | rôles vides et verdict `INCOMPLETE` par défaut |
 | Evidence durable de bout en bout | Partiel | le serveur existe ; le pipeline de référence garde surtout fichiers et état en mémoire |
 | Projection PostgreSQL métier | Disponible, non câblée | migrations présentes, aucun adaptateur `TaskMemory` PostgreSQL actif |

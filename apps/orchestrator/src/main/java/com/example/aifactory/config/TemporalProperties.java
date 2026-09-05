@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 @ConfigurationProperties(prefix = "ai-factory.temporal")
-public record TemporalProperties(boolean enabled, String target, String namespace, Duration namespaceRetention,
+public record TemporalProperties(String target, String namespace, Duration namespaceRetention,
                                  Map<String, String> taskQueues, Security security) {
     private static final Set<String> REQUIRED_QUEUES = Set.of(
             "workflow", "context", "llm", "sandbox", "assurance", "evidence", "scm");

@@ -120,7 +120,7 @@ flowchart TB
 | Cinq serveurs MCP | Oui | Oui | Frontières techniques actives |
 | Conteneurs sandbox Docker | Oui | Oui | Exécution locale non fiable, POC uniquement |
 | Evidence MCP | Oui | Partiellement intégré | Stockage disponible, intégration durable à terminer |
-| Temporal | Oui, démarré | Non pour l’orchestrateur | Socle préparé, `AI_FACTORY_TEMPORAL_ENABLED=false` |
+| Temporal | Oui, démarré | Raccordement en cours | Socle préparé, sélecteur historique retiré |
 | Task Memory PostgreSQL | Schémas préparés | Non | `InMemoryTaskMemory` reste actif |
 | Supervisor et agents hiérarchiques | Oui | Non | Qualification `INCOMPLETE`, rôles actifs vides |
 | Worktrees et intégration multi-patch | Oui | Non généralisé | Capacité du chemin hiérarchique |

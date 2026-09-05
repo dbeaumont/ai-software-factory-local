@@ -34,7 +34,7 @@ class TemporalPropertiesTest {
     }
 
     private static String[] valid() {
-        return new String[]{"ai-factory.temporal.enabled=false", "ai-factory.temporal.target=temporal:7233",
+        return new String[]{"ai-factory.temporal.target=temporal:7233",
                 "ai-factory.temporal.namespace=ai-factory-local", "ai-factory.temporal.namespace-retention=P7D",
                 "ai-factory.temporal.task-queues.workflow=ai-factory-workflows",
                 "ai-factory.temporal.task-queues.context=ai-factory-context",

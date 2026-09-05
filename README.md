@@ -140,8 +140,8 @@ des sandboxes (`sandbox-egress` et `sandbox-quality`).
 
 > **État du prototype.** `DeterministicWorkflowCoordinator` et `InMemoryTaskMemory` sont les adaptateurs actifs de
 > la configuration locale. Les workflows Temporal, les migrations SQL et les projections sont présents dans le
-> code afin de préparer la cible durable, mais `AI_FACTORY_TEMPORAL_ENABLED=false` par défaut et aucun adaptateur
-> PostgreSQL de `TaskMemory` n'est câblé dans la stack Compose actuelle.
+> code afin de préparer la cible durable. Le sélecteur de moteur historique a été retiré pendant le raccordement ;
+> aucun adaptateur PostgreSQL de `TaskMemory` n'est encore câblé dans la stack Compose actuelle.
 
 ### Repères dans l'implémentation
 
