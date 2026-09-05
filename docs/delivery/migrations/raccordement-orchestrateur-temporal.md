@@ -453,7 +453,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Versionner des historiques JSON de référence pour succès, échec, attente, annulation et continue-as-new.
   _(Le corpus V1 contient cinq historiques JSON réellement émis par `SoftwareFactoryWorkflowImpl`, avec un
   générateur explicite opt-in pour empêcher tout rafraîchissement silencieux des preuves.)_
-- [ ] Exécuter automatiquement le replay contre chaque nouvelle version du worker.
+- [x] Exécuter automatiquement le replay contre chaque nouvelle version du worker. _(Un test paramétré découvre le
+  corpus V1 dans les ressources de test et rejoue ses cinq historiques avec `WorkflowReplayer` contre
+  l'implémentation courante à chaque exécution Maven.)_
 - [ ] Tester un ancien worker et un nouveau worker simultanément avec Build IDs compatibles.
 - [ ] Refuser la livraison d'une image worker lorsque le replay échoue.
 

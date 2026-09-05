@@ -3,6 +3,8 @@ package com.example.aifactory.workflow.temporal;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestEnvironmentOptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.testing.WorkflowReplayer;
 import io.temporal.worker.WorkerFactoryOptions;
@@ -66,6 +68,14 @@ class WorkflowDeterminismArchitectureTest {
         }
 
         WorkflowReplayer.replayWorkflowExecution(history, SoftwareFactoryWorkflowImpl.class);
+    }
+
+    @ParameterizedTest(name = "replay V1 reference history: {0}")
+    @ValueSource(strings = {"success.json", "failure.json", "waiting.json", "cancellation.json",
+            "continue-as-new.json"})
+    void everyVersionedReferenceHistoryReplaysAgainstTheCurrentWorker(String fixture) throws Exception {
+        WorkflowReplayer.replayWorkflowExecutionFromResource(
+                "temporal-histories/v1/" + fixture, SoftwareFactoryWorkflowImpl.class);
     }
 
     @Test
