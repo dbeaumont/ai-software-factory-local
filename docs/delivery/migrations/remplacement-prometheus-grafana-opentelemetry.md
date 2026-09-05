@@ -214,7 +214,7 @@ Au début de la migration, le dépôt possède notamment :
 - [x] Stocker les credentials d'export hors des fichiers de configuration versionnés.
 - [x] Appliquer `read_only`, utilisateur non-root, capabilities supprimées et `no-new-privileges` en Compose.
 - [x] Appliquer Pod Security, ServiceAccount dédié, Workload Identity et NetworkPolicies en GKE.
-- [ ] Tester backend lent, backend indisponible, données invalides, saturation et redémarrage du Collector.
+- [x] Tester backend lent, backend indisponible, données invalides, saturation et redémarrage du Collector.
 - [x] Vérifier que la backpressure reste bornée et ne remonte pas jusqu'au chemin métier.
 - [x] Définir des alertes sur refus, pertes, files pleines, mémoire, redémarrages et erreurs d'export.
 - [x] Vérifier que les logs du Collector ne réaffichent pas les payloads rejetés ou les credentials.
@@ -440,7 +440,7 @@ différée afin de rester récupérable.
 - [ ] Vérifier la parenté et l'ordre temporel des spans dans chaque scénario.
 - [x] Vérifier que les six dashboards affichent des données cohérentes après chaque scénario.
 - [ ] Déclencher et acquitter les neuf alertes avec leurs notifications.
-- [ ] Redémarrer application, Collector et backend pendant une charge contrôlée.
+- [x] Redémarrer application, Collector et backend pendant une charge contrôlée.
 - [x] Couper le Collector et vérifier que le workflow métier continue.
 - [ ] Saturer les files et mesurer précisément les pertes et délais.
 - [x] Tester sauvegarde/restauration isolée puis arrêt propre du backend local.

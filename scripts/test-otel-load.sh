@@ -17,6 +17,16 @@ run_load() {
 }
 
 run_load --batches 100 --points 20 --workers 16
+run_load --batches 800 --points 10 --workers 16 &
+load_pid=$!
+"${compose[@]}" restart repository-context-mcp >/dev/null
+wait "$load_pid"
+for attempt in {1..30}; do
+  health=$("${compose[@]}" ps --format json repository-context-mcp | jq -r '.Health // empty')
+  [ "$health" = "healthy" ] && break
+  [ "$attempt" -lt 30 ] || { echo "repository-context-mcp did not recover during load" >&2; exit 1; }
+  sleep 1
+done
 sleep 10
 metric_count=$(docker exec ai-factory-signoz-telemetrystore-clickhouse-0-0 clickhouse-client --query \
   "SELECT count() FROM signoz_metrics.distributed_metadata WHERE metric_name = 'ai_factory_otel_load_probe'")

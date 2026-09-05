@@ -15,16 +15,22 @@ comptés/alertés ; aucun payload rejeté n'est copié dans un stockage secondai
 `./scripts/test-otel-load.sh` a produit les résultats suivants :
 
 - charge nominale : 6 000 enregistrements métriques/traces/logs acceptés en 0,755 s, soit 7 951,1/s ;
+- campagne avec redémarrage de `repository-context-mcp` : 24 000 enregistrements acceptés en 1,551 s, soit
+  15 471,1/s, puis retour du service à l'état `healthy` ;
 - présence de `ai_factory_otel_load_probe` confirmée dans les métadonnées ClickHouse ;
 - arrêt de l'ingester, puis 1 200 enregistrements supplémentaires acceptés en 0,248 s ;
 - présence de données dans les trois fichiers de file persistante ;
 - redémarrage du Collector pendant la panne, puis redémarrage de l'ingester et drainage réussi ;
-- Collector sain à 71,99 Mio sur la limite Compose de 512 Mio après la campagne ;
+- Collector sain à 73,02 Mio sur la limite Compose de 512 Mio après la campagne ;
 - ingestion, sept dashboards, 15 alertes et rétentions revalidés après reprise.
 
 La validation syntaxique avec l'image Collector épinglée et `docker compose config --quiet` est également passée.
 
 ## Limites
 
-La campagne mesure un débit court et la persistance après panne. Elle ne démontre pas encore le SLO sur une fenêtre
-longue, le comportement à file entièrement pleine, un backend volontairement lent, ni le coût GKE.
+`./scripts/test-otel-saturation.sh` lance par ailleurs un Collector isolé, limité à une file de huit éléments, face
+à un backend retardant chaque réponse de deux secondes. Une charge concurrente de 1 800 enregistrements déclenche
+le signal de file pleine attendu ; le Collector reste actif et les deux conteneurs jetables sont supprimés.
+
+La campagne mesure un débit court, la persistance après panne et le refus borné en saturation. Elle ne démontre pas
+encore le SLO sur une fenêtre longue, le nombre précis de points perdus, les délais par percentile, ni le coût GKE.
