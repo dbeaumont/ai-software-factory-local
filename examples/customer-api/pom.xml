@@ -10,7 +10,10 @@
   <groupId>com.example</groupId>
   <artifactId>customer-api</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <properties><java.version>25</java.version></properties>
+  <properties>
+    <java.version>25</java.version>
+    <tomcat.version>11.0.25</tomcat.version>
+  </properties>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-webmvc</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-webmvc-test</artifactId><scope>test</scope></dependency>
