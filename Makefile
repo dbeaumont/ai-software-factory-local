@@ -201,7 +201,7 @@ urls:
 	@echo -e "$(YELLOW)Quality, Artifacts & Observability:$(NC)"
 	@echo -e "  - SonarQube:    $(GREEN)http://localhost:$(SONAR_PORT)$(NC) (user: $(SONAR_ADMIN_LOGIN), password: $(SONAR_ADMIN_PASSWORD))"
 	@echo -e "  - Artifactory:  $(GREEN)http://localhost:$(ARTIFACTORY_PORT)$(NC) (user: admin, password: password)"
-	@echo -e "  - SigNoz:       $(GREEN)http://localhost:$(SIGNOZ_PORT)$(NC) (user: $(SIGNOZ_ROOT_EMAIL))"
+	@echo -e "  - SigNoz:       $(GREEN)http://localhost:$(SIGNOZ_PORT)$(NC) (user: $(SIGNOZ_ROOT_EMAIL), password: $(SIGNOZ_ROOT_PASSWORD))"
 	@echo ""
 
 clean:
