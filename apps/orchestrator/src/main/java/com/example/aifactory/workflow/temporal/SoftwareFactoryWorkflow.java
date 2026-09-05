@@ -211,6 +211,16 @@ public interface SoftwareFactoryWorkflow {
             chronology = List.copyOf(chronology);
             delegations = List.copyOf(delegations);
             humanDecisions = Map.copyOf(humanDecisions);
+            Map<String, Object> persisted = new java.util.LinkedHashMap<>();
+            persisted.put("taskId", taskId); persisted.put("attemptId", attemptId);
+            persisted.put("sourceCommit", sourceCommit); persisted.put("status", status);
+            persisted.put("chronology", chronology); persisted.put("delegations", delegations);
+            persisted.put("humanDecisions", humanDecisions);
+            if (approvedManifestId != null) persisted.put("approvedManifestId", approvedManifestId);
+            if (approvedBy != null) persisted.put("approvedBy", approvedBy);
+            if (cancellationReasonDigest != null) persisted.put("cancellationReasonDigest", cancellationReasonDigest);
+            if (independentReview != null) persisted.put("independentReview", independentReview);
+            TemporalPayloadGuard.requireSafePayload(persisted);
         }
 
         public Result(String taskId, String attemptId, String sourceCommit, String status,

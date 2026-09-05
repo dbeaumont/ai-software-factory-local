@@ -414,7 +414,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Interdire par test d'architecture réseau, filesystem, horloge système, thread, random et client MCP dans les
   implémentations de workflow. _(Le scan exhaustif des implémentations interdit I/O, HTTP/MCP, processus, horloges,
   aléatoire, threads/concurrence Java et clients Temporal ; les effets passent uniquement par des Activities.)_
-- [ ] Tester la taille maximale des inputs/résultats et l'externalisation des contenus vers Evidence MCP.
+- [x] Tester la taille maximale des inputs/résultats et l'externalisation des contenus vers Evidence MCP. _(La garde
+  64 Kio contrôle démarrages, signaux et résultat racine ; les résultats d'étape ne transportent que URI, digest,
+  taille, statut et verdict d'artefacts stockés dans Evidence.)_
 - [ ] Tester les transitions et commandes invalides sur la projection.
 
 ### 12.2 Tests Temporal embarqués

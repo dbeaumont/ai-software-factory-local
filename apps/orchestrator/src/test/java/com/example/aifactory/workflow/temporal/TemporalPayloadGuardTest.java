@@ -100,4 +100,23 @@ class TemporalPayloadGuardTest {
         assertThatThrownBy(() -> TemporalPayloadGuard.requireSafeStart(extra, request))
                 .isInstanceOf(SecurityException.class);
     }
+
+    @Test
+    void rejectsAnOversizedRootResultAndKeepsArtifactContentExternal() {
+        assertThatThrownBy(() -> new SoftwareFactoryWorkflow.Result(
+                "task-1", "attempt-1", "a".repeat(40), "FAILED",
+                java.util.List.of("x".repeat(4_097)), java.util.List.of(), Map.of(),
+                null, null, null))
+                .isInstanceOf(SecurityException.class);
+
+        var reference = new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                "evidence://task-1/attempt-1/tests/" + "b".repeat(64), "b".repeat(64),
+                1_000_000, "COMPLETE", "PASS");
+        var result = new com.example.aifactory.service.PipelineStepContracts.Result(
+                1, "tests", "task-1", "attempt-1", "a".repeat(40), Map.of("tests", reference));
+
+        assertThatCode(() -> TemporalPayloadGuard.requireSafePayload(result)).doesNotThrowAnyException();
+        assertThat(java.util.Arrays.stream(result.getClass().getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName)).doesNotContain("content", "patch", "log");
+    }
 }
