@@ -27,7 +27,7 @@ class TemporalTaskQueueMonitorTest {
                             .setStats(TaskQueueStats.newBuilder().setApproximateBacklogCount(backlog))
                             .addPollers(PollerInfo.getDefaultInstance())
                             .build();
-                }, () -> 3);
+                }, () -> 3, () -> 42);
 
         monitor.collect();
 
@@ -44,6 +44,7 @@ class TemporalTaskQueueMonitorTest {
         assertThat(registry.get("ai_temporal_task_queue_pollers")
                 .tags("perimeter", "llm", "task_type", "activity").gauge().value()).isEqualTo(1);
         assertThat(registry.get("ai_temporal_workflows_waiting_human").gauge().value()).isEqualTo(3);
+        assertThat(registry.get("ai_temporal_projection_lag_seconds").gauge().value()).isEqualTo(42);
     }
 
     @Test
@@ -55,12 +56,14 @@ class TemporalTaskQueueMonitorTest {
                         throw new IllegalStateException("unavailable");
                     }
                     return DescribeTaskQueueResponse.getDefaultInstance();
-                }, () -> { throw new IllegalStateException("database unavailable"); });
+                }, () -> { throw new IllegalStateException("database unavailable"); },
+                () -> { throw new IllegalStateException("database unavailable"); });
 
         monitor.collect();
 
         assertThat(registry.get("ai_temporal_task_queue_probe_failures")
                 .tags("perimeter", "llm", "task_type", "workflow").counter().count()).isEqualTo(1);
         assertThat(registry.get("ai_temporal_human_wait_probe_failures").counter().count()).isEqualTo(1);
+        assertThat(registry.get("ai_temporal_projection_probe_failures").counter().count()).isEqualTo(1);
     }
 }

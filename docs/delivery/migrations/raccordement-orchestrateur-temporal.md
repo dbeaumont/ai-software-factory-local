@@ -361,8 +361,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   erreurs d'activités et liens profonds vers Temporal UI. _(Le dashboard généré couvre désormais les requêtes
   client, pollers et slots worker, backlog/pollers applicatifs, schedule-to-start, erreurs/retries/timeouts et attente
   humaine ; namespace, workflow ID et run ID construisent un lien direct vers l'historique Temporal UI.)_
-- [ ] **TEMP-083 — Ajouter les alertes.** Couvrir absence de poller, backlog durable, erreur non déterministe,
-  projection en retard, activité bloquée et échec de continue-as-new.
+- [x] **TEMP-083 — Ajouter les alertes.** Couvrir absence de poller, backlog durable, erreur non déterministe,
+  projection en retard, activité bloquée et échec de continue-as-new. _(Six règles SigNoz dédiées s'appuient sur
+  des métriques explicites et bornées ; la sonde publie le retard de projection, les workflows annoncent leur
+  rollover, et les 15 alertes métier/Temporal ont été déclenchées par une fixture OTLP contre SigNoz local.)_
 - [ ] **TEMP-084 — Protéger les données.** Vérifier qu'aucun secret, patch complet, log volumineux ou donnée
   confidentielle n'entre dans les inputs, search attributes ou memo Temporal.
 - [ ] **TEMP-085 — Définir les Search Attributes.** N'enregistrer que les dimensions nécessaires, bornées et non

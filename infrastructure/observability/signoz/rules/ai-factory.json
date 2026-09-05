@@ -1033,5 +1033,419 @@
       "description": "The Collector rejected one or more log, metric or span records.",
       "runbook_url": "/docs/operations/runbooks/TELEMETRIE-ABSENTE.md"
     }
+  },
+  {
+    "alert": "AiFactoryTemporalPollerAbsent",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The workflow queue or an activity perimeter has remained without a poller.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "min(ai_temporal_task_queue_pollers{perimeter=\"workflow\",task_type=\"workflow\"}) < 1 or min(ai_temporal_task_queue_pollers{perimeter!=\"workflow\",task_type=\"activity\"}) < 1",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "2m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "temporal",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "A required Temporal task queue has no poller",
+      "description": "The workflow queue or an activity perimeter has remained without a poller.",
+      "runbook_url": "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryTemporalBacklogSustained",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "At least one bounded Temporal task queue has exceeded twenty pending tasks for ten minutes.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "max(ai_temporal_task_queue_backlog) > 20",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "10m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "temporal",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Temporal task queue backlog is sustained",
+      "description": "At least one bounded Temporal task queue has exceeded twenty pending tasks for ten minutes.",
+      "runbook_url": "/docs/operations/runbooks/SATURATION.md"
+    }
+  },
+  {
+    "alert": "AiFactoryTemporalNonDeterministic",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "A worker rejected persisted workflow history because the implementation is incompatible.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_temporal_workflow_nondeterministic[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "temporal",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Temporal workflow replay is non-deterministic",
+      "description": "A worker rejected persisted workflow history because the implementation is incompatible.",
+      "runbook_url": "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryTemporalProjectionLag",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The oldest current task projection has not been refreshed for more than sixty seconds.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "max(ai_temporal_projection_lag_seconds) > 60",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "5m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "temporal",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Temporal UI projection is stale",
+      "description": "The oldest current task projection has not been refreshed for more than sixty seconds.",
+      "runbook_url": "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryTemporalActivityStuck",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "A Temporal execution exhausted a configured timeout and may require idempotent recovery.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_temporal_timeouts[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "temporal",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Temporal activity or workflow timed out",
+      "description": "A Temporal execution exhausted a configured timeout and may require idempotent recovery.",
+      "runbook_url": "/docs/operations/runbooks/SATURATION.md"
+    }
+  },
+  {
+    "alert": "AiFactoryTemporalContinueAsNewFailure",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "A workflow requested history rollover without a matching successful continue-as-new.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_temporal_continue_as_new_requested[10m]) > increase(temporal_workflow_continue_as_new[10m])",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "2m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "temporal",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Temporal continue-as-new did not complete",
+      "description": "A workflow requested history rollover without a matching successful continue-as-new.",
+      "runbook_url": "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"
+    }
   }
 ]

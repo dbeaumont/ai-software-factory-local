@@ -36,11 +36,14 @@ public final class TemporalTaskQueueMonitor {
     private final Map<String, String> queues;
     private final Function<DescribeTaskQueueRequest, DescribeTaskQueueResponse> describe;
     private final LongSupplier waitingHuman;
+    private final LongSupplier projectionLagSeconds;
     private final Map<Key, AtomicLong> backlog = new LinkedHashMap<>();
     private final Map<Key, AtomicLong> pollers = new LinkedHashMap<>();
     private final Map<Key, Counter> failures = new LinkedHashMap<>();
     private final AtomicLong waitingHumanValue = new AtomicLong();
+    private final AtomicLong projectionLagValue = new AtomicLong();
     private final Counter humanQueryFailures;
+    private final Counter projectionQueryFailures;
 
     @Autowired
     public TemporalTaskQueueMonitor(MeterRegistry registry, TemporalProperties properties,
@@ -57,16 +60,25 @@ public final class TemporalTaskQueueMonitor {
                                             WHERE h.task_id = t.task_id AND h.status = 'PENDING')
                             """, Long.class);
                     return count == null ? 0 : count;
+                },
+                () -> {
+                    Long lag = jdbc.queryForObject("""
+                            SELECT COALESCE(CAST(EXTRACT(EPOCH FROM
+                                (CURRENT_TIMESTAMP - min(projected_at))) AS bigint), 0)
+                              FROM task_projection_snapshots
+                            """, Long.class);
+                    return lag == null ? 0 : lag;
                 });
     }
 
     TemporalTaskQueueMonitor(MeterRegistry registry, String namespace, Map<String, String> queues,
                              Function<DescribeTaskQueueRequest, DescribeTaskQueueResponse> describe,
-                             LongSupplier waitingHuman) {
+                             LongSupplier waitingHuman, LongSupplier projectionLagSeconds) {
         this.namespace = namespace;
         this.queues = Map.copyOf(queues);
         this.describe = describe;
         this.waitingHuman = waitingHuman;
+        this.projectionLagSeconds = projectionLagSeconds;
         queues.keySet().stream().sorted().forEach(perimeter -> {
             for (TaskQueueType type : TYPES) {
                 Key key = new Key(perimeter, type);
@@ -85,7 +97,10 @@ public final class TemporalTaskQueueMonitor {
         });
         Gauge.builder("ai_temporal_workflows_waiting_human", waitingHumanValue, AtomicLong::get)
                 .register(registry);
+        Gauge.builder("ai_temporal_projection_lag_seconds", projectionLagValue, AtomicLong::get)
+                .register(registry);
         humanQueryFailures = Counter.builder("ai_temporal_human_wait_probe_failures").register(registry);
+        projectionQueryFailures = Counter.builder("ai_temporal_projection_probe_failures").register(registry);
     }
 
     @Scheduled(fixedDelayString = "${ai-factory.temporal.queue-metrics-delay:PT15S}")
@@ -98,6 +113,12 @@ public final class TemporalTaskQueueMonitor {
         } catch (RuntimeException failure) {
             humanQueryFailures.increment();
             LOGGER.warn("Temporal human-wait metric query failed: {}", failure.getClass().getSimpleName());
+        }
+        try {
+            projectionLagValue.set(Math.max(0, projectionLagSeconds.getAsLong()));
+        } catch (RuntimeException failure) {
+            projectionQueryFailures.increment();
+            LOGGER.warn("Temporal projection-lag metric query failed: {}", failure.getClass().getSimpleName());
         }
     }
 

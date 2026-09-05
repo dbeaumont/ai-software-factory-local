@@ -20,17 +20,20 @@ class MultiAgentAlertRulesTest {
             "AiFactoryAgentContractError", "AiFactoryEvidenceAltered");
 
     @Test
-    void definesNineActionableSigNozAlerts() throws Exception {
+    void definesActionableSigNozAndTemporalAlerts() throws Exception {
         Path root = repositoryRoot();
         JsonNode rules = new ObjectMapper().readTree(Files.readString(
                 root.resolve("infrastructure/observability/signoz/rules/ai-factory.json")));
 
         Set<String> names = StreamSupport.stream(rules.spliterator(), false)
                 .map(rule -> rule.path("alert").asText()).collect(Collectors.toSet());
-        assertThat(names).containsAll(REQUIRED_ALERTS).hasSize(15);
+        assertThat(names).containsAll(REQUIRED_ALERTS).hasSize(21);
         assertThat(names).contains("AiFactoryCollectorExportFailures", "AiFactoryCollectorQueueSaturation",
                 "AiFactoryTelemetryIngestionAbsent", "AiFactoryCollectorRestart",
-                "AiFactoryCollectorMemoryPressure", "AiFactoryCollectorReceiverRefused");
+                "AiFactoryCollectorMemoryPressure", "AiFactoryCollectorReceiverRefused",
+                "AiFactoryTemporalPollerAbsent", "AiFactoryTemporalBacklogSustained",
+                "AiFactoryTemporalNonDeterministic", "AiFactoryTemporalProjectionLag",
+                "AiFactoryTemporalActivityStuck", "AiFactoryTemporalContinueAsNewFailure");
         StreamSupport.stream(rules.spliterator(), false).forEach(rule -> {
             assertThat(rule.path("schemaVersion").asText()).isEqualTo("v2alpha1");
             assertThat(rule.path("condition").path("compositeQuery").path("queries").path(0)

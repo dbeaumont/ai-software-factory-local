@@ -1,6 +1,7 @@
 package com.example.aifactory.service;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.temporal.worker.NonDeterministicException;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -49,10 +50,13 @@ class TaskQueueMetricsTest {
         metrics.start("ai-factory-llm", 1_000, 1_010, 1).close();
         metrics.start("ai-factory-llm", 2_000, 2_020, 2).close();
         metrics.recordWorkflowFailure("ai-factory-llm", new RuntimeException(new TimeoutException("late")));
+        metrics.recordReplayFailure("ai-factory-llm", new NonDeterministicException("history mismatch"));
 
         assertThat(registry.get("ai_temporal_activity_retries").tag("perimeter", "llm")
                 .counter().count()).isEqualTo(1);
         assertThat(registry.get("ai_temporal_timeouts").tag("perimeter", "llm")
+                .counter().count()).isEqualTo(1);
+        assertThat(registry.get("ai_temporal_workflow_nondeterministic").tag("perimeter", "llm")
                 .counter().count()).isEqualTo(1);
     }
 }

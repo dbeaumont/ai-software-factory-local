@@ -331,6 +331,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         if (Workflow.getInfo().isTargetWorkerDeploymentVersionChanged()) {
             options.setInitialVersioningBehavior(InitialVersioningBehavior.AUTO_UPGRADE);
         }
+        Workflow.getMetricsScope().counter("ai_temporal_continue_as_new_requested").inc(1);
         Workflow.continueAsNew(options.build(), request.continuedWith(state));
     }
 }

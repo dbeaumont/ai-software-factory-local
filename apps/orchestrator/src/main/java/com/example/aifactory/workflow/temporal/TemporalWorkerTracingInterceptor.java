@@ -38,7 +38,12 @@ public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBas
             public WorkflowOutput execute(WorkflowInput input) {
                 // A replay rebuilds workflow state and must not emit duplicate telemetry.
                 if (WorkflowUnsafe.isReplaying()) {
-                    return super.execute(input);
+                    try {
+                        return super.execute(input);
+                    } catch (RuntimeException failure) {
+                        queueMetrics.recordReplayFailure(Workflow.getInfo().getTaskQueue(), failure);
+                        throw failure;
+                    }
                 }
                 WorkflowInfo info = Workflow.getInfo();
                 ExecutionTracer.SpanKind kind = info.getParentWorkflowId().isPresent()

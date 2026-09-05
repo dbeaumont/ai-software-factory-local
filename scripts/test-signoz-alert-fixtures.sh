@@ -13,7 +13,7 @@ payload=$(jq -nc --arg old "$old" --arg current "$current" '
   def a($key;$value): {key:$key,value:{stringValue:$value}};
   def p($time;$value;$attrs): {timeUnixNano:$time,asDouble:$value,attributes:$attrs};
   def counter($name;$series): {name:$name,sum:{aggregationTemporality:2,isMonotonic:true,dataPoints:$series}};
-  def gauge($name;$value): {name:$name,gauge:{dataPoints:[p($current;$value;[])]}};
+  def gauge($name;$value;$attrs): {name:$name,gauge:{dataPoints:[p($current;$value;$attrs)]}};
   {resourceMetrics:[{
     resource:{attributes:[a("service.name";"otel-alert-fixture"),a("service.namespace";"ai-software-factory"),a("deployment.environment.name";"ai-factory-local")]},
     scopeMetrics:[{scope:{name:"ai-factory-alert-fixture",version:"1"},metrics:[
@@ -26,12 +26,20 @@ payload=$(jq -nc --arg old "$old" --arg current "$current" '
         p($current;1;[a("reason";"contract"),a("stop_condition";"CONTRACT_ERROR")])
       ]),
       counter("ai_agent_cost_micros";[p($old;0;[]),p($current;6000001;[])]),
-      gauge("ai_factory_sandbox_jobs_queued";21),
-      gauge("ai_task_queue_saturation_ratio";0.95),
+      gauge("ai_factory_sandbox_jobs_queued";21;[]),
+      gauge("ai_task_queue_saturation_ratio";0.95;[]),
       counter("ai_factory_sandbox_heartbeat_invalid";[p($old;0;[]),p($current;1;[])]),
       counter("ai_factory_sandbox_jobs_failed";[p($old;0;[]),p($current;6;[])]),
       counter("ai_factory_sandbox_maintenance_failures";[p($old;0;[]),p($current;1;[])]),
-      counter("ai_evidence_altered";[p($old;0;[]),p($current;1;[])])
+      counter("ai_evidence_altered";[p($old;0;[]),p($current;1;[])]),
+      gauge("ai_temporal_task_queue_pollers";0;[a("perimeter";"workflow"),a("task_type";"workflow")]),
+      gauge("ai_temporal_task_queue_pollers";0;[a("perimeter";"llm"),a("task_type";"activity")]),
+      gauge("ai_temporal_task_queue_backlog";21;[a("perimeter";"llm"),a("task_type";"activity")]),
+      counter("ai_temporal_workflow_nondeterministic";[p($old;0;[]),p($current;1;[])]),
+      gauge("ai_temporal_projection_lag_seconds";61;[]),
+      counter("ai_temporal_timeouts";[p($old;0;[]),p($current;1;[])]),
+      counter("ai_temporal_continue_as_new_requested";[p($old;0;[]),p($current;1;[])]),
+      counter("temporal_workflow_continue_as_new";[p($old;0;[]),p($current;0;[])])
     ]}]
   }]}' )
 
@@ -60,17 +68,17 @@ for attempt in {1..20}; do
     response=$(curl -fsS -X POST "$base_url/api/v5/query_range" \
       -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data "$request")
     if printf '%s' "$response" | jq -e \
-      '.status == "success" and ([.data.data.results[].aggregations[].series[]] | length > 0)' >/dev/null; then
+      '.status == "success" and ([.data.data.results[]?.aggregations[]?.series[]?] | length > 0)' >/dev/null; then
       validated=$((validated + 1))
     fi
   done < <(jq -r '.[] | select(.labels.component != "observability") | .condition.compositeQuery.queries[0].spec.query' infrastructure/observability/signoz/rules/ai-factory.json)
-  [ "$validated" -eq 9 ] && break
+  [ "$validated" -eq 15 ] && break
   sleep 1
 done
 
-[ "$validated" -eq 9 ] || {
-  echo "Only $validated/9 alert fixtures produced a positive query result" >&2
+[ "$validated" -eq 15 ] || {
+  echo "Only $validated/15 alert fixtures produced a positive query result" >&2
   printf '%s\n' "$response" | jq . >&2
   exit 1
 }
-echo "Validated 9/9 SigNoz alert rules with deterministic OTLP metrics."
+echo "Validated 15/15 SigNoz alert rules with deterministic OTLP metrics."

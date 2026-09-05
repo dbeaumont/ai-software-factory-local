@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.temporal.failure.TimeoutFailure;
+import io.temporal.worker.NonDeterministicException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -74,15 +75,31 @@ public final class TaskQueueMetrics {
     }
 
     public void recordWorkflowFailure(String taskQueue, Throwable failure) {
+        recordNonDeterminism(taskQueue, failure);
         if (isTimeout(failure)) {
             registry.counter("ai_temporal_timeouts", "perimeter",
                     perimeterByQueue.getOrDefault(taskQueue, "unknown")).increment();
         }
     }
 
+    public void recordReplayFailure(String taskQueue, Throwable failure) {
+        recordNonDeterminism(taskQueue, failure);
+    }
+
+    private void recordNonDeterminism(String taskQueue, Throwable failure) {
+        if (hasCause(failure, NonDeterministicException.class)) {
+            registry.counter("ai_temporal_workflow_nondeterministic", "perimeter",
+                    perimeterByQueue.getOrDefault(taskQueue, "unknown")).increment();
+        }
+    }
+
     private static boolean isTimeout(Throwable failure) {
+        return hasCause(failure, TimeoutFailure.class) || hasCause(failure, TimeoutException.class);
+    }
+
+    private static boolean hasCause(Throwable failure, Class<? extends Throwable> type) {
         for (Throwable current = failure; current != null; current = current.getCause()) {
-            if (current instanceof TimeoutFailure || current instanceof TimeoutException) return true;
+            if (type.isInstance(current)) return true;
         }
         return false;
     }
