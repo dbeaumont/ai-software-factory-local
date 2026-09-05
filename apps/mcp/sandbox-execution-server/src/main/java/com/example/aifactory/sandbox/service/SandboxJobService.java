@@ -8,9 +8,12 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -58,13 +61,16 @@ public class SandboxJobService {
     private final Counter rejectedRetention;
     private final Counter maintenanceFailures;
     private final Timer queueDuration;
+    private final ObservationRegistry observations;
 
+    @Autowired
     public SandboxJobService(SandboxExecutionProperties properties, SandboxRuntime runtime, MeterRegistry metrics,
-                             SandboxJobStore store, Clock clock) {
+                             SandboxJobStore store, Clock clock, ObservationRegistry observations) {
         this.properties = properties;
         this.runtime = runtime;
         this.store = store;
         this.clock = clock;
+        this.observations = observations;
         BlockingQueue<Runnable> queue = properties.maxQueuedJobs() == 0
                 ? new SynchronousQueue<>()
                 : new ArrayBlockingQueue<>(properties.maxQueuedJobs());
@@ -95,6 +101,11 @@ public class SandboxJobService {
                 Math.min(Duration.ofMinutes(1).toMillis(), properties.jobRetention().toMillis() / 4)));
         maintenance.scheduleWithFixedDelay(this::maintainJobs, maintenanceMillis, maintenanceMillis,
                 TimeUnit.MILLISECONDS);
+    }
+
+    SandboxJobService(SandboxExecutionProperties properties, SandboxRuntime runtime, MeterRegistry metrics,
+                      SandboxJobStore store, Clock clock) {
+        this(properties, runtime, metrics, store, clock, ObservationRegistry.NOOP);
     }
 
     public ExecutionView submit(Operation operation, StartExecutionRequest request) throws Exception {
@@ -129,6 +140,14 @@ public class SandboxJobService {
             }
             Job job = new Job(randomId(), request.taskId(), request.sourceCommit(), request.patchDigest(),
                     request.idempotencyKey(), operation, manifest, Instant.now(clock));
+            job.observation = Observation.createNotStarted("ai.factory.sandbox.job", observations)
+                    .contextualName("sandbox " + operation.name().toLowerCase(java.util.Locale.ROOT))
+                    .lowCardinalityKeyValue("ai.operation", operation.name().toLowerCase(java.util.Locale.ROOT))
+                    .lowCardinalityKeyValue("ai.outcome", "accepted")
+                    .highCardinalityKeyValue("ai.task.id", request.taskId())
+                    .highCardinalityKeyValue("sandbox.execution.id", job.executionId)
+                    .start();
+            job.observation.event(Observation.Event.of("queued"));
             idempotency.put(idempotencyScope, job.executionId);
             jobs.put(job.executionId, job);
             try {
@@ -137,9 +156,11 @@ public class SandboxJobService {
             } catch (RejectedExecutionException exception) {
                 rollbackAdmission(job, idempotencyScope);
                 rejectedGlobal.increment();
+                stopObservation(job, exception, "rejected");
                 throw new IllegalStateException("sandbox execution queue is saturated", exception);
             } catch (RuntimeException exception) {
                 rollbackAdmission(job, idempotencyScope);
+                stopObservation(job, exception, "failed");
                 throw exception;
             }
             submitted.increment();
@@ -223,11 +244,12 @@ public class SandboxJobService {
             runtime.cancel(executionId);
         }
         failed.increment();
+        stopObservation(job, null, "cancelled");
         return view(job);
     }
 
     private void run(Job job, Path workspace) {
-        try {
+        try (Observation.Scope ignored = openObservation(job)) {
             synchronized (job) {
                 if (job.status == ExecutionStatus.CANCELLED) {
                     return;
@@ -236,6 +258,7 @@ public class SandboxJobService {
                 job.startedAt = Instant.now(clock);
                 job.heartbeatAt = job.startedAt;
                 queueDuration.record(Duration.between(job.createdAt, job.startedAt));
+                event(job, "running");
                 store.save(snapshot(job));
             }
             SandboxRuntime.RuntimeResult result = runtime.execute(job.operation, job.executionId, workspace);
@@ -257,8 +280,10 @@ public class SandboxJobService {
                 store.save(snapshot(job));
             }
             completed.increment();
+            stopObservation(job, null, job.verdict == Verdict.PASSED ? "succeeded" : "rejected");
         } catch (SandboxRuntime.RuntimeTimeoutException exception) {
             timeout(job, exception);
+            stopObservation(job, exception, "timed_out");
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             synchronized (job) {
@@ -266,8 +291,34 @@ public class SandboxJobService {
                     failLocked(job, ExecutionStatus.CANCELLED, "sandbox execution interrupted");
                 }
             }
+            stopObservation(job, exception, "cancelled");
         } catch (Exception exception) {
             fail(job, ExecutionStatus.FAILED, "sandbox runtime unavailable");
+            stopObservation(job, exception, "failed");
+        }
+    }
+
+    private static Observation.Scope openObservation(Job job) {
+        return job.observation == null ? null : job.observation.openScope();
+    }
+
+    private static void event(Job job, String name) {
+        if (job.observation != null) {
+            job.observation.event(Observation.Event.of(name));
+        }
+    }
+
+    private static void stopObservation(Job job, Exception error, String outcome) {
+        synchronized (job) {
+            if (job.observation == null || job.observationStopped) {
+                return;
+            }
+            job.observation.lowCardinalityKeyValue("ai.outcome", outcome);
+            if (error != null) {
+                job.observation.error(error);
+            }
+            job.observation.stop();
+            job.observationStopped = true;
         }
     }
 
@@ -648,6 +699,8 @@ public class SandboxJobService {
         private Instant completedAt;
         private Instant heartbeatAt;
         private Future<?> future;
+        private Observation observation;
+        private boolean observationStopped;
 
         private Job(String executionId, String taskId, String sourceCommit, String patchDigest, String idempotencyKey,
                     Operation operation, JobManifest manifest, Instant createdAt) {

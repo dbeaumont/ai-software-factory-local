@@ -171,7 +171,7 @@ Au début de la migration, le dépôt possède notamment :
 - [x] Propager W3C Trace Context sur HTTP vers LiteLLM et les cinq serveurs MCP.
 - [x] Remplacer la fabrication manuelle de `traceparent` par l'injection du propagateur OTel.
 - [x] Conserver temporairement le champ de compatibilité MCP puis le retirer après validation de tous les clients.
-- [ ] Instrumenter soumission, attente, timeout, annulation et résultat des jobs sandbox Compose/GKE.
+- [x] Instrumenter soumission, attente, timeout, annulation et résultat des jobs sandbox Compose/GKE.
 - [x] Rendre l'instrumentation Temporal sûre face aux replays, retries, child workflows et `continue-as-new`.
 - [ ] Utiliser des `Span Link` lorsqu'une relation n'est pas une parenté stricte.
 - [ ] Vérifier que les tâches parallèles produisent des spans frères réellement superposés.

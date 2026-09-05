@@ -7,6 +7,9 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.json.JsonMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationHandler;
+import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -112,6 +115,37 @@ class SandboxJobServiceTest {
         assertEquals(ExecutionStatus.SUCCEEDED, completed.status());
         assertEquals(Operation.APPLY_PATCH, runtime.lastOperation);
         assertEquals(1, runtime.calls.get());
+    }
+
+    @Test
+    void tracesTheAsynchronousJobFromQueueToResult() throws Exception {
+        jobs.shutdown();
+        AtomicReference<Observation.Context> stopped = new AtomicReference<>();
+        ObservationRegistry registry = ObservationRegistry.create();
+        registry.observationConfig().observationHandler(new ObservationHandler<>() {
+            @Override
+            public void onStop(Observation.Context context) {
+                stopped.set(context);
+            }
+
+            @Override
+            public boolean supportsContext(Observation.Context context) {
+                return true;
+            }
+        });
+        jobs = new SandboxJobService(properties, runtime, new SimpleMeterRegistry(), store, clock, registry);
+
+        ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
+                request("workflow", "observed-sandbox-job", patchDigest));
+        assertEquals(ExecutionStatus.SUCCEEDED, await(submitted.executionId()).status());
+        for (int attempt = 0; attempt < 50 && stopped.get() == null; attempt++) {
+            Thread.sleep(10);
+        }
+
+        assertNotNull(stopped.get());
+        assertEquals("ai.factory.sandbox.job", stopped.get().getName());
+        assertEquals("succeeded", stopped.get().getLowCardinalityKeyValue("ai.outcome").getValue());
+        assertEquals("run_tests", stopped.get().getLowCardinalityKeyValue("ai.operation").getValue());
     }
 
     @Test
