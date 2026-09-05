@@ -523,3 +523,24 @@ Points de départ :
 - [SigNoz self-hosted avec Docker](https://signoz.io/docs/install/docker/)
 - [Dashboards et alertes SigNoz basés sur OpenTelemetry](https://signoz.io/docs/userguide/custom-apm-dashboards-alerts/)
 - [Google Cloud — OpenTelemetry](https://cloud.google.com/stackdriver/docs/instrumentation/opentelemetry)
+
+## 20. État d'exécution et conditions de déblocage
+
+État vérifié le **5 septembre 2026** après exécution continue du plan. La pile locale active contient uniquement
+OpenTelemetry Collector et SigNoz ; la suite complète de l'orchestrateur passe, les services reconstruits sont
+sains et SigNoz expose 611 métriques, sept dashboards et quinze règles. Les cases restées ouvertes ne sont pas
+présentées comme réalisées : elles exigent les ressources ou décisions suivantes.
+
+| Périmètre ouvert | Condition objective de reprise |
+|---|---|
+| Export, dashboards, alertes, rétention, Secret Manager et campagne GKE | Fournir un projet GCP de validation, un cluster GKE, un contexte `kubectl`, Workload Identity, les droits IAM minimaux, les canaux de notification et un budget. Sur le poste vérifié, `gcloud` est absent et `kubectl` n'a aucun contexte actif. |
+| Workflow réel API → LLM/MCP/sandbox/assurance/SCM et corrélation des trois signaux | Fournir un ticket et un dépôt de test non sensibles, les credentials des systèmes cibles et une autorisation portant sur le payload exact transmis au fournisseur LLM. Le parcours doit ensuite atteindre un verdict terminal ; une exécution arrêtée par ambiguïté ne vaut pas preuve. |
+| Propagation W3C incluant Temporal | Activer un chemin client/worker Temporal de validation et sa propagation de contexte. Les chemins HTTP, MCP et asynchrones sont testés, et les replays n'émettent plus de spans, mais le chemin Temporal actif n'est pas disponible dans la configuration locale de référence. |
+| Déclenchement, notification et acquittement des alertes | Raccorder un canal humain de validation, nommer l'astreinte destinataire, déclencher les neuf règles puis conserver les horodatages de détection, notification et acquittement. Les fixtures valident actuellement les requêtes et seuils, pas l'acquittement humain. |
+| Captures des anciens dashboards Grafana | Restaurer temporairement le tag legacy isolé et fournir un navigateur ou renderer de capture. Les six exports JSON et leurs requêtes sont conservés ; aucun navigateur ou renderer n'est installé sur le poste vérifié. |
+| Approbations, formations et exercice opérateur | Désigner les propriétaires application, plateforme, sécurité et exploitation, faire signer la matrice de parité et de rétention, puis enregistrer les participants, résultats et écarts de l'exercice. |
+| Suppression du rollback et clôture `OTEL-080`/`OTEL-090` | Attendre au minimum le **5 octobre 2026**, obtenir l'approbation formelle de stabilité, vérifier une dernière fois les sommes SHA-256, puis supprimer les deux archives Grafana et le tag legacy de façon coordonnée. Au 5 septembre 2026, la sauvegarde est présente et ne doit pas être détruite. |
+
+À chaque reprise, exécuter d'abord les contrôles non destructifs, joindre la preuve datée dans
+`docs/evidence/observability/`, cocher uniquement les critères réellement observés et conserver un commit par
+tâche ou campagne cohérente.
