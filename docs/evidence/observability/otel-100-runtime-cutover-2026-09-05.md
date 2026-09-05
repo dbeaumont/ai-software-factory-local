@@ -21,6 +21,16 @@
 | Receiver Temporal sans serveur Prometheus | succès |
 | Recherche de service dans les traces | 6 services, 2 265 spans avant test de redémarrage |
 | Logs OTLP persistés | 114 avant test de redémarrage |
+| Parenté HTTP → tâche asynchrone → LLM/MCP | observation capturée avant mise en file et rouverte dans le worker |
+
+## Continuité du contexte asynchrone
+
+L'admission `POST /api/tasks` reste sur le thread instrumenté de la requête jusqu'à la création de l'observation
+`ai.factory.task`. Cette observation capture le parent HTTP avant l'appel à l'`ExecutorService`, est rouverte dans
+le worker pendant toute l'exécution automatique, puis arrêtée avec l'état final comme résultat borné. Les spans
+pipeline, LLM et MCP créés par `ExecutionTracer` héritent donc du même parent ; l'injection W3C des appels MCP part
+du span actif au lieu de fabriquer une nouvelle racine. `AsyncTaskTracerTest` vérifie explicitement la parenté
+HTTP → tâche asynchrone → enfant LLM à travers le changement de thread.
 
 ## Résilience observée
 

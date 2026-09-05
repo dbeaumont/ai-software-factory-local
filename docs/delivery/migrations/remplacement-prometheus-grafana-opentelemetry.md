@@ -164,7 +164,7 @@ Au début de la migration, le dépôt possède notamment :
 
 ### 7.2 Spans et propagation
 
-- [ ] Relier le span HTTP entrant au traitement asynchrone complet de la tâche.
+- [x] Relier le span HTTP entrant au traitement asynchrone complet de la tâche.
 - [x] Adapter `ExecutionTracer` pour utiliser le contexte OTel actif et enregistrer statuts et exceptions.
 - [x] Instrumenter les frontières pipeline, workflow, child workflow et activité.
 - [x] Instrumenter les agents, tours, appels LLM, retries et appels d'outils sans enregistrer leur contenu.

@@ -8,6 +8,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -45,6 +46,7 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
     private final com.example.aifactory.config.AgentToolingProperties agentTooling;
     private final AgentContextToolHost agentTools;
     private final WorkflowOperationalMetrics operationalMetrics;
+    private final AsyncTaskTracer taskTracer;
 
     public DeterministicWorkflowCoordinator(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
                        PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses,
@@ -53,6 +55,18 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
                        MeterRegistry metrics, ObjectMapper objectMapper,
                        com.example.aifactory.config.AgentToolingProperties agentTooling,
                        AgentContextToolHost agentTools) {
+        this(props, runner, contextService, prompts, llm, agentResponses, sandbox, patchIntegrator, assurance,
+                scmDelivery, metrics, objectMapper, agentTooling, agentTools, AsyncTaskTracer.noop());
+    }
+
+    @Autowired
+    public DeterministicWorkflowCoordinator(AiFactoryProperties props, ProcessRunner runner, RepositoryContextProvider contextService,
+                       PromptService prompts, LlmGatewayClient llm, AgentResponseValidator agentResponses,
+                       SandboxExecutor sandbox, PatchIntegrator patchIntegrator,
+                       AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
+                       MeterRegistry metrics, ObjectMapper objectMapper,
+                       com.example.aifactory.config.AgentToolingProperties agentTooling,
+                       AgentContextToolHost agentTools, AsyncTaskTracer taskTracer) {
         this.props = props;
         this.runner = runner;
         this.contextService = contextService;
@@ -66,6 +80,7 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
         this.objectMapper = objectMapper;
         this.agentTooling = agentTooling;
         this.agentTools = agentTools;
+        this.taskTracer = taskTracer;
         this.operationalMetrics = new WorkflowOperationalMetrics(metrics);
         this.completedTasks = Counter.builder("ai_factory_tasks_completed").description("Tasks that completed validation").register(metrics);
         this.failedTasks = Counter.builder("ai_factory_tasks_failed").description("Tasks that failed before approval").register(metrics);
@@ -76,12 +91,12 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
 
     @Override
     public void start(TaskState state) {
-        executor.submit(() -> runPipeline(state));
+        taskTracer.submit(executor, state, "execute", () -> runPipeline(state));
     }
 
     @Override
     public void resumeAfterApproval(TaskState state) {
-        executor.submit(() -> {
+        taskTracer.submit(executor, state, "resume-after-approval", () -> {
             try {
                 Path workspace = Path.of(state.workspace);
                 String prUrl = scmDelivery.createDraftPullRequest(workspace, state.request.repositoryUrl(),

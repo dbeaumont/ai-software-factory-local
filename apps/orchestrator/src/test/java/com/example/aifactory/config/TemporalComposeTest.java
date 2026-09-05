@@ -24,7 +24,9 @@ class TemporalComposeTest {
         Map<String, Object> temporal = services.get("temporal");
         Map<String, Object> namespace = services.get("temporal-namespace");
 
-        assertThat(database.get("image")).isEqualTo("postgres:16-alpine");
+        assertThat(database.get("image").toString())
+                .startsWith("postgres:16-alpine@sha256:")
+                .matches("postgres:16-alpine@sha256:[0-9a-f]{64}");
         assertThat((List<String>) database.get("volumes"))
                 .contains("temporal-db-data:/var/lib/postgresql/data");
         assertThat(database.get("networks")).isEqualTo(List.of("workflow-internal"));
