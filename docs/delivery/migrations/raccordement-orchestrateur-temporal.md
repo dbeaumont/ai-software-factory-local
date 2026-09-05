@@ -171,8 +171,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-030 — Créer les beans obligatoires.** Construire `WorkflowServiceStubs`, `WorkflowClient`,
   `WorkerFactory` et les workers à chaque démarrage de l'orchestrateur post-bascule. _(Graphe SDK obligatoire
   créé par `TemporalRuntimeConfiguration`, avec sept workers uniques détenus par `TemporalWorkerRegistry`.)_
-- [ ] **TEMP-031 — Implémenter la sécurité du client.** Charger TLS/mTLS et clé API depuis des fichiers montés,
-  vérifier les permissions et ne jamais injecter les secrets dans les inputs de workflow.
+- [x] **TEMP-031 — Implémenter la sécurité du client.** Charger TLS/mTLS et clé API depuis des fichiers montés,
+  vérifier les permissions et ne jamais injecter les secrets dans les inputs de workflow. _(TLS système, mTLS
+  PKCS#8 et clé API chargés au bootstrap ; fichiers bornés, non symboliques et secrets owner-only.)_
 - [ ] **TEMP-032 — Enregistrer le workflow racine.** Enregistrer l'implémentation de production sur
   `ai-factory-workflows` avec un Build ID/version de déploiement explicite.
 - [ ] **TEMP-033 — Enregistrer les child workflows.** Enregistrer délégations, intégration de patch et revue
