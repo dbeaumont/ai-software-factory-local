@@ -190,8 +190,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-036 — Ajouter les interceptors.** Propager `traceparent`/baggage validés, identité d'exécution et
   métriques sans produire de spans lors d'un replay. _(Propagateur W3C Temporal borné branché au client ;
   interceptor worker branché à la factory avec corrélation d'identité, métriques de file et garde de replay.)_
-- [ ] **TEMP-037 — Exposer la readiness.** Considérer l'orchestrateur prêt en mode Temporal seulement si le
-  namespace est accessible et si les workers requis sont démarrés.
+- [x] **TEMP-037 — Exposer la readiness.** Considérer l'orchestrateur prêt en mode Temporal seulement si le
+  namespace est accessible et si les workers requis sont démarrés. _(`temporalEngine` passe UP uniquement après
+  accès borné au namespace et démarrage des sept workers ; ses détails distinguent infrastructure et admissions.)_
 - [ ] **TEMP-038 — Gérer le cycle de vie.** Démarrer la factory après l'enregistrement complet et l'arrêter avec
   drainage borné avant fermeture du client.
 
