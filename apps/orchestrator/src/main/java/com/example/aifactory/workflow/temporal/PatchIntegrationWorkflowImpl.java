@@ -29,7 +29,7 @@ public final class PatchIntegrationWorkflowImpl implements PatchIntegrationWorkf
         try {
             DurableExecutionActivities.Metadata metadata = DurableExecutionActivities.Metadata.deterministic(
                     request.taskId(), request.attemptId(), request.sourceCommit(), "integration", "apply-patches",
-                    sequenceBase + 1);
+                    sequenceBase + 1, request.planDigest());
             PatchIntegrationActivities.ApplicationResult applied = activities.apply(
                     new PatchIntegrationActivities.Request(metadata, request.workspace(),
                             request.planDigest(), PATCH_CHECK_PROFILE, PATCH_APPLY_PROFILE, request.patches()));
@@ -39,7 +39,8 @@ public final class PatchIntegrationWorkflowImpl implements PatchIntegrationWorkf
                 PatchIntegrationActivities.VerificationKind kind = kinds[index];
                 DurableExecutionActivities.Metadata verificationMetadata = DurableExecutionActivities.Metadata.deterministic(
                         request.taskId(), request.attemptId(), request.sourceCommit(), "integration",
-                        "verify-" + kind.name().toLowerCase(java.util.Locale.ROOT), sequenceBase + index + 2);
+                        "verify-" + kind.name().toLowerCase(java.util.Locale.ROOT), sequenceBase + index + 2,
+                        applied.integratedPatchDigest());
                 verifications.add(activities.verify(new PatchIntegrationActivities.VerificationRequest(
                         verificationMetadata, request.workspace(), applied.integratedPatchDigest(), kind)));
             }
@@ -52,7 +53,7 @@ public final class PatchIntegrationWorkflowImpl implements PatchIntegrationWorkf
             PatchIntegrationActivities.TerminalOutcome cleanupOutcome = outcome;
             DurableExecutionActivities.Metadata cleanupMetadata = DurableExecutionActivities.Metadata.deterministic(
                     request.taskId(), request.attemptId(), request.sourceCommit(), "integration", "cleanup",
-                    sequenceBase + 5);
+                    sequenceBase + 5, request.planDigest());
             Workflow.newDetachedCancellationScope(() -> activities.cleanup(new PatchIntegrationActivities.CleanupRequest(
                     cleanupMetadata, request.cleanupPlan(), cleanupOutcome))).run();
         }

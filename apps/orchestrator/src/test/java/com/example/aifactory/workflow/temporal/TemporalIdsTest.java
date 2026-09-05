@@ -11,7 +11,10 @@ class TemporalIdsTest {
         String workflow = TemporalIds.workflow("task-1", "attempt-1");
         String delegation = TemporalIds.delegation("task-1", "attempt-1", "code-1");
         String activity = TemporalIds.activity("task-1", "attempt-1", "code-1", "apply-patch", 0);
-        String effect = TemporalIds.effectKey("task-1", "attempt-1", "code-1", "apply-patch", 0);
+        String sourceCommit = "a".repeat(40);
+        String inputDigest = "b".repeat(64);
+        String effect = TemporalIds.effectKey("task-1", "attempt-1", "code-1", "apply-patch", 0,
+                sourceCommit, inputDigest);
 
         assertThat(TemporalIds.workflow("task-1", "attempt-1")).isEqualTo(workflow);
         assertThat(workflow).isEqualTo("ai-factory/task-1/attempt-1");
@@ -19,8 +22,10 @@ class TemporalIdsTest {
         assertThat(TemporalIds.activity("task-1", "attempt-1", "code-1", "apply-patch", 1))
                 .isNotEqualTo(activity);
         assertThat(DurableExecutionActivities.Metadata.deterministic(
-                "task-1", "attempt-1", "a".repeat(40), "code-1", "apply-patch", 0).idempotencyKey())
+                "task-1", "attempt-1", sourceCommit, "code-1", "apply-patch", 0, inputDigest).idempotencyKey())
                 .isEqualTo(effect);
+        assertThat(TemporalIds.effectKey("task-1", "attempt-1", "code-1", "apply-patch", 0,
+                sourceCommit, "c".repeat(64))).isNotEqualTo(effect);
     }
 
     @Test

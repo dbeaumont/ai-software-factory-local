@@ -121,8 +121,9 @@ public class ScmDeliveryService {
         String evidence = new TreeMap<>(request.evidenceDigests()).entrySet().stream()
                 .map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(java.util.stream.Collectors.joining("\n"));
-        String canonical = String.join("\n", request.taskId(), request.attemptId(), request.repositoryId(),
-                request.sourceCommit(), request.patchDigest(), evidence, request.baseBranch(), request.approvalProof().signature());
+        String canonical = String.join("\n", request.schemaVersion(), request.taskId(), request.attemptId(),
+                request.repositoryId(), request.sourceCommit(), request.patchDigest(), evidence, request.baseBranch(),
+                request.title(), request.actor(), request.approvalProof().signature());
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }

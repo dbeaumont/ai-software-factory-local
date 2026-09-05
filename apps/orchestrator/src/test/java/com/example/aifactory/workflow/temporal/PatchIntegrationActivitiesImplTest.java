@@ -37,7 +37,7 @@ class PatchIntegrationActivitiesImplTest {
 
         PatchIntegrationActivities.ApplicationResult result = activities.apply(new PatchIntegrationActivities.Request(
                 DurableExecutionActivities.Metadata.deterministic("task-1", "attempt-1", "a".repeat(40),
-                        "integration", "apply-patches", 1), workspace.toString(), plan(a, b),
+                        "integration", "apply-patches", 1, "b".repeat(64)), workspace.toString(), plan(a, b),
                 PatchIntegrationWorkflow.PATCH_CHECK_PROFILE, PatchIntegrationWorkflow.PATCH_APPLY_PROFILE,
                 List.of(a, b)));
 
@@ -53,7 +53,7 @@ class PatchIntegrationActivitiesImplTest {
                     new PatchIntegrationActivities.VerificationRequest(
                             DurableExecutionActivities.Metadata.deterministic(
                                     "task-1", "attempt-1", "a".repeat(40), "integration",
-                                    "verify-" + kind.name().toLowerCase(), kind.ordinal() + 2),
+                                    "verify-" + kind.name().toLowerCase(), kind.ordinal() + 2, "b".repeat(64)),
                             workspace.toString(), result.integratedPatchDigest(), kind));
             assertThat(verification.status()).isEqualTo("PASSED");
         }
@@ -101,7 +101,7 @@ class PatchIntegrationActivitiesImplTest {
             PatchIntegrationActivities.CleanupResult result = activities.cleanup(
                     new PatchIntegrationActivities.CleanupRequest(
                             DurableExecutionActivities.Metadata.deterministic(
-                                    "task-1", "attempt-1", commit, "integration", "cleanup", 5),
+                                    "task-1", "attempt-1", commit, "integration", "cleanup", 5, "b".repeat(64)),
                             plan, outcome));
 
             assertThat(result.status()).isEqualTo("CLEANED");

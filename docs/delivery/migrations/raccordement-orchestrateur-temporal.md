@@ -143,8 +143,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-023 — Retirer les écritures implicites dans `TaskState`.** Faire retourner aux étapes des événements
   métier explicites appliqués ensuite à la projection. _(`PipelineProjectionEvent` modélise chaque mutation ; le
   service d'étapes émet les événements et seul l'applier met à jour `TaskState`.)_
-- [ ] **TEMP-024 — Formaliser l'idempotence.** Dériver les clés des effets depuis workflow ID, étape, séquence,
-  source commit et digest d'entrée ; rejeter une réutilisation avec un payload différent.
+- [x] **TEMP-024 — Formaliser l'idempotence.** Dériver les clés des effets depuis workflow ID, étape, séquence,
+  source commit et digest d'entrée ; rejeter une réutilisation avec un payload différent. _(Clé canonique
+  `effect-<sha256>` généralisée aux activités, sandbox et livraison SCM ; les MCP persistants comparent le
+  fingerprint complet et refusent toute collision de payload.)_
 - [ ] **TEMP-025 — Classer les erreurs.** Distinguer erreurs métier non retryables, erreurs de contrat, saturation,
   timeout, dépendance indisponible et issue d'effet inconnue.
 - [ ] **TEMP-026 — Définir les politiques temporelles.** Fixer pour chaque activité start-to-close,

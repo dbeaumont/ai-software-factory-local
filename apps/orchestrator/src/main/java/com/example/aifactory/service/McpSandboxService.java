@@ -19,6 +19,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.example.aifactory.workflow.temporal.TemporalIds;
+
 @Service
 public class McpSandboxService implements SandboxExecutor {
     private static final int OUTPUT_PAGE_CHARS = 16_384;
@@ -90,12 +92,13 @@ public class McpSandboxService implements SandboxExecutor {
 
     private String executeTimed(String tool, String operation, Path workspace, String taskId, String sourceCommit) throws Exception {
         McpRequestMetadata metadata = McpRequestMetadata.create(
-                taskId, sourceCommit, "workflow", properties.sandboxPollTimeout());
+                taskId, PipelineStepContracts.INITIAL_ATTEMPT_ID, sourceCommit, "workflow",
+                properties.sandboxPollTimeout());
         String patchDigest = patchDigest(workspace);
         Map<String, Object> start = metadata.arguments();
         String inputDigest = patchDigest == null ? digest(sourceCommit) : patchDigest;
-        start.put("idempotency_key", idempotencyKey(
-                taskId, start.get("attempt_id").toString(), operation, inputDigest));
+        start.put("idempotency_key", TemporalIds.effectKey(taskId,
+                start.get("attempt_id").toString(), "sandbox", operation, 0, sourceCommit, inputDigest));
         if (patchDigest != null) {
             start.put("patch_digest", patchDigest);
         }
@@ -228,10 +231,6 @@ public class McpSandboxService implements SandboxExecutor {
         return Files.isRegularFile(patch)
                 ? HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(patch)))
                 : null;
-    }
-
-    private static String idempotencyKey(String taskId, String attemptId, String operation, String inputDigest) {
-        return taskId + ':' + attemptId + ':' + operation + ':' + inputDigest;
     }
 
     private static String digest(String value) throws Exception {

@@ -25,8 +25,15 @@ public final class TemporalIds {
                 Integer.toString(sequence));
     }
 
-    public static String effectKey(String taskId, String attemptId, String nodeId, String operation, int sequence) {
-        return bounded("effect", activity(taskId, attemptId, nodeId, operation, sequence));
+    public static String effectKey(String taskId, String attemptId, String nodeId, String operation, int sequence,
+                                   String sourceCommit, String inputDigest) {
+        String workflowId = workflow(taskId, attemptId);
+        String activityId = activity(taskId, attemptId, nodeId, operation, sequence);
+        if (sourceCommit == null || !sourceCommit.matches("[0-9a-f]{7,64}")
+                || inputDigest == null || !inputDigest.matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Effect source commit or input digest is invalid");
+        }
+        return "effect-" + digest(String.join("\u0000", workflowId, activityId, sourceCommit, inputDigest));
     }
 
     private static String bounded(String prefix, String... parts) {

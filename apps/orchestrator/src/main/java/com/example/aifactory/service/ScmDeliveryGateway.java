@@ -16,6 +16,8 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.example.aifactory.workflow.temporal.TemporalIds;
+
 @Service
 public class ScmDeliveryGateway {
     private static final Map<String, String> EVIDENCE_PATHS = Map.of(
@@ -57,7 +59,8 @@ public class ScmDeliveryGateway {
         arguments.put("base_branch", baseBranch);
         arguments.put("title", title);
         arguments.put("actor", "workflow");
-        arguments.put("idempotency_key", "delivery-" + taskId + '-' + attemptId);
+        arguments.put("idempotency_key", TemporalIds.effectKey(taskId, attemptId, "delivery",
+                "create-draft-pr", 0, sourceCommit, patchDigest));
         arguments.put("approval_proof", proof);
         JsonNode result = validator.validate("scm.create_draft_pull_request",
                 mcp.call(properties.serverName(), "scm.create_draft_pull_request", arguments));

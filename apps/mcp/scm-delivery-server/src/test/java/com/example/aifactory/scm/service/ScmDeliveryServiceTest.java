@@ -85,6 +85,10 @@ class ScmDeliveryServiceTest {
         assertEquals(root.resolve("state/worktrees/task-1-attempt-1"), captured.get().workspace());
         assertEquals(result, replay);
         assertEquals(1, creates.get());
+        ScmDeliveryService.CreateRequest conflictingReplay = new ScmDeliveryService.CreateRequest("1", "task-1",
+                "attempt-1", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "Other title",
+                "workflow", "delivery-task-1-attempt-1", proof);
+        assertThrows(SecurityException.class, () -> service.create(conflictingReplay));
         ScmDeliveryService.CreateRequest unauthorized = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-1", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "Add endpoint",
                 "delivery", "delivery-task-1-unauthorized", proof);

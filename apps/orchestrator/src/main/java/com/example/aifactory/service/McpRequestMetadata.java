@@ -31,10 +31,15 @@ final class McpRequestMetadata {
 
     private McpRequestMetadata(String taskId, String sourceCommit, String actor, Duration lifetime,
                                ExecutionIdentity identity) {
+        this(taskId, randomHex(16), sourceCommit, actor, lifetime, identity);
+    }
+
+    private McpRequestMetadata(String taskId, String attemptId, String sourceCommit, String actor,
+                               Duration lifetime, ExecutionIdentity identity) {
         this.taskId = taskId;
         this.sourceCommit = sourceCommit;
         this.actor = actor;
-        this.attemptId = randomHex(16);
+        this.attemptId = attemptId;
         this.identity = identity == null
                 ? ExecutionIdentity.deterministic(taskId, attemptId, actor, actor)
                 : identity;
@@ -59,6 +64,11 @@ final class McpRequestMetadata {
     static McpRequestMetadata create(String taskId, String sourceCommit, String actor, Duration lifetime,
                                      ExecutionIdentity identity) {
         return new McpRequestMetadata(taskId, sourceCommit, actor, lifetime, identity);
+    }
+
+    static McpRequestMetadata create(String taskId, String attemptId, String sourceCommit, String actor,
+                                     Duration lifetime) {
+        return new McpRequestMetadata(taskId, attemptId, sourceCommit, actor, lifetime, null);
     }
 
     Map<String, Object> arguments() {

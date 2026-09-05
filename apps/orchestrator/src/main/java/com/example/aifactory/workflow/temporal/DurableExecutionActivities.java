@@ -47,9 +47,10 @@ public interface DurableExecutionActivities {
         }
 
         public static Metadata deterministic(String taskId, String attemptId, String sourceCommit,
-                                             String nodeId, String operation, int sequence) {
+                                             String nodeId, String operation, int sequence, String inputDigest) {
             String operationId = TemporalIds.activity(taskId, attemptId, nodeId, operation, sequence);
-            String idempotencyKey = TemporalIds.effectKey(taskId, attemptId, nodeId, operation, sequence);
+            String idempotencyKey = TemporalIds.effectKey(taskId, attemptId, nodeId, operation, sequence,
+                    sourceCommit, inputDigest);
             return new Metadata(taskId, attemptId, sourceCommit,
                     operationId, idempotencyKey,
                     ExecutionIdentity.deterministic(taskId, attemptId, nodeId, operationId));

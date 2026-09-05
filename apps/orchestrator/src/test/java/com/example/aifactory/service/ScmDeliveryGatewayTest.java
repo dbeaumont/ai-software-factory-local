@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -60,7 +61,7 @@ class ScmDeliveryGatewayTest {
         assertEquals("http://localhost:3000/aiadmin/customer-api/pulls/7", url);
         assertEquals("customer-api", captured.get().get("repository_id"));
         assertEquals("workflow", captured.get().get("actor"));
-        assertEquals("delivery-task-1-approval-1", captured.get().get("idempotency_key"));
+        assertTrue(captured.get().get("idempotency_key").toString().matches("effect-[0-9a-f]{64}"));
         assertFalse(captured.get().toString().contains(key));
     }
 }

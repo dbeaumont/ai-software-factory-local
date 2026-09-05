@@ -81,7 +81,8 @@ class PatchIntegrationScenariosTest {
                 new CodeWorkspaceManager(new ProcessRunner()));
         return activities.apply(new PatchIntegrationActivities.Request(
                 DurableExecutionActivities.Metadata.deterministic(
-                        "task-1", "attempt-1", "a".repeat(40), "integration", "apply-patches", 1),
+                        "task-1", "attempt-1", "a".repeat(40), "integration", "apply-patches", 1,
+                        plan.digest()),
                 workspace.toString(), plan.digest(), PatchIntegrationWorkflow.PATCH_CHECK_PROFILE,
                 PatchIntegrationWorkflow.PATCH_APPLY_PROFILE, artifacts));
     }
