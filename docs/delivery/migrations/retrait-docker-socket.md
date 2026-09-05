@@ -46,16 +46,16 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 - [x] Inventorier les comportements actuels de `DockerSandboxRuntime` : lancement, timeout, annulation, logs, troncature et nettoyage des orphelins.
 - [x] Inventorier les volumes et caches utilisés : workspace, Maven, Trivy et état des jobs.
 - [x] Inventorier les variables et secrets injectés pour chaque profil.
-- [ ] Définir une matrice de parité pour les cinq opérations sandbox.
+- [x] Définir une matrice de parité pour les cinq opérations sandbox.
 - [x] Capturer des cas de référence locaux : succès, échec, timeout, annulation, sortie volumineuse et processus interrompu.
-- [ ] Définir les SLO locaux et GKE : temps de démarrage, durée maximale, délai d'annulation et rétention.
+- [x] Définir les SLO locaux et GKE : temps de démarrage, durée maximale, délai d'annulation et rétention.
 - [x] Décider si les runners Compose sont dédiés par classe de sécurité ou regroupés dans un pool homogène.
-- [ ] Consigner une ADR confirmant la cible Compose statique + GKE Jobs.
+- [x] Consigner une ADR confirmant la cible Compose statique + GKE Jobs.
 
 ### Critères de sortie du lot 0
 
-- [ ] La matrice couvre chaque opération et chaque politique réseau.
-- [ ] Les différences acceptables entre Compose et GKE sont écrites et approuvées.
+- [x] La matrice couvre chaque opération et chaque politique réseau.
+- [x] Les différences acceptables entre Compose et GKE sont écrites et approuvées.
 - [x] Aucun comportement indispensable ne dépend implicitement de la CLI Docker.
 
 ## 5. Lot 1 — stabiliser le contrat d'exécution
