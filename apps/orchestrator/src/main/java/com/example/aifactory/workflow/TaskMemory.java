@@ -29,6 +29,16 @@ public interface TaskMemory {
         // Volatile adapters have no durable reconciliation queue.
     }
 
+    /** Commits a projection snapshot and its stable Temporal event identity in one database transaction. */
+    default boolean project(String eventId, TaskState state) {
+        save(state);
+        return true;
+    }
+
+    default boolean wasProjected(String taskId, String attemptId, String eventId) {
+        return false;
+    }
+
     Optional<TaskState> find(String taskId);
 
     List<TaskState> list();

@@ -48,7 +48,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         PipelineProjectionEvent.Applier.apply(state, new PipelineProjectionEvent.WorkspaceInitialized(binding.workspace()));
         PipelineProjectionEvent.Applier.apply(state, new PipelineProjectionEvent.SourceCloned(
                 binding.sourceCommit(), "configured-cloud-model"));
-        memory.save(state);
+        project(state);
         PipelineStepContracts.Command command = command("bind-source", binding.taskId(), binding.attemptId(),
                 binding.repositoryId(), binding.sourceCommit(), Map.of("attestation", binding.attestationDigest()));
         return PipelineStepContracts.Result.from(command, binding.sourceCommit(), Map.of());
@@ -82,7 +82,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             };
             execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
             applyArtifacts(state, execution.result());
-            memory.save(state);
+            project(state);
             return execution.result();
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
@@ -100,7 +100,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             state.transition(TaskStatus.GENERATING_PATCH, "Temporal activity: generate patch candidate");
             PipelineProjectionEvent.StepExecution execution = steps.generatePatchCandidate(
                     state, Path.of(request.workspace()), request.command());
-            applyAndSave(state, execution);
+            applyAndProject(state, execution);
             return execution.result();
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
@@ -117,7 +117,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         state.transition(TaskStatus.APPLYING_PATCH, "Temporal activity: validate patch candidate");
         PipelineStepService.PatchValidationOutcome outcome = steps.validatePatchCandidate(
                 state, Path.of(request.workspace()), request.command());
-        applyAndSave(state, outcome.execution());
+        applyAndProject(state, outcome.execution());
         return new PatchValidationResult(outcome.valid(), outcome.execution().result(), outcome.error());
     }
 
@@ -131,7 +131,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             PipelineProjectionEvent.StepExecution execution = steps.repairPatchCandidate(state,
                     Path.of(request.workspace()), request.command(), request.validationError(),
                     request.repairAttempt());
-            applyAndSave(state, execution);
+            applyAndProject(state, execution);
             return execution.result();
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
@@ -151,7 +151,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         PipelineProjectionEvent.DeliveryPrepared prepared = steps.prepareDelivery(state);
         PipelineProjectionEvent.Applier.apply(state, prepared);
         state.transition(TaskStatus.WAITING_APPROVAL, "Pipeline complete; Temporal awaits approval");
-        memory.save(state);
+        project(state);
         return prepared.pendingEffect();
     }
 
@@ -167,9 +167,10 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
                     com.example.aifactory.service.ScmDeliveryGateway.repositoryId(state.request.repositoryUrl()),
                     request.sourceCommit(), Map.of("patch", TemporalIds.sha256(state.patch)));
             PipelineProjectionEvent.StepExecution execution = steps.deliver(state, command);
-            applyAndSave(state, execution);
+            execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
+            applyArtifacts(state, execution.result());
             state.transition(TaskStatus.PR_CREATED, "Pull request created by Temporal SCM activity");
-            memory.save(state);
+            project(state);
             return state.pullRequestUrl;
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
@@ -192,7 +193,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             throw new SecurityException("Pipeline gate rejection is not source-bound");
         }
         state.transition(TaskStatus.GATE_REJECTED, "Gate rejected: " + rejection.gate());
-        memory.save(state);
+        project(state);
     }
 
     @Override
@@ -207,7 +208,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             throw new SecurityException("Pipeline cancellation is not source-bound");
         }
         state.cancel(cancellation.reason(), cancellation.actor());
-        memory.save(state);
+        project(state);
     }
 
     @Override
@@ -233,7 +234,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         if (!state.humanApproved) {
             state.humanApproved = true;
             state.transition(TaskStatus.APPROVED, "Temporal approval recorded for manifest " + approval.manifestId());
-            memory.save(state);
+            project(state);
         }
     }
 
@@ -250,9 +251,11 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         if (!decision.sourceCommit().equals(state.sourceCommit)) {
             throw new SecurityException("Pipeline human decision is not source-bound");
         }
+        String eventId = projectionEventId();
+        if (memory.wasProjected(state.id, state.workflowAttemptId, eventId)) return;
         state.answerHumanAction(decision.requestId(), decision.decision(), decision.objectDigest(),
                 decision.actor(), decision.actorRole());
-        memory.save(state);
+        memory.project(eventId, state);
     }
 
     @Override
@@ -278,7 +281,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
                 request.repositoryId(), request.sourceCommit(), request.artifacts().get("patch").digest(),
                 Map.copyOf(references), policy, "workflow"));
         state.bindApprovalManifest(manifest.manifestId(), manifest.uri(), manifest.digest());
-        memory.save(state);
+        project(state);
         return manifest;
     }
 
@@ -304,10 +307,18 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         }
     }
 
-    private void applyAndSave(TaskState state, PipelineProjectionEvent.StepExecution execution) {
+    private void applyAndProject(TaskState state, PipelineProjectionEvent.StepExecution execution) {
         execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
         applyArtifacts(state, execution.result());
-        memory.save(state);
+        project(state);
+    }
+
+    private void project(TaskState state) {
+        memory.project(projectionEventId(), state);
+    }
+
+    private static String projectionEventId() {
+        return Activity.getExecutionContext().getInfo().getActivityId();
     }
 
     private static void applyArtifacts(TaskState state, PipelineStepContracts.Result result) {

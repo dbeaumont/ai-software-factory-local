@@ -98,6 +98,35 @@ public final class PostgresTaskMemory implements TaskMemory {
         });
     }
 
+    @Override
+    public boolean project(String eventId, TaskState state) {
+        requireEventId(eventId);
+        EvidenceRepository.StoredEvidence snapshot = storeSnapshot(state);
+        Boolean applied = transactions.execute(ignored -> {
+            if (wasProjected(state.id, state.workflowAttemptId, eventId)) return false;
+            persistMetadata(state, snapshot);
+            jdbc.update("INSERT INTO task_projection_events(task_id, attempt_id, event_id, snapshot_digest, "
+                            + "projected_at) VALUES (?, ?, ?, ?, ?)",
+                    state.id, state.workflowAttemptId, eventId, snapshot.digest(), Instant.now());
+            Long position = jdbc.queryForObject("SELECT projection_position FROM task_projection_events "
+                            + "WHERE task_id = ? AND attempt_id = ? AND event_id = ?",
+                    Long.class, state.id, state.workflowAttemptId, eventId);
+            jdbc.update("UPDATE task_projection_snapshots SET last_event_position = ?, last_event_id = ? "
+                            + "WHERE task_id = ?", position, eventId, state.id);
+            return true;
+        });
+        return Boolean.TRUE.equals(applied);
+    }
+
+    @Override
+    public boolean wasProjected(String taskId, String attemptId, String eventId) {
+        requireEventId(eventId);
+        Integer count = jdbc.queryForObject("SELECT count(*) FROM task_projection_events "
+                        + "WHERE task_id = ? AND attempt_id = ? AND event_id = ?",
+                Integer.class, taskId, attemptId, eventId);
+        return count != null && count > 0;
+    }
+
     private EvidenceRepository.StoredEvidence storeSnapshot(TaskState state) {
         if (state == null) throw new IllegalArgumentException("Task state is required");
         ProjectionSnapshot payload = new ProjectionSnapshot(
@@ -245,6 +274,12 @@ public final class PostgresTaskMemory implements TaskMemory {
 
     private static String workflowId(TaskState state) {
         return TemporalIds.workflow(state.id, state.workflowAttemptId);
+    }
+
+    private static void requireEventId(String eventId) {
+        if (eventId == null || !eventId.matches("[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}")) {
+            throw new IllegalArgumentException("Projection event identity is invalid");
+        }
     }
 
     record ProjectionSnapshot(TaskView view, String attemptId, Instant approvalExpiresAt) {}

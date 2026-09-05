@@ -55,7 +55,20 @@ class PostgresTaskMemoryTest {
                   snapshot_digest char(64) NOT NULL,
                   projected_at timestamp with time zone NOT NULL,
                   version bigint NOT NULL DEFAULT 0,
+                  last_event_position bigint NOT NULL DEFAULT 0,
+                  last_event_id varchar(255),
                   UNIQUE (task_id, attempt_id, snapshot_uri, snapshot_digest)
+                )
+                """);
+        jdbc.execute("""
+                CREATE TABLE task_projection_events (
+                  projection_position bigint GENERATED ALWAYS AS IDENTITY UNIQUE,
+                  task_id varchar(64) NOT NULL REFERENCES tasks(task_id),
+                  attempt_id varchar(128) NOT NULL,
+                  event_id varchar(255) NOT NULL,
+                  snapshot_digest char(64) NOT NULL,
+                  projected_at timestamp with time zone NOT NULL,
+                  PRIMARY KEY (task_id, attempt_id, event_id)
                 )
                 """);
         jdbc.execute("""
@@ -161,6 +174,28 @@ class PostgresTaskMemoryTest {
         assertThat(((Number) row.get("RETRY_COUNT")).intValue()).isEqualTo(1);
         assertThat(row.get("LAST_ERROR_CODE")).isEqualTo("IllegalStateException");
         assertThat(row.toString()).doesNotContain("secret endpoint details");
+    }
+
+    @Test
+    void appliesAStableTemporalProjectionEventOnlyOnce() {
+        TaskState task = task("task-event");
+        memory.save(task);
+        task.transition(TaskStatus.PLANNING, "First projection");
+
+        assertThat(memory.project("activity/task-event/plan/1", task)).isTrue();
+        long committedVersion = task.projectionVersion;
+        int committedSteps = memory.find(task.id).orElseThrow().steps.size();
+
+        task.transition(TaskStatus.PLANNING, "Duplicate delivery");
+        assertThat(memory.project("activity/task-event/plan/1", task)).isFalse();
+
+        TaskState restored = memory.find(task.id).orElseThrow();
+        assertThat(restored.projectionVersion).isEqualTo(committedVersion);
+        assertThat(restored.steps).hasSize(committedSteps);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM task_projection_events WHERE task_id = ?",
+                Integer.class, task.id)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT last_event_id FROM task_projection_snapshots WHERE task_id = ?",
+                String.class, task.id)).isEqualTo("activity/task-event/plan/1");
     }
 
     private static TaskState task(String id) {

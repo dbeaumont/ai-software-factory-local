@@ -167,4 +167,14 @@ class TaskMemorySchemaTest {
                 .contains("PRIMARY KEY REFERENCES tasks(task_id)")
                 .doesNotContain("error_message", "request_content", "requirement");
     }
+
+    @Test
+    void projectionEventsProvideAnIdempotencyKeyAndDurableCursor() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V012__idempotent_projection_events.sql"));
+
+        assertThat(sql).contains("CREATE TABLE task_projection_events")
+                .contains("projection_position", "event_id", "snapshot_digest", "last_event_position")
+                .contains("PRIMARY KEY (task_id, attempt_id, event_id)")
+                .doesNotContain("event_payload", "snapshot_content", "raw_content");
+    }
 }

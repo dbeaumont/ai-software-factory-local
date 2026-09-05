@@ -316,8 +316,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   réconciliation afin d'éviter l'état « ligne créée, workflow absent » et l'inverse. _(L'admission écrit la tâche,
   son snapshot Evidence et une intention `PENDING` dans une transaction avant tout appel Temporal ; un réconciliateur
   borné au démarrage puis périodique réessaie avec un workflow ID non réutilisable et clôt l'intention avec le run ID.)_
-- [ ] **TEMP-074 — Projeter les événements.** Mettre à jour le read model depuis des activités de projection
-  idempotentes ou depuis l'historique Temporal avec un curseur durable.
+- [x] **TEMP-074 — Projeter les événements.** Mettre à jour le read model depuis des activités de projection
+  idempotentes ou depuis l'historique Temporal avec un curseur durable. _(Toutes les activités projettent via leur
+  activity ID stable ; PostgreSQL committe atomiquement snapshot vérifié, clé d'idempotence et position monotone,
+  de sorte qu'un retry déjà appliqué ne modifie ni état, ni compteurs, ni transitions.)_
 - [ ] **TEMP-075 — Détecter le retard.** Exposer l'âge et la position de projection et signaler une vue
   potentiellement obsolète sans inventer un succès.
 - [ ] **TEMP-076 — Reconstruire une tâche.** Rejouer l'historique Temporal et vérifier les digests Evidence avant
