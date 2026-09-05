@@ -210,8 +210,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   travail ; figer `sourceCommit` pour toute la tentative. _(Le workflow V1 appelle `ResolveAndAttestSource` sur la
   file contexte ; URL sans credentials, identité, branche, workspace et clé d'idempotence sont validés et liés au
   commit SHA-1 avant toute coordination.)_
-- [ ] **TEMP-041 — Orchestrer le pipeline étape par étape.** Appeler les activités extraites dans l'ordre et
-  enregistrer uniquement des références de preuves compactes dans l'historique.
+- [x] **TEMP-041 — Orchestrer le pipeline étape par étape.** Appeler les activités extraites dans l'ordre et
+  enregistrer uniquement des références de preuves compactes dans l'historique. _(Le workflow V1 enchaîne source,
+  plan, génération, application, tests, qualité, sécurité, revue et préparation ; chaque résultat ne conserve que
+  les URI/digests/tailles/verdicts Evidence et chaque activité contrôle sa file spécialisée.)_
 - [ ] **TEMP-042 — Intégrer la réparation de patch.** Modéliser les tentatives comme une boucle workflow bornée,
   déterministe et observable, sans retry d'activité aveugle sur une erreur de patch.
 - [ ] **TEMP-043 — Intégrer les gates.** Une gate refusée termine la tentative avec un état métier explicite et

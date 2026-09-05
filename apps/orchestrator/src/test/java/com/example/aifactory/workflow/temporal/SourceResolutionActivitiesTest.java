@@ -63,9 +63,14 @@ class SourceResolutionActivitiesTest {
             Worker workflowWorker = environment.newWorker("ai-factory-workflows");
             workflowWorker.registerWorkflowImplementationTypes(SoftwareFactoryExecutionWorkflowV1Impl.class);
             Worker contextWorker = environment.newWorker("ai-factory-context");
+            PipelineExecutionActivities pipeline = new CompactPipelineActivities();
             contextWorker.registerActivitiesImplementations((SourceResolutionActivities) request ->
                     new SourceResolutionActivities.Result(request.repositoryId(), request.branch(), "c".repeat(40),
-                            "/workspace/" + request.taskId(), "d".repeat(64)));
+                            "/workspace/" + request.taskId(), "d".repeat(64)), pipeline);
+            environment.newWorker("ai-factory-llm").registerActivitiesImplementations(pipeline);
+            environment.newWorker("ai-factory-sandbox").registerActivitiesImplementations(pipeline);
+            environment.newWorker("ai-factory-assurance").registerActivitiesImplementations(pipeline);
+            environment.newWorker("ai-factory-scm").registerActivitiesImplementations(pipeline);
             environment.start();
             SoftwareFactoryExecutionWorkflowV1 workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryExecutionWorkflowV1.class, WorkflowOptions.newBuilder()
@@ -79,7 +84,51 @@ class SourceResolutionActivitiesTest {
             SoftwareFactoryWorkflow.Result result = workflow.run(request);
 
             assertThat(result.sourceCommit()).isEqualTo("c".repeat(40));
-            assertThat(result.chronology()).containsExactly("WORKFLOW_STARTED");
+            assertThat(result.status()).isEqualTo("WAITING_APPROVAL");
+            assertThat(result.chronology()).contains("STEP_COMPLETED:plan", "STEP_COMPLETED:review");
+        }
+    }
+
+    private static final class CompactPipelineActivities implements PipelineExecutionActivities {
+        @Override
+        public com.example.aifactory.service.PipelineStepContracts.Result bindSource(SourceBinding binding) {
+            return result("bind-source", binding.taskId(), binding.attemptId(), binding.sourceCommit(), Map.of());
+        }
+
+        @Override
+        public com.example.aifactory.service.PipelineStepContracts.Result execute(StepRequest request) {
+            String step = request.command().step();
+            Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts =
+                    "apply-patch".equals(step) ? Map.of() : Map.of(artifactName(step),
+                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                            "evidence://task-1/attempt-1/" + artifactName(step), "e".repeat(64),
+                            1, "COMPLETE", "PASSED"));
+            return com.example.aifactory.service.PipelineStepContracts.Result.from(
+                    request.command(), request.command().sourceCommit(), artifacts);
+        }
+
+        @Override
+        public com.example.aifactory.model.PendingEffect prepareDelivery(DeliveryRequest request) {
+            return new com.example.aifactory.model.PendingEffect("scm.create_draft_pull_request", Map.of(),
+                    "draft PR", "ALLOW", true);
+        }
+
+        private static String artifactName(String step) {
+            return switch (step) {
+                case "generate-patch" -> "patch";
+                case "test" -> "tests";
+                default -> step;
+            };
+        }
+
+        private static com.example.aifactory.service.PipelineStepContracts.Result result(
+                String step, String taskId, String attemptId, String sourceCommit,
+                Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts) {
+            var command = new com.example.aifactory.service.PipelineStepContracts.Command(
+                    com.example.aifactory.service.PipelineStepContracts.SCHEMA_VERSION, step, taskId, attemptId,
+                    TemporalIds.workflow(taskId, attemptId), "acme/customer-api", sourceCommit,
+                    Map.of("input", "f".repeat(64)));
+            return com.example.aifactory.service.PipelineStepContracts.Result.from(command, sourceCommit, artifacts);
         }
     }
 }

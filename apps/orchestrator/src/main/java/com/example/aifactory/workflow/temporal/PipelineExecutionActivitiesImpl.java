@@ -1,0 +1,138 @@
+package com.example.aifactory.workflow.temporal;
+
+import com.example.aifactory.config.TemporalProperties;
+import com.example.aifactory.model.PendingEffect;
+import com.example.aifactory.model.TaskState;
+import com.example.aifactory.model.TaskStatus;
+import com.example.aifactory.service.PipelineProjectionEvent;
+import com.example.aifactory.service.PipelineStepContracts;
+import com.example.aifactory.service.PipelineStepService;
+import com.example.aifactory.workflow.TaskMemory;
+import io.temporal.activity.Activity;
+import org.springframework.stereotype.Component;
+
+import java.nio.file.Path;
+import java.util.Map;
+
+/** Host-side adapter from compact Temporal commands to extracted pipeline steps and projection events. */
+@Component
+public final class PipelineExecutionActivitiesImpl implements PipelineExecutionActivities {
+    private static final Map<String, String> STEP_WORKERS = Map.of(
+            "plan", "llm", "generate-patch", "llm", "review", "llm",
+            "apply-patch", "sandbox", "test", "sandbox",
+            "quality", "assurance", "security", "assurance");
+    private final PipelineStepService steps;
+    private final TaskMemory memory;
+    private final Map<String, String> taskQueues;
+
+    public PipelineExecutionActivitiesImpl(PipelineStepService steps, TaskMemory memory,
+                                           TemporalProperties properties) {
+        this.steps = steps;
+        this.memory = memory;
+        this.taskQueues = properties.taskQueues();
+    }
+
+    @Override
+    public PipelineStepContracts.Result bindSource(SourceBinding binding) {
+        requireQueue("context");
+        if (binding == null || binding.sourceCommit() == null || !binding.sourceCommit().matches("[0-9a-f]{40}")
+                || binding.workspace() == null || binding.workspace().isBlank()
+                || binding.attestationDigest() == null || !binding.attestationDigest().matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Resolved source binding is invalid");
+        }
+        TaskState state = requireTask(binding.taskId(), binding.attemptId());
+        state.transition(TaskStatus.CLONING, "Source resolved and attested by Temporal");
+        PipelineProjectionEvent.Applier.apply(state, new PipelineProjectionEvent.WorkspaceInitialized(binding.workspace()));
+        PipelineProjectionEvent.Applier.apply(state, new PipelineProjectionEvent.SourceCloned(
+                binding.sourceCommit(), "configured-cloud-model"));
+        memory.save(state);
+        PipelineStepContracts.Command command = command("bind-source", binding.taskId(), binding.attemptId(),
+                binding.repositoryId(), binding.sourceCommit(), Map.of("attestation", binding.attestationDigest()));
+        return PipelineStepContracts.Result.from(command, binding.sourceCommit(), Map.of());
+    }
+
+    @Override
+    public PipelineStepContracts.Result execute(StepRequest request) {
+        if (request == null || request.command() == null || request.workspace() == null) {
+            throw new IllegalArgumentException("Pipeline activity request is invalid");
+        }
+        PipelineStepContracts.Command command = request.command();
+        String workerKind = STEP_WORKERS.get(command.step());
+        if (workerKind == null) throw new IllegalArgumentException("Unsupported Temporal pipeline step");
+        requireQueue(workerKind);
+        TaskState state = requireTask(command.taskId(), command.attemptId());
+        if (!command.sourceCommit().equals(state.sourceCommit) || !request.workspace().equals(state.workspace)) {
+            throw new SecurityException("Pipeline step is not bound to the projected source");
+        }
+        try {
+            state.transition(status(command.step()), "Temporal activity: " + command.step());
+            Path workspace = Path.of(request.workspace());
+            PipelineProjectionEvent.StepExecution execution = switch (command.step()) {
+                case "plan" -> steps.plan(state, workspace, command);
+                case "generate-patch" -> steps.generateAndRepairPatch(state, workspace, command);
+                case "apply-patch" -> steps.applyPatch(state, workspace, command);
+                case "test" -> steps.test(state, workspace, command);
+                case "quality" -> steps.quality(state, workspace, command);
+                case "security" -> steps.security(state, workspace, command);
+                case "review" -> steps.review(state, workspace, command);
+                default -> throw new IllegalArgumentException("Unsupported Temporal pipeline step");
+            };
+            execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
+            memory.save(state);
+            return execution.result();
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Pipeline step failed: " + command.step(), failure));
+        }
+    }
+
+    @Override
+    public PendingEffect prepareDelivery(DeliveryRequest request) {
+        requireQueue("scm");
+        TaskState state = requireTask(request.taskId(), request.attemptId());
+        if (!request.sourceCommit().equals(state.sourceCommit)) {
+            throw new SecurityException("Delivery preparation is not source-bound");
+        }
+        PipelineProjectionEvent.DeliveryPrepared prepared = steps.prepareDelivery(state);
+        PipelineProjectionEvent.Applier.apply(state, prepared);
+        state.transition(TaskStatus.WAITING_APPROVAL, "Pipeline complete; Temporal awaits approval");
+        memory.save(state);
+        return prepared.pendingEffect();
+    }
+
+    private TaskState requireTask(String taskId, String attemptId) {
+        if (!PipelineStepContracts.INITIAL_ATTEMPT_ID.equals(attemptId)) {
+            throw new IllegalArgumentException("Unknown pipeline attempt");
+        }
+        return memory.find(taskId).orElseThrow(() -> new IllegalArgumentException("Unknown task " + taskId));
+    }
+
+    private void requireQueue(String workerKind) {
+        String actual = Activity.getExecutionContext().getInfo().getActivityTaskQueue();
+        if (!taskQueues.get(workerKind).equals(actual)) {
+            throw new SecurityException("Pipeline capability invoked on an unauthorized task queue");
+        }
+    }
+
+    private static PipelineStepContracts.Command command(String step, String taskId, String attemptId,
+                                                         String repositoryId, String sourceCommit,
+                                                         Map<String, String> digests) {
+        return new PipelineStepContracts.Command(PipelineStepContracts.SCHEMA_VERSION, step, taskId, attemptId,
+                TemporalIds.workflow(taskId, attemptId), repositoryId, sourceCommit, digests);
+    }
+
+    private static TaskStatus status(String step) {
+        return switch (step) {
+            case "plan" -> TaskStatus.PLANNING;
+            case "generate-patch" -> TaskStatus.GENERATING_PATCH;
+            case "apply-patch" -> TaskStatus.APPLYING_PATCH;
+            case "test" -> TaskStatus.TESTING;
+            case "quality" -> TaskStatus.QUALITY_SCANNING;
+            case "security" -> TaskStatus.SECURITY_SCANNING;
+            case "review" -> TaskStatus.REVIEWING;
+            default -> throw new IllegalArgumentException("Unsupported pipeline step");
+        };
+    }
+}

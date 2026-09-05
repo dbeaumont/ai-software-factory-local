@@ -14,14 +14,15 @@ public final class TemporalActivityAdapters {
 
     public TemporalActivityAdapters(DurableExecutionActivities durable,
                                     PatchIntegrationActivities patchIntegration,
-                                    SourceResolutionActivities sourceResolution) {
+                                    SourceResolutionActivities sourceResolution,
+                                    PipelineExecutionActivities pipeline) {
         registrations = Map.of(
-                "context", new Object[]{new ContextAdapter(durable), sourceResolution},
-                "llm", new Object[]{new LlmAdapter(durable)},
-                "sandbox", new Object[]{new SandboxAdapter(durable), patchIntegration},
-                "assurance", new Object[]{new AssuranceAdapter(durable)},
+                "context", new Object[]{new ContextAdapter(durable), sourceResolution, pipeline},
+                "llm", new Object[]{new LlmAdapter(durable), pipeline},
+                "sandbox", new Object[]{new SandboxAdapter(durable), patchIntegration, pipeline},
+                "assurance", new Object[]{new AssuranceAdapter(durable), pipeline},
                 "evidence", new Object[]{new EvidenceAdapter(durable)},
-                "scm", new Object[]{new ScmAdapter(durable)});
+                "scm", new Object[]{new ScmAdapter(durable), pipeline});
     }
 
     public Object[] forWorker(String kind) {

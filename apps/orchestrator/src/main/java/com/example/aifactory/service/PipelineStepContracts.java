@@ -25,7 +25,7 @@ public final class PipelineStepContracts {
             requireToken("taskId", taskId, 128);
             requireToken("attemptId", attemptId, 128);
             requireText("workflowId", workflowId, 200);
-            requireToken("repositoryId", repositoryId, 128);
+            requireRepositoryId(repositoryId);
             requireSourceCommit(sourceCommit);
             inputDigests = immutableDigests(inputDigests, 32);
         }
@@ -122,6 +122,13 @@ public final class PipelineStepContracts {
 
     private static void requireText(String name, String value, int max) {
         if (value == null || value.isBlank() || value.length() > max) throw new IllegalArgumentException(name + " is invalid");
+    }
+
+    private static void requireRepositoryId(String value) {
+        if (value == null || value.length() > 128
+                || !value.matches("[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)?")) {
+            throw new IllegalArgumentException("repositoryId is invalid");
+        }
     }
 
     private static String sha256(String value) {

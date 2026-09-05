@@ -68,22 +68,26 @@ class TemporalWorkerRegistryTest {
         DurableExecutionActivities durable = mock(DurableExecutionActivities.class);
         PatchIntegrationActivities patch = mock(PatchIntegrationActivities.class);
         SourceResolutionActivities source = mock(SourceResolutionActivities.class);
-        TemporalActivityAdapters adapters = new TemporalActivityAdapters(durable, patch, source);
+        PipelineExecutionActivities pipeline = mock(PipelineExecutionActivities.class);
+        TemporalActivityAdapters adapters = new TemporalActivityAdapters(durable, patch, source, pipeline);
 
-        assertThat(adapters.forWorker("context")).hasSize(2)
+        assertThat(adapters.forWorker("context")).hasSize(3)
                 .anyMatch(TemporalActivityAdapters.ContextActivities.class::isInstance)
                 .anyMatch(SourceResolutionActivities.class::isInstance);
-        assertThat(adapters.forWorker("llm")).hasSize(1)
-                .allMatch(TemporalActivityAdapters.LlmActivities.class::isInstance);
-        assertThat(adapters.forWorker("sandbox")).hasSize(2)
+        assertThat(adapters.forWorker("llm")).hasSize(2)
+                .anyMatch(TemporalActivityAdapters.LlmActivities.class::isInstance)
+                .anyMatch(PipelineExecutionActivities.class::isInstance);
+        assertThat(adapters.forWorker("sandbox")).hasSize(3)
                 .anyMatch(TemporalActivityAdapters.SandboxActivities.class::isInstance)
                 .anyMatch(PatchIntegrationActivities.class::isInstance);
-        assertThat(adapters.forWorker("assurance")).hasSize(1)
-                .allMatch(TemporalActivityAdapters.AssuranceActivities.class::isInstance);
+        assertThat(adapters.forWorker("assurance")).hasSize(2)
+                .anyMatch(TemporalActivityAdapters.AssuranceActivities.class::isInstance)
+                .anyMatch(PipelineExecutionActivities.class::isInstance);
         assertThat(adapters.forWorker("evidence")).hasSize(1)
                 .allMatch(TemporalActivityAdapters.EvidenceActivities.class::isInstance);
-        assertThat(adapters.forWorker("scm")).hasSize(1)
-                .allMatch(TemporalActivityAdapters.ScmActivities.class::isInstance);
+        assertThat(adapters.forWorker("scm")).hasSize(2)
+                .anyMatch(TemporalActivityAdapters.ScmActivities.class::isInstance)
+                .anyMatch(PipelineExecutionActivities.class::isInstance);
         assertThatThrownBy(() -> adapters.forWorker("workflow"))
                 .isInstanceOf(IllegalArgumentException.class);
     }

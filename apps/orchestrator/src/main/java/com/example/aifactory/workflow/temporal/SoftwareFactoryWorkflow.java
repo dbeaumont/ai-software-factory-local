@@ -114,7 +114,18 @@ public interface SoftwareFactoryWorkflow {
         }
     }
 
-    record SourceLocation(String repositoryUrl, String branch, String contextTaskQueue) {}
+    record SourceLocation(String repositoryUrl, String branch, String contextTaskQueue,
+                          Map<String, String> taskQueues) {
+        public SourceLocation {
+            taskQueues = taskQueues == null ? Map.of() : Map.copyOf(taskQueues);
+        }
+
+        public SourceLocation(String repositoryUrl, String branch, String contextTaskQueue) {
+            this(repositoryUrl, branch, contextTaskQueue, Map.of(
+                    "context", contextTaskQueue, "llm", "ai-factory-llm", "sandbox", "ai-factory-sandbox",
+                    "assurance", "ai-factory-assurance", "evidence", "ai-factory-evidence", "scm", "ai-factory-scm"));
+        }
+    }
 
     record ExecutionPolicy(long maxHistoryEvents, long maxHistoryBytes, int maxDelegationsPerRun) {
         private static final long DEFAULT_MAX_HISTORY_EVENTS = 10_000;
