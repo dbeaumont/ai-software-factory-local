@@ -417,7 +417,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester la taille maximale des inputs/résultats et l'externalisation des contenus vers Evidence MCP. _(La garde
   64 Kio contrôle démarrages, signaux et résultat racine ; les résultats d'étape ne transportent que URI, digest,
   taille, statut et verdict d'artefacts stockés dans Evidence.)_
-- [ ] Tester les transitions et commandes invalides sur la projection.
+- [x] Tester les transitions et commandes invalides sur la projection. _(Transitions hors ordre, événements dupliqués,
+  version optimiste périmée, approbation/décision/annulation/retry invalides et remplacement atomique défaillant sont
+  tous refusés sans état partiel.)_
 
 ### 12.2 Tests Temporal embarqués
 
