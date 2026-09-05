@@ -49,6 +49,23 @@ cleanup() {
 trap cleanup EXIT
 
 auth=(-H "Authorization: Bearer $token")
+
+# A valid session can be issued while the authenticated API modules are still
+# being initialized. Wait for every API used below so a fresh Compose startup
+# cannot fail with a transient 404 between login and provisioning.
+for attempt in {1..90}; do
+  if curl -fsS "$SIGNOZ_BASE_URL/api/v1/channels" "${auth[@]}" >/dev/null 2>&1 \
+    && curl -fsS "$SIGNOZ_BASE_URL/api/v2/dashboards?limit=1" "${auth[@]}" >/dev/null 2>&1 \
+    && curl -fsS "$SIGNOZ_BASE_URL/api/v2/rules" "${auth[@]}" >/dev/null 2>&1; then
+    break
+  fi
+  if [ "$attempt" -eq 90 ]; then
+    echo "SigNoz provisioning APIs did not become ready at $SIGNOZ_BASE_URL" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
 channel_payload='{"name":"ai-factory-local","webhook_configs":[{"send_resolved":true,"url":"http://alert-sink:8080/alerts"}]}'
 channels=$(curl -fsS "$SIGNOZ_BASE_URL/api/v1/channels" "${auth[@]}")
 channel_id=$(printf '%s' "$channels" | jq -r '.data[] | select(.name == "ai-factory-local") | .id' | head -1)
