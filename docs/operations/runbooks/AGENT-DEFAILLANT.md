@@ -65,3 +65,8 @@ curl -fsS -X POST -H 'Content-Type: application/json' \
 Escalader à l'équipe IA pour une dérive modèle/prompt, à Architecture pour une insuffisance de contrat ou de
 routage, et à Sécurité pour toute tentative d'escalade, injection ou contenu sensible. Basculer selon le
 [runbook de rollback](ROLLBACK-MULTI-AGENTS.md) si plusieurs rôles ou tâches sont affectés.
+
+## Corrélation OpenTelemetry
+
+Dans SigNoz, filtrer d'abord par `ai.agent.role`, `ai.stop_condition` et `service.name`, puis ouvrir la trace et les
+logs corrélés. `ai.task.id` reste un attribut de trace/log et ne doit jamais devenir une dimension métrique.

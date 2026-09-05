@@ -448,14 +448,30 @@ Agents, Temporal, MCP, Sandbox et OpenTelemetry Collector sur `http://localhost:
 | `AiFactoryAgentCostSpike` | warning | Vérifier modèle, rôle, boucle et télémétrie fournisseur |
 | `AiFactoryTaskQueueBacklog` | warning | Suspendre les admissions hiérarchiques et localiser le goulot |
 | `AiFactorySandboxHeartbeatInvalid` | critical | Geler les effets et traiter comme incident MCP |
+| `AiFactorySandboxExecutionFailures` | critical | Conserver les preuves et isoler le runner ou Job affecté |
+| `AiFactorySandboxMaintenanceFailure` | critical | Suspendre les admissions et réparer la maintenance d'état |
 | `AiFactoryAgentContractError` | warning | Refuser la sortie et corriger contrat/prompt/version |
 | `AiFactoryEvidenceAltered` | critical | Isoler Evidence MCP, invalider les approbations liées |
+| `AiFactoryCollectorExportFailures` | critical | Vérifier ingester, ClickHouse et réseau ; préserver le métier |
+| `AiFactoryCollectorQueueSaturation` | warning | Corriger le backend avant toute modification de capacité |
+| `AiFactoryTelemetryIngestionAbsent` | critical | Localiser application, Collector, ingester ou stockage |
+| `AiFactoryCollectorRestart` | warning | Vérifier OOM, configuration et historique de déploiement |
+| `AiFactoryCollectorMemoryPressure` | warning | Réduire volume/cardinalité avant d'augmenter la limite |
+| `AiFactoryCollectorReceiverRefused` | critical | Corriger transport ou schéma sans journaliser le payload |
 
 Les règles sont provisionnées dans SigNoz. En local, elles sont routées vers `alert-sink`, qui vérifie le chemin de
 notification sans publier de port ni conserver les payloads. En environnement partagé, remplacer ce canal par la
 destination d'astreinte approuvée et tester sa rotation/déduplication.
 
-### 9.3 SLO proposés, non encore contractuels
+### 9.3 Parcours de recherche
+
+Dans SigNoz, filtrer les métriques par `service.name`, environnement, rôle, opération et résultat. Depuis un panneau,
+ouvrir la trace représentative puis les logs portant le même `trace_id`. Rechercher un identifiant unique comme
+`ai.task.id` uniquement dans traces/logs. Temporal UI reste l'autorité de l'historique durable ; le détail de tâche
+de l'application reste l'autorité de son état projeté. Les runbooks sont indexés dans
+[`docs/operations/runbooks`](runbooks/README.md).
+
+### 9.4 SLO proposés, non encore contractuels
 
 | Indicateur | Cible initiale |
 |---|---:|
@@ -470,7 +486,7 @@ L’instrumentation canonique n’est pas complète. En dessous de 100 appels é
 Une preuve altérée, une mutation non approuvée ou un succès erroné est une violation d’invariant, indépendamment du
 budget d’erreur.
 
-### 9.4 Requêtes utiles
+### 9.5 Requêtes utiles
 
 ```promql
 max(ai_factory_sandbox_jobs_queued)
@@ -554,6 +570,14 @@ données inutilisables.
 
 Dans la cible durable, Temporal est l’autorité de chronologie, Evidence MCP l’autorité des artefacts et PostgreSQL
 une projection reconstruisible. Cette organisation n’est pas encore câblée de bout en bout dans le chemin actif.
+
+### 11.5 Différences local et GKE
+
+En local, SigNoz, ClickHouse et PostgreSQL sont dans Compose ; `alert-sink` valide les notifications sans les sortir
+du poste. Les secrets sont dans `.env`/`.vault` et la restauration porte sur les volumes locaux. En GKE, la gateway
+Collector exporte vers Cloud Monitoring, Trace et Logging avec Workload Identity, mTLS et NetworkPolicies ; les
+secrets résiduels relèvent de Secret Manager, les dashboards/alertes du projet GCP et leur rétention doivent être
+validés dans ce projet. Une preuve locale ne vaut donc jamais qualification cloud.
 
 ## 12. Maintenance préventive
 
@@ -844,7 +868,22 @@ secrets, test de rollback et scénario complet jusqu’à `PR_CREATED`.
 - stockage objet immuable des preuves et audit centralisé/SIEM ;
 - haute disponibilité, SLO contractuels et PRA testé.
 
-## 20. Références du dépôt
+## 20. Checklist release et sécurité OpenTelemetry
+
+Avant chaque release modifiant instrumentation, Collector, dashboard ou alerte :
+
+- [ ] les six suites applicatives et les tests de contrat/confidentialité passent ;
+- [ ] `docker compose config --quiet`, la validation Collector et les manifests GKE passent ;
+- [ ] aucune image flottante, socket Docker, port OTLP public ou secret versionné n'est introduit ;
+- [ ] `check-signoz-telemetry.sh`, `validate-signoz-queries.sh` et `test-otel-redaction.sh` passent ;
+- [ ] les attributs nouveaux ont type, unité, cardinalité, rétention et propriétaire documentés ;
+- [ ] prompts, résultats, code, patchs, preuves, credentials et paramètres d'URL restent absents ;
+- [ ] dashboards, alertes, notifications, runbooks et liens sont cohérents avec la définition versionnée ;
+- [ ] la sauvegarde compatible et le rollback atomique sont disponibles pendant la fenêtre convenue ;
+- [ ] toute hausse de rétention, exposition réseau ou destination externe est approuvée par Sécurité/Exploitation ;
+- [ ] les preuves locales et GKE sont distinguées explicitement dans la décision de release.
+
+## 21. Références du dépôt
 
 - [`README.md`](https://github.com/dbeaumont/ai-software-factory-local/blob/57aee95f0fe360aa9ba45553056a46e9e42b873e/README.md)
 - [`infrastructure/compose.yaml`](https://github.com/dbeaumont/ai-software-factory-local/blob/57aee95f0fe360aa9ba45553056a46e9e42b873e/infrastructure/compose.yaml)

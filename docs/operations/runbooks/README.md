@@ -17,6 +17,7 @@
 | Collector indisponible ou saturé | préserver le métier et borner la perte de télémétrie | [Collector indisponible](COLLECTOR-INDISPONIBLE.md) |
 | Télémétrie absente, retardée ou rejetée | localiser la rupture du pipeline OTLP | [Télémétrie absente](TELEMETRIE-ABSENTE.md) |
 | Cardinalité, volume ou coût anormal | réduire le signal à la source sans masquer un incident | [Coût d'observabilité](COUT-OBSERVABILITE.md) |
+| Régression de la chaîne d'observabilité | revenir atomiquement à la dernière version qualifiée | [Rollback observabilité](ROLLBACK-OBSERVABILITE.md) |
 
 Tous les runbooks sont fail-closed : ils ne permettent ni de contourner un gate, ni de répéter un effet dont
 l'issue est inconnue, ni de supprimer une preuve pour rétablir le service.

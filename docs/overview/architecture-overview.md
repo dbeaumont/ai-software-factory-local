@@ -204,11 +204,11 @@ flowchart TB
   SCM --> GITEA[Gitea]
   EVD --> EVOL[(Volume Evidence)]
   ORCH --> WS[(Workspaces)]
-  PROM[Prometheus] --> ORCH
-  PROM --> CTX
-  PROM --> SBX
-  PROM --> TEMP
-  GRAF[Grafana] --> PROM
+  ORCH -->|OTLP| OTEL[OpenTelemetry Collector]
+  CTX -->|OTLP| OTEL
+  SBX -->|OTLP| OTEL
+  TEMP -->|receiver de compatibilité| OTEL
+  OTEL --> SIGNOZ[SigNoz]
 ```
 
 ### Choix structurant
@@ -716,24 +716,22 @@ contrôle MCP. Le profil qualité obtient SonarQube en plus des dépendances aut
 
 ```mermaid
 flowchart TB
-  ORCH[Orchestrator] --> PROM[Prometheus]
-  CTX[Context MCP] --> PROM
-  SBX[Sandbox MCP] --> PROM
-  TEMP[Temporal] --> PROM
-  PROM --> GRAF[Grafana]
-  PROM --> RULES[Règles d’alerte]
-  RULES -. non câblé .-> AM[Alertmanager]
+  ORCH[Orchestrator] -->|OTLP| OTEL[OpenTelemetry Collector]
+  MCP[Cinq services MCP] -->|OTLP| OTEL
+  TEMP[Temporal] -->|receiver de compatibilité| OTEL
+  OTEL --> SIGNOZ[SigNoz local]
+  SIGNOZ --> DASH[Sept dashboards]
+  SIGNOZ --> RULES[15 règles et notification locale]
 ```
 
 ### État courant
 
-- scrape toutes les 15 secondes ;
-- six dashboards : Orchestrator, Supervisor, Agents, Temporal, MCP et Sandbox ;
-- alertes sur boucles, budgets, coût, backlog, heartbeat, contrats et altération de preuve ;
-- pas de persistance Prometheus ;
-- pas d’Alertmanager ni de notification ;
-- Assurance, Evidence et SCM MCP non scrutés ;
-- SLO MCP proposés mais instrumentation canonique encore incomplète.
+- métriques, traces et logs des six applications exportés par OTLP ;
+- sept dashboards : Orchestrator, Supervisor, Agents, Temporal, MCP, Sandbox et Collector ;
+- neuf alertes métier, six alertes techniques et notification locale de qualification ;
+- stockage SigNoz persistant avec rétention bornée ;
+- redaction des attributs sensibles et stdout de secours ;
+- SLO MCP proposés, encore à approuver après une campagne suffisamment longue.
 
 La solution est observable pour le développement, mais pas encore exploitable avec un engagement de service.
 
@@ -850,7 +848,7 @@ flowchart TB
 
 ### Paliers
 
-1. **Sécuriser le POC** : rotation des secrets, sauvegarde, persistance Prometheus et kill switch exploitable.
+1. **Sécuriser le POC** : rotation des secrets, sauvegarde SigNoz et kill switch exploitable.
 2. **Rendre l’état durable** : Temporal actif, projection PostgreSQL reconstruisible, Evidence de bout en bout.
 3. **Qualifier en shadow** : corpus apparié, télémétrie qualité/coût/latence/sécurité et aucun effet.
 4. **Ouvrir un canary** : rôles et dépôts allow-listés, rollback testé et supervision active.

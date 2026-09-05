@@ -449,30 +449,30 @@ différée afin de rester récupérable.
 
 ## 15. Rollback
 
-- [ ] Conserver un tag ou une version déployable de la dernière configuration Prometheus/Grafana validée.
-- [ ] Conserver hors ligne les exports de configuration et la sauvegarde du volume Grafana pendant la période convenue.
-- [ ] Documenter le redéploiement complet du commit précédent, applications comprises.
-- [ ] Interdire un rollback partiel qui mélangerait export OTLP et ancienne configuration applicative.
-- [ ] Arrêter Collector/SigNoz avant de redéployer la version Prometheus/Grafana précédente.
-- [ ] Documenter la restauration des notifications historiques sans doublons.
+- [x] Conserver un tag ou une version déployable de la dernière configuration Prometheus/Grafana validée.
+- [x] Conserver hors ligne les exports de configuration et la sauvegarde du volume Grafana pendant la période convenue.
+- [x] Documenter le redéploiement complet du commit précédent, applications comprises.
+- [x] Interdire un rollback partiel qui mélangerait export OTLP et ancienne configuration applicative.
+- [x] Arrêter Collector/SigNoz avant de redéployer la version Prometheus/Grafana précédente.
+- [x] Documenter la restauration des notifications historiques sans doublons.
 - [ ] Tester le rollback après panne Collector, défaut backend, perte de métrique et alerte manquante.
 - [ ] Vérifier que le rollback ne réactive aucune capture de donnée sensible.
-- [ ] Définir l'autorité pouvant déclencher le rollback et le délai de décision.
+- [x] Définir l'autorité pouvant déclencher le rollback et le délai de décision.
 - [ ] Supprimer sauvegardes et tag de rollback uniquement après approbation formelle de la stabilité.
 
 ## 16. Documentation, exploitation et formation
 
-- [ ] Créer un runbook « Collector indisponible ou saturé ».
-- [ ] Créer un runbook « télémétrie absente, retardée ou rejetée ».
-- [ ] Créer un runbook « cardinalité ou coût d'observabilité anormal ».
-- [ ] Mettre à jour les runbooks agents, sandbox, MCP, Temporal et saturation.
-- [ ] Documenter requêtes usuelles, filtres, recherche de traces et parcours d'incident.
-- [ ] Documenter sauvegarde, restauration, rétention, purge et rotation des credentials.
-- [ ] Documenter les différences entre interface locale et Google Cloud.
+- [x] Créer un runbook « Collector indisponible ou saturé ».
+- [x] Créer un runbook « télémétrie absente, retardée ou rejetée ».
+- [x] Créer un runbook « cardinalité ou coût d'observabilité anormal ».
+- [x] Mettre à jour les runbooks agents, sandbox, MCP, Temporal et saturation.
+- [x] Documenter requêtes usuelles, filtres, recherche de traces et parcours d'incident.
+- [x] Documenter sauvegarde, restauration, rétention, purge et rotation des credentials.
+- [x] Documenter les différences entre interface locale et Google Cloud.
 - [ ] Former les développeurs aux conventions OTel et aux règles de cardinalité.
 - [ ] Former les opérateurs aux dashboards, alertes, traces et logs corrélés.
 - [ ] Organiser un exercice d'incident et enregistrer les écarts de procédure.
-- [ ] Mettre à jour la checklist de release et la revue de sécurité.
+- [x] Mettre à jour la checklist de release et la revue de sécurité.
 
 ## 17. Découpage recommandé en tickets et commits
 

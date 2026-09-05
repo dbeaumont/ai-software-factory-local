@@ -73,3 +73,8 @@ portant le label contrôlé par l'usine.
 - les files et taux d'échec reviennent sous leurs seuils pendant vingt minutes ;
 - le contrôle d'absence de socket et les tests de sécurité passent ;
 - l'incident, sa cause et les identifiants d'exécution touchés sont consignés.
+
+## Corrélation OpenTelemetry
+
+Depuis le dashboard Sandbox de SigNoz, partir du verdict, du timeout ou de la file, puis ouvrir la trace portant
+`ai.task.id` et les logs corrélés. Ne jamais recopier sortie de job, patch ou preuve dans un attribut exporté.

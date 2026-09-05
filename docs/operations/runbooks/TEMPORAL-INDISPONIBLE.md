@@ -46,3 +46,8 @@ pollers sur les sept task queues configurées. L'UI locale d'investigation est e
 Escalader immédiatement à Exploitation pour corruption ou indisponibilité de la base, à l'équipe Temporal pour
 historique non relisible ou erreur de compatibilité worker, et à Sécurité si une altération est suspectée. Si la
 reprise durable n'est pas démontrée, appliquer le [rollback](ROLLBACK-MULTI-AGENTS.md).
+
+## Corrélation OpenTelemetry
+
+Comparer Temporal UI et SigNoz avec `temporal.workflow.type`, `temporal.activity.type`, namespace et task queue.
+Un replay ne doit pas créer de faux effets ; conserver l'historique durable comme autorité temporelle.

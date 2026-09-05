@@ -7,6 +7,9 @@
 > Portée du verdict : corrélation applicative, métriques, dashboards, alertes et audit testés. Aucun exporteur
 > OpenTelemetry/OTLP n'est câblé dans le runtime courant et le journal HMAC reste local au processus.
 
+> Ce rapport est une preuve historique du 2 septembre 2026. La chaîne décrite a été remplacée le 5 septembre par
+> OpenTelemetry/SigNoz ; voir `docs/evidence/observability/otel-070-resilience-stability-2026-09-05.md`.
+
 ## Chaîne de traçabilité
 
 | Segment | Identité ou liaison vérifiée | Preuve d'implémentation |

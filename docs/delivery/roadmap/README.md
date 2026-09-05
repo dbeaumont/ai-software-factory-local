@@ -1,6 +1,6 @@
 # Backlog et pistes d'évolution
 
-> État revu le 3 septembre 2026. Les éléments « faits » attestent une présence dans le dépôt ; ils ne valent pas
+> État revu le 5 septembre 2026. Les éléments « faits » attestent une présence dans le dépôt ; ils ne valent pas
 > qualification de production. Voir la [rétrodocumentation](../overview/current-state.md) pour la matrice actif/disponible/cible.
 
 ## Fait
@@ -11,7 +11,7 @@
 - [x] Boucle bornée de réparation du patch lorsque `git apply --check` échoue.
 - [x] Migration vers Java 25, Spring Boot 4.1.1 et Spring AI 2.0.1.
 - [x] Cinq serveurs MCP séparant contexte, sandbox, SCM, assurance et preuves.
-- [x] Métriques Micrometer, Prometheus, six dashboards Grafana et règles d'alerte multi-agents.
+- [x] Métriques, traces et logs OpenTelemetry, sept dashboards SigNoz et règles d'alerte métier/techniques.
 - [x] Diagrammes d'architecture du pipeline, des agents, des données, de la confiance et de la cible GCP.
 - [x] Implémentations Temporal, DAG multi-agent, contrats et politiques de qualification disponibles dans le code.
 
@@ -24,21 +24,19 @@
 - [x] Retirer l'accès du contrôleur sandbox à `/var/run/docker.sock` avec des runners Compose statiques en local
   et des Jobs GKE isolés en environnement partagé ; suivre le
   [plan détaillé de migration](../migrations/retrait-docker-socket.md).
-- [ ] Ajouter un export OpenTelemetry réel ; `ExecutionTracer` et les métriques actuelles ne constituent pas encore
-  une chaîne OTLP de bout en bout.
+- [x] Exporter les six applications en OTLP via le Collector et corréler métriques, traces et logs dans SigNoz.
 - [ ] Compléter les écrans de supervision fonctionnelle, technique et FinOps.
 - [ ] Ajouter une commande opérateur et une vue IHM pour le kill switch.
-- [ ] Scraper Assurance, Evidence et SCM MCP dans Prometheus.
+- [x] Instrumenter Assurance, Evidence et SCM MCP et exporter leurs trois signaux en OTLP.
 - [ ] Qualifier puis activer progressivement Temporal et le mode hiérarchique.
 - [ ] Valider sauvegarde, restauration, rétention et purge de bout en bout.
 
 ## Écarts de l'interface d'exploitation
 
-### P0 — `make urls` expose des secrets
+### P0 corrigé — `make urls` n'expose plus les secrets d'observabilité
 
-Le [`Makefile`](../../Makefile) affiche les mots de passe Gitea, SonarQube, Artifactory et Grafana. Ils apparaissent
-aussi lors d'un `make -n urls`. La cible doit n'afficher que les URLs et utilisateurs, puis indiquer le mécanisme
-sécurisé de récupération des secrets.
+Le [`Makefile`](../../../Makefile) n'affiche que les URLs et les identifiants non sensibles. Les secrets restent
+dans `.env`/`.vault` et ne doivent jamais être ajoutés à une cible d'aide ou à un journal de CI.
 
 ### P1 — aucune cible Make n'active l'architecture hiérarchique
 

@@ -62,3 +62,8 @@ accès cross-task et les appels refusés dans le journal de sécurité chaîné,
 Traiter toute preuve altérée ou compromission probable comme critique et prévenir immédiatement Sécurité,
 Exploitation et le propriétaire du système affecté. Appliquer le [rollback global](ROLLBACK-MULTI-AGENTS.md) si
 l'intégrité, l'isolation ou l'étendue de l'incident ne peut pas être démontrée.
+
+## Corrélation OpenTelemetry
+
+Filtrer SigNoz par `mcp.server.name`, `mcp.tool.name`, `ai.outcome` et `error.type`. Préserver les `trace_id` utiles
+à l'enquête, sans exporter arguments, réponses, URI avec credentials ni contenu des preuves.

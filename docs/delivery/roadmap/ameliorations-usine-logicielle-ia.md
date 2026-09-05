@@ -102,7 +102,7 @@ La CI devrait vérifier :
 - contrats JSON et politiques YAML ;
 - déterminisme des workflows Temporal ;
 - syntaxe Docker Compose ;
-- validation Prometheus et dashboards Grafana ;
+- validation des contrats OTLP, dashboards et alertes SigNoz ;
 - analyse Sonar ;
 - SBOM CycloneDX ;
 - scans Trivy et secrets ;

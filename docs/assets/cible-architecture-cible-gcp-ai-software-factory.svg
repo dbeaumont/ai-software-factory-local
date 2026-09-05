@@ -146,7 +146,7 @@
   <g><rect x="1330" y="2510" width="520" height="88" rx="14" fill="#fff" stroke="#80868b" stroke-width="2"/>
     <text x="1590" y="2542" text-anchor="middle" class="node-title">Traces, logs et SLO</text><text x="1590" y="2573" text-anchor="middle" class="service">Cloud Trace + Logging + Monitoring</text></g>
   <g><rect x="1900" y="2510" width="520" height="88" rx="14" fill="#fff" stroke="#80868b" stroke-width="2"/>
-    <text x="2160" y="2542" text-anchor="middle" class="node-title">Métriques Kubernetes et applicatives</text><text x="2160" y="2573" text-anchor="middle" class="service">Managed Service for Prometheus</text></g>
+    <text x="2160" y="2542" text-anchor="middle" class="node-title">Collecte Kubernetes et applicative</text><text x="2160" y="2573" text-anchor="middle" class="service">OpenTelemetry Collector</text></g>
   <g><rect x="2470" y="2510" width="520" height="88" rx="14" fill="#fff" stroke="#80868b" stroke-width="2"/>
     <text x="2730" y="2542" text-anchor="middle" class="node-title">FinOps, qualité et indicateurs DORA</text><text x="2730" y="2573" text-anchor="middle" class="service">BigQuery + Looker Studio</text></g>
 

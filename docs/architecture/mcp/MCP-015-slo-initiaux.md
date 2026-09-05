@@ -54,9 +54,10 @@ Le SLI porte sur les jobs admis. Un job refusé pour quota ou saturation aliment
 erreurs système MCP / requêtes MCP éligibles
 ```
 
-Le taux est calculé par serveur. Les dimensions obligatoires sont `server`, `tool`, `outcome`, `error_code` et `version`; aucune donnée de ticket, chemin, prompt, dépôt ou résultat ne doit apparaître dans un label Prometheus.
+Le taux est calculé par serveur. Les dimensions obligatoires sont `server`, `tool`, `outcome`, `error_code` et
+`version`; aucune donnée de ticket, chemin, prompt, dépôt ou résultat ne doit apparaître dans une dimension métrique.
 
-## 3. Mesure Prometheus cible
+## 3. Mesure OpenTelemetry/SigNoz cible
 
 Les métriques canoniques attendues sont :
 
@@ -93,7 +94,7 @@ histogram_quantile(
 |---|---|---|
 | disponibilité context MCP | compteurs client appels/erreurs avec label `server` | ajouter `tool`, `outcome`, `error_code`, `version` |
 | disponibilité sandbox MCP | compteurs appels/erreurs dédiés | normaliser avec la métrique MCP canonique et le label serveur |
-| p95 lectures | timer global de collecte de contexte | timer par appel d'outil et histogramme Prometheus |
+| p95 lectures | timer global de collecte de contexte | timer par appel d'outil et histogramme OTLP |
 | délai de démarrage sandbox | timer `ai_factory_sandbox_job_queue_duration` | publier les buckets d'histogramme et vérifier `ACCEPTED -> RUNNING` |
 | saturation | jauges jobs queued/running et rejets par raison | intégrer au dashboard et aux alertes de burn rate |
 

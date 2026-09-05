@@ -54,3 +54,8 @@ latence LLM, base Temporal ou ressource hôte. Distinguer backlog croissant et b
 Escalader à Exploitation après dix minutes sans drainage, à l'équipe Temporal si aucune file n'est pollée, et à
 Sécurité si la saturation résulte d'un abus, d'une fuite inter-tâches ou d'un contournement de quota. Déclencher
 le [rollback](ROLLBACK-MULTI-AGENTS.md) si les seuils de la politique de rollback sont atteints.
+
+## Corrélation OpenTelemetry
+
+Utiliser les dashboards Supervisor, Sandbox et Collector dans SigNoz pour distinguer backlog métier, saturation
+de runner et file d'export. Une file Collector pleine ne justifie jamais l'augmentation d'un quota métier.

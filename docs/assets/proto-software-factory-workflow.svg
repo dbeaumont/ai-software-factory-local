@@ -213,5 +213,5 @@
   <circle cx="1600" cy="734" r="7" fill="#f5a623"/><text x="1617" y="738" class="service-name">API OpenAI</text><text x="1617" y="755" class="service-desc">Modele cloud a la demande</text>
 
   <g filter="url(#soft-shadow)"><rect x="1577" y="772" width="226" height="50" rx="12" fill="#fff"/></g>
-  <circle cx="1600" cy="792" r="7" fill="#0c66e4"/><text x="1617" y="796" class="service-name">Prometheus / Grafana</text><text x="1617" y="813" class="service-desc">Metriques et tableaux de bord</text>
+  <circle cx="1600" cy="792" r="7" fill="#0c66e4"/><text x="1617" y="796" class="service-name">OpenTelemetry / SigNoz</text><text x="1617" y="813" class="service-desc">Metriques, traces, logs et dashboards</text>
 </svg>

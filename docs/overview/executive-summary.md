@@ -139,7 +139,7 @@ flowchart TB
 
   SANDBOX --> QUALITY[Tests, SonarQube, Syft et Trivy]
   SCM --> GIT[Gitea]
-  OBS[Prometheus et Grafana] -. supervision .-> ORCH
+  ORCH -->|OTLP| OBS[Collector OpenTelemetry et SigNoz]
 ```
 
 ### Lecture pour un décideur
@@ -250,7 +250,7 @@ flowchart TB
 | Absence de SSO, RBAC et séparation multi-tenant | Accès trop large | Intégrer identité d’entreprise et autorisations minimales |
 | Secrets dans des fichiers locaux | Rotation et audit fragiles | Secret Manager et identités workload |
 | Kill switch non monté dans le déploiement actuel | Confinement fin indisponible | Rendre le contrôle opérable et le tester |
-| Prometheus non persistant et alerting non routé | Perte de métriques et incidents non notifiés | Persistance, couverture complète et Alertmanager |
+| Notification SigNoz externe non qualifiée | Incident local non relayé hors poste | Qualifier un canal d'entreprise, sa déduplication et son acquittement |
 | Images partiellement non épinglées | Dérive de supply chain | Digests, signatures et provenance |
 
 Ces risques sont connus et traitables, mais ils interdisent une exposition en production dans l’état actuel.

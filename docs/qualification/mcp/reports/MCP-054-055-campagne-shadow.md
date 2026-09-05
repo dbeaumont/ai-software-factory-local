@@ -70,7 +70,8 @@ Deux défauts de déploiement détectés par le premier essai ont été corrigé
 
 Le rapport [`MCP-shadow-20260831-211514.md`](../../../evidence/mcp/baselines/MCP-shadow-20260831-211514.md) constate une couverture de fichiers de `1,0`, une validité syntaxique des citations de `1,0`, 2 790 caractères directs et 3 964 caractères MCP. Ce premier résultat valide le câblage, mais pas la promotion : il ne couvre qu'une tâche et le contexte MCP est actuellement 42 % plus volumineux. L'évaluation du plan n'a pas pu être menée, LiteLLM ayant ensuite répondu HTTP 500.
 
-Les métriques sont en mémoire et repartent de zéro au redémarrage de l'orchestrateur. Chaque rapport intermédiaire doit donc être conservé, et la campagne de 20 tâches doit être exécutée sans redémarrage ou avec une agrégation Prometheus persistante.
+Les métriques applicatives repartent de zéro au redémarrage de l'orchestrateur. Chaque rapport intermédiaire doit
+donc être conservé ; la campagne de 20 tâches s'appuie désormais sur l'agrégation OTLP persistée dans SigNoz.
 
 ## Avancement après stabilisation de la chaîne LLM
 
