@@ -104,6 +104,11 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                             resolved.sourceCommit(), requestId, decision.decision(), decision.objectDigest(),
                             decision.actor(), decision.actorRole(), decision.decidedAt()));
         });
+        if ("CANCELLED".equals(coordinated.status())) {
+            pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordCancellation(
+                    new PipelineExecutionActivities.Cancellation(request.taskId(), request.attemptId(),
+                            resolved.sourceCommit(), coordinated.cancellationReasonDigest(), cancellation.actor()));
+        }
         if ("APPROVED".equals(coordinated.status())) {
             pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordApproval(
                     new PipelineExecutionActivities.Approval(request.taskId(), request.attemptId(),

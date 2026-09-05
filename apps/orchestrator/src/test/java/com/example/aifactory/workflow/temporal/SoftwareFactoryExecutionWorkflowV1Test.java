@@ -16,6 +16,8 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,6 +77,54 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"cloning", "llm", "sandbox", "human-wait", "delivery"})
+    void handlesCancellationAccordingToTheSafetyBoundaryOfEachPhase(String phase) throws Exception {
+        AtomicInteger deliveries = new AtomicInteger();
+        TestActivities activities = new TestActivities(deliveries, null, phase);
+        try (TestWorkflowEnvironment environment = environment(activities)) {
+            SoftwareFactoryExecutionWorkflowV1 workflow = environment.getWorkflowClient().newWorkflowStub(
+                    SoftwareFactoryExecutionWorkflowV1.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId("ai-factory/task-1/cancellation-" + phase)
+                            .setTaskQueue("test-workflow").build());
+
+            WorkflowClient.start(workflow::run, request());
+            if ("human-wait".equals(phase) || "delivery".equals(phase)) {
+                awaitStatus(workflow, "WAITING_APPROVAL");
+            }
+            if ("delivery".equals(phase)) {
+                workflow.approve(new SoftwareFactoryWorkflow.ApprovalSignal(
+                        "task-1", "pipeline-1", MANIFEST_ID, MANIFEST_DIGEST,
+                        "APPROVE", "operator@example.test", "2026-09-06T00:00:00Z"));
+            }
+            if (!"human-wait".equals(phase)) {
+                assertThat(activities.blockedStarted.await(3, TimeUnit.SECONDS)).isTrue();
+            }
+
+            workflow.cancel(new SoftwareFactoryWorkflow.CancellationSignal(
+                    "task-1", "pipeline-1", "operator cancellation", "operator@example.test",
+                    "2026-09-06T00:01:00Z"));
+            activities.releaseBlocked.countDown();
+            SoftwareFactoryWorkflow.Result result = WorkflowStub.fromTyped(workflow)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
+
+            if ("delivery".equals(phase)) {
+                assertThat(result.status()).as("an SCM effect already in progress is allowed to finish")
+                        .isEqualTo("PR_CREATED");
+                assertThat(deliveries).hasValue(1);
+                assertThat(activities.cancellations).isEmpty();
+            } else {
+                assertThat(result.status()).isEqualTo("CANCELLED");
+                assertThat(result.cancellationReasonDigest()).isEqualTo(
+                        TemporalIds.sha256("operator cancellation"));
+                assertThat(deliveries).hasValue(0);
+                assertThat(activities.cancellations).hasSize(1);
+            }
+        } finally {
+            activities.releaseBlocked.countDown();
+        }
+    }
+
     private static TestWorkflowEnvironment environment(TestActivities activities) {
         TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance();
         Map<String, Worker> workers = new LinkedHashMap<>();
@@ -118,17 +168,27 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         private final AtomicInteger deliveries;
         private final String rejectedGate;
         private final java.util.List<String> rejectedGates = new java.util.concurrent.CopyOnWriteArrayList<>();
+        private final String blockedPhase;
+        private final CountDownLatch blockedStarted = new CountDownLatch(1);
+        private final CountDownLatch releaseBlocked = new CountDownLatch(1);
+        private final java.util.List<Cancellation> cancellations = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         private TestActivities(AtomicInteger deliveries) {
-            this(deliveries, null);
+            this(deliveries, null, null);
         }
 
         private TestActivities(AtomicInteger deliveries, String rejectedGate) {
+            this(deliveries, rejectedGate, null);
+        }
+
+        private TestActivities(AtomicInteger deliveries, String rejectedGate, String blockedPhase) {
             this.deliveries = deliveries;
             this.rejectedGate = rejectedGate;
+            this.blockedPhase = blockedPhase;
         }
 
         @Override public SourceResolutionActivities.Result resolve(SourceResolutionActivities.Request request) {
+            blockIf("cloning");
             return new SourceResolutionActivities.Result(
                     request.repositoryId(), request.branch(), COMMIT, "/workspace/tasks/task-1", "d".repeat(64));
         }
@@ -139,6 +199,8 @@ class SoftwareFactoryExecutionWorkflowV1Test {
 
         @Override public PipelineStepContracts.Result execute(StepRequest request) {
             String step = request.command().step();
+            if ("plan".equals(step)) blockIf("llm");
+            if ("test".equals(step)) blockIf("sandbox");
             if (step.equals(rejectedGate)) {
                 throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
                         "gate rejected by fixture", "BUSINESS_REJECTION");
@@ -174,12 +236,13 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         }
 
         @Override public String deliver(DeliveryRequest request) {
+            blockIf("delivery");
             deliveries.incrementAndGet();
             return "http://localhost:3000/aiadmin/customer-api/pulls/1";
         }
 
         @Override public void recordGateRejection(GateRejection rejection) { rejectedGates.add(rejection.gate()); }
-        @Override public void recordCancellation(Cancellation cancellation) {}
+        @Override public void recordCancellation(Cancellation cancellation) { cancellations.add(cancellation); }
         @Override public void recordApproval(Approval approval) {}
         @Override public void recordHumanDecision(HumanDecision decision) {}
 
@@ -200,6 +263,19 @@ class SoftwareFactoryExecutionWorkflowV1Test {
             return new PipelineStepContracts.ArtifactReference(
                     "evidence://task-1/pipeline-1/" + name + '/' + digest,
                     digest, 64, "COMPLETE", "PASS");
+        }
+
+        private void blockIf(String phase) {
+            if (!phase.equals(blockedPhase)) return;
+            blockedStarted.countDown();
+            try {
+                if (!releaseBlocked.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("test synchronization timeout");
+                }
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(interrupted);
+            }
         }
     }
 }
