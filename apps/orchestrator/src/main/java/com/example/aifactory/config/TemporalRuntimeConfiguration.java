@@ -29,7 +29,7 @@ public class TemporalRuntimeConfiguration {
                 .build());
     }
 
-    @Bean(destroyMethod = "shutdown")
+    @Bean
     WorkerFactory temporalWorkerFactory(WorkflowClient client, TemporalProperties properties,
                                         TemporalWorkerTracingInterceptor tracingInterceptor) {
         TemporalProperties.Capacity capacity = properties.capacity();

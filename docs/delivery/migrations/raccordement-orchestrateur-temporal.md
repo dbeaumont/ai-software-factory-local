@@ -193,8 +193,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-037 — Exposer la readiness.** Considérer l'orchestrateur prêt en mode Temporal seulement si le
   namespace est accessible et si les workers requis sont démarrés. _(`temporalEngine` passe UP uniquement après
   accès borné au namespace et démarrage des sept workers ; ses détails distinguent infrastructure et admissions.)_
-- [ ] **TEMP-038 — Gérer le cycle de vie.** Démarrer la factory après l'enregistrement complet et l'arrêter avec
-  drainage borné avant fermeture du client.
+- [x] **TEMP-038 — Gérer le cycle de vie.** Démarrer la factory après l'enregistrement complet et l'arrêter avec
+  drainage borné avant fermeture du client. _(`SmartLifecycle` démarre tard après validation des sept workers,
+  arrête tôt, attend la durée configurée puis force l'arrêt uniquement si le drainage n'est pas terminé.)_
 
 ### Critères de sortie du lot 2
 
