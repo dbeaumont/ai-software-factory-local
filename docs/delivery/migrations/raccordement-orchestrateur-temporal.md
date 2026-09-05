@@ -246,8 +246,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   transportant uniquement l'état minimal vérifié. _(Le workflow surveille les nombres d'événements, la taille de
   l'historique et la recommandation serveur ; la continuation transporte l'index, la génération, les résultats,
   la chronologie et les seuls signaux nécessaires. Un test Temporal force trois générations et vérifie l'ordre.)_
-- [ ] **TEMP-050 — Versionner le déterminisme.** Couvrir toute évolution incompatible par Worker Versioning,
-  nouveau type de workflow ou `Workflow.getVersion`.
+- [x] **TEMP-050 — Versionner le déterminisme.** Couvrir toute évolution incompatible par Worker Versioning,
+  nouveau type de workflow ou `Workflow.getVersion`. _(Le workflow de production possède un type `V1` immuable ;
+  tous les workflows sont `PINNED` sur un Build ID explicite et une continuation ne demande `AUTO_UPGRADE` que
+  lorsqu'une version de déploiement cible a changé. Les tests vérifient l'enregistrement et le replay.)_
 
 ### Critères de sortie du lot 3
 
