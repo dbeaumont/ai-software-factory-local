@@ -9,6 +9,7 @@
     <captureMarkerAttribute>false</captureMarkerAttribute>
     <captureKeyValuePairAttributes>false</captureKeyValuePairAttributes>
     <captureLoggerContext>false</captureLoggerContext>
+    <captureMdcAttributes>temporal.namespace,temporal.task_queue,temporal.workflow.type,temporal.activity.type,ai.task.id,ai.attempt.id,temporal.workflow.id,temporal.run.id</captureMdcAttributes>
   </appender>
   <root level="${ROOT_LOG_LEVEL}">
     <appender-ref ref="CONSOLE"/>

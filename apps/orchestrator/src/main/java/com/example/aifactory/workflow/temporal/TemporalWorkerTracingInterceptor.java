@@ -46,7 +46,11 @@ public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBas
                 ExecutionIdentity identity = ExecutionIdentity.deterministic(
                         bounded(info.getWorkflowId()), bounded(info.getRunId()), bounded(info.getWorkflowId()),
                         bounded(info.getWorkflowType()));
-                return tracer.trace(kind, identity, info.getWorkflowType(), () -> super.execute(input));
+                Correlation correlation = correlation(info.getRootWorkflowId().orElse(info.getWorkflowId()));
+                return tracer.traceTemporal(kind, identity, info.getWorkflowType(),
+                        new ExecutionTracer.TemporalContext(info.getNamespace(), info.getTaskQueue(),
+                                info.getWorkflowType(), "none", correlation.taskId(), correlation.attemptId(),
+                                info.getWorkflowId(), info.getRunId()), () -> super.execute(input));
             }
         };
     }
@@ -70,8 +74,12 @@ public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBas
                         bounded(info.getActivityId()), bounded(info.getActivityRunId()));
                 try (TaskQueueMetrics.Lease ignored = queueMetrics.start(info.getActivityTaskQueue(),
                         info.getCurrentAttemptScheduledTimestamp(), info.getStartedTimestamp())) {
-                    return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, identity, info.getActivityType(),
-                            () -> super.execute(input));
+                    Correlation correlation = correlation(info.getWorkflowId());
+                    return tracer.traceTemporal(ExecutionTracer.SpanKind.ACTIVITY, identity,
+                            info.getActivityType(), new ExecutionTracer.TemporalContext(
+                                    info.getNamespace(), info.getActivityTaskQueue(), info.getWorkflowType(),
+                                    info.getActivityType(), correlation.taskId(), correlation.attemptId(),
+                                    info.getWorkflowId(), info.getWorkflowRunId()), () -> super.execute(input));
                 }
             }
         };
@@ -81,4 +89,17 @@ public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBas
         if (value != null && value.matches("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")) return value;
         return "id-" + Integer.toUnsignedString(value == null ? 0 : value.hashCode(), 16);
     }
+
+    public static Correlation correlation(String workflowId) {
+        if (workflowId != null && workflowId.startsWith("ai-factory/")) {
+            String[] parts = workflowId.split("/", -1);
+            if (parts.length == 3 && parts[1].matches("[A-Za-z0-9_-]{1,64}")
+                    && parts[2].matches("[A-Za-z0-9_-]{1,128}")) {
+                return new Correlation(parts[1], parts[2]);
+            }
+        }
+        return new Correlation("unknown", "unknown");
+    }
+
+    public record Correlation(String taskId, String attemptId) {}
 }

@@ -349,8 +349,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 11. Lot 6 — observabilité, exploitation et sécurité
 
-- [ ] **TEMP-080 — Corréler les signaux.** Ajouter workflow ID, run ID, task ID, attempt ID, task queue, workflow
-  type et activity type aux traces, métriques et logs selon les règles de cardinalité.
+- [x] **TEMP-080 — Corréler les signaux.** Ajouter workflow ID, run ID, task ID, attempt ID, task queue, workflow
+  type et activity type aux traces, métriques et logs selon les règles de cardinalité. _(L'intercepteur enrichit
+  chaque observation et le MDC avec les huit dimensions Temporal ; namespace, queue et types restent des tags
+  métriques bornés, tandis que task, attempt, workflow et run IDs sont réservés à la corrélation haute cardinalité.)_
 - [ ] **TEMP-081 — Mesurer les files.** Collecter backlog, schedule-to-start, retries, timeouts, pollers,
   saturation et workflows bloqués en attente humaine.
 - [ ] **TEMP-082 — Compléter le dashboard SigNoz Temporal.** Ajouter santé client/worker, files par périmètre,
