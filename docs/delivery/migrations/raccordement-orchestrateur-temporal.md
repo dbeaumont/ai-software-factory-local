@@ -370,8 +370,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   démarrage/signal avant le SDK et refuse secrets, credentials URI, diff brut, contenu classifié, texte/collection ou
   payload hors bornes ; besoin, objectif, question et motif deviennent des digests, les contenus restent dans Evidence,
   et les anciens adapters textuels agent/MCP ne sont plus enregistrés.)_
-- [ ] **TEMP-085 — Définir les Search Attributes.** N'enregistrer que les dimensions nécessaires, bornées et non
-  sensibles ; versionner leur création locale.
+- [x] **TEMP-085 — Définir les Search Attributes.** N'enregistrer que les dimensions nécessaires, bornées et non
+  sensibles ; versionner leur création locale. _(Le schéma v1 ne contient que task ID, attempt ID, repository ID et
+  mode d'exécution en `Keyword` ; une garde exige le jeu exact et des valeurs bornées, et le bootstrap local crée les
+  attributs de façon idempotente depuis le manifeste versionné.)_
 - [ ] **TEMP-086 — Sauvegarder et restaurer.** Tester sauvegarde cohérente de `temporal-db`, `orchestrator-db` et
   Evidence MCP, puis restauration dans l'ordre documenté.
 - [ ] **TEMP-087 — Tester la rétention.** Vérifier expiration des historiques, conservation légale des preuves et

@@ -31,10 +31,10 @@ final class TemporalPayloadGuard {
     static void requireSafeStart(WorkflowOptions options, Object input) {
         if (options == null || input == null) throw rejected();
         if (configured(options.getMemo()) || configured(options.getSearchAttributes())
-                || options.getTypedSearchAttributes() != null && options.getTypedSearchAttributes().size() > 0
                 || text(options.getStaticSummary()) || text(options.getStaticDetails())) {
             throw rejected();
         }
+        TemporalSearchAttributes.requireSafe(options.getTypedSearchAttributes());
         requireSafePayload(input);
     }
 

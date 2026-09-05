@@ -1,6 +1,8 @@
 package com.example.aifactory.workflow.temporal;
 
 import io.temporal.client.WorkflowOptions;
+import io.temporal.common.SearchAttributeKey;
+import io.temporal.common.SearchAttributes;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -75,6 +77,27 @@ class TemporalPayloadGuardTest {
         assertThatThrownBy(() -> TemporalPayloadGuard.requireSafeStart(search, Map.of("task", "task-1")))
                 .isInstanceOf(SecurityException.class);
         assertThatThrownBy(() -> TemporalPayloadGuard.requireSafeStart(details, Map.of("task", "task-1")))
+                .isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void acceptsOnlyTheVersionedTypedSearchAttributeContract() {
+        var request = new SoftwareFactoryWorkflow.Request(
+                "task-1", "pipeline-1", "customer-api", "requirement");
+        WorkflowOptions safe = WorkflowOptions.newBuilder().setWorkflowId("wf").setTaskQueue("queue")
+                .setTypedSearchAttributes(TemporalSearchAttributes.forRequest(request)).build();
+        WorkflowOptions extra = WorkflowOptions.newBuilder().setWorkflowId("wf").setTaskQueue("queue")
+                .setTypedSearchAttributes(SearchAttributes.newBuilder()
+                        .set(TemporalSearchAttributes.TASK_ID, "task-1")
+                        .set(TemporalSearchAttributes.ATTEMPT_ID, "pipeline-1")
+                        .set(TemporalSearchAttributes.REPOSITORY_ID, "customer-api")
+                        .set(TemporalSearchAttributes.EXECUTION_MODE, "PIPELINE")
+                        .set(SearchAttributeKey.forKeyword("UnreviewedField"), "value")
+                        .build())
+                .build();
+
+        assertThatCode(() -> TemporalPayloadGuard.requireSafeStart(safe, request)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> TemporalPayloadGuard.requireSafeStart(extra, request))
                 .isInstanceOf(SecurityException.class);
     }
 }

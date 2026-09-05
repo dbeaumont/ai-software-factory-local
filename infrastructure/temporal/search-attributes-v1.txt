@@ -1,0 +1,5 @@
+# Indexed-data schema v1. Keep in sync with TemporalSearchAttributes.
+AiFactoryTaskId|Keyword
+AiFactoryAttemptId|Keyword
+AiFactoryRepositoryId|Keyword
+AiFactoryExecutionMode|Keyword

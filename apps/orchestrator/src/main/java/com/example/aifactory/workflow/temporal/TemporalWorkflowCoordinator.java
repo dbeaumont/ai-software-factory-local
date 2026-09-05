@@ -54,6 +54,7 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
                 .setWorkflowId(workflowId)
                 .setTaskQueue(properties.taskQueues().get("workflow"))
                 .setWorkflowIdReusePolicy(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
+                .setTypedSearchAttributes(TemporalSearchAttributes.forRequest(request))
                 .build(), request);
         if (!workflowId.equals(execution.workflowId())) {
             throw new SecurityException("Temporal started an unexpected workflow identity");
