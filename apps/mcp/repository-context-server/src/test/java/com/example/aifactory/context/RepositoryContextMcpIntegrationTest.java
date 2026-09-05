@@ -105,7 +105,7 @@ class RepositoryContextMcpIntegrationTest {
                                         Map.entry("source_commit", commit),
                                         Map.entry("actor", "workflow"),
                                         Map.entry("trace_id", "0123456789abcdef0123456789abcdef"),
-                                        Map.entry("traceparent", "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"),
+                                        Map.entry("traceparent", "00-0123456789abcdef0123456789abcdef-0123456789abcdef-03"),
                                         Map.entry("deadline", java.time.Instant.now().plusSeconds(60).toString()),
                                         Map.entry("path", "src/Example.java"),
                                         Map.entry("start_line", 1),

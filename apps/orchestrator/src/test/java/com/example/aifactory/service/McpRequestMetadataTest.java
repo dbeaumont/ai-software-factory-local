@@ -37,7 +37,7 @@ class McpRequestMetadataTest {
     void usesTheActiveOpenTelemetryContextForTheCompatibilityEnvelope() {
         SpanContext context = SpanContext.create(
                 "0123456789abcdef0123456789abcdef", "0123456789abcdef",
-                TraceFlags.getSampled(), TraceState.getDefault());
+                TraceFlags.builder().setSampled(true).setRandomTraceId(true).build(), TraceState.getDefault());
 
         try (Scope ignored = Span.wrap(context).makeCurrent()) {
             Map<String, Object> arguments = McpRequestMetadata.create(
@@ -45,7 +45,7 @@ class McpRequestMetadataTest {
 
             assertThat(arguments.get("trace_id")).isEqualTo(context.getTraceId());
             assertThat(arguments.get("traceparent"))
-                    .isEqualTo("00-0123456789abcdef0123456789abcdef-0123456789abcdef-01");
+                    .isEqualTo("00-0123456789abcdef0123456789abcdef-0123456789abcdef-03");
         }
     }
 }

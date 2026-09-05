@@ -36,7 +36,7 @@ public class SandboxJobService {
     private static final Pattern TASK_ID = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
     private static final Pattern COMMIT = Pattern.compile("^[0-9a-f]{40}$");
     private static final Pattern TRACE_ID = Pattern.compile("^[0-9a-f]{32}$");
-    private static final Pattern TRACEPARENT = Pattern.compile("^00-[0-9a-f]{32}-[0-9a-f]{16}-0[01]$");
+    private static final Pattern TRACEPARENT = Pattern.compile("^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$");
     private static final Pattern DIGEST = Pattern.compile("^[0-9a-f]{64}$");
     private static final Pattern EXECUTION_ID = Pattern.compile("^[0-9a-f]{32}$");
     private static final int DEFAULT_OUTPUT_PAGE_CHARS = 4_096;

@@ -121,7 +121,7 @@ class SandboxExecutionMcpIntegrationTest {
                                         Map.entry("source_commit", commit),
                                         Map.entry("actor", "workflow"),
                                         Map.entry("trace_id", "0123456789abcdef0123456789abcdef"),
-                                        Map.entry("traceparent", "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"),
+                                        Map.entry("traceparent", "00-0123456789abcdef0123456789abcdef-0123456789abcdef-03"),
                                         Map.entry("run_id", "pipeline-1"),
                                         Map.entry("delegation_id", "workflow"),
                                         Map.entry("agent_run_id", "workflow-pipeline-1"),
