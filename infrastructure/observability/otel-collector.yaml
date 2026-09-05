@@ -1,6 +1,13 @@
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
+  file_storage/queue:
+    directory: /var/lib/otelcol/queue
+    create_directory: true
+    compaction:
+      directory: /var/lib/otelcol/compaction
+      on_start: true
+      on_rebound: true
 
 receivers:
   otlp:
@@ -105,6 +112,7 @@ exporters:
       enabled: true
       num_consumers: 4
       queue_size: 2048
+      storage: file_storage/queue
     retry_on_failure:
       enabled: true
       initial_interval: 1s
@@ -112,7 +120,7 @@ exporters:
       max_elapsed_time: 60s
 
 service:
-  extensions: [health_check]
+  extensions: [health_check, file_storage/queue]
   telemetry:
     logs:
       level: info

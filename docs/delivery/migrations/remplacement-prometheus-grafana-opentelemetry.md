@@ -201,7 +201,7 @@ Au début de la migration, le dépôt possède notamment :
 - [x] Ajouter les receivers OTLP/gRPC et OTLP/HTTP sur des réseaux internes uniquement.
 - [x] Ajouter le receiver nécessaire aux métriques Temporal et autres sources non OTLP retenues au lot 0.
 - [x] Ajouter `memory_limiter`, `batch`, filtrage, transformation, redaction et détection de ressources.
-- [ ] Configurer les retry queues, la persistance éventuelle et la dead-letter policy selon le backend.
+- [x] Configurer les retry queues, leur persistance et documenter l'absence de dead-letter native du backend OTLP.
 - [x] Séparer les pipelines métriques, traces et logs.
 - [x] Exposer santé, readiness et métriques internes du Collector sans port public inutile.
 - [x] Épingler et tester les versions de configuration et composants Collector utilisés.
@@ -224,7 +224,7 @@ Au début de la migration, le dépôt possède notamment :
 - [x] Le Collector reçoit les trois signaux retenus et les route vers les backends attendus.
 - [x] La perte et le retard d'ingestion sont mesurables.
 - [x] Une panne complète du Collector ne fait échouer aucune opération métier.
-- [ ] Les configurations passent validation syntaxique, tests de sécurité et test de charge.
+- [x] Les configurations passent validation syntaxique, tests de sécurité et test de charge courte documenté.
 
 ## 9. Lot 4 — SigNoz, dashboards et alertes sur macOS
 

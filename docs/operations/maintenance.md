@@ -127,6 +127,7 @@ serveurs MCP, LiteLLM, Temporal gRPC et les bases PostgreSQL ne publient pas de 
 | `sonar-db-data`, `sonar-data`, `sonar-logs`, `sonar-extensions` | Données SonarQube | Important pour historique qualité et configuration |
 | `artifactory-data`, `artifactory-db-data` | Binaires, métadonnées et configuration Artifactory | Critique et dépendant de clés stables |
 | volumes SigNoz ClickHouse/PostgreSQL | métriques, traces, logs, règles et dashboards | À sauvegarder ensemble avec les secrets locaux associés |
+| `otel-collector-queue` | file d'export OTLP persistante et bornée | Recréable ; utile uniquement pendant une panne courte du backend |
 
 ## 3. Modèle de responsabilité
 

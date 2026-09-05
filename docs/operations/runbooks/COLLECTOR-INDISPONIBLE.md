@@ -25,5 +25,9 @@ mémoire et redémarrages. Confirmer séparément que `/actuator/health` répond
 3. Vérifier la reprise de `otelcol_exporter_sent_metric_points` et l'absence de nouveaux échecs.
 4. Comparer la fenêtre affectée à l'audit métier ; ne jamais inventer les points perdus.
 
+La file d'export locale est persistée dans le volume `otel-collector-queue`, bornée à 2 048 éléments et compactée
+au démarrage/rebond. Le protocole OTLP n'offre pas de dead-letter queue native dans ce déploiement : après 60 s de
+retry, les pertes sont comptées et alertées, sans conserver de payload rejeté dans un stockage secondaire.
+
 Déclencher un rollback complet du commit si la configuration empêche le démarrage métier. Ne jamais réactiver
 Prometheus ou Grafana en parallèle.

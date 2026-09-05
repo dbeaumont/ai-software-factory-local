@@ -43,4 +43,5 @@ Cette fixture ne contient ni secret, ni prompt, ni résultat LLM, ni code source
 - `otel-060-parity-report-2026-09-05.md` compare métriques, dashboards et alertes aux fixtures historiques.
 - `otel-070-resilience-stability-2026-09-05.md` consigne les pannes Collector/backend, la récupération et la décision de stabilité locale.
 - `otel-075-backup-restore-2026-09-05.md` consigne la sauvegarde cohérente et la restauration dans des volumes isolés.
+- `otel-076-persistent-queue-load-2026-09-05.md` mesure la charge courte et le drainage de la file persistante après panne.
 - `grafana-volume-backup-2026-09-05.md` consigne les sauvegardes récupérables et leur expiration.

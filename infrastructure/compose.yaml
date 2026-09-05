@@ -8,11 +8,12 @@ services:
   # Align named-volume ownership with the non-root orchestrator and sandbox runners.
   sandbox-storage-init:
     image: busybox:1.37
-    command: ["sh", "-c", "chown -R 10000:10000 /workspace /m2 /trivy"]
+    command: ["sh", "-c", "chown -R 10000:10000 /workspace /m2 /trivy && chown -R 10001:10001 /otelqueue"]
     volumes:
       - factory-workspace:/workspace
       - sandbox-m2-cache:/m2
       - sandbox-trivy-cache:/trivy
+      - otel-collector-queue:/otelqueue
     network_mode: none
     restart: "no"
 
@@ -777,6 +778,7 @@ services:
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
       - ./observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - otel-collector-queue:/var/lib/otelcol
     read_only: true
     user: "10001:10001"
     cap_drop: [ALL]
@@ -890,6 +892,7 @@ volumes:
   sonar-extensions:
   artifactory-data:
   artifactory-db-data:
+  otel-collector-queue:
 
 secrets:
   # Utilisé uniquement au build (Dockerfile: --mount=type=secret,id=artifactory_token)
