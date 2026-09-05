@@ -74,13 +74,24 @@ public final class PostgresTaskMemory implements TaskMemory {
 
     @Override
     public void workflowStarted(TaskState state) {
-        EvidenceRepository.StoredEvidence snapshot = storeSnapshot(state);
         transactions.executeWithoutResult(ignored -> {
-            persistMetadata(state, snapshot);
+            List<String> statuses = jdbc.query("SELECT status FROM task_admission_outbox WHERE task_id = ? "
+                            + "AND attempt_id = ? FOR UPDATE", (row, index) -> row.getString(1),
+                    state.id, state.workflowAttemptId);
+            if (statuses.size() != 1) throw new IllegalStateException("Task admission intent is missing");
+            if ("STARTED".equals(statuses.getFirst())) return;
+            if (countWorkflowRun(state.workflowRunId) == 0) {
+                jdbc.update("INSERT INTO workflow_runs(workflow_run_id, workflow_id, temporal_run_id, task_id, "
+                                + "attempt_id, source_commit, status, started_at, updated_at, version) "
+                                + "SELECT ?, ?, ?, task_id, current_attempt_id, source_commit, 'RUNNING', "
+                                + "created_at, ?, 0 FROM tasks WHERE task_id = ? AND current_attempt_id = ?",
+                        state.workflowRunId, workflowId(state), java.util.UUID.fromString(state.workflowRunId),
+                        Instant.now(), state.id, state.workflowAttemptId);
+            }
             int updated = jdbc.update("UPDATE task_admission_outbox SET status = 'STARTED', updated_at = ?, "
                             + "version = version + 1 WHERE task_id = ? AND attempt_id = ? AND status = 'PENDING'",
                     Instant.now(), state.id, state.workflowAttemptId);
-            if (updated != 1) throw new IllegalStateException("Task admission intent is missing or already closed");
+            if (updated != 1) throw new IllegalStateException("Task admission intent could not be closed");
         });
     }
 
@@ -120,6 +131,10 @@ public final class PostgresTaskMemory implements TaskMemory {
         Boolean applied = transactions.execute(ignored -> {
             if (wasProjected(state.id, state.workflowAttemptId, eventId)) return false;
             persistMetadata(state, snapshot);
+            jdbc.update("UPDATE workflow_runs SET source_commit = ?, status = ?, updated_at = ?, "
+                            + "completed_at = ?, version = version + 1 WHERE workflow_run_id = ?",
+                    state.sourceCommit == null ? UNRESOLVED_COMMIT : state.sourceCommit, state.status.name(),
+                    Instant.now(), terminal(state.status) ? Instant.now() : null, state.workflowRunId);
             jdbc.update("INSERT INTO task_projection_events(task_id, attempt_id, event_id, snapshot_digest, "
                             + "projected_at) VALUES (?, ?, ?, ?, ?)",
                     state.id, state.workflowAttemptId, eventId, snapshot.digest(), Instant.now());
@@ -241,7 +256,11 @@ public final class PostgresTaskMemory implements TaskMemory {
         if (!taskId.equals(snapshot.view().id()) || !reference.attemptId().equals(snapshot.attemptId())) {
             throw new SecurityException("Task projection snapshot identity diverged");
         }
-        return restoreState(snapshot, reference.version());
+        TaskState state = restoreState(snapshot, reference.version());
+        List<String> runIds = jdbc.query("SELECT workflow_run_id FROM workflow_runs WHERE task_id = ? "
+                        + "AND attempt_id = ?", (row, index) -> row.getString(1), taskId, reference.attemptId());
+        if (!runIds.isEmpty()) state.workflowRunId = runIds.getFirst();
+        return state;
     }
 
     private static TaskState restoreState(ProjectionSnapshot snapshot, long version) {
@@ -304,10 +323,23 @@ public final class PostgresTaskMemory implements TaskMemory {
         return TemporalIds.workflow(state.id, state.workflowAttemptId);
     }
 
+    private int countWorkflowRun(String runId) {
+        Integer count = jdbc.queryForObject("SELECT count(*) FROM workflow_runs WHERE workflow_run_id = ?",
+                Integer.class, runId);
+        return count == null ? 0 : count;
+    }
+
     private static void requireEventId(String eventId) {
         if (eventId == null || !eventId.matches("[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}")) {
             throw new IllegalArgumentException("Projection event identity is invalid");
         }
+    }
+
+    private static boolean terminal(com.example.aifactory.model.TaskStatus status) {
+        return java.util.Set.of(com.example.aifactory.model.TaskStatus.PR_CREATED,
+                com.example.aifactory.model.TaskStatus.CANCELLED,
+                com.example.aifactory.model.TaskStatus.FAILED,
+                com.example.aifactory.model.TaskStatus.GATE_REJECTED).contains(status);
     }
 
     record ProjectionSnapshot(TaskView view, String attemptId, Instant approvalExpiresAt) {}

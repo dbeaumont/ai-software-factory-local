@@ -61,6 +61,22 @@ class PostgresTaskMemoryTest {
                 )
                 """);
         jdbc.execute("""
+                CREATE TABLE workflow_runs (
+                  workflow_run_id varchar(128) PRIMARY KEY,
+                  workflow_id varchar(255) NOT NULL,
+                  temporal_run_id uuid NOT NULL,
+                  task_id varchar(64) NOT NULL REFERENCES tasks(task_id),
+                  attempt_id varchar(128) NOT NULL,
+                  source_commit char(40) NOT NULL,
+                  status varchar(48) NOT NULL,
+                  started_at timestamp with time zone NOT NULL,
+                  completed_at timestamp with time zone,
+                  updated_at timestamp with time zone NOT NULL,
+                  version bigint NOT NULL DEFAULT 0,
+                  UNIQUE(task_id, attempt_id)
+                )
+                """);
+        jdbc.execute("""
                 CREATE TABLE task_projection_events (
                   projection_position bigint GENERATED ALWAYS AS IDENTITY UNIQUE,
                   task_id varchar(64) NOT NULL REFERENCES tasks(task_id),
@@ -152,11 +168,12 @@ class PostgresTaskMemoryTest {
         assertThat(jdbc.queryForObject("SELECT status FROM task_admission_outbox WHERE task_id = ?",
                 String.class, task.id)).isEqualTo("PENDING");
 
-        task.bindExecution("PIPELINE", "temporal-run-1", "pipeline-v1", 20_000, 50_000, 12);
+        String runId = "3d45f820-11d4-4e5a-b6bc-c60d498847e9";
+        task.bindExecution("PIPELINE", runId, "pipeline-v1", 20_000, 50_000, 12);
         memory.workflowStarted(task);
 
         assertThat(memory.pendingAdmissions(10)).isEmpty();
-        assertThat(memory.find(task.id).orElseThrow().workflowRunId).isEqualTo("temporal-run-1");
+        assertThat(memory.find(task.id).orElseThrow().workflowRunId).isEqualTo(runId);
         assertThat(jdbc.queryForObject("SELECT status FROM task_admission_outbox WHERE task_id = ?",
                 String.class, task.id)).isEqualTo("STARTED");
     }

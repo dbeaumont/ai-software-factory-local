@@ -28,6 +28,12 @@ public final class ProjectionRebuilder {
     }
 
     public UiProjectionSnapshot rebuild(String workflowId, String runId) {
+        UiProjectionSnapshot snapshot = preview(workflowId, runId);
+        projectionStore.replaceAtomically(snapshot);
+        return snapshot;
+    }
+
+    public UiProjectionSnapshot preview(String workflowId, String runId) {
         ProjectionHistorySource.History history = histories.read(workflowId, runId);
         requireBoundHistory(workflowId, runId, history);
         SoftwareFactoryWorkflow.Request request = history.request();
@@ -68,7 +74,6 @@ public final class ProjectionRebuilder {
                         request.taskId(), request.attemptId(), request.sourceCommit(), status,
                         history.startedAt(), history.completedAt()),
                 delegations, verifiedEvidence);
-        projectionStore.replaceAtomically(snapshot);
         return snapshot;
     }
 

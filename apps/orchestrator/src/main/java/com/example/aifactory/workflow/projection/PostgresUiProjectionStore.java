@@ -56,9 +56,9 @@ public final class PostgresUiProjectionStore implements UiProjectionStore {
                     run.workflowRunId(), run.workflowId(), UUID.fromString(run.temporalRunId()), run.taskId(),
                     run.attemptId(), run.sourceCommit(), run.status(), run.startedAt(), run.completedAt(), Instant.now());
         } else {
-            jdbc.update("UPDATE workflow_runs SET status = ?, completed_at = ?, updated_at = ?, "
+            jdbc.update("UPDATE workflow_runs SET source_commit = ?, status = ?, completed_at = ?, updated_at = ?, "
                             + "version = version + 1 WHERE workflow_run_id = ?",
-                    run.status(), run.completedAt(), Instant.now(), run.workflowRunId());
+                    run.sourceCommit(), run.status(), run.completedAt(), Instant.now(), run.workflowRunId());
         }
 
         Set<String> delegationIds = new HashSet<>();

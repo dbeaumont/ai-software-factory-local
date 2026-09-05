@@ -328,8 +328,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   remplacement atomique de la projection. _(La source SDK retrouve l'entrée, le commit résolu et les références
   produites par les activités ; le rebuilder refuse toute divergence de lignée, URI, digest ou statut, puis le store
   PostgreSQL remplace en une transaction la tâche, le run, les délégations et les métadonnées Evidence vérifiées.)_
-- [ ] **TEMP-077 — Reconstruire toutes les projections.** Ajouter une commande opérateur bornée, observable et
-  réentrante avec mode dry-run.
+- [x] **TEMP-077 — Reconstruire toutes les projections.** Ajouter une commande opérateur bornée, observable et
+  réentrante avec mode dry-run. _(La commande `POST /api/operations/projections/rebuild` traite au plus 100 tâches
+  courantes, accepte un curseur de reprise, propose une validation sans écriture, isole les erreurs par tâche et
+  publie compteurs et audit sans contenu sensible ; relancer une page remplace les mêmes lignes atomiquement.)_
 - [ ] **TEMP-078 — Persister la séquence des tickets.** Remplacer le compteur JVM `AF-xxxx` par une séquence
   durable sans collision après redémarrage.
 - [ ] **TEMP-079 — Migrer les tâches locales utiles.** Utiliser `LegacyTaskMigrator`, marquer la provenance et ne
