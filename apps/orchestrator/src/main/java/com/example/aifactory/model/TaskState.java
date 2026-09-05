@@ -41,11 +41,12 @@ public class TaskState {
     public String pullRequestUrl;
     public String error;
     public final List<AgentStep> steps = new ArrayList<>();
-    public final Instant createdAt = Instant.now();
+    public final Instant createdAt;
     public Instant updatedAt = Instant.now();
     public String executionMode = "PIPELINE";
     public String workflowAttemptId = "pipeline-1";
     private int workflowAttemptSequence = 1;
+    public long projectionVersion;
     public String workflowRunId;
     public String dagVersion = "pipeline-v1";
     public Long globalMaxTokens;
@@ -58,9 +59,14 @@ public class TaskState {
     public final Map<String, TaskView.HumanActionView> humanActions = new LinkedHashMap<>();
 
     public TaskState(String id, String ticketNumber, TaskRequest request) {
+        this(id, ticketNumber, request, Instant.now());
+    }
+
+    public TaskState(String id, String ticketNumber, TaskRequest request, Instant createdAt) {
         this.id = id;
         this.ticketNumber = ticketNumber;
         this.request = request;
+        this.createdAt = createdAt;
     }
 
     public synchronized void transition(TaskStatus newStatus, String summary) {
@@ -359,6 +365,16 @@ public class TaskState {
         steps.add(new AgentStep("TEMPORAL_RETRY:" + nextAttemptId, "OK",
                 "New attempt from " + previousAttemptId + " requested by " + actor, updatedAt));
         return new RetryAttempt(previousAttemptId, nextAttemptId);
+    }
+
+    public synchronized void restoreProjectionMetadata(String attemptId, long version, Instant expiresAt) {
+        if (attemptId == null || !attemptId.matches("pipeline-[1-9][0-9]*") || version < 0) {
+            throw new IllegalArgumentException("Task projection metadata is invalid");
+        }
+        workflowAttemptId = attemptId;
+        workflowAttemptSequence = Integer.parseInt(attemptId.substring("pipeline-".length()));
+        projectionVersion = version;
+        approvalExpiresAt = expiresAt;
     }
 
     private static void validateOperatorAction(String reason, String actor) {

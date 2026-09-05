@@ -308,8 +308,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   délégations, artefacts, contradictions, décisions, actions humaines et effets en attente. _(Les migrations
   V001–V009 couvrent le modèle, ses filiations, contraintes et versions optimistes ; Flyway les charge depuis le
   JAR avant le démarrage et l'orchestrateur reçoit uniquement les identifiants de sa base dédiée.)_
-- [ ] **TEMP-072 — Implémenter `PostgresTaskMemory`.** Fournir lectures et écritures transactionnelles avec
-  verrouillage optimiste et contraintes d'unicité.
+- [x] **TEMP-072 — Implémenter `PostgresTaskMemory`.** Fournir lectures et écritures transactionnelles avec
+  verrouillage optimiste et contraintes d'unicité. _(Le bean applicatif persiste atomiquement les métadonnées
+  PostgreSQL et une référence vers le snapshot complet chiffré par Evidence MCP ; les lectures vérifient URI,
+  digest et statut avant reconstruction, et les versions concurrentes sont rejetées.)_
 - [ ] **TEMP-073 — Persister l'admission avant le démarrage.** Utiliser une outbox ou une procédure de
   réconciliation afin d'éviter l'état « ligne créée, workflow absent » et l'inverse.
 - [ ] **TEMP-074 — Projeter les événements.** Mettre à jour le read model depuis des activités de projection

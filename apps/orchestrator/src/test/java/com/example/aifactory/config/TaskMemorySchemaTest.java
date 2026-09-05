@@ -146,4 +146,15 @@ class TaskMemorySchemaTest {
                 .contains("version             bigint NOT NULL DEFAULT 0")
                 .doesNotContain("raw_content", "patch_content", "prompt_content");
     }
+
+    @Test
+    void projectionSnapshotsKeepOnlyAContentAddressedEvidenceReference() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V010__task_projection_snapshots.sql"));
+
+        assertThat(sql).contains("CREATE TABLE task_projection_snapshots")
+                .contains("snapshot_uri", "snapshot_digest", "projected_at", "version")
+                .contains("PRIMARY KEY REFERENCES tasks(task_id)")
+                .contains("UNIQUE (task_id, attempt_id, snapshot_uri, snapshot_digest)")
+                .doesNotContain("snapshot_content", "content_base64", "raw_content", "patch_content");
+    }
 }

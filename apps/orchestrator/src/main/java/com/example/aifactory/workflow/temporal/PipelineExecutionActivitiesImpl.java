@@ -81,6 +81,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
                 default -> throw new IllegalArgumentException("Unsupported Temporal pipeline step");
             };
             execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
+            applyArtifacts(state, execution.result());
             memory.save(state);
             return execution.result();
         } catch (RuntimeException failure) {
@@ -305,7 +306,14 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
 
     private void applyAndSave(TaskState state, PipelineProjectionEvent.StepExecution execution) {
         execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
+        applyArtifacts(state, execution.result());
         memory.save(state);
+    }
+
+    private static void applyArtifacts(TaskState state, PipelineStepContracts.Result result) {
+        result.artifacts().forEach((type, artifact) -> state.recordArtifact(type, type, artifact.status(),
+                java.util.Set.of("security", "review").contains(type) ? "CONFIDENTIAL" : "INTERNAL",
+                artifact.uri(), artifact.digest(), artifact.sizeBytes(), true));
     }
 
     private void requireQueue(String workerKind) {
