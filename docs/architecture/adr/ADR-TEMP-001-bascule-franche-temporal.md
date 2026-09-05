@@ -85,6 +85,22 @@ de conserver ses historiques de test comme fixtures indépendantes.
   `attemptId`, y compris après un échec ou une annulation.
 - Un rejeu opérateur crée une tentative liée ; il ne réutilise ni Workflow ID ni clé d'effet.
 
+## Identité des runs et des tentatives
+
+| Identifiant | Règle |
+|---|---|
+| `taskId` | Identité métier stable attribuée une seule fois à l'admission. |
+| `attemptId` | Identité stable d'une tentative, générée par le control plane ; toute reprise fonctionnelle crée la suivante. |
+| `workflowId` | Dérivé de `taskId` et `attemptId` par `TemporalIds.workflow`. |
+| `temporalRunId` | Identifiant opaque attribué par Temporal ; utilisé comme localisateur, jamais comme clé métier. |
+| `repositoryId` | Identité canonique du dépôt autorisé, distincte de son URL et immuable pendant la tentative. |
+| `sourceCommit` | SHA-1 Git attesté par l'activité de résolution et figé avant toute génération. |
+
+Tous les inputs de workflow, commandes d'activité, événements de projection et références de preuve portent au
+minimum `taskId`, `attemptId`, `repositoryId` et `sourceCommit` dès que ce dernier est résolu. Une valeur provenant
+du modèle ne peut fournir ou remplacer aucun de ces identifiants. PostgreSQL conserve séparément `workflowId` et
+`temporalRunId` afin de retrouver un historique sans en faire des autorités métier.
+
 ## Vérification
 
 - aucun contrat public ne permet de choisir le moteur ;

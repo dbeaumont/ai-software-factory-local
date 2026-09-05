@@ -81,8 +81,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-005 — Définir le workflow ID.** Utiliser un identifiant stable tel que
   `ai-factory/{taskId}/{attemptId}`, avec une politique de réutilisation qui refuse les doublons non terminés.
   _(Format implémenté dans `TemporalIds`, doublons refusés pour toute tentative déjà créée.)_
-- [ ] **TEMP-006 — Définir les Run IDs et tentatives.** Ne jamais utiliser un Run ID aléatoire comme clé métier ;
+- [x] **TEMP-006 — Définir les Run IDs et tentatives.** Ne jamais utiliser un Run ID aléatoire comme clé métier ;
   conserver `taskId`, `attemptId`, `sourceCommit` et `repositoryId` dans chaque entrée, activité et preuve.
+  _(Identités, origine, immutabilité et usages fixés dans `ADR-TEMP-001`.)_
 - [ ] **TEMP-007 — Définir le fail-closed.** Si Temporal est indisponible, refuser ou mettre en attente
   l'admission ; ne jamais lancer implicitement `DeterministicWorkflowCoordinator`.
 - [ ] **TEMP-008 — Définir le rollback.** Le rollback redéploie une version compatible des workers Temporal ; il ne
