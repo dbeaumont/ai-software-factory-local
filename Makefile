@@ -17,7 +17,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap tokens demo test test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls down clean
 
 help:
 	$(log-target)
@@ -27,6 +27,7 @@ help:
 	@echo -e "  $(CYAN)make up$(NC)         - start the complete local factory stack"
 	@echo -e "  $(CYAN)make all$(NC)        - reset data and start a fully bootstrapped local factory"
 	@echo -e "  $(CYAN)make bootstrap$(NC)  - initialize demo Gitea repository and service tokens"
+	@echo -e "  $(CYAN)make bootstrap-signoz$(NC) - provision local SigNoz dashboards, channel and alerts"
 	@echo -e "  $(CYAN)make tokens$(NC)     - validate or regenerate local Gitea and SonarQube tokens"
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
@@ -65,13 +66,14 @@ build:
 		--build-arg TRIVY_PRELOAD_DB="$(TRIVY_PRELOAD_DB)" \
 		-t ai-factory-sandbox:local ./infrastructure/sandbox
 	./scripts/pin-sandbox-image.sh .env ai-factory-sandbox:local
-	$(COMPOSE) build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp scm-delivery-mcp assurance-mcp evidence-mcp orchestrator factory-web
+	$(COMPOSE) build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp scm-delivery-mcp assurance-mcp evidence-mcp orchestrator factory-web ai-factory-signoz-telemetrystore-clickhouse-user-scripts signoz-bootstrap
 	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build
 	$(log-target)
 	@echo -e "$(BLUE)Starting local factory stack...$(NC)"
 	$(COMPOSE) up -d
+	$(COMPOSE) wait signoz-bootstrap
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls
 
@@ -90,6 +92,12 @@ bootstrap: init
 	./scripts/bootstrap-sonar.sh
 	$(COMPOSE) up -d --force-recreate sandbox-execution-mcp scm-delivery-mcp orchestrator
 	@echo -e "$(GREEN)Bootstrap complete!$(NC)"
+
+bootstrap-signoz: init
+	$(log-target)
+	@echo -e "$(BLUE)Provisioning SigNoz dashboards and alerts...$(NC)"
+	./scripts/bootstrap-signoz.sh
+	@echo -e "$(GREEN)SigNoz provisioning complete!$(NC)"
 
 tokens: init
 	$(log-target)
@@ -188,13 +196,12 @@ urls:
 	@echo -e "  - Approve task: POST $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/api/tasks/<TASK_ID>/approve$(NC)"
 	@echo -e "  - Actuator:     $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/actuator$(NC)"
 	@echo -e "  - Health:       $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/actuator/health$(NC)"
-	@echo -e "  - Metrics:      $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/actuator/prometheus$(NC)"
+	@echo -e "  - Metrics:      $(GREEN)http://localhost:$(ORCHESTRATOR_PORT)/actuator/metrics$(NC)"
 	@echo ""
 	@echo -e "$(YELLOW)Quality, Artifacts & Observability:$(NC)"
 	@echo -e "  - SonarQube:    $(GREEN)http://localhost:$(SONAR_PORT)$(NC) (user: $(SONAR_ADMIN_LOGIN), password: $(SONAR_ADMIN_PASSWORD))"
 	@echo -e "  - Artifactory:  $(GREEN)http://localhost:$(ARTIFACTORY_PORT)$(NC) (user: admin, password: password)"
-	@echo -e "  - Prometheus:   $(GREEN)http://localhost:$(PROMETHEUS_PORT)$(NC)"
-	@echo -e "  - Grafana:      $(GREEN)http://localhost:$(GRAFANA_PORT)$(NC) (user: $(GRAFANA_ADMIN_USER), initial password: $(GRAFANA_ADMIN_PASSWORD))"
+	@echo -e "  - SigNoz:       $(GREEN)http://localhost:$(SIGNOZ_PORT)$(NC) (user: $(SIGNOZ_ROOT_EMAIL))"
 	@echo ""
 
 clean:

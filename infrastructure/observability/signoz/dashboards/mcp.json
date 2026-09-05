@@ -1,0 +1,359 @@
+{
+  "schemaVersion": "v6",
+  "image": "/assets/Icons/eight-ball",
+  "generateName": true,
+  "tags": [
+    {
+      "key": "project",
+      "value": "ai-software-factory"
+    },
+    {
+      "key": "domain",
+      "value": "mcp"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "AI Factory MCP",
+      "description": "Appels, latence, retries et concurrence des serveurs MCP."
+    },
+    "variables": [],
+    "panels": {
+      "7cf52f24-32b0-570a-9cb8-1f3c530e08e6": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "MCP call rate",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (server, outcome) (rate(mcp_client_calls[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "8e6e077a-56cf-5658-b266-fd79011dd7ed": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "MCP latency p95",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "histogram_quantile(0.95, sum by (le, server) (rate({__name__=\"mcp_client_duration.bucket\"}[5m])))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "c12e115a-a5cf-5bdf-8a33-516fc1f665a3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "MCP retries and errors",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (server) (rate(mcp_client_retries[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "B",
+                          "query": "sum by (server) (rate(mcp_client_errors[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "6c187c9d-301b-5007-8e56-e18c34edb5f2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "MCP in-flight calls",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (server) (mcp_client_inflight)",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/7cf52f24-32b0-570a-9cb8-1f3c530e08e6"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/8e6e077a-56cf-5658-b266-fd79011dd7ed"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/c12e115a-a5cf-5bdf-8a33-516fc1f665a3"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/6c187c9d-301b-5007-8e56-e18c34edb5f2"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "6h",
+    "refreshInterval": "30s",
+    "links": []
+  }
+}

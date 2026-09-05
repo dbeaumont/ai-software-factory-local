@@ -34,3 +34,8 @@ OTLP, pas interprétée comme une valeur nulle.
 - comparer cardinalité, ressources et délai d'ingestion après la bascule.
 
 Cette fixture ne contient ni secret, ni prompt, ni résultat LLM, ni code source, ni preuve métier brute.
+
+## Preuves après bascule
+
+- `otel-100-runtime-cutover-2026-09-05.md` consigne les contrôles de la bascule atomique.
+- `grafana-volume-backup-2026-09-05.md` consigne les sauvegardes récupérables et leur expiration.

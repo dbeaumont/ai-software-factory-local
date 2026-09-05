@@ -1,5 +1,11 @@
 package com.example.aifactory.service;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.propagation.TextMapSetter;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.security.SecureRandom;
@@ -9,6 +15,7 @@ import java.util.Map;
 
 final class McpRequestMetadata {
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final TextMapSetter<Map<String, String>> MAP_SETTER = Map::put;
     private final String taskId;
     private final String sourceCommit;
     private final String actor;
@@ -31,9 +38,17 @@ final class McpRequestMetadata {
         this.identity = identity == null
                 ? ExecutionIdentity.deterministic(taskId, attemptId, actor, actor)
                 : identity;
-        this.traceId = this.identity.traceId();
-        String spanId = randomHex(8);
-        this.traceparent = "00-" + traceId + '-' + spanId + "-01";
+        SpanContext active = Span.current().getSpanContext();
+        if (active.isValid()) {
+            this.traceId = active.getTraceId();
+            Map<String, String> carrier = new LinkedHashMap<>();
+            W3CTraceContextPropagator.getInstance().inject(Context.current(), carrier, MAP_SETTER);
+            this.traceparent = carrier.get("traceparent");
+        } else {
+            // Compatibility envelope for non-instrumented unit tests and offline callers only.
+            this.traceId = this.identity.traceId();
+            this.traceparent = "00-" + traceId + '-' + randomHex(8) + "-01";
+        }
         this.deadline = Instant.now().plus(lifetime).toString();
     }
 

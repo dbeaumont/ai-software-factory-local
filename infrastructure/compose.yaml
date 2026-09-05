@@ -1,5 +1,8 @@
 name: ai-software-factory
 
+include:
+  - path: ./observability/signoz/generated/compose.yaml
+
 # All application services share this private Docker network; only explicitly mapped ports are exposed to the host.
 services:
   # Align named-volume ownership with the non-root orchestrator and sandbox runners.
@@ -195,6 +198,7 @@ services:
       secrets:
         - artifactory_token
     environment:
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
       AI_FACTORY_CONTEXT_WORKSPACE_ROOT: /workspace/tasks
       AI_FACTORY_CONTEXT_REGISTRY_ROOT: /var/lib/ai-factory/context-registry
       AI_FACTORY_CONTEXT_MAX_FILE_BYTES: ${AI_FACTORY_CONTEXT_MAX_FILE_BYTES:-1048576}
@@ -227,6 +231,7 @@ services:
       secrets:
         - artifactory_token
     environment:
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
       AI_FACTORY_SANDBOX_WORKSPACE_ROOT: /workspace/tasks
       AI_FACTORY_SANDBOX_STATE_ROOT: /var/lib/ai-factory/sandbox-jobs
       AI_FACTORY_WORKSPACE_VOLUME: ${AI_FACTORY_WORKSPACE_VOLUME}
@@ -405,6 +410,7 @@ services:
       secrets:
         - artifactory_token
     environment:
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
       AI_FACTORY_SCM_GITEA_BASE_URL: ${AI_FACTORY_GITEA_BASE_URL:-http://gitea:3000}
       AI_FACTORY_SCM_GITEA_PUBLIC_BASE_URL: ${AI_FACTORY_GITEA_PUBLIC_BASE_URL:-http://localhost:3000}
       AI_FACTORY_SCM_GITEA_USER: ${AI_FACTORY_GITEA_USER:-aiadmin}
@@ -443,6 +449,8 @@ services:
         MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
       secrets:
         - artifactory_token
+    environment:
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -463,6 +471,7 @@ services:
       args: { MAVEN_MIRROR_URL: "${MAVEN_MIRROR_URL}" }
       secrets: [artifactory_token]
     environment:
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
       AI_FACTORY_EVIDENCE_STATE_ROOT: /var/lib/ai-factory/evidence
       AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES: ${AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES:-1048576}
       # POC: domain-separated derivation in evidence-mcp; replace with a dedicated Secret Manager key at MCP-217.
@@ -516,6 +525,7 @@ services:
       secrets:
         - artifactory_token
     environment:
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
       AI_FACTORY_LLM_BASE_URL: ${AI_FACTORY_LLM_BASE_URL}
       AI_FACTORY_LLM_API_KEY: ${LITELLM_MASTER_KEY}
       AI_FACTORY_CLOUD_MODEL: ${AI_FACTORY_CLOUD_MODEL}
@@ -761,41 +771,78 @@ services:
       retries: 60
     networks: [factory, sandbox-egress, sandbox-quality]
 
-  # Metrics collection and visualization for the orchestrator.
-  prometheus:
-    image: prom/prometheus:v3.5.0
-    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+  # Single internal telemetry entry point. SigNoz ingestion remains isolated behind this Collector.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.160.0@sha256:799dc6cf12c96192af37b5bdba804da8c10b3bc563b43cb90c3f3c58d9572ad6
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
-      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./observability/alerts:/etc/prometheus/rules:ro
-    ports:
-      - "${PROMETHEUS_PORT}:9090"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
-    networks: [factory, mcp-internal, workflow-internal]
-
-  grafana:
-    image: grafana/grafana:12.1.1
-    ports:
-      - "${GRAFANA_PORT}:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    read_only: true
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=64m,mode=1777
     depends_on:
-      prometheus:
-        condition: service_healthy
+      ingester:
+        condition: service_started
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/api/health"]
+      test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otelcol-contrib/config.yaml"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512m }
+        reservations: { cpus: "0.10", memory: 128m }
+    restart: unless-stopped
+    networks: [factory, mcp-internal, workflow-internal, ai-factory-signoz-network]
+
+  # Local-only destination proving that alert rules are routed without contacting an external system.
+  alert-sink:
+    image: python:3.13.7-alpine3.22@sha256:9ba6d8cbebf0fb6546ae71f2a1c14f6ffd2fdab83af7fa5669734ef30ad48844
+    command: ["python", "/opt/ai-factory/alert-sink.py"]
+    volumes:
+      - ./observability/alert-sink.py:/opt/ai-factory/alert-sink.py:ro
+    read_only: true
+    user: "65534:65534"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2).read()"]
       interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 15s
-    networks: [factory]
+      timeout: 3s
+      retries: 6
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 64m }
+        reservations: { cpus: "0.01", memory: 16m }
+    restart: unless-stopped
+    networks: [ai-factory-signoz-network]
+
+  # Idempotent dashboard/alert provisioning executed after the local backend is ready.
+  signoz-bootstrap:
+    image: ai-factory-signoz-bootstrap:0.1.0
+    build:
+      context: ..
+      dockerfile: infrastructure/observability/signoz-bootstrap.Dockerfile
+    environment:
+      SIGNOZ_BASE_URL: http://ai-factory-signoz-signoz-0:8080
+      SIGNOZ_ROOT_EMAIL: ${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}
+      SIGNOZ_ROOT_PASSWORD: ${SIGNOZ_ROOT_PASSWORD:?SIGNOZ_ROOT_PASSWORD must be initialized by make init}
+    depends_on:
+      ai-factory-signoz-signoz-0:
+        condition: service_healthy
+      alert-sink:
+        condition: service_healthy
+    read_only: true
+    user: "65534:65534"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    restart: "no"
+    networks: [ai-factory-signoz-network]
 
 networks:
   # Temporal frontend and database remain private; only workflow workers join this segment.
@@ -843,7 +890,6 @@ volumes:
   sonar-extensions:
   artifactory-data:
   artifactory-db-data:
-  grafana-data:
 
 secrets:
   # Utilisé uniquement au build (Dockerfile: --mount=type=secret,id=artifactory_token)

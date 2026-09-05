@@ -1,0 +1,348 @@
+{
+  "schemaVersion": "v6",
+  "image": "/assets/Icons/eight-ball",
+  "generateName": true,
+  "tags": [
+    {
+      "key": "project",
+      "value": "ai-software-factory"
+    },
+    {
+      "key": "domain",
+      "value": "supervisor"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "AI Factory Supervisor",
+      "description": "Décisions du superviseur, replans et bornes de délégation."
+    },
+    "variables": [],
+    "panels": {
+      "916e54d5-f620-5c36-b67b-3b663651632d": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Supervisor executions",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (outcome) (rate({__name__=\"ai_agent_duration.count\",role=\"supervisor\"}[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "76e01a11-323d-592c-ae17-0f4ecb90a33f": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Replans, contradictions and escalations",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (event) (rate(ai_workflow_events{event=~\"replan|contradiction|escalation\"}[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "eba6dbd4-84eb-5f59-a142-a16ba15f781d": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Delegation fan-out",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "max by (role) ({__name__=\"ai_delegation_fan_out.max\"})",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "99574a76-d811-5c96-ba50-1a94d52ae55c": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Delegation depth",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "max by (role) ({__name__=\"ai_delegation_depth.max\"})",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/916e54d5-f620-5c36-b67b-3b663651632d"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/76e01a11-323d-592c-ae17-0f4ecb90a33f"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/eba6dbd4-84eb-5f59-a142-a16ba15f781d"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/99574a76-d811-5c96-ba50-1a94d52ae55c"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "6h",
+    "refreshInterval": "30s",
+    "links": []
+  }
+}

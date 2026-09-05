@@ -1,0 +1,492 @@
+{
+  "schemaVersion": "v6",
+  "image": "/assets/Icons/eight-ball",
+  "generateName": true,
+  "tags": [
+    {
+      "key": "project",
+      "value": "ai-software-factory"
+    },
+    {
+      "key": "domain",
+      "value": "collector"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "AI Factory OpenTelemetry Collector",
+      "description": "Santé, débit, refus et files du Collector OpenTelemetry local."
+    },
+    "variables": [],
+    "panels": {
+      "0b6589fe-a0b1-59f3-b9f5-aef9f45fd3d5": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Accepted telemetry",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (receiver) (rate(otelcol_receiver_accepted_spans[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "B",
+                          "query": "sum by (receiver) (rate(otelcol_receiver_accepted_metric_points[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "C",
+                          "query": "sum by (receiver) (rate(otelcol_receiver_accepted_log_records[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "750424fe-e6b5-58b0-b931-4b5a7745826e": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Refused telemetry",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum(rate(otelcol_receiver_refused_spans[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "B",
+                          "query": "sum(rate(otelcol_receiver_refused_metric_points[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "C",
+                          "query": "sum(rate(otelcol_receiver_refused_log_records[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "63ab74b9-beac-572e-842f-d59ca8618e74": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Export failures",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum(rate(otelcol_exporter_send_failed_spans[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "B",
+                          "query": "sum(rate(otelcol_exporter_send_failed_metric_points[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "C",
+                          "query": "sum(rate(otelcol_exporter_send_failed_log_records[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "0288e6a7-8aee-531a-8009-810060fce2f2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Exporter queue utilization",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "max by (exporter) (otelcol_exporter_queue_size / clamp_min(otelcol_exporter_queue_capacity, 1))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "13e39948-147e-5b7f-9a93-02808a4d2e9a": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Collector memory",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "otelcol_process_memory_rss",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/0b6589fe-a0b1-59f3-b9f5-aef9f45fd3d5"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/750424fe-e6b5-58b0-b931-4b5a7745826e"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/63ab74b9-beac-572e-842f-d59ca8618e74"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/0288e6a7-8aee-531a-8009-810060fce2f2"
+              }
+            },
+            {
+              "x": 0,
+              "y": 12,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/13e39948-147e-5b7f-9a93-02808a4d2e9a"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "6h",
+    "refreshInterval": "30s",
+    "links": []
+  }
+}

@@ -48,7 +48,7 @@ La baseline complète et exploitable hors ligne est conservée dans
 | perte transitoire maximale mesurée | 0,1 % | 0,1 % |
 | disponibilité du chemin métier si OTel est indisponible | 100 % | 100 % |
 | rétention métriques initiale | 30 jours | politique plateforme approuvée |
-| rétention traces et logs initiale | 7 jours | politique plateforme approuvée |
+| rétention traces et logs initiale | 15 jours (défaut SigNoz borné) | politique plateforme approuvée |
 
 Les budgets locaux sont 4 Go de mémoire Docker au minimum pour SigNoz seul, puis une mesure de la pile complète
 avant qualification. Les limites finales CPU, mémoire et disque sont inscrites dans Compose après mesure. En GKE,
@@ -92,3 +92,19 @@ noms, cibles, règles, expressions, cardinalités principales et valeurs de réf
 - **Prometheus remote write derrière le Collector** : conserve Prometheus comme backend ou protocole principal.
 - **Double collecte temporaire** : contraire à la bascule immédiate demandée et susceptible de doubler les séries.
 - **Agent Docker avec socket** : réintroduit l'accès au daemon retiré par la migration sandbox.
+
+## Références qualifiées
+
+Références officielles consultées le 5 septembre 2026 :
+
+- [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/configuration/) 0.160.0 : configuration,
+  processors et export OTLP ;
+- [Spring Boot observability](https://docs.spring.io/spring-boot/reference/actuator/observability.html) 4.1.1 :
+  starter OpenTelemetry, export OTLP et propagation de contexte ;
+- [SigNoz self-hosted](https://signoz.io/docs/install/docker/) 0.135.0 / ingester 0.144.6 : installation,
+  API dashboards/alertes et rétention ;
+- [Google Cloud OpenTelemetry](https://cloud.google.com/stackdriver/docs/instrumentation/opentelemetry) : export
+  Collector `googlecloud` et Workload Identity GKE.
+
+Les liens maintenus sont ceux de la section 19 du plan de migration. Toute montée de ces versions exige la
+revalidation des schémas Collector, conventions sémantiques, requêtes et tests de confidentialité.

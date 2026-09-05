@@ -7,6 +7,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,23 +18,28 @@ class MultiAgentDashboardsTest {
             "agents.json", "AI Factory Agents",
             "temporal.json", "AI Factory Temporal",
             "mcp.json", "AI Factory MCP",
-            "sandbox.json", "AI Factory Sandbox");
+            "sandbox.json", "AI Factory Sandbox",
+            "collector.json", "AI Factory OpenTelemetry Collector");
 
     @Test
     void provisionsEveryOperationalPerimeterWithActionableQueries() throws Exception {
-        Path dashboards = repositoryRoot().resolve("infrastructure/observability/grafana/dashboards");
+        Path dashboards = repositoryRoot().resolve("infrastructure/observability/signoz/dashboards");
         ObjectMapper mapper = new ObjectMapper();
 
         for (Map.Entry<String, String> expected : REQUIRED.entrySet()) {
             JsonNode dashboard = mapper.readTree(Files.readString(dashboards.resolve(expected.getKey())));
-            assertThat(dashboard.path("title").asText()).isEqualTo(expected.getValue());
-            assertThat(dashboard.path("uid").asText()).isNotBlank();
-            assertThat(dashboard.path("panels").size()).isGreaterThanOrEqualTo(4);
-            assertThat(dashboard.path("panels")).allSatisfy(panel -> {
-                assertThat(panel.path("title").asText()).isNotBlank();
-                assertThat(panel.path("targets").isArray()).isTrue();
-                assertThat(panel.path("targets")).allSatisfy(target ->
-                        assertThat(target.path("expr").asText()).isNotBlank());
+            assertThat(dashboard.path("schemaVersion").asText()).isEqualTo("v6");
+            assertThat(dashboard.path("spec").path("display").path("name").asText())
+                    .isEqualTo(expected.getValue());
+            JsonNode panels = dashboard.path("spec").path("panels");
+            assertThat(panels.size()).isGreaterThanOrEqualTo(4);
+            StreamSupport.stream(panels.spliterator(), false).forEach(panel -> {
+                assertThat(panel.path("spec").path("display").path("name").asText()).isNotBlank();
+                JsonNode queries = panel.path("spec").path("queries").path(0)
+                        .path("spec").path("plugin").path("spec").path("queries");
+                assertThat(queries.isArray()).isTrue();
+                StreamSupport.stream(queries.spliterator(), false).forEach(query ->
+                        assertThat(query.path("spec").path("query").asText()).isNotBlank());
             });
         }
     }

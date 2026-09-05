@@ -21,13 +21,13 @@ docker compose -f infrastructure/compose.yaml ps
 docker compose -f infrastructure/compose.yaml logs --tail=200 orchestrator temporal sandbox-execution-mcp
 ```
 
-Dans Prometheus, comparer :
+Dans le dashboard SigNoz « AI Factory Global », comparer :
 
 ```promql
 max by (perimeter) (ai_task_queue_saturation_ratio)
 max(ai_factory_sandbox_jobs_queued)
-histogram_quantile(0.95, sum by (le, perimeter) (rate(ai_task_queue_wait_seconds_bucket[10m])))
-sum by (role) (rate(ai_agent_duration_seconds_count{outcome="error"}[10m]))
+histogram_quantile(0.95, sum by (le, perimeter) (rate({__name__="ai_task_queue_wait.bucket"}[10m])))
+sum by (role) (rate({__name__="ai_agent_duration.count",outcome="error"}[10m]))
 ```
 
 Identifier le goulot avant toute action : workers non pollants, dépendance MCP indisponible, quotas sandbox,

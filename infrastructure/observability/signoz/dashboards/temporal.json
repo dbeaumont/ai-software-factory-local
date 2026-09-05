@@ -1,0 +1,359 @@
+{
+  "schemaVersion": "v6",
+  "image": "/assets/Icons/eight-ball",
+  "generateName": true,
+  "tags": [
+    {
+      "key": "project",
+      "value": "ai-software-factory"
+    },
+    {
+      "key": "domain",
+      "value": "temporal"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "AI Factory Temporal",
+      "description": "Santé, débit, latence et persistance Temporal collectés par le receiver du Collector."
+    },
+    "variables": [],
+    "panels": {
+      "1e265f8e-6ee8-51f0-8090-8168c3245d26": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Temporal scrape readiness",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "up{job=\"temporal\"}",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "74f37001-5d33-5990-862e-b36a77606a50": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Frontend request and error rates",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum(rate(service_requests{service_name=\"frontend\"}[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "B",
+                          "query": "sum(rate(service_errors{service_name=\"frontend\"}[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "94465cd2-5366-5864-9baf-e56281741a8b": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Workflow task schedule-to-start p95",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "histogram_quantile(0.95, sum by (le) (rate({__name__=\"workflow_task_schedule_to_start_latency.bucket\"}[5m])))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "5fb44c64-cc6c-5e14-8d0a-65dc31f361c2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Persistence errors",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum(rate(persistence_error_with_type[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/1e265f8e-6ee8-51f0-8090-8168c3245d26"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/74f37001-5d33-5990-862e-b36a77606a50"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/94465cd2-5366-5864-9baf-e56281741a8b"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/5fb44c64-cc6c-5e14-8d0a-65dc31f361c2"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "6h",
+    "refreshInterval": "30s",
+    "links": []
+  }
+}

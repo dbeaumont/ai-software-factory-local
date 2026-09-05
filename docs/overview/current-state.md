@@ -221,11 +221,11 @@ flowchart TB
     SONAR --> SDB[(PostgreSQL Sonar)]
     ARTI --> ADB[(PostgreSQL Artifactory)]
 
-    PROM[Prometheus] --> ORCH
-    PROM --> CTX
-    PROM --> SBX
-    PROM --> TMP
-    GRAF[Grafana] --> PROM
+    ORCH -->|OTLP| OTEL[OpenTelemetry Collector]
+    CTX -->|OTLP| OTEL
+    SBX -->|OTLP| OTEL
+    TMP -->|receiver de compatibilité| OTEL
+    OTEL --> SIGNOZ[SigNoz]
 ```
 
 Les agents ne sont pas des conteneurs Compose séparés. Ce sont des rôles logiques chargés dans le processus
@@ -248,7 +248,7 @@ Les agents ne sont pas des conteneurs Compose séparés. Ce sont des rôles logi
 | `gitea` | forge Git locale | `3000`, SSH `2222` |
 | `sonarqube` | analyse qualité | `9000` |
 | `artifactory` | miroir/dépôt de dépendances | `8082` |
-| `prometheus` / `grafana` | métriques, alertes et tableaux de bord | `9090`, `3001` |
+| `otel-collector` / `SigNoz` | métriques, traces, logs, alertes et tableaux de bord | SigNoz `3301` uniquement |
 
 ### 3.3 Réseaux et frontières
 
@@ -478,7 +478,7 @@ un ordre déterministe pour les dépendances et l'arbitrage.
 | Contrats | JSON Schema pour requêtes, résultats, événements, preuves et décisions |
 | Exécution | Docker Engine local, image sandbox Maven/Java/Node/Syft/Trivy |
 | Données de plateforme | PostgreSQL pour Temporal, Gitea, SonarQube et Artifactory |
-| Observabilité | Actuator, Prometheus, Grafana et règles d'alerte |
+| Observabilité | OpenTelemetry, OTLP, Collector et SigNoz |
 
 Le dépôt ne contient pas de projet Maven parent : l'orchestrateur et chaque serveur MCP ont leur propre `pom.xml`
 et leur propre cycle de construction.
@@ -624,7 +624,7 @@ et doit être arbitré ; l'absence de preuve ou l'ambiguïté ne vaut pas accept
 | Runner Compose persistant | séparation de processus plus faible que gVisor/microVM | persistance possible entre deux jobs si le nettoyage est défaillant | usage local uniquement, profils séparés, filesystem read-only et reconstruction régulière |
 | API sans identité | aucune authentification, RBAC ni limitation de débit devant `/api` | création/approbation/annulation accessibles à tout client joignant le port | OIDC/SSO au proxy, RBAC, CSRF pour l'UI et rate limiting |
 | Secrets de développement | plusieurs valeurs Compose ont des défauts simples | compromission immédiate hors poste isolé | secrets uniques, Secret Manager/Vault, rotation et interdiction de valeurs par défaut |
-| Réseaux/ports | Gitea, Sonar, Artifactory, Prometheus, Grafana et orchestrateur sont publiés | surface d'attaque locale ou LAN selon le bind | binder sur loopback en local, publier uniquement le reverse proxy en environnement partagé |
+| Réseaux/ports | Gitea, Sonar, Artifactory, SigNoz et orchestrateur sont publiés | surface d'attaque locale ou LAN selon le bind | binder sur loopback en local, publier uniquement le reverse proxy en environnement partagé |
 | MCP interne sans authentification forte | la segmentation réseau porte l'essentiel de la confiance | usurpation possible si le réseau est compromis | mTLS et identité de workload par service |
 | Audit local | clé aléatoire et journal non durable/WORM | perte au redémarrage et preuve difficile à opposer | export append-only signé vers un stockage externe |
 | État volatile | tâches en RAM | perte de suivi et approbations incohérentes après redémarrage | brancher la projection PostgreSQL et Temporal avant production |
@@ -725,7 +725,7 @@ flowchart TB
     GDB[(gitea-db-data<br/>gitea-data)]
     SDB[(sonar data/logs/extensions)]
     ADB[(artifactory db/data)]
-    GRAF[(grafana-data)]
+    SIGNOZ[(ClickHouse et PostgreSQL SigNoz)]
 
     ORCH --> MEM
     ORCH --> WS
@@ -863,12 +863,12 @@ runtimes d'analyse/code/revue produisent des conclusions typées et des référe
 
 ### 9.1 Collecte
 
-Prometheus collecte actuellement l'orchestrateur, Repository Context MCP, Sandbox Execution MCP et Temporal. Des
-dashboards Grafana existent pour Temporal, MCP, orchestrateur, agents, sandbox et Supervisor.
+Les six applications Spring exportent métriques, traces et logs par OTLP vers un Collector interne. Temporal ne
+dispose pas encore d'un export OTLP retenu : le Collector collecte donc son endpoint métrique par un receiver de
+compatibilité, sans serveur Prometheus autonome. SigNoz stocke et présente les trois signaux.
 
-Les trois MCP Assurance, Evidence et SCM exposent Actuator mais ne figurent pas dans la configuration Prometheus
-observée : leurs métriques ne sont donc pas collectées par défaut. C'est un écart à corriger pour obtenir une vision
-complète des gates, preuves et effets.
+Sept dashboards versionnés couvrent Temporal, MCP, orchestrateur, agents, sandbox, Supervisor et le Collector.
+Les neuf alertes SigNoz sont provisionnées de façon idempotente et routées localement vers un sink interne borné.
 
 ### 9.2 Alertes présentes
 
@@ -991,7 +991,7 @@ Pour toute évolution :
   `TaskState` ;
 - les migrations PostgreSQL décrivent une cible, sans adaptateur de persistance actif ;
 - l'analyse Sonar n'est généralisée ni à Gradle ni à npm ;
-- Prometheus ne scrape que deux des cinq serveurs MCP ;
+- la conservation SigNoz locale et les notifications externes restent à qualifier sur une campagne longue ;
 - l'image orchestrateur reste root et embarque un client Docker devenu inutile dans sa topologie actuelle ;
 - `AI_FACTORY_SANDBOX_STATE_ROOT` est déclaré deux fois dans le service Compose sandbox ;
 - plusieurs images utilisent un tag mutable ou non fixé par digest ;

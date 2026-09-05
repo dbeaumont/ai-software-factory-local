@@ -1,0 +1,13 @@
+apiVersion: v1alpha1
+metadata:
+  name: ai-factory-signoz
+spec:
+  deployment:
+    mode: docker
+    flavor: compose
+  signoz:
+    spec:
+      image: signoz/signoz:v0.135.0
+  ingester:
+    spec:
+      image: signoz/signoz-otel-collector:v0.144.6

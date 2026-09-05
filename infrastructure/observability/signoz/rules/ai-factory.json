@@ -1,0 +1,623 @@
+[
+  {
+    "alert": "AiFactoryAgentLoopDetected",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "An agent stopped after repeating an identical call or exhausting its turn limit.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_agent_failures{reason=~\"repeated_call|max_turns\"}[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "agents",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Agent loop or turn limit detected",
+      "description": "An agent stopped after repeating an identical call or exhausting its turn limit.",
+      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+    }
+  },
+  {
+    "alert": "AiFactoryAgentBudgetExhausted",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "A host-enforced token, cost, turn or fan-out budget stopped an agent.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_agent_failures{stop_condition=\"BUDGET_EXHAUSTED\"}[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "agents",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Agent execution budget exhausted",
+      "description": "A host-enforced token, cost, turn or fan-out budget stopped an agent.",
+      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+    }
+  },
+  {
+    "alert": "AiFactoryAgentCostSpike",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "Agent usage exceeded 5,000,000 cost micros over fifteen minutes.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "sum(increase(ai_agent_cost_micros[15m])) > 5000000",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "5m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "agents",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Aggregate agent cost exceeds the operational threshold",
+      "description": "Agent usage exceeded 5,000,000 cost micros over fifteen minutes.",
+      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+    }
+  },
+  {
+    "alert": "AiFactoryTaskQueueBacklog",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "More than twenty sandbox jobs are queued or a worker perimeter remains above 90 percent saturation.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "max(ai_factory_sandbox_jobs_queued) > 20 or max(ai_task_queue_saturation_ratio) > 0.9",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "10m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "queues",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Worker backlog or saturation is sustained",
+      "description": "More than twenty sandbox jobs are queued or a worker perimeter remains above 90 percent saturation.",
+      "runbook_url": "/docs/operations/runbooks/SATURATION.md"
+    }
+  },
+  {
+    "alert": "AiFactorySandboxHeartbeatInvalid",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The orchestrator rejected a sandbox heartbeat and failed the execution closed.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_factory_sandbox_heartbeat_invalid[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "sandbox",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Sandbox execution heartbeat is absent, invalid or stale",
+      "description": "The orchestrator rejected a sandbox heartbeat and failed the execution closed.",
+      "runbook_url": "/docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactorySandboxExecutionFailures",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "More than five sandbox executions failed, timed out or were cancelled in ten minutes.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_factory_sandbox_jobs_failed[10m]) > 5",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "5m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "sandbox",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Sandbox executions are repeatedly failing",
+      "description": "More than five sandbox executions failed, timed out or were cancelled in ten minutes.",
+      "runbook_url": "/docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactorySandboxMaintenanceFailure",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The sandbox controller could not maintain persisted jobs or clean expired state.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_factory_sandbox_maintenance_failures[10m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "2m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "sandbox",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Sandbox cleanup or retention maintenance is failing",
+      "description": "The sandbox controller could not maintain persisted jobs or clean expired state.",
+      "runbook_url": "/docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryAgentContractError",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "An agent emitted a malformed final turn or a result outside its declared output contract.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_agent_failures{stop_condition=\"CONTRACT_ERROR\"}[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "contracts",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Agent output contract validation failed",
+      "description": "An agent emitted a malformed final turn or a result outside its declared output contract.",
+      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+    }
+  },
+  {
+    "alert": "AiFactoryEvidenceAltered",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "Evidence MCP metadata, content or digest diverged from its workflow binding.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase(ai_evidence_altered[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "evidence",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Evidence integrity verification failed",
+      "description": "Evidence MCP metadata, content or digest diverged from its workflow binding.",
+      "runbook_url": "/docs/operations/runbooks/MCP-COMPROMIS.md"
+    }
+  }
+]

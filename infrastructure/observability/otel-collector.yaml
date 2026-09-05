@@ -1,0 +1,141 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        max_recv_msg_size_mib: 4
+      http:
+        endpoint: 0.0.0.0:4318
+        max_request_body_size: 4194304
+  prometheus/temporal:
+    config:
+      scrape_configs:
+        - job_name: temporal
+          scrape_interval: 15s
+          scrape_timeout: 5s
+          static_configs:
+            - targets: [temporal:8000]
+              labels:
+                service_namespace: ai-software-factory
+                deployment_environment_name: local
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 384
+    spike_limit_mib: 96
+  resource_detection:
+    detectors: [env, system]
+    override: false
+    timeout: 2s
+  transform/redact:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - delete_key(span.attributes, "http.request.header.authorization")
+          - delete_key(span.attributes, "http.request.header.cookie")
+          - delete_key(span.attributes, "http.response.header.set_cookie")
+          - delete_key(span.attributes, "gen_ai.prompt")
+          - delete_key(span.attributes, "gen_ai.completion")
+          - delete_key(span.attributes, "gen_ai.input.messages")
+          - delete_key(span.attributes, "gen_ai.output.messages")
+          - delete_key(span.attributes, "ai.prompt")
+          - delete_key(span.attributes, "ai.result")
+          - delete_key(span.attributes, "ai.evidence")
+          - delete_key(span.attributes, "code")
+          - delete_key(span.attributes, "patch")
+          - delete_key(span.attributes, "url.full")
+          - delete_key(span.attributes, "url.query")
+          - delete_key(span.attributes, "http.url")
+          - delete_key(span.attributes, "http.target")
+          - delete_key(span.attributes, "db.statement")
+          - delete_key(span.attributes, "exception.message")
+          - delete_key(span.attributes, "exception.stacktrace")
+    log_statements:
+      - context: log
+        statements:
+          - delete_key(log.attributes, "authorization")
+          - delete_key(log.attributes, "cookie")
+          - delete_key(log.attributes, "set-cookie")
+          - delete_key(log.attributes, "gen_ai.prompt")
+          - delete_key(log.attributes, "gen_ai.completion")
+          - delete_key(log.attributes, "ai.prompt")
+          - delete_key(log.attributes, "ai.result")
+          - delete_key(log.attributes, "ai.evidence")
+          - delete_key(log.attributes, "code")
+          - delete_key(log.attributes, "patch")
+          - delete_key(log.attributes, "url.full")
+          - delete_key(log.attributes, "url.query")
+          - delete_key(log.attributes, "http.url")
+          - delete_key(log.attributes, "http.target")
+          - delete_key(log.attributes, "db.statement")
+          - delete_key(log.attributes, "exception.message")
+          - delete_key(log.attributes, "exception.stacktrace")
+    metric_statements:
+      - context: datapoint
+        statements:
+          - delete_key(datapoint.attributes, "authorization")
+          - delete_key(datapoint.attributes, "cookie")
+          - delete_key(datapoint.attributes, "gen_ai.prompt")
+          - delete_key(datapoint.attributes, "gen_ai.completion")
+          - delete_key(datapoint.attributes, "ai.prompt")
+          - delete_key(datapoint.attributes, "ai.result")
+          - delete_key(datapoint.attributes, "ai.evidence")
+          - delete_key(datapoint.attributes, "code")
+          - delete_key(datapoint.attributes, "patch")
+          - delete_key(datapoint.attributes, "url.full")
+          - delete_key(datapoint.attributes, "url.query")
+          - delete_key(datapoint.attributes, "http.url")
+          - delete_key(datapoint.attributes, "http.target")
+          - delete_key(datapoint.attributes, "db.statement")
+  batch:
+    send_batch_size: 512
+    send_batch_max_size: 1024
+    timeout: 5s
+
+exporters:
+  otlp_http/signoz:
+    endpoint: http://ingester:4318
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 2048
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 60s
+
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      readers:
+        - periodic:
+            interval: 15000
+            exporter:
+              otlp:
+                protocol: http/protobuf
+                endpoint: http://ingester:4318
+                timeout: 5000
+                insecure: true
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource_detection, transform/redact, batch]
+      exporters: [otlp_http/signoz]
+    metrics:
+      receivers: [otlp, prometheus/temporal]
+      processors: [memory_limiter, resource_detection, transform/redact, batch]
+      exporters: [otlp_http/signoz]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource_detection, transform/redact, batch]
+      exporters: [otlp_http/signoz]

@@ -64,6 +64,20 @@ ensure_env_secret() {
   fi
 }
 
+ensure_complex_env_secret() {
+  local key="$1"
+  local value
+  value=$(read_value "$ENV_FILE" "$key")
+  if [ -z "$value" ] || [[ "$value" =~ ^[0-9a-f]{48}$ ]]; then
+    value="A!a1$(generate_hex 20)"
+    write_value "$ENV_FILE" "$key" "$value"
+    echo "Generated local complex secret: $key"
+  elif [ "${#value}" -lt 12 ] || [[ ! "$value" =~ [A-Z] ]] || [[ ! "$value" =~ [a-z] ]] || [[ ! "$value" =~ [0-9] ]] || [[ ! "$value" =~ [\~\!@#\$%\^\&\*\(\)_+\`=\{\}\|\[\]\\:\"\<\>\?,\.\/\-] ]]; then
+    echo "$key must contain at least 12 characters, including uppercase, lowercase, number and symbol." >&2
+    exit 1
+  fi
+}
+
 ensure_shared_secret() {
   local key="$1"
   local bytes="$2"
@@ -116,6 +130,8 @@ sync_optional_secret() {
 }
 
 ensure_env_secret ARTIFACTORY_DB_PASSWORD 24 1
+ensure_env_secret SIGNOZ_DB_PASSWORD 24 32
+ensure_complex_env_secret SIGNOZ_ROOT_PASSWORD
 ensure_env_secret AI_FACTORY_SANDBOX_RUNNER_TOKEN 32 32
 ensure_shared_secret APPROVAL_ATTESTATION_KEY 32 32
 ensure_shared_secret JF_SHARED_SECURITY_MASTERKEY 16 32

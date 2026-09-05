@@ -1,0 +1,174 @@
+networks:
+  ai-factory-signoz-network:
+    name: ai-factory-signoz-network
+services:
+  ai-factory-signoz-metastore-postgres-0:
+    container_name: ai-factory-signoz-metastore-postgres-0
+    environment:
+    - POSTGRES_DB=signoz
+    - POSTGRES_PASSWORD=${SIGNOZ_DB_PASSWORD:?SIGNOZ_DB_PASSWORD must be initialized by make init}
+    - POSTGRES_USER=signoz
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+      - CMD-SHELL
+      - pg_isready -U signoz -d signoz
+      timeout: 10s
+    image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+    networks:
+    - ai-factory-signoz-network
+    restart: unless-stopped
+    volumes:
+    - ai-factory-signoz-metastore-postgres-0-data:/var/lib/postgresql/data
+  ai-factory-signoz-signoz-0:
+    container_name: ai-factory-signoz-signoz-0
+    environment:
+    - SIGNOZ_SQLSTORE_POSTGRES_DSN=postgres://signoz:${SIGNOZ_DB_PASSWORD:?SIGNOZ_DB_PASSWORD must be initialized by make init}@ai-factory-signoz-metastore-postgres-0:5432/signoz?sslmode=disable
+    - SIGNOZ_SQLSTORE_PROVIDER=postgres
+    - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://ai-factory-signoz-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_TELEMETRYSTORE_PROVIDER=clickhouse
+    - SIGNOZ_USER_ROOT_ENABLED=true
+    - SIGNOZ_USER_ROOT_EMAIL=${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}
+    - SIGNOZ_USER_ROOT_PASSWORD=${SIGNOZ_ROOT_PASSWORD:?SIGNOZ_ROOT_PASSWORD must be initialized by make init}
+    - SIGNOZ_USER_ROOT_ORG_NAME=${SIGNOZ_ROOT_ORG_NAME:-ai-software-factory}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 60s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - http://localhost:8080/api/v1/health
+      timeout: 10s
+    image: signoz/signoz:v0.135.0@sha256:9b0ea7ad66485c2e53d158108dc7d75cd6e14f0cfd129eb342b3889ed5a968ce
+    networks:
+    - ai-factory-signoz-network
+    ports:
+    - ${SIGNOZ_PORT:-3301}:8080
+    restart: unless-stopped
+    depends_on:
+      ai-factory-signoz-metastore-postgres-0:
+        condition: service_healthy
+      ai-factory-signoz-telemetrystore-clickhouse-0-0:
+        condition: service_healthy
+  ai-factory-signoz-telemetrykeeper-clickhousekeeper-0:
+    container_name: ai-factory-signoz-telemetrykeeper-clickhousekeeper-0
+    entrypoint:
+    - /usr/bin/clickhouse-keeper
+    - --config-file=/etc/clickhouse-keeper/keeper.yaml
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 40s
+      test:
+      - CMD
+      - clickhouse-keeper-client
+      - -h
+      - localhost
+      - -p
+      - "9181"
+      - -q
+      - ls
+      timeout: 10s
+    image: clickhouse/clickhouse-keeper:25.12.5@sha256:525b8b0f93ccb371131c46f22a066ea43d33d74aba314203e8044609945d8524
+    networks:
+    - ai-factory-signoz-network
+    restart: unless-stopped
+    volumes:
+    - ai-factory-signoz-telemetrykeeper-0-data:/var/lib/clickhouse-keeper
+    - ./telemetrykeeper/clickhousekeeper/keeper-0.yaml:/etc/clickhouse-keeper/keeper.yaml:ro
+  ai-factory-signoz-telemetrystore-clickhouse-0-0:
+    container_name: ai-factory-signoz-telemetrystore-clickhouse-0-0
+    depends_on:
+      ai-factory-signoz-telemetrykeeper-clickhousekeeper-0:
+        condition: service_healthy
+      ai-factory-signoz-telemetrystore-clickhouse-user-scripts:
+        condition: service_completed_successfully
+    environment:
+    - CLICKHOUSE_SKIP_USER_SETUP=1
+    - CLICKHOUSE_CONFIG=/etc/clickhouse-server/config-0-0.yaml
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 40s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - http://localhost:8123/ping
+      timeout: 10s
+    image: clickhouse/clickhouse-server:25.12.5@sha256:cacf32d6884291dc2ff5e0156a97f46fc53ff7c929a7906d114e268a929dfd3a
+    networks:
+    - ai-factory-signoz-network
+    restart: unless-stopped
+    volumes:
+    - ai-factory-signoz-telemetrystore-0-0-data:/var/lib/clickhouse
+    - ai-factory-signoz-telemetrystore-user-scripts:/var/lib/clickhouse/user_scripts:ro
+    - ./telemetrystore/clickhouse/config-0-0.yaml:/etc/clickhouse-server/config-0-0.yaml:ro
+    - ./telemetrystore/clickhouse/functions.yaml:/etc/clickhouse-server/functions.yaml:ro
+  ai-factory-signoz-telemetrystore-clickhouse-user-scripts:
+    command:
+    - sh
+    - -c
+    - install -m 0755 /opt/histogramQuantile /var/lib/clickhouse/user_scripts/histogramQuantile
+    build:
+      context: ../histogram-quantile
+    container_name: ai-factory-signoz-telemetrystore-clickhouse-user-scripts
+    image: ai-factory-signoz-histogram-quantile:0.0.1
+    network_mode: none
+    restart: "no"
+    volumes:
+    - ai-factory-signoz-telemetrystore-user-scripts:/var/lib/clickhouse/user_scripts
+  ai-factory-signoz-telemetrystore-migrator:
+    command:
+    - -c
+    - |
+      /signoz-otel-collector migrate ready &&
+      /signoz-otel-collector migrate bootstrap &&
+      /signoz-otel-collector migrate sync up &&
+      /signoz-otel-collector migrate async up
+    container_name: ai-factory-signoz-telemetrystore-migrator
+    entrypoint:
+    - /bin/sh
+    environment:
+    - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://ai-factory-signoz-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    image: signoz/signoz-otel-collector:v0.144.6@sha256:7e4e539a73f1f88fbc1cd7e659ab3950908e83ce1f2a37a297452f910d072174
+    networks:
+    - ai-factory-signoz-network
+    restart: on-failure
+  ingester:
+    command:
+    - -c
+    - |
+      /signoz-otel-collector migrate sync check &&
+      /signoz-otel-collector --config=/etc/otel-collector-config.yaml
+    deploy:
+      replicas: 1
+    entrypoint:
+    - /bin/sh
+    environment:
+    - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://ai-factory-signoz-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    image: signoz/signoz-otel-collector:v0.144.6@sha256:7e4e539a73f1f88fbc1cd7e659ab3950908e83ce1f2a37a297452f910d072174
+    networks:
+      ai-factory-signoz-network:
+        aliases:
+        - ai-factory-signoz-ingester
+    restart: unless-stopped
+    volumes:
+    - ./ingester/ingester.yaml:/etc/otel-collector-config.yaml:ro
+volumes:
+  ai-factory-signoz-metastore-postgres-0-data:
+    name: ai-factory-signoz-metastore-postgres-0-data
+  ai-factory-signoz-telemetrykeeper-0-data:
+    name: ai-factory-signoz-telemetrykeeper-0-data
+  ai-factory-signoz-telemetrystore-0-0-data:
+    name: ai-factory-signoz-telemetrystore-0-0-data
+  ai-factory-signoz-telemetrystore-user-scripts:
+    name: ai-factory-signoz-telemetrystore-user-scripts

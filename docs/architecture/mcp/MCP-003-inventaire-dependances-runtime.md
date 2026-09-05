@@ -32,7 +32,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | Livraison SCM | `scm-delivery-mcp` | `GITEA_TOKEN` et nom `AI_FACTORY_GITEA_USER`, confinés au serveur | workspace source read-only puis staging privé | serveur SCM vers `gitea:3000` et push HTTP authentifié | `sa-scm-delivery-mcp`, jeton Gitea dédié jusqu'à fédération d'identité |
 | Assurance | `assurance-mcp` stateless | aucun secret runtime | aucun volume | `mcp-internal` uniquement ; évalue les données transmises | `sa-assurance-mcp`, sans accès au code ni au SCM |
 | Preuves | `evidence-mcp` | clé de chiffrement locale dérivée de la clé d'attestation | volume `evidence-state` immuable et chiffré | `mcp-internal` uniquement | `sa-evidence-mcp`, puis bucket Cloud Storage dédié et KMS |
-| Observabilité | Prometheus/Grafana | comptes administrateur Grafana hors flux MCP | `grafana-data`, configuration Prometheus en lecture seule | Prometheus joint `factory`, `mcp-internal` et `workflow-internal`; quatre cibles configurées | identité de collecte dédiée, accès métriques uniquement |
+| Observabilité | Collector OpenTelemetry/SigNoz | compte administrateur SigNoz hors flux MCP | volumes ClickHouse/PostgreSQL et définitions versionnées | OTLP privé sur les trois réseaux internes ; seule l'UI SigNoz est publiée | Workload Identity du Collector et rôles Google minimaux |
 
 ## 3. Inventaire des secrets
 
@@ -50,7 +50,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | `GITEA_DB_PASSWORD` | Gitea et `gitea-db` | connexion PostgreSQL | plateforme SCM | Secret de plateforme, sans exposition MCP. |
 | `GITEA_ADMIN_PASSWORD`, `GITEA_REVIEWER_PASSWORD` | scripts/bootstrap local | comptes POC | IAM/SSO et comptes nominatifs | Ne pas réutiliser le compte administrateur comme compte de service SCM. |
 | `SONAR_ADMIN_PASSWORD` | bootstrap local | initialisation SonarQube | administration SonarQube | Le scanner et Assurance n'utilisent pas le compte administrateur. |
-| `GRAFANA_ADMIN_PASSWORD` | Grafana | administration locale | plateforme observabilité/SSO | Hors périmètre des serveurs MCP. |
+| `SIGNOZ_ROOT_PASSWORD` | SigNoz | administration locale initiale | plateforme observabilité/SSO | Généré localement, hors périmètre des serveurs MCP. |
 
 ### 3.2 Constats de sécurité
 
@@ -73,7 +73,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | `gitea-data`, `gitea-db-data` | Gitea/PostgreSQL | persistants | données SCM | service SCM d'entreprise, hors serveurs MCP |
 | `sonar-data`, `sonar-logs`, `sonar-extensions`, `sonar-db-data` | SonarQube/PostgreSQL | persistants | moteur de qualité | service SonarQube d'entreprise, hors serveurs MCP |
 | `artifactory-data`, `artifactory-db-data` | Artifactory/PostgreSQL | persistants | dépôt de dépendances | service Artifactory/Artifact Registry, hors serveurs MCP |
-| `grafana-data` | Grafana | persistant | tableaux de bord | plateforme d'observabilité |
+| volumes SigNoz ClickHouse/PostgreSQL | SigNoz | persistants | métriques, traces, logs, dashboards et alertes | Google Cloud Observability en cible GKE |
 | `evidence-state` | `evidence-mcp` | RW par le serveur, non monté dans l'orchestrateur | stockage local immuable, chiffré et lié aux digests | Cloud Storage avec CMEK, précondition de création et rétention verrouillée |
 
 ## 5. Inventaire réseau et destinations
@@ -83,7 +83,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | Réseau | Membres utiles au flux MCP | Propriété actuelle | Limite constatée |
 |---|---|---|---|
 | `factory` / `ai-factory-network` | orchestrateur, LiteLLM, Gitea, SonarQube, Artifactory, bases, web et observabilité | réseau applicatif partagé ; aucun job sandbox n'y est désormais raccordé | conserver l'absence de jobs non fiables sur ce segment |
-| `mcp-internal` / `ai-factory-mcp-internal` | orchestrateur, cinq serveurs MCP et Prometheus | réseau Docker `internal: true` sans egress direct | absence d'authentification applicative ; Prometheus ne scrape actuellement que Context et Sandbox MCP |
+| `mcp-internal` / `ai-factory-mcp-internal` | orchestrateur, cinq serveurs MCP et Collector OTel | réseau Docker `internal: true` sans egress direct | OTLP local sans mTLS, acceptable uniquement sur ce réseau isolé |
 | `sandbox-egress` / `ai-factory-sandbox-egress` | jobs de tests/sécurité, Artifactory et proxy d'egress | réseau `internal: true`; proxy seul raccordé aussi à `factory`, avec refus par défaut | porter l'isolation et les règles de destination vers GKE |
 | `sandbox-quality` / `ai-factory-sandbox-quality` | jobs qualité, SonarQube, Artifactory et proxy d'egress | réseau `internal: true`; profil choisi côté serveur | conserver la séparation des profils dans la cible GKE |
 | `none` | jobs `validate_patch` et `apply_patch` | aucun réseau | conforme au besoin | conserver dans la cible sandbox |
@@ -106,7 +106,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | `scm-delivery-mcp` | Gitea/SCM | métadonnées, push et draft PR | destination SCM unique par registre, identité et scope dépôt |
 | `assurance-mcp` | aucune destination métier directe | évaluation des résultats fournis | conserver stateless et sans code source complet |
 | `evidence-mcp` | volume local chiffré | preuves et manifests | stockage objet/KMS limité à l'environnement en cible |
-| Prometheus | endpoints Actuator orchestrateur/MCP | métriques | identité de collecte ; aucun accès aux endpoints outils |
+| Collector OTel | endpoints OTLP des applications et endpoint métrique Temporal | métriques, traces et logs expurgés | Workload Identity et accès en écriture aux backends Google uniquement |
 
 ## 6. Comptes techniques et identités
 

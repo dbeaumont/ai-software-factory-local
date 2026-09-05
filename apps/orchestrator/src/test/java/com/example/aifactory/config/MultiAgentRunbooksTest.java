@@ -26,7 +26,7 @@ class MultiAgentRunbooksTest {
         }
 
         String alerts = Files.readString(
-                root.resolve("infrastructure/observability/alerts/multiagents.yml"));
+                root.resolve("infrastructure/observability/signoz/rules/ai-factory.json"));
         assertThat(alerts).contains("/docs/operations/runbooks/SATURATION.md",
                 "/docs/operations/runbooks/AGENT-DEFAILLANT.md",
                 "/docs/operations/runbooks/MCP-COMPROMIS.md");

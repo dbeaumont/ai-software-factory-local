@@ -17,9 +17,9 @@ une sortie invalide. Ce runbook couvre les alertes `AiFactoryAgentLoopDetected`,
 ## Diagnostic
 
 ```promql
-sum by (role, stop_condition, reason) (increase(ai_agent_failures_total[15m]))
-sum by (role) (increase(ai_agent_cost_micros_total[15m]))
-sum by (role, outcome) (rate(ai_agent_duration_seconds_count[15m]))
+sum by (role, stop_condition, reason) (increase(ai_agent_failures[15m]))
+sum by (role) (increase(ai_agent_cost_micros[15m]))
+sum by (role, outcome) (rate({__name__="ai_agent_duration.count"}[15m]))
 ```
 
 Consulter la tâche sans exposer son contenu sensible :

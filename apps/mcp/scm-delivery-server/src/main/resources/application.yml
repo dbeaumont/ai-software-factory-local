@@ -1,6 +1,9 @@
 server:
   port: 8093
 
+logging:
+  structured: { format: { console: "${AI_FACTORY_STRUCTURED_LOG_FORMAT:ecs}" }, json: { context: { include: true }, stacktrace: { max-length: 8192, max-throwable-depth: 16 } } }
+
 spring:
   application:
     name: scm-delivery-mcp
@@ -26,11 +29,30 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,metrics
   endpoint:
     health:
       probes:
         enabled: true
+  tracing:
+    sampling: { probability: "${AI_FACTORY_OTEL_TRACES_SAMPLING_PROBABILITY:1.0}" }
+    propagation: { type: W3C }
+  opentelemetry:
+    enabled: ${AI_FACTORY_OTEL_ENABLED:true}
+    resource-attributes: { service.namespace: ai-software-factory, service.version: 0.1.0, deployment.environment.name: "${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}" }
+    tracing:
+      export: { max-queue-size: 2048, max-batch-size: 512, schedule-delay: 5s, timeout: 10s, otlp: { endpoint: "${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://otel-collector:4318/v1/traces}", connect-timeout: 2s, timeout: 5s } }
+      limits: { max-attributes: 64, max-attribute-value-length: 1024, max-events: 64, max-links: 32, max-attributes-per-event: 64, max-attributes-per-link: 64 }
+    logging:
+      export: { max-queue-size: 2048, max-batch-size: 512, schedule-delay: 1s, timeout: 10s, otlp: { endpoint: "${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:http://otel-collector:4318/v1/logs}", connect-timeout: 2s, timeout: 5s } }
+      limits: { max-attributes: 64, max-attribute-value-length: 1024 }
+  otlp:
+    metrics:
+      export: { enabled: "${AI_FACTORY_OTEL_ENABLED:true}", url: "${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://otel-collector:4318/v1/metrics}", step: 15s, batch-size: 1000, base-time-unit: seconds, connect-timeout: 2s, read-timeout: 5s }
+  metrics:
+    tags: { service.name: "${spring.application.name}", service.namespace: ai-software-factory, service.version: 0.1.0, deployment.environment.name: "${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}" }
+    distribution:
+      percentiles-histogram: { http.server.requests: true }
 
 ai-factory:
   scm:

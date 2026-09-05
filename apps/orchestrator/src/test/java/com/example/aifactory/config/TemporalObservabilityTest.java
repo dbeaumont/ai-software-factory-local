@@ -2,7 +2,6 @@ package com.example.aifactory.config;
 
 import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
-import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,15 +28,14 @@ class TemporalObservabilityTest {
         assertThat(resourceLimits(temporal)).containsKeys("cpus", "memory");
         assertThat(resourceLimits(services.get("temporal-db"))).containsKeys("cpus", "memory");
         assertThat(resourceLimits(services.get("temporal-ui"))).containsKeys("cpus", "memory");
-        assertThat((List<String>) services.get("prometheus").get("networks"))
+        assertThat((List<String>) services.get("otel-collector").get("networks"))
                 .contains("workflow-internal");
 
-        String prometheus = Files.readString(root.resolve("infrastructure/observability/prometheus.yml"));
-        assertThat(prometheus).contains("job_name: temporal", "temporal:8000");
-        var dashboard = new ObjectMapper().readTree(Files.readString(
-                root.resolve("infrastructure/observability/grafana/dashboards/temporal.json")));
-        assertThat(dashboard.path("title").asText()).isEqualTo("AI Factory Temporal");
-        assertThat(dashboard.path("panels").size()).isGreaterThanOrEqualTo(4);
+        String collector = Files.readString(root.resolve("infrastructure/observability/otel-collector.yaml"));
+        assertThat(collector).contains("prometheus/temporal:", "targets: [temporal:8000]");
+        String dashboard = Files.readString(
+                root.resolve("infrastructure/observability/signoz/dashboards/temporal.json"));
+        assertThat(dashboard).contains("AI Factory Temporal", "up{job=\\\"temporal\\\"}");
     }
 
     @SuppressWarnings("unchecked")

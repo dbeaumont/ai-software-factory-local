@@ -64,7 +64,7 @@ La stack actuelle contient :
 | Qualité de code | SonarQube Community + PostgreSQL 16 |
 | SBOM | Syft (CycloneDX JSON) |
 | Scan sécurité | Trivy (vulnérabilités & secrets) |
-| Observabilité | Prometheus v3.5 + Grafana 12.1 (métriques Micrometer/Actuator) |
+| Observabilité | OpenTelemetry/OTLP + Collector 0.160 + SigNoz 0.135 (métriques, traces et logs) |
 
 ### Architecture multi-agent 1.2.0
 
@@ -126,10 +126,11 @@ flowchart TB
   SCM --> Gitea[Gitea]
   Evidence --> EvidenceVolume[(Volume de preuves)]
   API --> Workspace[(Workspaces de tâches)]
-  Prometheus[Prometheus] --> API
-  Prometheus --> Context
-  Prometheus --> Sandbox
-  Grafana[Grafana] --> Prometheus
+  API -->|OTLP| Collector[OpenTelemetry Collector]
+  Context -->|OTLP| Collector
+  Sandbox -->|OTLP| Collector
+  Temporal -->|receiver de compatibilité| Collector
+  Collector --> SigNoz[SigNoz]
 ```
 
 Les cinq serveurs MCP séparent les capacités par nature : lecture du dépôt, exécution, évaluation, preuves et
@@ -240,8 +241,7 @@ URLs principales :
 - Orchestrateur direct (diagnostic & Actuator) : `http://localhost:8088`
 - SonarQube : `http://localhost:9000`
 - Artifactory : `http://localhost:8082` (utilisateur `admin`, mot de passe `password`)
-- Prometheus : `http://localhost:9090`
-- Grafana : `http://localhost:3001`
+- SigNoz : `http://localhost:3301` (compte initial généré par `make init`)
 
 Le script `make bootstrap` initialise les comptes Gitea `aiadmin` et `reviewer`, pousse les trois dépôts de référence Maven, Gradle et Node depuis `examples/`, et génère automatiquement les jetons `GITEA_TOKEN` et `SONAR_TOKEN` dans le fichier `.env`.
 
@@ -575,11 +575,11 @@ contrats MCP pour pouvoir remplacer les backends sans donner davantage de pouvoi
 | Web et API | Nginx + Spring sur Compose | Cloud Run ou GKE derrière HTTPS/IAP | Authentification, autoscaling et exposition maîtrisée |
 | Workflow | Coordinateur en processus ; Temporal disponible mais désactivé | Temporal managé ou opéré, workers séparés par task queue | Reprise durable, signaux humains, retries et versionnement |
 | État | Mémoire JVM et volumes locaux | PostgreSQL/Cloud SQL + stockage objet des preuves | Transactions, sauvegardes, rétention et restauration |
-| Sandbox | Conteneur Docker via socket locale | GKE dédié avec gVisor/Agent Sandbox et Jobs éphémères | Séparer le code non fiable du plan de contrôle |
+| Sandbox | Runners Compose statiques sans socket Docker | GKE dédié avec gVisor/Agent Sandbox et Jobs éphémères | Séparer le code non fiable du plan de contrôle |
 | Réseau | Réseaux Compose et proxy Squid allow-listé | `default deny`, egress explicite, VPC séparé, aucun accès metadata/control plane | Réduire mouvement latéral et exfiltration |
 | Identités et secrets | Fichiers `.env`/`.vault` | Workload Identity et Secret Manager | Identités courtes, minimales et auditables |
 | SCM, qualité, artefacts | Gitea, SonarQube et Artifactory locaux | Services d'entreprise via adaptateurs MCP | Conserver les politiques et systèmes de référence |
-| Observabilité | Prometheus et Grafana locaux | métriques, traces et audit centralisés avec alerting/SIEM | SLO, investigation et conformité |
+| Observabilité | Collector OpenTelemetry et SigNoz locaux | Google Cloud Monitoring, Trace et Logging via gateway OTel | SLO, investigation et conformité |
 
 La promotion suit `PIPELINE -> HIERARCHICAL_SHADOW -> HIERARCHICAL_CANARY -> HIERARCHICAL_ACTIVE`. Chaque étape
 exige les seuils de qualification, les rôles autorisés et les preuves de sécurité attendues ; en leur absence, le
@@ -597,8 +597,8 @@ make demo
 
 - **SonarQube** (`http://localhost:9000`) : Analyse de la qualité du code Java/Maven. Les jetons sont générés par `make bootstrap` ou `make tokens`.
 - **Artifactory** (`http://localhost:8082`) : Dépôt d'artefacts local. Les builds Maven des sandboxes utilisent le miroir explicite `MAVEN_MIRROR_URL`.
-- **Prometheus** (`http://localhost:9090`) : collecte l'orchestrateur, Repository Context MCP, Sandbox Execution MCP et Temporal. Assurance, Evidence et SCM MCP restent à ajouter.
-- **Grafana** (`http://localhost:3001`) : six dashboards sont pré-provisionnés pour l'orchestrateur, le Supervisor, les agents, Temporal, MCP et la sandbox.
+- **SigNoz** (`http://localhost:3301`) : reçoit métriques, traces et logs via le Collector OpenTelemetry. Sept dashboards (les six périmètres historiques et le Collector) et neuf alertes sont provisionnés automatiquement.
+- **Collector OpenTelemetry** : reçoit OTLP des six applications, collecte les métriques Temporal par un receiver de compatibilité interne et n'expose aucun port à l'hôte.
 
 ## Commandes Make disponibles
 

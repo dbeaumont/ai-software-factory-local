@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+[ -f .env ] && set -a && source .env && set +a
+
+SIGNOZ_BASE_URL=${SIGNOZ_BASE_URL:-http://127.0.0.1:${SIGNOZ_PORT:-3301}}
+SIGNOZ_ROOT_EMAIL=${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}
+: "${SIGNOZ_ROOT_PASSWORD:?SIGNOZ_ROOT_PASSWORD must be initialized by make init}"
+
+for attempt in {1..90}; do
+  if curl -fsS "$SIGNOZ_BASE_URL/api/v1/health" >/dev/null; then
+    break
+  fi
+  if [ "$attempt" -eq 90 ]; then
+    echo "SigNoz did not become healthy at $SIGNOZ_BASE_URL" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+session_context=$(curl -fsS --get "$SIGNOZ_BASE_URL/api/v2/sessions/context" \
+  --data-urlencode "email=$SIGNOZ_ROOT_EMAIL" \
+  --data-urlencode "ref=$SIGNOZ_BASE_URL")
+org_id=$(printf '%s' "$session_context" | jq -er '.data.orgs[0].id')
+login_payload=$(jq -nc --arg email "$SIGNOZ_ROOT_EMAIL" --arg password "$SIGNOZ_ROOT_PASSWORD" --arg orgId "$org_id" \
+  '{email:$email,password:$password,orgId:$orgId}')
+session=$(curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/sessions/email_password" \
+  -H 'Content-Type: application/json' --data "$login_payload")
+token=$(printf '%s' "$session" | jq -er '.data.accessToken')
+
+cleanup() {
+  curl -fsS -X DELETE "$SIGNOZ_BASE_URL/api/v2/sessions" -H "Authorization: Bearer $token" >/dev/null || true
+}
+trap cleanup EXIT
+
+auth=(-H "Authorization: Bearer $token")
+channel_payload='{"name":"ai-factory-local","webhook_configs":[{"send_resolved":true,"url":"http://alert-sink:8080/alerts"}]}'
+channels=$(curl -fsS "$SIGNOZ_BASE_URL/api/v1/channels" "${auth[@]}")
+channel_id=$(printf '%s' "$channels" | jq -r '.data[] | select(.name == "ai-factory-local") | .id' | head -1)
+if [ -n "$channel_id" ]; then
+  curl -fsS -X PUT "$SIGNOZ_BASE_URL/api/v1/channels/$channel_id" "${auth[@]}" \
+    -H 'Content-Type: application/json' --data "$channel_payload" >/dev/null
+else
+  curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v1/channels" "${auth[@]}" \
+    -H 'Content-Type: application/json' --data "$channel_payload" >/dev/null
+fi
+curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v1/channels/test" "${auth[@]}" \
+  -H 'Content-Type: application/json' --data "$channel_payload" >/dev/null
+echo "SigNoz channel ready: ai-factory-local"
+
+dashboards=$(curl -fsS "$SIGNOZ_BASE_URL/api/v2/dashboards?limit=100" "${auth[@]}")
+for dashboard_file in infrastructure/observability/signoz/dashboards/*.json; do
+  dashboard_name=$(jq -er '.spec.display.name' "$dashboard_file")
+  dashboard_id=$(printf '%s' "$dashboards" | jq -r --arg name "$dashboard_name" \
+    '.data.dashboards[] | select(.spec.display.name == $name) | .id' | head -1)
+  if [ -n "$dashboard_id" ]; then
+    dashboard_resource_name=$(printf '%s' "$dashboards" | jq -er --arg id "$dashboard_id" \
+      '.data.dashboards[] | select(.id == $id) | .name')
+    dashboard_payload=$(jq -c --arg name "$dashboard_resource_name" 'del(.generateName) | .name = $name' "$dashboard_file")
+    curl -fsS -X PUT "$SIGNOZ_BASE_URL/api/v2/dashboards/$dashboard_id" "${auth[@]}" \
+      -H 'Content-Type: application/json' --data "$dashboard_payload" >/dev/null
+    echo "SigNoz dashboard updated: $dashboard_name"
+  else
+    curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/dashboards" "${auth[@]}" \
+      -H 'Content-Type: application/json' --data-binary "@$dashboard_file" >/dev/null
+    echo "SigNoz dashboard created: $dashboard_name"
+  fi
+done
+
+rules=$(curl -fsS "$SIGNOZ_BASE_URL/api/v2/rules" "${auth[@]}")
+while IFS= read -r rule_payload; do
+  rule_name=$(printf '%s' "$rule_payload" | jq -er '.alert')
+  rule_id=$(printf '%s' "$rules" | jq -r --arg name "$rule_name" '.data[] | select(.alert == $name) | .id' | head -1)
+  if [ -n "$rule_id" ]; then
+    curl -fsS -X PUT "$SIGNOZ_BASE_URL/api/v2/rules/$rule_id" "${auth[@]}" \
+      -H 'Content-Type: application/json' --data "$rule_payload" >/dev/null
+    echo "SigNoz rule updated: $rule_name"
+  else
+    curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/rules" "${auth[@]}" \
+      -H 'Content-Type: application/json' --data "$rule_payload" >/dev/null
+    echo "SigNoz rule created: $rule_name"
+  fi
+done < <(jq -c '.[]' infrastructure/observability/signoz/rules/ai-factory.json)

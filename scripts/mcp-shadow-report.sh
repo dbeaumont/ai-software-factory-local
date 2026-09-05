@@ -2,50 +2,55 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+[ -f .env ] && set -a && source .env && set +a
 
-orchestrator_url="${AI_FACTORY_REPORT_ORCHESTRATOR_URL:-http://localhost:${ORCHESTRATOR_PORT:-8080}}"
-generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-report_path="${1:-docs/mcp/baselines/MCP-shadow-$(date -u +%Y%m%d-%H%M%S).md}"
-metrics_file="$(mktemp)"
-trap 'rm -f "$metrics_file"' EXIT
+base_url=${SIGNOZ_BASE_URL:-http://127.0.0.1:${SIGNOZ_PORT:-3301}}
+email=${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}
+: "${SIGNOZ_ROOT_PASSWORD:?SIGNOZ_ROOT_PASSWORD must be initialized by make init}"
+generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+report_path=${1:-docs/mcp/baselines/MCP-shadow-$(date -u +%Y%m%d-%H%M%S).md}
 
-curl -fsS --max-time 15 "${orchestrator_url}/actuator/prometheus" -o "$metrics_file"
+context=$(curl -fsS --get "$base_url/api/v2/sessions/context" --data-urlencode "email=$email" --data-urlencode "ref=$base_url")
+org_id=$(printf '%s' "$context" | jq -er '.data.orgs[0].id')
+login=$(jq -nc --arg email "$email" --arg password "$SIGNOZ_ROOT_PASSWORD" --arg orgId "$org_id" '{email:$email,password:$password,orgId:$orgId}')
+session=$(curl -fsS -X POST "$base_url/api/v2/sessions/email_password" -H 'Content-Type: application/json' --data "$login")
+token=$(printf '%s' "$session" | jq -er '.data.accessToken')
+trap 'curl -fsS -X DELETE "$base_url/api/v2/sessions" -H "Authorization: Bearer $token" >/dev/null || true' EXIT
 
-metric_value() {
-  local expression="$1"
-  awk -v expression="$expression" '$0 ~ expression { print $NF; exit }' "$metrics_file"
+now=$(date +%s)
+start=$(((now - 86400) * 1000))
+end=$((now * 1000))
+
+query_scalar() {
+  local query=$1 payload response
+  payload=$(jq -nc --arg query "$query" --argjson start "$start" --argjson end "$end" \
+    '{schemaVersion:"v1",start:$start,end:$end,requestType:"time_series",compositeQuery:{queries:[{type:"promql",spec:{name:"A",query:$query,step:60}}]}}')
+  response=$(curl -fsS -X POST "$base_url/api/v5/query_range" \
+    -H "Authorization: Bearer $token" -H 'Content-Type: application/json' --data "$payload")
+  printf '%s' "$response" | jq -er '
+    if .status != "success" or .error != null then error(.error // "query failed")
+    else ([.data.data.results[]?.aggregations[]?.series[]?.values[]?.value] | last // 0)
+    end'
 }
 
-metric_sum() {
-  local expression="$1"
-  awk -v expression="$expression" '$0 ~ expression { sum += $NF } END { print sum + 0 }' "$metrics_file"
-}
-
-mean_metric() {
-  local prefix="$1"
-  local sum count
-  sum="$(metric_value "^${prefix}_sum")"
-  count="$(metric_value "^${prefix}_count")"
-  awk -v sum="${sum:-0}" -v count="${count:-0}" 'BEGIN { if (count == 0) print "n/a"; else printf "%.4f", sum / count }'
-}
-
-context_success="$(metric_sum '^ai_factory_mcp_context_shadow_runs_total.*outcome="success"')"
-context_failure="$(metric_sum '^ai_factory_mcp_context_shadow_runs_total.*outcome="failure"')"
-coverage_mean="$(mean_metric 'ai_factory_mcp_context_shadow_file_coverage_ratio')"
-citation_mean="$(mean_metric 'ai_factory_mcp_context_shadow_citation_validity_ratio')"
-context_mcp_latency_mean="$(mean_metric 'ai_factory_mcp_client_duration_seconds')"
-direct_chars="$(metric_value '^ai_factory_mcp_context_shadow_chars_sum.*source="direct"')"
-mcp_chars="$(metric_value '^ai_factory_mcp_context_shadow_chars_sum.*source="mcp"')"
-sandbox_success="$(metric_sum '^ai_factory_mcp_sandbox_shadow_runs_total.*outcome="success"')"
-sandbox_failure="$(metric_sum '^ai_factory_mcp_sandbox_shadow_runs_total.*outcome="(direct_failure|mcp_failure)"')"
-sandbox_equal="$(metric_sum '^ai_factory_mcp_sandbox_shadow_comparisons_total.*result="equal"')"
-sandbox_different="$(metric_sum '^ai_factory_mcp_sandbox_shadow_comparisons_total.*result="different"')"
+context_success=$(query_scalar 'sum(ai_factory_mcp_context_shadow_runs{outcome="success"})')
+context_failure=$(query_scalar 'sum(ai_factory_mcp_context_shadow_runs{outcome="failure"})')
+coverage_mean=$(query_scalar 'sum({__name__="ai_factory_mcp_context_shadow_file_coverage_ratio.sum"}) / clamp_min(sum({__name__="ai_factory_mcp_context_shadow_file_coverage_ratio.count"}), 1)')
+citation_mean=$(query_scalar 'sum({__name__="ai_factory_mcp_context_shadow_citation_validity_ratio.sum"}) / clamp_min(sum({__name__="ai_factory_mcp_context_shadow_citation_validity_ratio.count"}), 1)')
+context_mcp_latency_mean=$(query_scalar 'sum({__name__="ai_factory_mcp_client_duration.sum"}) / clamp_min(sum({__name__="ai_factory_mcp_client_duration.count"}), 1)')
+direct_chars=$(query_scalar 'sum({__name__="ai_factory_mcp_context_shadow_chars.sum",source="direct"})')
+mcp_chars=$(query_scalar 'sum({__name__="ai_factory_mcp_context_shadow_chars.sum",source="mcp"})')
+sandbox_success=$(query_scalar 'sum(ai_factory_mcp_sandbox_shadow_runs{outcome="success"})')
+sandbox_failure=$(query_scalar 'sum(ai_factory_mcp_sandbox_shadow_runs{outcome=~"direct_failure|mcp_failure"})')
+sandbox_equal=$(query_scalar 'sum(ai_factory_mcp_sandbox_shadow_comparisons{result="equal"})')
+sandbox_different=$(query_scalar 'sum(ai_factory_mcp_sandbox_shadow_comparisons{result="different"})')
 
 mkdir -p "$(dirname "$report_path")"
 {
   printf '# Rapport de campagne MCP shadow\n\n'
   printf -- '- Généré à : `%s`\n' "$generated_at"
-  printf -- '- Source : `%s/actuator/prometheus`\n' "$orchestrator_url"
+  printf -- '- Source : `%s` (API SigNoz v5)\n' "$base_url"
+  printf -- '- Fenêtre : dernières 24 heures\n'
   printf -- '- Autorité de décision : chemin direct\n\n'
   printf '## Contexte dépôt\n\n'
   printf '| Mesure | Valeur |\n|---|---:|\n'
@@ -54,8 +59,8 @@ mkdir -p "$(dirname "$report_path")"
   printf '| Couverture moyenne des fichiers | %s |\n' "$coverage_mean"
   printf '| Validité moyenne des citations | %s |\n' "$citation_mean"
   printf '| Latence MCP Context moyenne (secondes) | %s |\n' "$context_mcp_latency_mean"
-  printf '| Caractères directs cumulés | %s |\n' "${direct_chars:-0}"
-  printf '| Caractères MCP cumulés | %s |\n\n' "${mcp_chars:-0}"
+  printf '| Caractères directs cumulés | %s |\n' "$direct_chars"
+  printf '| Caractères MCP cumulés | %s |\n\n' "$mcp_chars"
   printf '## Sandbox\n\n'
   printf '| Mesure | Valeur |\n|---|---:|\n'
   printf '| Comparaisons réussies | %s |\n' "$sandbox_success"
@@ -64,15 +69,12 @@ mkdir -p "$(dirname "$report_path")"
   printf '| Sorties différentes | %s |\n\n' "$sandbox_different"
   printf '## Décision de gate\n\n'
   printf -- '- [ ] Au moins 20 tâches représentatives ont terminé en shadow.\n'
-  printf -- '- [ ] La couverture des fichiers utiles est supérieure ou égale à 90 %% sur la campagne.\n'
+  printf -- '- [ ] La couverture des fichiers utiles est supérieure ou égale à 90 %%.\n'
   printf -- '- [ ] Toutes les citations sont vérifiables et liées au bon commit.\n'
   printf -- '- [ ] Le contexte MCP réduit les caractères/tokens sans régression du plan évaluée manuellement.\n'
   printf -- '- [ ] `validate_patch`, tests, qualité et sécurité ont chacun une comparaison sandbox réussie.\n'
   printf -- '- [ ] Les divergences sandbox sont expliquées et acceptées, ou corrigées.\n'
-  printf -- '- [ ] Le Product Owner et le représentant RSSI autorisent la phase `MCP_ACTIVE`.\n\n'
-  printf '## Extrait des métriques MCP\n\n```text\n'
-  awk '/^ai_factory_mcp_(context_shadow|sandbox_shadow)/ { print }' "$metrics_file"
-  printf '```\n'
-} > "$report_path"
+  printf -- '- [ ] Le Product Owner et le représentant RSSI autorisent la phase `MCP_ACTIVE`.\n'
+} >"$report_path"
 
 printf 'Rapport MCP shadow généré : %s\n' "$report_path"

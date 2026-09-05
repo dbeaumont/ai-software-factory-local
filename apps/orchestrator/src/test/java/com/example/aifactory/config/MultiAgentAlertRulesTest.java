@@ -1,14 +1,14 @@
 package com.example.aifactory.config;
 
 import org.junit.jupiter.api.Test;
-import org.yaml.snakeyaml.Yaml;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,33 +20,33 @@ class MultiAgentAlertRulesTest {
             "AiFactoryAgentContractError", "AiFactoryEvidenceAltered");
 
     @Test
-    @SuppressWarnings("unchecked")
-    void definesAndMountsNineActionableMultiAgentAlerts() throws Exception {
+    void definesNineActionableSigNozAlerts() throws Exception {
         Path root = repositoryRoot();
-        Map<String, Object> document;
-        try (var input = Files.newInputStream(
-                root.resolve("infrastructure/observability/alerts/multiagents.yml"))) {
-            document = new Yaml().load(input);
-        }
-        List<Map<String, Object>> groups = (List<Map<String, Object>>) document.get("groups");
-        List<Map<String, Object>> rules = groups.stream()
-                .flatMap(group -> ((List<Map<String, Object>>) group.get("rules")).stream()).toList();
+        JsonNode rules = new ObjectMapper().readTree(Files.readString(
+                root.resolve("infrastructure/observability/signoz/rules/ai-factory.json")));
 
-        assertThat(rules.stream().map(rule -> rule.get("alert").toString()).collect(Collectors.toSet()))
+        assertThat(StreamSupport.stream(rules.spliterator(), false)
+                .map(rule -> rule.path("alert").asText()).collect(Collectors.toSet()))
                 .isEqualTo(REQUIRED_ALERTS);
-        assertThat(rules).allSatisfy(rule -> {
-            assertThat(rule.get("expr")).as("expression for %s", rule.get("alert")).isNotNull();
-            assertThat(rule.get("for")).as("duration for %s", rule.get("alert")).isNotNull();
-            assertThat((Map<String, Object>) rule.get("labels"))
-                    .containsKeys("severity", "component");
-            assertThat((Map<String, Object>) rule.get("annotations"))
-                    .containsKeys("summary", "description", "runbook_url");
+        StreamSupport.stream(rules.spliterator(), false).forEach(rule -> {
+            assertThat(rule.path("schemaVersion").asText()).isEqualTo("v2alpha1");
+            assertThat(rule.path("condition").path("compositeQuery").path("queries").path(0)
+                    .path("spec").path("query").asText()).isNotBlank();
+            assertThat(rule.path("evaluation").path("spec").path("evalWindow").asText()).isNotBlank();
+            assertThat(rule.path("labels").hasNonNull("severity")).isTrue();
+            assertThat(rule.path("labels").hasNonNull("component")).isTrue();
+            assertThat(rule.path("annotations").hasNonNull("summary")).isTrue();
+            assertThat(rule.path("annotations").hasNonNull("description")).isTrue();
+            assertThat(rule.path("annotations").hasNonNull("runbook_url")).isTrue();
+            assertThat(rule.toString()).contains("ai-factory-local");
         });
 
-        String prometheus = Files.readString(root.resolve("infrastructure/observability/prometheus.yml"));
         String compose = Files.readString(root.resolve("infrastructure/compose.yaml"));
-        assertThat(prometheus).contains("/etc/prometheus/rules/*.yml");
-        assertThat(compose).contains("./observability/alerts:/etc/prometheus/rules:ro");
+        String bootstrapImage = Files.readString(
+                root.resolve("infrastructure/observability/signoz-bootstrap.Dockerfile"));
+        assertThat(compose).contains("signoz-bootstrap");
+        assertThat(bootstrapImage).contains(
+                "COPY infrastructure/observability/signoz/rules infrastructure/observability/signoz/rules");
     }
 
     private static Path repositoryRoot() {

@@ -54,18 +54,18 @@ Au début de la migration, le dépôt possède notamment :
 
 ## 3. Résultat attendu
 
-- [ ] Toutes les applications Spring Boot émettent leurs métriques et traces via OTLP vers un Collector.
-- [ ] Les logs structurés contiennent les identifiants OTel de corrélation sans contenu sensible.
+- [x] Toutes les applications Spring Boot émettent leurs métriques et traces via OTLP vers un Collector.
+- [x] Les logs structurés contiennent les identifiants OTel de corrélation sans contenu sensible.
 - [ ] Une trace relie API, pipeline ou workflow, agents, LLM, MCP, sandbox, assurance et SCM.
-- [ ] Les métriques Temporal et celles des composants non instrumentables sont intégrées sans dépendre d'un serveur Prometheus autonome.
-- [ ] Les six dashboards actuels possèdent un équivalent validé dans le backend cible.
-- [ ] Les neuf alertes actuelles possèdent un équivalent testé et routé.
-- [ ] Les SLO, historiques et baselines indispensables restent consultables pendant la durée de rétention convenue.
-- [ ] Le développement macOS reste autonome avec `docker compose up` et un backend OTLP local.
+- [x] Les métriques Temporal et celles des composants non instrumentables sont intégrées sans dépendre d'un serveur Prometheus autonome.
+- [x] Les six dashboards actuels possèdent un équivalent validé dans le backend cible.
+- [x] Les neuf alertes actuelles possèdent un équivalent testé et routé.
+- [x] Les SLO, historiques et baselines indispensables restent consultables pendant la durée de rétention convenue.
+- [x] Le développement macOS reste autonome avec `docker compose up` et un backend OTLP local.
 - [ ] GKE exporte vers Google Cloud Observability avec identité, chiffrement et réseau minimaux.
-- [ ] Prometheus, Grafana, leurs ports, volumes et configurations sont retirés du runtime actif.
-- [ ] Une panne du Collector ou du backend n'interrompt jamais un workflow métier.
-- [ ] Le rollback repose sur le redéploiement du commit précédent, jamais sur la coexistence des deux chaînes.
+- [x] Prometheus, Grafana, leurs ports, volumes et configurations sont retirés du runtime actif.
+- [x] Une panne du Collector ou du backend n'interrompt jamais un workflow métier.
+- [x] Le rollback repose sur le redéploiement du commit précédent, jamais sur la coexistence des deux chaînes.
 
 ## 4. Principes d'architecture
 
@@ -99,7 +99,7 @@ Au début de la migration, le dépôt possède notamment :
 
 ### 5.2 Décisions à consigner dans une ADR
 
-- [ ] Qualifier SigNoz self-hosted et sa compatibilité `arm64`/Docker Desktop.
+- [x] Qualifier SigNoz self-hosted et sa compatibilité `arm64`/Docker Desktop.
 - [ ] Valider Google Cloud Monitoring, Trace et Logging comme backends GKE, ou documenter l'alternative retenue.
 - [x] Décider si les logs applicatifs sont exportés par OTLP dès cette migration ou dans un lot séparé.
 - [x] Décider le traitement des métriques Temporal : receiver Prometheus du Collector, receiver dédié ou export natif.
@@ -134,13 +134,13 @@ Au début de la migration, le dépôt possède notamment :
 ### 6.2 Confidentialité et sécurité
 
 - [x] Maintenir les quatre options de capture de contenu à `false` par défaut.
-- [ ] Écrire les règles de redaction du Collector pour URL, headers, paramètres, exceptions et attributs.
-- [ ] Refuser les clés d'attribut inconnues ou dangereuses aux frontières d'instrumentation internes.
+- [x] Écrire les règles de redaction du Collector pour URL, headers, paramètres, exceptions et attributs.
+- [x] Refuser les clés d'attribut inconnues ou dangereuses aux frontières d'instrumentation internes.
 - [x] Borner le nombre d'attributs, leur longueur, le nombre d'événements et de liens par span.
-- [ ] Scanner automatiquement des exports OTLP de test pour secrets, prompts, code, patchs et preuves.
+- [x] Scanner automatiquement des exports OTLP de test pour secrets, prompts, code, patchs et preuves.
 - [x] Définir les droits d'accès distincts entre télémétrie opérationnelle, sécurité et coûts.
 - [x] Définir rétention, purge, chiffrement, localisation et journalisation des accès.
-- [ ] Réaliser une analyse de menace des endpoints OTLP et du Collector.
+- [x] Réaliser une analyse de menace des endpoints OTLP et du Collector.
 
 ### Critères de sortie du lot 1
 
@@ -153,99 +153,99 @@ Au début de la migration, le dépôt possède notamment :
 
 ### 7.1 Socle Spring Boot
 
-- [ ] Ajouter le starter/bridge OpenTelemetry compatible avec Spring Boot 4.1.1 à l'orchestrateur.
-- [ ] Ajouter le même socle aux cinq serveurs MCP.
-- [ ] Centraliser versions et dépendances OTel dans le parent Maven ou le BOM approprié.
-- [ ] Configurer l'export OTLP par variables d'environnement, désactivable explicitement en test unitaire.
-- [ ] Configurer les ressources OTel de chaque service avec des valeurs déterministes.
-- [ ] Conserver `SimpleMeterRegistry` uniquement dans les tests unitaires qui en ont besoin.
-- [ ] Vérifier qu'un seul SDK et un seul provider effectif sont chargés par application.
-- [ ] Définir les timeouts, batchs et files d'export bornés afin de ne pas ralentir l'arrêt ou le chemin métier.
+- [x] Ajouter le starter/bridge OpenTelemetry compatible avec Spring Boot 4.1.1 à l'orchestrateur.
+- [x] Ajouter le même socle aux cinq serveurs MCP.
+- [x] Centraliser versions et dépendances OTel dans le parent Maven ou le BOM approprié.
+- [x] Configurer l'export OTLP par variables d'environnement, désactivable explicitement en test unitaire.
+- [x] Configurer les ressources OTel de chaque service avec des valeurs déterministes.
+- [x] Conserver `SimpleMeterRegistry` uniquement dans les tests unitaires qui en ont besoin.
+- [x] Vérifier qu'un seul SDK et un seul provider effectif sont chargés par application.
+- [x] Définir les timeouts, batchs et files d'export bornés afin de ne pas ralentir l'arrêt ou le chemin métier.
 
 ### 7.2 Spans et propagation
 
 - [ ] Relier le span HTTP entrant au traitement asynchrone complet de la tâche.
-- [ ] Adapter `ExecutionTracer` pour utiliser le contexte OTel actif et enregistrer statuts et exceptions.
-- [ ] Instrumenter les frontières pipeline, workflow, child workflow et activité.
-- [ ] Instrumenter les agents, tours, appels LLM, retries et appels d'outils sans enregistrer leur contenu.
-- [ ] Propager W3C Trace Context sur HTTP vers LiteLLM et les cinq serveurs MCP.
-- [ ] Remplacer la fabrication manuelle de `traceparent` par l'injection du propagateur OTel.
-- [ ] Conserver temporairement le champ de compatibilité MCP puis le retirer après validation de tous les clients.
+- [x] Adapter `ExecutionTracer` pour utiliser le contexte OTel actif et enregistrer statuts et exceptions.
+- [x] Instrumenter les frontières pipeline, workflow, child workflow et activité.
+- [x] Instrumenter les agents, tours, appels LLM, retries et appels d'outils sans enregistrer leur contenu.
+- [x] Propager W3C Trace Context sur HTTP vers LiteLLM et les cinq serveurs MCP.
+- [x] Remplacer la fabrication manuelle de `traceparent` par l'injection du propagateur OTel.
+- [x] Conserver temporairement le champ de compatibilité MCP puis le retirer après validation de tous les clients.
 - [ ] Instrumenter soumission, attente, timeout, annulation et résultat des jobs sandbox Compose/GKE.
-- [ ] Rendre l'instrumentation Temporal sûre face aux replays, retries, child workflows et `continue-as-new`.
+- [x] Rendre l'instrumentation Temporal sûre face aux replays, retries, child workflows et `continue-as-new`.
 - [ ] Utiliser des `Span Link` lorsqu'une relation n'est pas une parenté stricte.
 - [ ] Vérifier que les tâches parallèles produisent des spans frères réellement superposés.
 
 ### 7.3 Métriques et logs
 
-- [ ] Exporter par OTLP les compteurs, gauges, timers et distributions Micrometer existants.
-- [ ] Vérifier le mapping des noms, unités, histogrammes et tags entre Micrometer et OTel.
-- [ ] Ajouter `trace_id` et `span_id` au contexte de logs structuré lorsque le contexte est actif.
-- [ ] Conserver les logs sur stdout comme voie de secours indépendante du Collector.
-- [ ] Normaliser les erreurs avec un type borné et conserver le détail uniquement dans l'événement de trace autorisé.
-- [ ] Représenter un coût inconnu comme indisponible, jamais comme un coût nul.
+- [x] Exporter par OTLP les compteurs, gauges, timers et distributions Micrometer existants.
+- [x] Vérifier le mapping des noms, unités, histogrammes et tags entre Micrometer et OTel.
+- [x] Ajouter `trace_id` et `span_id` au contexte de logs structuré lorsque le contexte est actif.
+- [x] Conserver les logs sur stdout comme voie de secours indépendante du Collector.
+- [x] Normaliser les erreurs avec un type borné et conserver le détail uniquement dans l'événement de trace autorisé.
+- [x] Représenter un coût inconnu comme indisponible, jamais comme un coût nul.
 
 ### Critères de sortie du lot 2
 
-- [ ] Les six applications Spring démarrent avec et sans Collector disponible.
+- [x] Les six applications Spring démarrent avec et sans Collector disponible.
 - [ ] Une trace locale relie une requête API aux appels LLM, MCP et sandbox correspondants.
 - [ ] Les tests de retry, timeout, annulation et exception produisent les statuts attendus.
-- [ ] Les métriques métier historiques sont présentes dans un export OTLP de référence.
-- [ ] Aucun test ne détecte de donnée sensible ou de cardinalité non bornée.
+- [x] Les métriques métier historiques sont présentes dans un export OTLP de référence.
+- [x] Aucun test ne détecte de donnée sensible ou de cardinalité non bornée.
 
 ## 8. Lot 3 — OpenTelemetry Collector
 
 ### 8.1 Configuration commune
 
-- [ ] Ajouter une image `otel/opentelemetry-collector-contrib` épinglée et qualifiée sur `amd64` et `arm64`.
-- [ ] Ajouter les receivers OTLP/gRPC et OTLP/HTTP sur des réseaux internes uniquement.
-- [ ] Ajouter le receiver nécessaire aux métriques Temporal et autres sources non OTLP retenues au lot 0.
-- [ ] Ajouter `memory_limiter`, `batch`, filtrage, transformation, redaction et détection de ressources.
+- [x] Ajouter une image `otel/opentelemetry-collector-contrib` épinglée et qualifiée sur `amd64` et `arm64`.
+- [x] Ajouter les receivers OTLP/gRPC et OTLP/HTTP sur des réseaux internes uniquement.
+- [x] Ajouter le receiver nécessaire aux métriques Temporal et autres sources non OTLP retenues au lot 0.
+- [x] Ajouter `memory_limiter`, `batch`, filtrage, transformation, redaction et détection de ressources.
 - [ ] Configurer les retry queues, la persistance éventuelle et la dead-letter policy selon le backend.
-- [ ] Séparer les pipelines métriques, traces et logs.
-- [ ] Exposer santé, readiness et métriques internes du Collector sans port public inutile.
-- [ ] Épingler et tester les versions de configuration et composants Collector utilisés.
-- [ ] Désactiver les extensions, receivers et exporters inutiles.
-- [ ] Définir les limites CPU, mémoire, files, batchs et taille maximale de message.
+- [x] Séparer les pipelines métriques, traces et logs.
+- [x] Exposer santé, readiness et métriques internes du Collector sans port public inutile.
+- [x] Épingler et tester les versions de configuration et composants Collector utilisés.
+- [x] Désactiver les extensions, receivers et exporters inutiles.
+- [x] Définir les limites CPU, mémoire, files, batchs et taille maximale de message.
 
 ### 8.2 Résilience et sécurité
 
 - [ ] Activer TLS/mTLS ou une authentification approuvée hors du réseau local isolé.
-- [ ] Stocker les credentials d'export hors des fichiers de configuration versionnés.
-- [ ] Appliquer `read_only`, utilisateur non-root, capabilities supprimées et `no-new-privileges` en Compose.
+- [x] Stocker les credentials d'export hors des fichiers de configuration versionnés.
+- [x] Appliquer `read_only`, utilisateur non-root, capabilities supprimées et `no-new-privileges` en Compose.
 - [ ] Appliquer Pod Security, ServiceAccount dédié, Workload Identity et NetworkPolicies en GKE.
 - [ ] Tester backend lent, backend indisponible, données invalides, saturation et redémarrage du Collector.
-- [ ] Vérifier que la backpressure reste bornée et ne remonte pas jusqu'au chemin métier.
+- [x] Vérifier que la backpressure reste bornée et ne remonte pas jusqu'au chemin métier.
 - [ ] Définir des alertes sur refus, pertes, files pleines, mémoire, redémarrages et erreurs d'export.
-- [ ] Vérifier que les logs du Collector ne réaffichent pas les payloads rejetés ou les credentials.
+- [x] Vérifier que les logs du Collector ne réaffichent pas les payloads rejetés ou les credentials.
 
 ### Critères de sortie du lot 3
 
-- [ ] Le Collector reçoit les trois signaux retenus et les route vers les backends attendus.
-- [ ] La perte et le retard d'ingestion sont mesurables.
-- [ ] Une panne complète du Collector ne fait échouer aucune opération métier.
+- [x] Le Collector reçoit les trois signaux retenus et les route vers les backends attendus.
+- [x] La perte et le retard d'ingestion sont mesurables.
+- [x] Une panne complète du Collector ne fait échouer aucune opération métier.
 - [ ] Les configurations passent validation syntaxique, tests de sécurité et test de charge.
 
 ## 9. Lot 4 — SigNoz, dashboards et alertes sur macOS
 
 ### 9.1 Déploiement local retenu
 
-- [ ] Ajouter SigNoz self-hosted et ses stockages ClickHouse/PostgreSQL au Compose du projet.
-- [ ] Générer les fichiers de déploiement depuis une configuration Foundry versionnée, puis versionner le rendu auditable utilisé par le projet.
-- [ ] Interdire tout téléchargement ou génération implicite au démarrage normal de la pile.
-- [ ] Épingler chaque image SigNoz, Collector et stockage par version puis par digest qualifié.
-- [ ] Publier uniquement l'interface SigNoz sur `${SIGNOZ_PORT:-3301}` afin d'éviter le port `8080` déjà utilisé par l'application.
-- [ ] Conserver OTLP `4317/4318`, ClickHouse et PostgreSQL sur un réseau Compose interne non publié.
-- [ ] Faire exporter le Collector du projet vers l'ingester SigNoz par OTLP.
-- [ ] Ne pas monter la socket Docker dans un composant SigNoz ou Collector.
-- [ ] Collecter métriques et logs de conteneurs sans socket, ou documenter leur exclusion si aucune source sûre n'est disponible.
-- [ ] Ajouter volumes persistants, healthchecks et initialisation idempotente.
-- [ ] Créer le compte administrateur initial sans secret en clair dans le dépôt.
-- [ ] Documenter un minimum de 4 Go de mémoire Docker pour SigNoz, puis mesurer la recommandation réelle pour la pile complète.
-- [ ] Définir une rétention locale courte et bornée, ainsi que les limites de stockage ClickHouse.
-- [ ] Configurer le Collector local pour exporter métriques, traces et logs vers SigNoz.
-- [ ] Configurer la self-observability du Collector pour qu'elle soit envoyée en OTLP à SigNoz, sans endpoint Prometheus.
-- [ ] Prévoir un profil `observability` activé par défaut et un mode `OTEL_SDK_DISABLED=true` explicite pour les tests sans observabilité.
+- [x] Ajouter SigNoz self-hosted et ses stockages ClickHouse/PostgreSQL au Compose du projet.
+- [x] Générer les fichiers de déploiement depuis une configuration Foundry versionnée, puis versionner le rendu auditable utilisé par le projet.
+- [x] Interdire tout téléchargement ou génération implicite au démarrage normal de la pile.
+- [x] Épingler chaque image SigNoz, Collector et stockage par version puis par digest qualifié.
+- [x] Publier uniquement l'interface SigNoz sur `${SIGNOZ_PORT:-3301}` afin d'éviter le port `8080` déjà utilisé par l'application.
+- [x] Conserver OTLP `4317/4318`, ClickHouse et PostgreSQL sur un réseau Compose interne non publié.
+- [x] Faire exporter le Collector du projet vers l'ingester SigNoz par OTLP.
+- [x] Ne pas monter la socket Docker dans un composant SigNoz ou Collector.
+- [x] Collecter métriques et logs de conteneurs sans socket, ou documenter leur exclusion si aucune source sûre n'est disponible.
+- [x] Ajouter volumes persistants, healthchecks et initialisation idempotente.
+- [x] Créer le compte administrateur initial sans secret en clair dans le dépôt.
+- [x] Documenter un minimum de 4 Go de mémoire Docker pour SigNoz, puis mesurer la recommandation réelle pour la pile complète.
+- [x] Définir une rétention locale courte et bornée, ainsi que les limites de stockage ClickHouse.
+- [x] Configurer le Collector local pour exporter métriques, traces et logs vers SigNoz.
+- [x] Configurer la self-observability du Collector pour qu'elle soit envoyée en OTLP à SigNoz, sans endpoint Prometheus.
+- [x] Prévoir un profil `observability` activé par défaut et un mode `OTEL_SDK_DISABLED=true` explicite pour les tests sans observabilité.
 
 ### 9.2 Solution de dashboards basée sur les métriques OTel
 
@@ -263,46 +263,46 @@ spécification visuelle et fonctionnelle pendant le portage.
 | Temporal | workflows, activités, task queues, retries et latence | `temporal.json` |
 | OpenTelemetry Collector | réception, export, refus, pertes, files et mémoire | nouveau dashboard obligatoire |
 
-- [ ] Définir les requêtes SigNoz de chaque panneau dans un inventaire versionné.
-- [ ] Provisionner ou importer automatiquement le dashboard « Vue globale ».
-- [ ] Provisionner ou importer automatiquement le dashboard « Supervisor ».
-- [ ] Provisionner ou importer automatiquement le dashboard « Agents ».
-- [ ] Provisionner ou importer automatiquement le dashboard « MCP ».
-- [ ] Provisionner ou importer automatiquement le dashboard « Sandbox ».
-- [ ] Provisionner ou importer automatiquement le dashboard « Temporal ».
-- [ ] Créer le dashboard « OpenTelemetry Collector » à partir de sa télémétrie interne OTLP.
+- [x] Définir les requêtes SigNoz de chaque panneau dans un inventaire versionné.
+- [x] Provisionner ou importer automatiquement le dashboard « Vue globale ».
+- [x] Provisionner ou importer automatiquement le dashboard « Supervisor ».
+- [x] Provisionner ou importer automatiquement le dashboard « Agents ».
+- [x] Provisionner ou importer automatiquement le dashboard « MCP ».
+- [x] Provisionner ou importer automatiquement le dashboard « Sandbox ».
+- [x] Provisionner ou importer automatiquement le dashboard « Temporal ».
+- [x] Créer le dashboard « OpenTelemetry Collector » à partir de sa télémétrie interne OTLP.
 - [ ] Reproduire variables, unités, seuils, fenêtres, légendes et liens des panneaux existants.
-- [ ] Utiliser les histogrammes OTLP pour p50, p95 et p99 sans recalcul incompatible.
+- [x] Utiliser les histogrammes OTLP pour p50, p95 et p99 sans recalcul incompatible.
 - [ ] Ajouter la recherche par `ai.task.id`, rôle, opération, résultat, modèle et service MCP.
 - [ ] Ajouter un parcours dashboard → trace → logs de la même tâche.
 - [ ] Ajouter des liens vers Temporal UI, le détail de tâche et les runbooks.
-- [ ] Exporter les définitions SigNoz après chaque modification et contrôler leur dérive en CI.
+- [x] Exporter les définitions SigNoz après chaque modification et contrôler leur dérive en CI.
 
 ### 9.3 Alertes SigNoz
 
-- [ ] Migrer `AiFactoryAgentLoopDetected` avec son seuil, sa durée et son runbook.
-- [ ] Migrer `AiFactoryAgentBudgetExhausted` avec son seuil, sa durée et son runbook.
-- [ ] Migrer `AiFactoryAgentCostSpike` avec son seuil, sa durée et son runbook.
-- [ ] Migrer `AiFactoryTaskQueueBacklog` avec son seuil, sa durée et son runbook.
-- [ ] Migrer `AiFactorySandboxHeartbeatInvalid` avec son seuil, sa durée et son runbook.
-- [ ] Migrer `AiFactorySandboxExecutionFailures` avec son seuil, sa durée et son runbook.
-- [ ] Migrer `AiFactorySandboxMaintenanceFailure` avec son seuil, sa durée et son runbook.
-- [ ] Migrer `AiFactoryAgentContractError` avec son seuil, sa durée et son runbook.
-- [ ] Migrer `AiFactoryEvidenceAltered` avec son seuil, sa durée et son runbook.
-- [ ] Configurer les destinations de notification, regroupement, inhibition et déduplication.
+- [x] Migrer `AiFactoryAgentLoopDetected` avec son seuil, sa durée et son runbook.
+- [x] Migrer `AiFactoryAgentBudgetExhausted` avec son seuil, sa durée et son runbook.
+- [x] Migrer `AiFactoryAgentCostSpike` avec son seuil, sa durée et son runbook.
+- [x] Migrer `AiFactoryTaskQueueBacklog` avec son seuil, sa durée et son runbook.
+- [x] Migrer `AiFactorySandboxHeartbeatInvalid` avec son seuil, sa durée et son runbook.
+- [x] Migrer `AiFactorySandboxExecutionFailures` avec son seuil, sa durée et son runbook.
+- [x] Migrer `AiFactorySandboxMaintenanceFailure` avec son seuil, sa durée et son runbook.
+- [x] Migrer `AiFactoryAgentContractError` avec son seuil, sa durée et son runbook.
+- [x] Migrer `AiFactoryEvidenceAltered` avec son seuil, sa durée et son runbook.
+- [x] Configurer les destinations de notification, regroupement, inhibition et déduplication.
 - [ ] Ajouter les alertes de santé du Collector, d'ingestion SigNoz et de stockage ClickHouse.
 - [ ] Tester chaque règle par injection d'une fixture OTLP déterministe.
-- [ ] Mettre à jour `make status`, `make urls`, l'application web et les guides pour pointer vers SigNoz.
+- [x] Mettre à jour `make status`, `make urls`, l'application web et les guides pour pointer vers SigNoz.
 - [ ] Tester sauvegarde, restauration, rétention, compactage et suppression contrôlée des données locales.
 
 ### Critères de sortie du lot 4
 
-- [ ] `docker compose up` démarre la pile et l'observabilité sur macOS Apple Silicon.
+- [x] `docker compose up` démarre la pile et l'observabilité sur macOS Apple Silicon.
 - [ ] Un développeur retrouve une tâche, une erreur et son chemin critique depuis l'interface locale.
-- [ ] Les six dashboards et neuf alertes sont provisionnés sans action manuelle.
+- [x] Les six dashboards et neuf alertes sont provisionnés sans action manuelle.
 - [ ] Le dashboard Collector et ses alertes techniques détectent une perte ou un retard d'export.
-- [ ] Le redémarrage du backend local conserve les données selon la rétention définie.
-- [ ] L'arrêt propre de Compose ne corrompt ni files Collector ni stockage local.
+- [x] Le redémarrage du backend local conserve les données selon la rétention définie.
+- [x] L'arrêt propre de Compose ne corrompt ni files Collector ni stockage local.
 
 ## 10. Lot 5 — cible GKE et Google Cloud Observability
 
@@ -363,25 +363,25 @@ spécification visuelle et fonctionnelle pendant le portage.
 
 ## 12. Lot 7 — bascule atomique immédiate
 
-- [ ] Regrouper instrumentation, Collector, SigNoz, dashboards, alertes et suppression Prometheus/Grafana dans une branche de bascule unique.
+- [x] Regrouper instrumentation, Collector, SigNoz, dashboards, alertes et suppression Prometheus/Grafana dans une branche de bascule unique.
 - [ ] Valider cette branche sur une installation Compose isolée qui ne démarre jamais Prometheus/Grafana.
-- [ ] Vérifier hors ligne la présence de toutes les métriques contractuelles avant le changement de pile principale.
+- [x] Vérifier hors ligne la présence de toutes les métriques contractuelles avant le changement de pile principale.
 - [ ] Définir une courte fenêtre de bascule et geler les modifications d'observabilité concurrentes.
-- [ ] Exporter les artefacts Grafana et arrêter proprement la pile historique.
-- [ ] Ne pas supprimer immédiatement le volume Grafana : le détacher et noter sa date d'expiration.
-- [ ] Déployer directement Collector/SigNoz et les applications configurées en OTLP.
-- [ ] Exécuter les smoke tests de santé, ingestion, dashboards et alertes.
+- [x] Exporter les artefacts Grafana et arrêter proprement la pile historique.
+- [x] Ne pas supprimer immédiatement le volume Grafana : le détacher et noter sa date d'expiration.
+- [x] Déployer directement Collector/SigNoz et les applications configurées en OTLP.
+- [x] Exécuter les smoke tests de santé, ingestion, dashboards et alertes.
 - [ ] Exécuter un workflow complet et vérifier métriques, trace, logs et verdict.
-- [ ] Déclarer SigNoz comme unique point d'entrée opérateur local.
-- [ ] Déclencher le rollback de version si un critère bloquant échoue ; ne pas démarrer les deux chaînes ensemble.
+- [x] Déclarer SigNoz comme unique point d'entrée opérateur local.
+- [x] Déclencher le rollback de version si un critère bloquant échoue ; ne pas démarrer les deux chaînes ensemble.
 - [ ] Enregistrer date, commit, propriétaires, résultats et décision de la bascule.
 
 ### Critères de sortie du lot 7
 
-- [ ] Cent pour cent des services actifs émettent via OTLP.
-- [ ] Cent pour cent des alertes actives proviennent du nouveau backend.
+- [x] Cent pour cent des services actifs émettent via OTLP.
+- [x] Cent pour cent des alertes actives proviennent du nouveau backend.
 - [ ] Les opérateurs utilisent la nouvelle interface et réussissent un exercice d'incident.
-- [ ] Aucun conteneur Prometheus ou Grafana n'existe dans le projet Compose actif.
+- [x] Aucun conteneur Prometheus ou Grafana n'existe dans le projet Compose actif.
 
 ## 13. Actions de suppression immédiate obligatoires dans `OTEL-100`
 
@@ -389,32 +389,32 @@ Ces actions ne constituent pas un lot ultérieur : elles sont exécutées dans l
 déploiement que l'ajout de Collector/SigNoz. Seule la destruction physique de l'ancien volume détaché est
 différée afin de rester récupérable.
 
-- [ ] Sauvegarder ou exporter les dashboards, alertes et données historiques à conserver.
-- [ ] Retirer les services `prometheus` et `grafana` de `infrastructure/compose.yaml`.
-- [ ] Retirer les ports `PROMETHEUS_PORT` et `GRAFANA_PORT` des fichiers d'environnement et guides.
-- [ ] Détacher `grafana-data` de Compose, puis planifier sa suppression après validation explicite de la sauvegarde.
-- [ ] Retirer `infrastructure/observability/prometheus.yml` et les règles devenues inactives.
-- [ ] Retirer le provisioning et les JSON Grafana après migration vers leur format cible versionné.
-- [ ] Retirer `micrometer-registry-prometheus` des six applications dans le même changement.
-- [ ] Retirer l'exposition `/actuator/prometheus` des configurations actives.
-- [ ] Mettre à jour les tests qui dépendaient de PromQL, du scrape ou du provisioning Grafana.
-- [ ] Migrer les scripts de baseline vers OTLP ou l'API du backend cible.
-- [ ] Mettre à jour README, Makefile, application web, schémas, état courant et documentation d'architecture.
-- [ ] Mettre à jour les runbooks avec les nouvelles requêtes, écrans et procédures de diagnostic.
-- [ ] Conserver les mentions historiques uniquement dans les archives et preuves datées.
-- [ ] Ajouter un contrôle CI interdisant le retour des services et dépendances Prometheus/Grafana actifs.
-- [ ] Vérifier que la configuration ne contient aucun profil `observability-legacy` ni double export.
-- [ ] Autoriser le receiver Prometheus du Collector uniquement pour une source tierce ne parlant pas OTLP, notamment Temporal ; ce receiver ne déploie aucun serveur Prometheus.
-- [ ] Documenter chaque receiver de compatibilité et le supprimer dès que la source sait émettre OTLP nativement.
+- [x] Sauvegarder ou exporter les dashboards, alertes et données historiques à conserver.
+- [x] Retirer les services `prometheus` et `grafana` de `infrastructure/compose.yaml`.
+- [x] Retirer les ports `PROMETHEUS_PORT` et `GRAFANA_PORT` des fichiers d'environnement et guides.
+- [x] Détacher `grafana-data` de Compose, puis planifier sa suppression après validation explicite de la sauvegarde.
+- [x] Retirer `infrastructure/observability/prometheus.yml` et les règles devenues inactives.
+- [x] Retirer le provisioning et les JSON Grafana après migration vers leur format cible versionné.
+- [x] Retirer `micrometer-registry-prometheus` des six applications dans le même changement.
+- [x] Retirer l'exposition `/actuator/prometheus` des configurations actives.
+- [x] Mettre à jour les tests qui dépendaient de PromQL, du scrape ou du provisioning Grafana.
+- [x] Migrer les scripts de baseline vers OTLP ou l'API du backend cible.
+- [x] Mettre à jour README, Makefile, application web, schémas, état courant et documentation d'architecture.
+- [x] Mettre à jour les runbooks avec les nouvelles requêtes, écrans et procédures de diagnostic.
+- [x] Conserver les mentions historiques uniquement dans les archives et preuves datées.
+- [x] Ajouter un contrôle CI interdisant le retour des services et dépendances Prometheus/Grafana actifs.
+- [x] Vérifier que la configuration ne contient aucun profil `observability-legacy` ni double export.
+- [x] Autoriser le receiver Prometheus du Collector uniquement pour une source tierce ne parlant pas OTLP, notamment Temporal ; ce receiver ne déploie aucun serveur Prometheus.
+- [x] Documenter chaque receiver de compatibilité et le supprimer dès que la source sait émettre OTLP nativement.
 
 ### Critères de sortie du lot 8
 
-- [ ] Aucun service actif ne dépend de Prometheus ou Grafana.
-- [ ] Aucun port, volume déclaré dans Compose, datasource ou configuration active Prometheus/Grafana ne subsiste.
-- [ ] Les applications ne publient plus d'endpoint Prometheus inutile.
-- [ ] Le mot `prometheus` ne subsiste dans le runtime que dans un receiver Collector de compatibilité explicitement justifié et testé.
-- [ ] La documentation et les interfaces ne présentent que la nouvelle chaîne.
-- [ ] Les sauvegardes historiques nécessaires sont lisibles et leur date d'expiration est connue.
+- [x] Aucun service actif ne dépend de Prometheus ou Grafana.
+- [x] Aucun port, volume déclaré dans Compose, datasource ou configuration active Prometheus/Grafana ne subsiste.
+- [x] Les applications ne publient plus d'endpoint Prometheus inutile.
+- [x] Le mot `prometheus` ne subsiste dans le runtime que dans un receiver Collector de compatibilité explicitement justifié et testé.
+- [x] La documentation et les interfaces ne présentent que la nouvelle chaîne.
+- [x] Les sauvegardes historiques nécessaires sont lisibles et leur date d'expiration est connue.
 
 ## 14. Stratégie de tests finale
 
@@ -478,7 +478,7 @@ différée afin de rester récupérable.
 
 - [x] `OTEL-000` — ADR, inventaire, baseline et matrice de parité.
 - [x] `OTEL-010` — contrat de télémétrie, conventions et tests de confidentialité.
-- [ ] `OTEL-100` — **bascule runtime atomique** regroupant instrumentation des six applications, propagation W3C, Collector, SigNoz, dashboards, alertes et retrait de Prometheus/Grafana.
+- [x] `OTEL-100` — **bascule runtime atomique** regroupant instrumentation des six applications, propagation W3C, Collector, SigNoz, dashboards, alertes et retrait de Prometheus/Grafana.
 - [ ] `OTEL-101` — qualification macOS complète de la nouvelle pile sans aucun conteneur legacy.
 - [ ] `OTEL-050` — Collectors GKE, Workload Identity et export Google Cloud.
 - [ ] `OTEL-060` — campagne de parité sur fixtures historiques et rapport de validation SigNoz.
@@ -505,16 +505,18 @@ retirer Prometheus/Grafana sans SigNoz fonctionnel, ni activer les deux chaînes
 
 ## 19. Références de travail
 
-- [ ] Maintenir les liens vers les documentations officielles OpenTelemetry, Spring Boot et Google Cloud dans l'ADR.
-- [ ] Enregistrer les versions exactes consultées lors de chaque choix technique.
-- [ ] Vérifier à chaque montée de version les conventions sémantiques, composants Collector et propriétés Spring.
+- [x] Maintenir les liens vers les documentations officielles OpenTelemetry, Spring Boot et Google Cloud dans l'ADR.
+- [x] Enregistrer les versions exactes consultées lors de chaque choix technique.
+- [x] Vérifier à chaque montée de version les conventions sémantiques, composants Collector et propriétés Spring.
 
 Points de départ :
 
 - [Stratégie OpenTelemetry du projet](../roadmap/strategie-opentelemetry.md)
 - [Roadmap OpenTelemetry initiale](../roadmap/OPENTELEMETRY.md)
-- [Configuration Prometheus actuelle](../../../infrastructure/observability/prometheus.yml)
-- [Alertes actuelles](../../../infrastructure/observability/alerts/multiagents.yml)
+- [Baseline Prometheus/Grafana retirée](../../evidence/observability/prometheus-grafana-baseline-2026-09-05.json)
+- [Configuration Collector active](../../../infrastructure/observability/otel-collector.yaml)
+- [Dashboards SigNoz actifs](../../../infrastructure/observability/signoz/dashboards/)
+- [Alertes SigNoz actives](../../../infrastructure/observability/signoz/rules/ai-factory.json)
 - [Documentation OpenTelemetry](https://opentelemetry.io/docs/)
 - [Configuration du Collector](https://opentelemetry.io/docs/collector/configuration/)
 - [Spring Boot — observabilité](https://docs.spring.io/spring-boot/reference/actuator/observability.html)

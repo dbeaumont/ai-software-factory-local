@@ -67,14 +67,14 @@ flowchart TB
   LLM --> OAI[OpenAI]
   ORCH --> MCP[Context / Sandbox / Assurance / Evidence / SCM]
   MCP --> G[Gitea]
-  MCP --> J[Jobs sandbox Docker]
+  MCP --> J[Runners sandbox Compose statiques]
   J --> SQ[SonarQube]
   J --> AF[Artifactory]
   ORCH -. désactivé par défaut .-> T[Temporal]
-  P[Prometheus] --> ORCH
-  P --> MCP
-  P --> T
-  GF[Grafana] --> P
+  ORCH -->|OTLP| C[OpenTelemetry Collector]
+  MCP -->|OTLP| C
+  T -->|receiver de compatibilité| C
+  C --> S[SigNoz]
 ```
 
 ### 2.1 Inventaire des services Compose
@@ -86,7 +86,7 @@ flowchart TB
 | LLM | `litellm` | Passerelle interne vers le modèle OpenAI configuré |
 | SCM | `gitea`, `gitea-db` | Dépôts, branches, commits et PR de démonstration |
 | MCP | `repository-context-mcp` | Lecture bornée du dépôt, sans port hôte |
-| MCP | `sandbox-execution-mcp` | Contrôle des jobs Docker ; seul service montant le socket Docker |
+| MCP | `sandbox-execution-mcp` | Contrôle de runners Compose statiques, sans socket Docker |
 | MCP | `assurance-mcp` | Évaluation déterministe des gates et politiques |
 | MCP | `evidence-mcp` | Stockage local chiffré et immuable des preuves |
 | MCP | `scm-delivery-mcp` | Livraison Gitea après approbation |
@@ -94,7 +94,7 @@ flowchart TB
 | Workflow | `temporal-db`, `temporal-schema`, `temporal`, `temporal-namespace`, `temporal-ui` | Socle durable préparé ; client orchestrateur désactivé par défaut |
 | Qualité | `sonarqube`, `sonar-db` | Analyse et quality gate |
 | Artefacts | `artifactory`, `artifactory-db`, `artifactory-config` | Dépôt local et initialisation one-shot |
-| Supervision | `prometheus`, `grafana` | Collecte, règles d’alerte et dashboards |
+| Observabilité | `otel-collector`, SigNoz, `signoz-bootstrap`, `alert-sink` | OTLP, stockage, dashboards et alertes |
 
 `temporal-schema`, `temporal-namespace` et `artifactory-config` sont des services d’initialisation qui se terminent
 normalement après succès. Leur état `Exited (0)` n’est pas une panne.
@@ -103,14 +103,14 @@ normalement après succès. Leur état `Exited (0)` n’est pas une panne.
 
 | Réseau | Caractéristique | Membres / usage principal |
 |---|---|---|
-| `ai-factory-network` | Accès externe possible | Web, orchestrateur, Gitea, LiteLLM, SonarQube, Artifactory, Grafana |
-| `ai-factory-mcp-internal` | `internal: true` | Orchestrateur, MCP et Prometheus |
-| `ai-factory-workflow-internal` | `internal: true` | Temporal, orchestrateur et Prometheus |
+| `ai-factory-network` | Accès externe possible | Web, orchestrateur, Gitea, LiteLLM, SonarQube, Artifactory et Collector |
+| `ai-factory-mcp-internal` | `internal: true` | Orchestrateur, MCP et Collector |
+| `ai-factory-workflow-internal` | `internal: true` | Temporal, orchestrateur et Collector |
 | `ai-factory-sandbox-egress` | `internal: true` | Jobs de test, Artifactory et proxy egress |
 | `ai-factory-sandbox-quality` | `internal: true` | Jobs qualité, SonarQube, Artifactory et proxy egress |
 
 Ports hôte par défaut : Web `8080`, orchestrateur `8088`, Gitea HTTP `3000`, Gitea SSH `2222`, SonarQube
-`9000`, Artifactory `8082`, Prometheus `9090`, Grafana `3001` et Temporal UI sur `127.0.0.1:8233`. Les cinq
+`9000`, Artifactory `8082`, SigNoz `3301` et Temporal UI sur `127.0.0.1:8233`. Les cinq
 serveurs MCP, LiteLLM, Temporal gRPC et les bases PostgreSQL ne publient pas de port hôte.
 
 ### 2.3 Persistance réelle
@@ -126,10 +126,7 @@ serveurs MCP, LiteLLM, Temporal gRPC et les bases PostgreSQL ne publient pas de 
 | `evidence-state` | Preuves chiffrées et manifestes | Critique dès que le chemin Evidence est utilisé |
 | `sonar-db-data`, `sonar-data`, `sonar-logs`, `sonar-extensions` | Données SonarQube | Important pour historique qualité et configuration |
 | `artifactory-data`, `artifactory-db-data` | Binaires, métadonnées et configuration Artifactory | Critique et dépendant de clés stables |
-| `grafana-data` | Configuration locale Grafana | Important pour les personnalisations |
-
-Prometheus n’a pas de volume persistant dans le Compose courant : ses séries temporelles disparaissent avec son
-conteneur. Les règles d’alerte sont chargées, mais aucun Alertmanager ni canal de notification n’est défini.
+| volumes SigNoz ClickHouse/PostgreSQL | métriques, traces, logs, règles et dashboards | À sauvegarder ensemble avec les secrets locaux associés |
 
 ## 3. Modèle de responsabilité
 
@@ -388,8 +385,8 @@ déploiement sont hors périmètre.
 
 - vérifier `make status` et les healthchecks ;
 - contrôler l’espace disque et la mémoire de l’hôte ;
-- vérifier les targets Prometheus dans `/targets` ;
-- consulter les alertes Prometheus et les six dashboards Grafana ;
+- vérifier les services, ingestion et files du Collector dans SigNoz ;
+- consulter les neuf alertes et les sept dashboards SigNoz ;
 - contrôler les files sandbox, tâches bloquées et erreurs récentes ;
 - vérifier qu’aucun mode ou rôle hiérarchique n’a été activé sans changement approuvé ;
 - confirmer que la capture du contenu des prompts, résultats et preuves reste désactivée.
@@ -438,11 +435,9 @@ Une approbation ne doit pas être réutilisée après modification du commit, du
 
 ### 9.1 Collecte actuelle
 
-Prometheus scrute toutes les 15 secondes : `orchestrator`, `repository-context-mcp`,
-`sandbox-execution-mcp` et `temporal`. Les MCP Assurance, Evidence et SCM ne sont pas encore scrutés. Cette lacune
-interdit de déclarer une supervision complète de bout en bout.
-
-Dashboards Grafana fournis : Orchestrator, Supervisor, Agents, Temporal, MCP et Sandbox.
+Les six applications Spring envoient métriques, traces et logs en OTLP au Collector interne. Temporal est la seule
+source de compatibilité scrutée par le receiver du Collector. SigNoz expose les dashboards Orchestrator, Supervisor,
+Agents, Temporal, MCP, Sandbox et OpenTelemetry Collector sur `http://localhost:3301`.
 
 ### 9.2 Alertes configurées
 
@@ -456,8 +451,9 @@ Dashboards Grafana fournis : Orchestrator, Supervisor, Agents, Temporal, MCP et 
 | `AiFactoryAgentContractError` | warning | Refuser la sortie et corriger contrat/prompt/version |
 | `AiFactoryEvidenceAltered` | critical | Isoler Evidence MCP, invalider les approbations liées |
 
-Les règles seules n’envoient aucune notification. Ajouter un Alertmanager et un canal d’astreinte avant toute
-exploitation non surveillée.
+Les règles sont provisionnées dans SigNoz. En local, elles sont routées vers `alert-sink`, qui vérifie le chemin de
+notification sans publier de port ni conserver les payloads. En environnement partagé, remplacer ce canal par la
+destination d'astreinte approuvée et tester sa rotation/déduplication.
 
 ### 9.3 SLO proposés, non encore contractuels
 
@@ -480,8 +476,8 @@ budget d’erreur.
 max(ai_factory_sandbox_jobs_queued)
 max(ai_factory_sandbox_jobs_running)
 max by (perimeter) (ai_task_queue_saturation_ratio)
-sum by (role, stop_condition, reason) (increase(ai_agent_failures_total[15m]))
-sum by (role) (increase(ai_agent_cost_micros_total[15m]))
+sum by (role, stop_condition, reason) (increase(ai_agent_failures[15m]))
+sum by (role) (increase(ai_agent_cost_micros[15m]))
 ```
 
 ## 10. Capacité, quotas et rétention
@@ -526,7 +522,7 @@ copie isolée avant d’être déclarée exploitable.
 - `sandbox-job-state`, `scm-delivery-state`, `evidence-state`, `context-registry-state` ;
 - `factory-workspace` lorsque la conservation d’une enquête l’exige ;
 - `temporal-db-data` dès que Temporal contient un historique utile ;
-- `grafana-data` si des personnalisations locales existent.
+- volumes ClickHouse/PostgreSQL SigNoz et exports versionnés des dashboards/règles.
 
 Une copie cohérente exige l’arrêt des écritures. Pour les bases PostgreSQL, privilégier des dumps logiques contrôlés
 et restaurables, complétés par les volumes applicatifs associés. Sauvegarder Artifactory sans ses clés rend les
@@ -563,7 +559,7 @@ une projection reconstruisible. Cette organisation n’est pas encore câblée d
 
 ### 12.1 Chaque jour d’utilisation
 
-- santé des conteneurs et targets Prometheus ;
+- santé des conteneurs, ingestion OTLP et files du Collector ;
 - espace disque, mémoire et saturation sandbox ;
 - tâches bloquées et erreurs de contrat ;
 - findings critiques et intégrité des preuves ;
@@ -583,7 +579,7 @@ une projection reconstruisible. Cette organisation n’est pas encore câblée d
 
 - exercice de restauration isolée ;
 - rotation planifiée des jetons à durée courte ;
-- revue des comptes Gitea, SonarQube, Grafana et Artifactory ;
+- revue des comptes Gitea, SonarQube, SigNoz et Artifactory ;
 - revue des versions Docker, Java, Spring, Temporal, LiteLLM, Syft et Trivy ;
 - revue des SLO, coûts, capacités et rétention ;
 - vérification des runbooks et contacts d’escalade ;
@@ -627,7 +623,7 @@ docker compose --env-file .env -f infrastructure/compose.yaml up -d --build
 make status
 ```
 
-Vérifier les migrations/initialisations one-shot, les healthchecks, les cibles Prometheus et un scénario de référence.
+Vérifier les initialisations one-shot, les healthchecks, l'ingestion SigNoz et un scénario de référence.
 Conserver les anciennes images jusqu’à validation de la fenêtre de retour arrière.
 
 ### 13.4 Compatibilité Temporal
@@ -808,13 +804,13 @@ secrets, test de rollback et scénario complet jusqu’à `PR_CREATED`.
 
 1. fichier `.env.delete` sensible suivi dans Git ;
 2. absence de SSO, RBAC, séparation multi-tenant et rate limiting utilisateur ;
-3. `sandbox-execution-mcp` montant le socket Docker de l’hôte ;
+3. runners Compose locaux moins isolés que les Jobs GKE/gVisor cibles ;
 4. transports MCP sans authentification forte ;
 5. secrets locaux en fichiers et mots de passe de démonstration ;
 6. mémoire des tâches active non durable ;
 7. Temporal et projection PostgreSQL non intégrés au chemin actif ;
 8. sauvegarde/restauration et PRA non automatisés ni éprouvés ;
-9. Prometheus non persistant, collecte MCP incomplète et absence d’Alertmanager ;
+9. rétention SigNoz et notification externe non encore éprouvées sur une campagne longue ;
 10. kill switch non monté dans Compose ;
 11. images non toutes épinglées par digest ;
 12. absence de haute disponibilité ;
@@ -833,8 +829,8 @@ secrets, test de rollback et scénario complet jusqu’à `PR_CREATED`.
 
 - persister les tâches et relier la projection au workflow ;
 - monter et tester un kill switch exploitable atomiquement ;
-- rendre Prometheus persistant et scruter les cinq MCP ;
-- ajouter Alertmanager ;
+- éprouver sauvegarde/restauration SigNoz et les alertes techniques du Collector ;
+- raccorder un canal d'astreinte approuvé hors environnement local ;
 - automatiser sauvegarde/restauration et tests de reprise ;
 - épingler toutes les images par digest ;
 - ajouter scan de secrets et SBOM de la Factory elle-même.
