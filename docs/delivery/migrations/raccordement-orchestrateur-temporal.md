@@ -450,7 +450,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### 12.3 Tests de replay et compatibilité
 
-- [ ] Versionner des historiques JSON de référence pour succès, échec, attente, annulation et continue-as-new.
+- [x] Versionner des historiques JSON de référence pour succès, échec, attente, annulation et continue-as-new.
+  _(Le corpus V1 contient cinq historiques JSON réellement émis par `SoftwareFactoryWorkflowImpl`, avec un
+  générateur explicite opt-in pour empêcher tout rafraîchissement silencieux des preuves.)_
 - [ ] Exécuter automatiquement le replay contre chaque nouvelle version du worker.
 - [ ] Tester un ancien worker et un nouveau worker simultanément avec Build IDs compatibles.
 - [ ] Refuser la livraison d'une image worker lorsque le replay échoue.
