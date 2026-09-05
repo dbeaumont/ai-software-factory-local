@@ -226,8 +226,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   autorisés ; conserver `PIPELINE` comme comportement initial du moteur Temporal. _(`PIPELINE` est la valeur par
   défaut et rejette toute délégation/revue enfant ; seul `HIERARCHICAL_ACTIVE` autorise le scheduler de child
   workflows déjà couvert par les tests de DAG, sans couplage entre moteur Temporal et mode multi-agent.)_
-- [ ] **TEMP-045 — Intégrer la revue indépendante.** Lier la revue aux digests du plan, du patch, des tests, de la
-  qualité, de la sécurité et du commit source.
+- [x] **TEMP-045 — Intégrer la revue indépendante.** Lier la revue aux digests du plan, du patch, des tests, de la
+  qualité, de la sécurité et du commit source. _(Le bundle est déjà lié au task/attempt/commit/manifeste ; en
+  production hiérarchique il exige désormais les cinq digests exacts et les compare aux références Evidence
+  réellement produites avant de lancer le child workflow indépendant.)_
 - [ ] **TEMP-046 — Attendre l'approbation sans thread bloqué.** Utiliser un signal Temporal et `Workflow.await`,
   avec manifeste immuable et vérification de l'approbateur côté activité/hôte.
 - [ ] **TEMP-047 — Encadrer l'effet SCM.** Livrer par une activité idempotente, puis réconcilier Gitea avant tout

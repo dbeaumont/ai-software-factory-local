@@ -73,6 +73,10 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                     null, null, null, null);
         }
         phase = "WAITING_APPROVAL";
+        if (request.executionMode() == SoftwareFactoryWorkflow.WorkflowExecutionMode.HIERARCHICAL_ACTIVE
+                && request.independentReview() != null) {
+            request.independentReview().bundle().requireProductionArtifactBinding(artifacts);
+        }
         SoftwareFactoryWorkflow.Result coordinated = delegate.run(request.withResolvedSource(resolved.sourceCommit()));
         List<String> chronology = new java.util.ArrayList<>();
         chronology.add("SOURCE_RESOLVED:" + resolved.sourceCommit());

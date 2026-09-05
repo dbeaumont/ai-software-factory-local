@@ -3,12 +3,14 @@ package com.example.aifactory.service;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 /** Immutable, workflow-owned inputs for the final independent review. */
 public record IndependentReviewBundle(String taskId, String attemptId, String sourceCommit,
                                       ConsolidatedPatch consolidatedPatch, FinalManifest finalManifest,
                                       List<ResultReference> reviewedResults,
-                                      List<ContradictionReference> contradictions) {
+                                      List<ContradictionReference> contradictions,
+                                      Map<String, String> reviewedArtifactDigests) {
     private static final Set<String> RESULT_ROLES = Set.of(
             "supervisor", "architecture-agent", "code-agent", "developer", "patch-repair",
             "test-agent", "test-design", "test-evidence", "security-agent", "threat-model",
@@ -23,9 +25,32 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
         }
         reviewedResults = List.copyOf(reviewedResults);
         contradictions = List.copyOf(contradictions);
+        reviewedArtifactDigests = reviewedArtifactDigests == null ? Map.of() : Map.copyOf(reviewedArtifactDigests);
         requireUnique(reviewedResults.stream().map(ResultReference::resultId).toList(), "result");
         requireUnique(contradictions.stream().map(ContradictionReference::contradictionId).toList(),
                 "contradiction");
+    }
+
+    public IndependentReviewBundle(String taskId, String attemptId, String sourceCommit,
+                                   ConsolidatedPatch consolidatedPatch, FinalManifest finalManifest,
+                                   List<ResultReference> reviewedResults,
+                                   List<ContradictionReference> contradictions) {
+        this(taskId, attemptId, sourceCommit, consolidatedPatch, finalManifest, reviewedResults,
+                contradictions, Map.of());
+    }
+
+    public void requireProductionArtifactBinding(
+            Map<String, PipelineStepContracts.ArtifactReference> actualArtifacts) {
+        Set<String> required = Set.of("plan", "patch", "tests", "quality", "security");
+        if (!reviewedArtifactDigests.keySet().equals(required)
+                || reviewedArtifactDigests.values().stream().anyMatch(
+                digest -> digest == null || !digest.matches("[0-9a-f]{64}"))
+                || !consolidatedPatch.digest().equals(reviewedArtifactDigests.get("patch"))
+                || actualArtifacts == null || required.stream().anyMatch(name ->
+                actualArtifacts.get(name) == null
+                        || !actualArtifacts.get(name).digest().equals(reviewedArtifactDigests.get(name)))) {
+            throw new SecurityException("Independent review inputs differ from produced pipeline evidence");
+        }
     }
 
     public boolean boundTo(String expectedTaskId, String expectedAttemptId, String expectedSourceCommit) {
