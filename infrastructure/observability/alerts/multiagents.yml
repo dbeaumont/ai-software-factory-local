@@ -55,7 +55,29 @@ groups:
         annotations:
           summary: Sandbox execution heartbeat is absent, invalid or stale
           description: The orchestrator rejected a sandbox heartbeat and failed the execution closed.
-          runbook_url: /docs/runbooks/MCP-COMPROMIS.md
+          runbook_url: /docs/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
+
+      - alert: AiFactorySandboxExecutionFailures
+        expr: increase(ai_factory_sandbox_jobs_failed_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: sandbox
+        annotations:
+          summary: Sandbox executions are repeatedly failing
+          description: More than five sandbox executions failed, timed out or were cancelled in ten minutes.
+          runbook_url: /docs/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
+
+      - alert: AiFactorySandboxMaintenanceFailure
+        expr: increase(ai_factory_sandbox_maintenance_failures_total[10m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          component: sandbox
+        annotations:
+          summary: Sandbox cleanup or retention maintenance is failing
+          description: The sandbox controller could not maintain persisted jobs or clean expired state.
+          runbook_url: /docs/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md
 
       - alert: AiFactoryAgentContractError
         expr: increase(ai_agent_failures_total{stop_condition="CONTRACT_ERROR"}[5m]) > 0

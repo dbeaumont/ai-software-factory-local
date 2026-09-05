@@ -145,13 +145,13 @@ Le risque résiduel cible suppose l'ensemble des contrôles listés ci-dessous. 
 
 **Tests.** Faux serveur MCP de MCP-179, egress canary interdit, résultat signé par mauvaise identité, digest divergent, appel backend hors scope, serveur qui ignore deadline et réponse malveillante. Le risque reste élevé car le serveur détient nécessairement sa capacité propre.
 
-### TM-12 — Évasion sandbox et socket Docker
+### TM-12 — Évasion sandbox
 
-**Scénario.** Du code généré exploite le runtime/conteneur ou compromet `sandbox-execution-mcp`, puis utilise `/var/run/docker.sock` pour contrôler l'hôte et les autres conteneurs.
+**Scénario.** Du code généré exploite un runner ou un Job, persiste entre deux exécutions ou tente un déplacement latéral par le réseau autorisé.
 
-**Contrôles.** POC : profil immuable, non-root, capabilities supprimées, `no-new-privileges`, ressources bornées, workspace contrôlé. Cible obligatoire : aucun socket Docker, contrôleur séparé, GKE Sandbox/gVisor, nœuds/namespace/identité dédiés, filesystem jetable, Pod Security, NetworkPolicy default-deny et images admises par digest.
+**Contrôles.** Local : runners statiques séparés par profil, API interne authentifiée, non-root, capabilities supprimées, `no-new-privileges`, ressources bornées et workspace contrôlé. Cible : Jobs GKE/gVisor, namespace et identité dédiés, filesystem jetable, Pod Security, NetworkPolicy default-deny et images admises par digest.
 
-**Tests.** MCP-084/MCP-085, tentative de montage/socket/privilege, accès host namespaces/devices/metadata, évasion connue de l'image de test et vérification de destruction. Tant que le socket subsiste, l'usage reste POC local isolé.
+**Tests.** MCP-084/MCP-085, commande ou profil injecté, accès host namespaces/devices/metadata, évasion connue de l'image de test, annulation et vérification de destruction. Le mode Compose persistant reste réservé au développement local.
 
 ### TM-13 — Altération ou suppression de preuves
 
@@ -223,9 +223,9 @@ confinée à `scm-delivery-mcp`.
 
 Les risques suivants sont acceptables uniquement pour une démonstration locale isolée et bloquent toute exposition partagée :
 
-1. `/var/run/docker.sock` reste détenu par le contrôleur sandbox Compose.
-2. Les endpoints MCP ne disposent pas encore d'authentification workload complète.
-3. L'API opérateur ne possède pas encore de SSO, RBAC ni rate limiting.
+1. Les endpoints MCP ne disposent pas encore d'authentification workload complète.
+2. L'API opérateur ne possède pas encore de SSO, RBAC ni rate limiting.
+3. Le backend GKE doit encore être qualifié sur le cluster, le stockage et les identités cibles.
 4. Les preuves immuables et l'approbation liée aux digests sont disponibles dans le chemin durable, mais pas
    intégrées de bout en bout au pipeline déterministe de référence.
 5. Le journal d'audit HMAC reste local au processus et n'est pas un journal externe WORM.

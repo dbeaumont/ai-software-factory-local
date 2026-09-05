@@ -162,17 +162,18 @@ requises. La présence de code ou de paramètres ne constitue jamais une autoris
 docker version
 docker compose version
 git status --short --branch
-test -S /var/run/docker.sock
 docker system df
 ```
 
-Sur Linux, renseigner le groupe du socket dans `.env` :
+Vérifier ensuite que la configuration effective ne contient aucun montage de socket Docker :
 
 ```bash
-stat -c '%g' /var/run/docker.sock
+./scripts/check-no-docker-socket.sh
+docker compose --env-file .env -f infrastructure/compose.yaml config | grep -F docker.sock && exit 1 || true
 ```
 
-La valeur obtenue devient `DOCKER_SOCKET_GID`. Docker Desktop accepte généralement `0`.
+Le runtime local attendu est `AI_FACTORY_SANDBOX_RUNTIME=compose`. `make init` migre automatiquement une ancienne
+configuration locale vers cette valeur et génère le jeton interne des runners.
 
 ## 5. Configuration et secrets
 
@@ -908,4 +909,3 @@ make clean
 | Correctif et tests de régression | |
 | Vérification sur deux fenêtres | |
 | Approbations de reprise | |
-

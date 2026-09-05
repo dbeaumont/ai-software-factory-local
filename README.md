@@ -153,7 +153,7 @@ des sandboxes (`sandbox-egress` et `sandbox-quality`).
 | Workflow durable cible | [`SoftwareFactoryWorkflowImpl`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/SoftwareFactoryWorkflowImpl.java) |
 | Contexte dépôt | [`McpRepositoryContextService`](apps/orchestrator/src/main/java/com/example/aifactory/service/McpRepositoryContextService.java) |
 | Exécution isolée | [`McpSandboxService`](apps/orchestrator/src/main/java/com/example/aifactory/service/McpSandboxService.java), [`SandboxJobService`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/SandboxJobService.java) |
-| Profils et limites sandbox | [`SandboxProfiles`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/SandboxProfiles.java), [`DockerSandboxRuntime`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/DockerSandboxRuntime.java) |
+| Profils et limites sandbox | [`SandboxProfiles`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/SandboxProfiles.java), [`ComposeSandboxRuntime`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/ComposeSandboxRuntime.java), [`GkeSandboxRuntime`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/GkeSandboxRuntime.java) |
 | Preuves et approbation durable | [`McpEvidenceRepository`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/McpEvidenceRepository.java), [`EvidenceApprovalGate`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/EvidenceApprovalGate.java) |
 | Livraison Gitea | [`ScmDeliveryGateway`](apps/orchestrator/src/main/java/com/example/aifactory/service/ScmDeliveryGateway.java) |
 | Configuration locale | [`compose.yaml`](infrastructure/compose.yaml), [`application.yml`](apps/orchestrator/src/main/resources/application.yml), [`.env.example`](.env.example) |
@@ -352,9 +352,9 @@ Dans la configuration Compose, les validations de patch, tests, analyses SonarQu
 par `sandbox-execution-mcp`. L'orchestrateur ne monte plus le socket Docker et ne reçoit plus les secrets SonarQube
 ou Artifactory nécessaires aux jobs. Les commandes et contraintes sont définies par cinq profils serveur immuables ;
 les appels MCP ne peuvent fournir ni shell, ni image, ni réseau, ni volume, ni variable d'environnement.
-Les valeurs d'environnement configurées côté serveur doivent être monolignes (CR/LF/NUL refusés) et sont transmises
-par un fichier `--env-file`, jamais concaténées au script. Les noms de fichiers et le contenu du patch sont uniquement
-lus par Git : les métacaractères shell qu'ils contiennent ne sont pas évalués.
+Les valeurs d'environnement configurées côté serveur doivent être monolignes (CR/LF/NUL refusés). Elles sont
+injectées uniquement dans le runner correspondant au profil. Les noms de fichiers et le contenu du patch sont
+uniquement lus par Git : les métacaractères shell qu'ils contiennent ne sont pas évalués.
 
 ```bash
 AI_FACTORY_MCP_CLIENT_ENABLED=true
@@ -366,13 +366,14 @@ AI_FACTORY_MCP_SANDBOX_ACTIVE_OPERATIONS=validate_patch,apply_patch,run_tests,ru
 Le chemin Docker historique de l'orchestrateur a été supprimé. Une opération absente de la liste, un serveur MCP
 désactivé ou un ancien mode `DIRECT`/`MCP_SHADOW` échoue fermé, sans réintroduire la socket ou les secrets.
 
-Le contrôleur reste une solution locale POC-only : lui seul monte encore `/var/run/docker.sock`. Son conteneur est
-non-root, read-only, sans capabilities, sans port hôte et attaché uniquement au réseau MCP interne. En production,
-ce backend devra être remplacé par des Jobs Kubernetes ou une Sandbox API sans modifier les outils MCP.
+Le mode local utilise quatre runners Compose statiques, séparés selon leurs droits workspace et réseau. Ils sont
+non-root, read-only, sans capabilities, sans port hôte et n'acceptent que des identifiants de profils signés par un
+jeton local. Aucun composant applicatif ne contrôle le daemon Docker. La cible partagée utilise le contrôleur de Jobs
+GKE avec RBAC, Pod Security, gVisor, quotas et NetworkPolicies dédiés.
 
 Les états bornés et déjà redacted des jobs sont écrits atomiquement dans le volume dédié `sandbox-job-state`.
 Après un redémarrage, les résultats terminaux et les clés d'idempotence sont restaurés ; toute exécution qui était
-encore active devient `FAILED / INDETERMINATE`, et seuls les conteneurs `ai-factory-sbx-<execution_id>` sont nettoyés.
+encore active devient `FAILED / INDETERMINATE`, et les processus orphelins annoncés par les runners sont annulés.
 Les états terminaux expirent depuis leur `completed_at` après `AI_FACTORY_SANDBOX_JOB_RETENTION` (`P7D` par défaut,
 valeur autorisée de 1 minute à 365 jours). La purge du snapshot, du handle et de sa clé d'idempotence s'effectue au
 démarrage, avant les opérations MCP et périodiquement ; une nouvelle soumission après expiration reçoit donc un
@@ -498,7 +499,7 @@ l'export vers un SIEM dans une cible de production.
 
 ### Risques résiduels du déploiement local
 
-- `sandbox-execution-mcp` monte encore `/var/run/docker.sock` : une compromission de ce contrôleur menace l'hôte ;
+- les runners Compose sont persistants et offrent une isolation plus faible que gVisor ou une microVM ; ils restent réservés au développement local ;
 - les transports MCP sont confinés aux réseaux Compose mais ne disposent pas encore d'une authentification forte ;
 - l'API publique n'implémente pas encore SSO, RBAC, séparation multi-tenant ni rate limiting par utilisateur ;
 - le pipeline de référence utilise encore l'approbation simple ; l'endpoint d'approbation lié à un manifeste est
@@ -638,8 +639,7 @@ make demo
   propriétaires humains désignés ;
 - support des builds limité à Maven, Gradle et npm ;
 - pas de SSO, RBAC ni policy engine ;
-- montage de `/var/run/docker.sock` encore présent dans le contrôleur local `sandbox-execution-mcp` ;
-- pas encore de sandbox Kubernetes ; l'allow-list egress locale doit être transposée en politiques réseau de production ;
+- le backend Kubernetes est implémenté mais sa qualification exige encore un cluster GKE cible, son stockage et ses identités Workload Identity ;
 - approbation humaine obligatoire avant push/PR ;
 
 Les règles de confiance des prompts, la validation des contrats de sortie et les gates de tests, qualité et

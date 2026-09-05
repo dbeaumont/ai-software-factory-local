@@ -71,7 +71,7 @@ L’identité de l’utilisateur doit être propagée comme identité d’audit,
 
 ## 3. Remplacer l’accès à la socket Docker
 
-Le contrôleur Sandbox MCP monte actuellement `/var/run/docker.sock`. C’est acceptable pour un prototype local isolé, mais pas pour une usine partagée.
+Le montage de `/var/run/docker.sock` a été retiré du contrôleur Sandbox MCP. Docker Compose reste utilisé sur macOS avec des runners statiques sans socket. Les environnements partagés utilisent des Jobs GKE isolés.
 
 ```mermaid
 flowchart LR
@@ -82,14 +82,15 @@ flowchart LR
     S --> E[Preuves signées]
 ```
 
-Cibles possibles :
+Cible retenue :
 
-- machine Docker distante dédiée pour une première étape ;
-- Kubernetes Jobs pour une plateforme interne ;
-- microVM Firecracker ou Kata Containers pour les traitements non fiables ;
-- pool de workers séparé par niveau de confiance.
+- runners Compose statiques, non privilégiés et accessibles uniquement sur le réseau interne pour le développement local ;
+- Jobs GKE éphémères pour les environnements partagés et la production ;
+- microVM Firecracker ou Kata Containers comme renforcement ultérieur pour les traitements non fiables.
 
 Chaque job doit recevoir une image figée par digest, un workspace jetable, un réseau fermé, des limites CPU/mémoire/temps et aucune capacité de choisir ses volumes ou commandes.
+
+Le déroulé complet et ses critères d'acceptation sont suivis dans le [plan de migration sans socket Docker](../migrations/retrait-docker-socket.md).
 
 ## 4. Mettre en place une CI obligatoire
 
@@ -305,4 +306,3 @@ L’usine pourra être considérée comme prête pour une expérimentation d’e
 La prochaine étape ne consiste pas à multiplier les rôles agentiques ou les composants. Il faut d’abord consolider le control plane, l’isolation d’exécution, la chaîne de livraison et la preuve de performance.
 
 L’ordre recommandé est donc : **persistance durable**, **sécurisation de l’API et du sandbox**, **OpenTelemetry et évaluation multi-agent**, puis **activation progressive de Temporal et de l’architecture hiérarchique**.
-

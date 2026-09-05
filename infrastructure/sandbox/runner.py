@@ -70,6 +70,7 @@ PROFILES = {
 }
 
 ACTIVE = {}
+ACTIVE_WRITE_WORKSPACES = set()
 ACTIVE_LOCK = threading.Lock()
 
 
@@ -203,12 +204,22 @@ class Handler(BaseHTTPRequestHandler):
             workspace = (WORKSPACE_ROOT / task_directory).resolve()
             if workspace.parent != WORKSPACE_ROOT or not workspace.is_dir():
                 raise ValueError("unknown task workspace")
+            write_workspace = profile_id == "patch-apply-v1"
             with ACTIVE_LOCK:
                 if execution_id in ACTIVE:
                     raise ValueError("execution is already active")
-            exit_code, output, truncated, timed_out = bounded_process(
-                PROFILES[profile_id], workspace, execution_id, timeout_seconds, max_output
-            )
+                if write_workspace and workspace in ACTIVE_WRITE_WORKSPACES:
+                    raise ValueError("workspace already has an active write execution")
+                if write_workspace:
+                    ACTIVE_WRITE_WORKSPACES.add(workspace)
+            try:
+                exit_code, output, truncated, timed_out = bounded_process(
+                    PROFILES[profile_id], workspace, execution_id, timeout_seconds, max_output
+                )
+            finally:
+                if write_workspace:
+                    with ACTIVE_LOCK:
+                        ACTIVE_WRITE_WORKSPACES.discard(workspace)
             self.send_json(200, {
                 "exit_code": exit_code,
                 "output": output,

@@ -21,7 +21,9 @@
 - [ ] Intégrer Keycloak ou un fournisseur OpenID Connect pour l'authentification et le RBAC.
 - [ ] Ajouter un déclenchement par GitHub Actions/GitLab CI sans le confondre avec le backend d'exécution sandbox.
 - [ ] Persister les tâches et journaux d'audit dans un stockage de contrôle durable.
-- [ ] Remplacer l'accès direct du contrôleur sandbox à `/var/run/docker.sock` par un backend distant isolé.
+- [x] Retirer l'accès du contrôleur sandbox à `/var/run/docker.sock` avec des runners Compose statiques en local
+  et des Jobs GKE isolés en environnement partagé ; suivre le
+  [plan détaillé de migration](../migrations/retrait-docker-socket.md).
 - [ ] Ajouter un export OpenTelemetry réel ; `ExecutionTracer` et les métriques actuelles ne constituent pas encore
   une chaîne OTLP de bout en bout.
 - [ ] Compléter les écrans de supervision fonctionnelle, technique et FinOps.

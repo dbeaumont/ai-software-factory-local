@@ -55,6 +55,7 @@ public class SandboxJobService {
     private final Counter rejectedGlobal;
     private final Counter rejectedTask;
     private final Counter rejectedRetention;
+    private final Counter maintenanceFailures;
     private final Timer queueDuration;
 
     public SandboxJobService(SandboxExecutionProperties properties, SandboxRuntime runtime, MeterRegistry metrics,
@@ -82,6 +83,7 @@ public class SandboxJobService {
                 .tag("reason", "task_quota").register(metrics);
         this.rejectedRetention = Counter.builder("ai_factory_sandbox_jobs_rejected")
                 .tag("reason", "retention_capacity").register(metrics);
+        this.maintenanceFailures = Counter.builder("ai_factory_sandbox_maintenance_failures").register(metrics);
         this.queueDuration = Timer.builder("ai_factory_sandbox_job_queue_duration").register(metrics);
         Gauge.builder("ai_factory_sandbox_jobs_running", executor, ThreadPoolExecutor::getActiveCount)
                 .register(metrics);
@@ -457,6 +459,7 @@ public class SandboxJobService {
             refreshHeartbeats();
             pruneExpiredJobs();
         } catch (RuntimeException exception) {
+            maintenanceFailures.increment();
             LOGGER.warn("Sandbox job maintenance failed; it will be retried", exception);
         }
     }

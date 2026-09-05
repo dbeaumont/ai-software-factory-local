@@ -30,7 +30,7 @@ class SandboxRunnerTest(unittest.TestCase):
             "AI_FACTORY_RUNNER_PORT": str(PORT),
         })
         self.process = subprocess.Popen(
-            ["python3", str(RUNNER)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+            ["python3", str(RUNNER)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
         for _ in range(50):
             try:
@@ -85,6 +85,7 @@ class SandboxRunnerTest(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as error:
             self.request(payload)
         self.assertEqual(400, error.exception.code)
+        error.exception.close()
         self.assertFalse(marker.exists())
 
     def test_rejects_wrong_image_digest(self):
@@ -93,6 +94,7 @@ class SandboxRunnerTest(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as error:
             self.request(payload)
         self.assertEqual(400, error.exception.code)
+        error.exception.close()
 
 
 if __name__ == "__main__":

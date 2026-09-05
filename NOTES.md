@@ -1,6 +1,6 @@
-# Utilisation de la socket docker
+# Retrait de la socket Docker
 
-Oui, la socket Docker est toujours utilisée, mais **plus par l’orchestrateur**.
+La socket Docker n'est plus utilisée par les composants applicatifs.
 
 Flux actuel :
 
@@ -8,12 +8,14 @@ Flux actuel :
 orchestrateur
   → HTTP MCP
   → sandbox-execution-mcp
-  → commandes docker run/ps/rm
-  → /var/run/docker.sock
+  → API interne authentifiée
+  → runner Compose statique par classe de profil
 ```
 
-- Le montage est dans [infrastructure/compose.yaml](/Users/david/Dev/ai-software-factory-local/infrastructure/compose.yaml:146).
-- Son utilisation est dans [DockerSandboxRuntime.java](/Users/david/Dev/ai-software-factory-local/apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/DockerSandboxRuntime.java:39).
-- Un test garantit que seul `sandbox-execution-mcp` possède la socket et que l’orchestrateur ne la monte pas : [ComposeMcpSecurityTest.java](/Users/david/Dev/ai-software-factory-local/apps/orchestrator/src/test/java/com/example/aifactory/config/ComposeMcpSecurityTest.java:28).
+- La topologie locale est définie dans `infrastructure/compose.yaml`.
+- `ComposeSandboxRuntime` distribue uniquement des identifiants de profils enregistrés.
+- `ComposeMcpSecurityTest` impose zéro montage de socket, zéro port hôte sur les runners et le profil de sécurité attendu.
+- `scripts/check-no-docker-socket.sh` empêche la réintroduction de l'ancien runtime dans les fichiers actifs.
 
-C’est une solution transitoire réservée au POC local. La cible consiste à remplacer ce contrôleur Docker par des Jobs GKE/gVisor, puis à supprimer complètement la socket avec MCP-092.
+Les runners persistants restent réservés au développement local. Les environnements partagés utilisent
+`GkeSandboxRuntime` et `KubernetesGkeJobController` avec Jobs GKE/gVisor.

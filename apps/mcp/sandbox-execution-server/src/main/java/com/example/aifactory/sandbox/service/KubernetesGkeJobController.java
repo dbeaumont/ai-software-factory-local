@@ -111,6 +111,22 @@ public class KubernetesGkeJobController implements GkeJobController {
                     "name", properties.environmentSecret(), "key", variable, "optional", true))));
         }
         environment.add(Map.of("name", "HOME", "value", "/tmp/home"));
+        List<Map<String, Object>> volumeMounts = new ArrayList<>();
+        volumeMounts.add(Map.of("name", "workspace", "mountPath", "/workspace",
+                "subPath", request.taskDirectory(), "readOnly", request.workspaceReadOnly()));
+        volumeMounts.add(Map.of("name", "tmp", "mountPath", "/tmp"));
+        List<Map<String, Object>> volumes = new ArrayList<>();
+        volumes.add(Map.of("name", "workspace",
+                "persistentVolumeClaim", Map.of("claimName", properties.workspaceClaim())));
+        volumes.add(Map.of("name", "tmp", "emptyDir", Map.of("sizeLimit", "64Mi")));
+        if (request.mavenCache()) {
+            volumeMounts.add(Map.of("name", "maven-cache", "mountPath", "/tmp/home/.m2"));
+            volumes.add(Map.of("name", "maven-cache", "emptyDir", Map.of("sizeLimit", "2Gi")));
+        }
+        if ("security-syft-trivy-v2".equals(request.profileId())) {
+            volumeMounts.add(Map.of("name", "trivy-cache", "mountPath", "/tmp/home/.cache/trivy"));
+            volumes.add(Map.of("name", "trivy-cache", "emptyDir", Map.of("sizeLimit", "1Gi")));
+        }
 
         Map<String, Object> labels = Map.of(
                 "app.kubernetes.io/name", "ai-factory-sandbox-job",
@@ -133,10 +149,7 @@ public class KubernetesGkeJobController implements GkeJobController {
                 "runAsNonRoot", true,
                 "runAsUser", 10000,
                 "capabilities", Map.of("drop", List.of("ALL"))));
-        container.put("volumeMounts", List.of(
-                Map.of("name", "workspace", "mountPath", "/workspace", "subPath", request.taskDirectory(),
-                        "readOnly", request.workspaceReadOnly()),
-                Map.of("name", "tmp", "mountPath", "/tmp")));
+        container.put("volumeMounts", volumeMounts);
 
         Map<String, Object> podSpec = new LinkedHashMap<>();
         podSpec.put("serviceAccountName", properties.jobServiceAccount());
@@ -145,14 +158,13 @@ public class KubernetesGkeJobController implements GkeJobController {
         podSpec.put("restartPolicy", "Never");
         podSpec.put("securityContext", Map.of("seccompProfile", Map.of("type", "RuntimeDefault")));
         podSpec.put("containers", List.of(container));
-        podSpec.put("volumes", List.of(
-                Map.of("name", "workspace", "persistentVolumeClaim", Map.of("claimName", properties.workspaceClaim())),
-                Map.of("name", "tmp", "emptyDir", Map.of("sizeLimit", "64Mi"))));
+        podSpec.put("volumes", volumes);
 
         return Map.of(
                 "apiVersion", "batch/v1",
                 "kind", "Job",
-                "metadata", Map.of("name", name, "namespace", properties.namespace(), "labels", labels),
+                "metadata", Map.of("name", name, "namespace", properties.namespace(), "labels", labels,
+                        "annotations", Map.of("ai-factory.io/profile-id", request.profileId())),
                 "spec", Map.of(
                         "backoffLimit", 0,
                         "activeDeadlineSeconds", request.timeout().toSeconds(),

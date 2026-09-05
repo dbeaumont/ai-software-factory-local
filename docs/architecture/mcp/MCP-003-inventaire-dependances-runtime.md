@@ -25,7 +25,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | Orchestration | `orchestrator` | clé LiteLLM et clé d'attestation d'approbation | `factory-workspace` en lecture/écriture, prompts en lecture seule | `factory` vers LiteLLM ; `mcp-internal` vers les cinq serveurs MCP | `sa-orchestrator` ; aucun secret Gitea/Sonar/Artifactory/Docker |
 | Inférence | `litellm`, fournisseur cloud | `LITELLM_MASTER_KEY`, `VAULT_OPENAI_API_KEY`/`OPENAI_API_KEY` | aucun volume de modèle | egress TLS vers le fournisseur cloud | identité LiteLLM dédiée, secrets fournisseur dans Secret Manager |
 | Contexte dépôt | `repository-context-mcp` | aucun secret runtime | `factory-workspace:/workspace/tasks:ro` et registre de contexte | uniquement `mcp-internal`; aucun egress attendu | `sa-repository-context-mcp`, lecture limitée au workspace de la tentative |
-| Validation/application de patch | `sandbox-execution-mcp` et conteneur sandbox | aucun secret fonctionnel | workspace partagé ; `sandbox-job-state`; socket Docker local | MCP sur `mcp-internal`; job avec réseau `none` | `sa-sandbox-controller` puis identité éphémère de tentative GKE |
+| Validation/application de patch | `sandbox-execution-mcp` et runner sandbox | aucun secret fonctionnel | workspace partagé ; `sandbox-job-state` | MCP sur `mcp-internal`; runner sur `sandbox-control` sans egress | `sa-sandbox-controller` puis identité éphémère de tentative GKE |
 | Tests | jobs sandbox `test-maven-v1`, `test-gradle-v1`, `test-node-v1` | `ARTIFACTORY_TOKEN` si miroir authentifié | workspace ; cache `ai-factory-m2` réservé à Maven | réseau interne `sandbox-egress`; Artifactory direct et domaines Gradle/npm via proxy allow-listé | contrôleur sandbox/identité de job, secret à durée courte |
 | Qualité | job sandbox `quality-sonar-v1` | `SONAR_TOKEN`, éventuellement `ARTIFACTORY_TOKEN` | workspace, cache Maven, rapports `.ai-factory` | réseau interne `sandbox-quality`; SonarQube, Artifactory et proxy filtré | contrôleur sandbox pour produire le rapport ; `assurance-mcp` pour le verdict |
 | Sécurité | job sandbox `security-syft-trivy-v1` | aucun dans le profil actuel | workspace, SBOM et rapport `.ai-factory` | réseau interne `sandbox-egress`; la cible reste un scan sans réseau avec bases préchargées | identité de job sandbox ; mises à jour de bases via pipeline séparé |
@@ -67,7 +67,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 |---|---|---|---|---|
 | `factory-workspace` | orchestrateur RW ; `repository-context-mcp` RO ; contrôleur sandbox RO ; jobs sandbox RO ou RW selon profil | partagé entre tâches par nom de sous-répertoire | frontière interservices fondée sur un chemin local et isolation dépendante de `task_id` | espace par `task_id` + `attempt_id`, handle opaque, source figée et artefacts par digest |
 | `sandbox-job-state` | `sandbox-execution-mcp` | RW | persistance locale des handles et heartbeats | stockage durable/idempotent du contrôleur ; Cloud SQL/Firestore selon choix d'architecture |
-| `/var/run/docker.sock` | `sandbox-execution-mcp` seulement | accès au daemon via groupe `DOCKER_SOCKET_GID` | équivaut à un privilège hôte élevé | suppression complète avec le contrôleur de Jobs GKE ; MCP-089/MCP-092 |
+| runners Compose statiques | `sandbox-execution-mcp` via API interne authentifiée | profils et réseaux séparés, aucun port hôte | isolation de processus plus faible que gVisor | usage local uniquement ; Jobs GKE en environnement partagé |
 | `ai-factory-m2` | jobs tests/qualité, créé dynamiquement | RW partagé | accélère Maven mais peut mélanger des artefacts entre tâches | cache proxy/mirror contrôlé ou cache segmenté et non fiable |
 | prompts hôte vers `/opt/ai-factory/resources/prompts` | orchestrateur | RO | source des prompts versionnés | registre signé/versionné ; jamais modifiable par un agent |
 | `gitea-data`, `gitea-db-data` | Gitea/PostgreSQL | persistants | données SCM | service SCM d'entreprise, hors serveurs MCP |
@@ -99,7 +99,7 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 | orchestrateur | `sandbox-execution-mcp:8092/mcp` | jobs sandbox | conserver sur réseau privé avec audience/scopes dédiés |
 | orchestrateur | `scm-delivery-mcp:8093/mcp` | résolution SCM et livraison approuvée | conserver sur réseau privé avec identité dédiée |
 | `repository-context-mcp` | aucune destination réseau métier | lecture du volume RO | rester sans egress |
-| contrôleur sandbox | socket Unix Docker | création/inspection de conteneurs | remplacer par API contrôleur GKE, sans droit de création de Job pour l'orchestrateur |
+| contrôleur sandbox | runners Compose sur `sandbox-control` ou API Kubernetes | soumission de profils immuables | aucun droit de création de Job pour l'orchestrateur |
 | job tests | Artifactory/mirrors Maven/npm | dépendances | egress proxy allow-listé par FQDN/port et profil |
 | job qualité | SonarQube + Artifactory | scan et dépendances | egress proxy allow-listé ; aucune autre destination interne |
 | job sécurité | proxy filtré sur `sandbox-egress` | bases Syft/Trivy | viser des bases préchargées et un réseau `none` lorsque le cycle de mise à jour est maîtrisé |
@@ -112,10 +112,10 @@ Les fichiers locaux `.env` et `.vault` ne sont pas lus ni reproduits. Les noms p
 
 | Identité actuelle | Nature/droits | Problème | Identité cible |
 |---|---|---|---|
-| processus orchestrateur | utilisateur par défaut de l'image, actuellement sans directive `USER` dédiée | identité Unix non durcie | utilisateur non-root + `sa-orchestrator`, client MCP seulement |
+| processus orchestrateur UID `10000` | non-root, client MCP seulement | identité workload encore absente en Compose | `sa-orchestrator`, client MCP seulement |
 | `context-mcp` UID `10001` | non-root, volume workspace RO | pas encore d'identité applicative pour authentifier l'appelant | `sa-repository-context-mcp` avec aucune permission réseau/backend |
-| `sandbox-mcp` UID `10002` + groupe du socket | non-root dans le conteneur mais accès puissant au daemon Docker | privilège effectif élevé | `sa-sandbox-controller`; droit minimal de créer seulement les jobs/profils approuvés |
-| conteneur sandbox | identité de l'image, sans compte métier propre | partage du daemon/réseau/cache | service account Kubernetes par classe de job ou identité éphémère par tentative, gVisor |
+| `sandbox-mcp` UID `10002` | non-root et sans accès au daemon | authentification locale par secret partagé | `sa-sandbox-controller`; droit minimal de créer seulement les jobs/profils approuvés |
+| runner sandbox UID `10000` | non-root, réseau et profils bornés par service | runner persistant en local | service account Kubernetes sans token monté, gVisor |
 | `aiadmin` Gitea | compte administrateur POC utilisé pour la livraison | sur-privilégié et confondu avec le bootstrap | compte technique SCM non-admin, scope dépôt/PR ; reviewers nominatifs séparés |
 | compte lié à `SONAR_TOKEN` | scanner SonarQube | portée à vérifier | identité d'analyse dédiée ; identité Assurance distincte en lecture |
 | compte lié à `ARTIFACTORY_TOKEN` | lecture du miroir | même secret pour build d'image et runtime | identités distinctes CI/build et sandbox, lecture par dépôt |
@@ -130,7 +130,7 @@ La cible GCP applique un compte de service distinct pour l'orchestrateur et chaq
 | D1 | Clos : jeton et accès Gitea direct retirés de l'orchestrateur ; livraison confiée à `scm-delivery-mcp`. | MCP-123 |
 | D2 | Les serveurs MCP ne valident pas encore une identité, une audience et des scopes propres à l'appelant ; TLS est traité séparément. | MCP-211 à MCP-213 |
 | D3 | La séparation et l'allow-list sont effectives dans Docker local ; leur équivalent GKE, DNS et metadata reste à appliquer. | MCP-092/MCP-216 |
-| D4 | `docker.sock` reste monté dans le contrôleur sandbox local. | MCP-089 et MCP-092 |
+| D4 | Clos : socket supprimée, runtime Docker retiré et contrôle de non-régression ajouté. | MCP-089 et MCP-092 |
 | D5 | Secrets runtime statiques dans `.env`/`.vault`, malgré une bonne séparation partielle des détenteurs. | MCP-217 |
 | D6 | Workspace partagé et cache Maven non segmenté par tentative. | schémas communs `attempt_id`, lot sandbox et MCP-145 à MCP-151 |
 | D7 | Clos localement : Evidence MCP fournit un backend chiffré et immuable ; l'adaptateur GCS reste à implémenter. | MCP-145 à MCP-151 |

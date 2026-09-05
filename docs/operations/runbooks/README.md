@@ -13,6 +13,7 @@
 | Serveur MCP suspect ou preuve altérée | couper serveur/outils et geler les effets | [MCP compromis](MCP-COMPROMIS.md) |
 | Backlog ou saturation | suspendre les admissions hiérarchiques | [Saturation](SATURATION.md) |
 | Temporal indisponible | préserver l'historique et geler les effets inconnus | [Temporal indisponible](TEMPORAL-INDISPONIBLE.md) |
+| Backend sandbox indisponible | suspendre les admissions et réconcilier les exécutions | [Sandbox indisponible](SANDBOX-BACKEND-INDISPONIBLE.md) |
 
 Tous les runbooks sont fail-closed : ils ne permettent ni de contourner un gate, ni de répéter un effet dont
 l'issue est inconnue, ni de supprimer une preuve pour rétablir le service.

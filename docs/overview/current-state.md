@@ -73,8 +73,8 @@ Cette distinction est indispensable pour lire le dépôt sans confondre code pr�
 | Agents hiérarchiques | Disponible, non qualifié | rôles vides et verdict `INCOMPLETE` par défaut |
 | Evidence durable de bout en bout | Partiel | le serveur existe ; le pipeline de référence garde surtout fichiers et état en mémoire |
 | Projection PostgreSQL métier | Disponible, non câblée | migrations présentes, aucun adaptateur `TaskMemory` PostgreSQL actif |
-| Sandbox Docker | Active | le contrôleur MCP crée des conteneurs via la socket Docker |
-| Sandbox GKE | Cible | runtime conditionnel présent, mais `GkeJobController` n'a pas d'implémentation opérationnelle |
+| Sandbox Compose | Active | quatre runners statiques non-root exécutent des profils fermés sans accès au daemon Docker |
+| Sandbox GKE | Disponible, non qualifiée | contrôleur Kubernetes et politiques présents ; cluster, stockage et identités cibles à valider |
 | GCS/KMS | Cible | génération de descripteurs immuables seulement, sans client Cloud Storage |
 
 ## 2. Périmètre fonctionnel
@@ -452,7 +452,7 @@ flowchart LR
    embarqué.
 4. Extraire ensuite le pool qui apporte le plus de valeur, généralement la revue indépendante ou le code à forte
    charge, sans modifier les droits d'effet.
-5. Déporter la sandbox vers GKE et supprimer la socket Docker locale.
+5. Qualifier sur le cluster cible le backend GKE désormais disponible ; la socket Docker locale est supprimée.
 6. Activer par canary, avec kill switch et retour immédiat au pipeline embarqué.
 
 La décision de sortie doit être mesurée : taux de succès, p95/p99, coût par tâche, incidents, régressions de
@@ -529,9 +529,9 @@ profil d'exécution arbitraire, ni un réseau, ni une commande libre.
 Chaque conteneur de job est plafonné à 2 CPU, 2 Gio de mémoire et 512 PID, avec suppression de toutes les
 capabilities Linux et `no-new-privileges`. Le profil est choisi côté serveur à partir de l'opération demandée.
 
-`SandboxRuntime` abstrait l'exécuteur. `DockerSandboxRuntime` est actif localement. `GkeSandboxRuntime` est une
-préparation : sans implémentation de `GkeJobController`, il ne constitue pas encore une sandbox Kubernetes prête à
-déployer.
+`SandboxRuntime` abstrait l'exécuteur. `ComposeSandboxRuntime` distribue localement les profils vers quatre runners
+statiques sans socket Docker. `GkeSandboxRuntime` utilise l'implémentation Kubernetes de `GkeJobController` ; son
+activation opérationnelle nécessite encore le cluster, le PVC, les secrets et les identités de la plateforme cible.
 
 ### 4.6 Modes durable et hiérarchique
 
@@ -621,7 +621,7 @@ et doit être arbitré ; l'absence de preuve ou l'ambiguïté ne vaut pas accept
 
 | Risque | Constat | Impact | Traitement recommandé |
 |---|---|---|---|
-| Socket Docker | montée dans `sandbox-execution-mcp` | contrôle quasi-root de l'hôte en cas de compromission du contrôleur | remplacer par un exécuteur distant sans socket : GKE Jobs, microVM ou API Docker fortement filtrée |
+| Runner Compose persistant | séparation de processus plus faible que gVisor/microVM | persistance possible entre deux jobs si le nettoyage est défaillant | usage local uniquement, profils séparés, filesystem read-only et reconstruction régulière |
 | API sans identité | aucune authentification, RBAC ni limitation de débit devant `/api` | création/approbation/annulation accessibles à tout client joignant le port | OIDC/SSO au proxy, RBAC, CSRF pour l'UI et rate limiting |
 | Secrets de développement | plusieurs valeurs Compose ont des défauts simples | compromission immédiate hors poste isolé | secrets uniques, Secret Manager/Vault, rotation et interdiction de valeurs par défaut |
 | Réseaux/ports | Gitea, Sonar, Artifactory, Prometheus, Grafana et orchestrateur sont publiés | surface d'attaque locale ou LAN selon le bind | binder sur loopback en local, publier uniquement le reverse proxy en environnement partagé |
@@ -631,13 +631,12 @@ et doit être arbitré ; l'absence de preuve ou l'ambiguïté ne vaut pas accept
 | Chaîne d'approvisionnement | certaines images sont taguées sans digest ; téléchargements Syft/Trivy non vérifiés explicitement | substitution ou dérive d'image | pin par digest, vérification SHA/signature, génération de provenance |
 | Analyse partielle | qualité Sonar seulement pour Maven | couverture différente pour Gradle/npm | profils Sonar Gradle/npm ou gates alternatives documentées |
 
-### 5.5 À propos de `/var/run/docker.sock`
+### 5.5 Retrait de `/var/run/docker.sock`
 
-Le montage n'est pas une nécessité fonctionnelle de l'usine ; c'est une dépendance de l'adaptateur local
-`DockerSandboxRuntime`. La bonne cible consiste à conserver l'interface `SandboxRuntime` et à déporter les jobs vers
-un service d'exécution qui ne partage pas le daemon de l'hôte. Le port GKE déjà amorcé va dans cette direction, mais
-il faut encore implémenter le contrôleur, l'identité, les NetworkPolicies, les quotas, la collecte de preuves et le
-nettoyage des jobs. Un proxy de socket local réduit l'API exposée mais ne donne pas une isolation équivalente.
+Le montage a été retiré de tous les services. En local, `ComposeSandboxRuntime` délègue uniquement un profil enregistré
+à des runners statiques séparés par capacité ; aucun appelant ne choisit commande, image, volume, réseau ou secret.
+En cible partagée, le contrôleur Kubernetes crée des Jobs GKE par digest avec identité, ressources et NetworkPolicy
+bornées. Un garde-fou CI refuse la réintroduction de la socket et de l'ancien runtime.
 
 ### 5.6 Classification et rétention prévues
 

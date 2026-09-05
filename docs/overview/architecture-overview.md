@@ -588,8 +588,9 @@ Chaque job est plafonné à 2 CPU, 2 Gio et 512 PID, sans capability Linux et av
 `no-new-privileges`. L’appelant ne fournit jamais de commande shell, d’image, de volume, de réseau ou de variable
 d’environnement arbitraire.
 
-Risque résiduel majeur : `sandbox-execution-mcp` monte `/var/run/docker.sock`. Une compromission de ce contrôleur
-peut compromettre l’hôte. Ce backend est acceptable uniquement pour un POC local isolé.
+Le mode local s'appuie sur des runners Compose statiques sans accès au daemon Docker. Ils restent moins isolés que
+les Jobs GKE/gVisor et sont donc réservés au développement local. Le backend partagé applique RBAC, Pod Security,
+quotas, images par digest et politiques réseau dans un namespace dédié.
 
 ---
 
