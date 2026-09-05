@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,40 @@ TOKEN = "a" * 64
 DIGEST = "b" * 64
 PORT = 18088
 RUNNER = Path(__file__).with_name("runner.py")
+RUNNER_SPEC = importlib.util.spec_from_file_location("sandbox_runner", RUNNER)
+RUNNER_MODULE = importlib.util.module_from_spec(RUNNER_SPEC)
+RUNNER_SPEC.loader.exec_module(RUNNER_MODULE)
+
+
+class SandboxProcessTest(unittest.TestCase):
+    def test_timeout_kills_the_process_group(self):
+        with tempfile.TemporaryDirectory() as workspace:
+            _, output, _, timed_out = RUNNER_MODULE.bounded_process(
+                "sleep 30 & echo $!; wait", Path(workspace), "d" * 32, 1, 4096
+            )
+            child_pid = int(output.strip())
+
+            self.assertTrue(timed_out)
+            for _ in range(20):
+                state = subprocess.run(
+                    ["ps", "-p", str(child_pid), "-o", "stat="],
+                    capture_output=True, text=True, check=False,
+                ).stdout.strip()
+                if not state or state.startswith("Z"):
+                    break
+                time.sleep(0.05)
+            self.assertTrue(not state or state.startswith("Z"), f"child process remains active: {state}")
+
+    def test_execution_temporary_directory_is_removed(self):
+        with tempfile.TemporaryDirectory() as workspace:
+            exit_code, output, _, timed_out = RUNNER_MODULE.bounded_process(
+                "touch \"$TMPDIR/marker\"; printf '%s' \"$TMPDIR\"",
+                Path(workspace), "e" * 32, 2, 4096,
+            )
+
+            self.assertEqual(0, exit_code)
+            self.assertFalse(timed_out)
+            self.assertFalse(Path(output).exists())
 
 
 class SandboxRunnerTest(unittest.TestCase):
@@ -24,7 +59,7 @@ class SandboxRunnerTest(unittest.TestCase):
         env.update({
             "AI_FACTORY_SANDBOX_RUNNER_TOKEN": TOKEN,
             "AI_FACTORY_SANDBOX_IMAGE": "sha256:" + DIGEST,
-            "AI_FACTORY_RUNNER_ALLOWED_PROFILES": "patch-check-v1",
+            "AI_FACTORY_RUNNER_ALLOWED_PROFILES": "patch-check-v1,patch-apply-v1",
             "AI_FACTORY_RUNNER_WORKSPACE_ROOT": str(self.workspace),
             "AI_FACTORY_SANDBOX_MAX_OUTPUT_CHARS": "4096",
             "AI_FACTORY_RUNNER_PORT": str(PORT),
@@ -77,6 +112,26 @@ class SandboxRunnerTest(unittest.TestCase):
         response = json.load(self.request(self.valid_payload()))
         self.assertNotEqual(0, response["exit_code"])
         self.assertFalse(response["timed_out"])
+
+    def test_applies_a_registered_patch_to_the_task_workspace(self):
+        task = self.workspace / "task-1"
+        subprocess.run(["git", "init", "-q", str(task)], check=True)
+        (task / "message.txt").write_text("before\n")
+        (task / "changes.patch").write_text(
+            "diff --git a/message.txt b/message.txt\n"
+            "--- a/message.txt\n"
+            "+++ b/message.txt\n"
+            "@@ -1 +1 @@\n"
+            "-before\n"
+            "+after\n"
+        )
+        payload = self.valid_payload()
+        payload["profile_id"] = "patch-apply-v1"
+
+        response = json.load(self.request(payload))
+
+        self.assertEqual(0, response["exit_code"])
+        self.assertEqual("after\n", (task / "message.txt").read_text())
 
     def test_rejects_caller_supplied_command(self):
         marker = self.workspace / "escaped"

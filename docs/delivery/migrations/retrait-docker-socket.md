@@ -99,7 +99,7 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 - [x] Borner la taille des requêtes, des réponses et des logs.
 - [x] Propager correctement timeout et annulation au processus enfant.
 - [x] Tuer le groupe de processus complet lors d'une annulation ou d'un timeout.
-- [ ] Nettoyer les fichiers temporaires et secrets après chaque tentative.
+- [x] Nettoyer les fichiers temporaires et secrets après chaque tentative.
 - [x] Empêcher deux écritures concurrentes sur le même workspace de tâche.
 
 ### 6.3 Durcissement du runner local
@@ -240,11 +240,11 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 - [ ] Tests de contrat identiques pour `ComposeSandboxRuntime` et `GkeSandboxRuntime`.
 - [x] Tests négatifs : commande libre, chemin arbitraire, profil inconnu, digest absent et secret non autorisé.
 - [x] Tests de concurrence sur une même tâche et sur plusieurs tâches.
-- [ ] Tests de timeout et suppression de tout le groupe de processus local.
+- [x] Tests de timeout et suppression de tout le groupe de processus local.
 - [x] Tests d'annulation avant démarrage, pendant exécution et après état terminal.
 - [x] Tests de reprise du MCP et de réconciliation des jobs/runners.
 - [x] Tests de bornage et de redaction des logs.
-- [ ] Tests de lecture seule et d'écriture du workspace.
+- [x] Tests de lecture seule et d'écriture du workspace.
 - [ ] Tests de refus réseau et d'absence d'accès au metadata service.
 - [ ] Test end-to-end macOS : build, démarrage Compose, workflow complet et arrêt propre.
 - [ ] Test end-to-end GKE : workflow complet, collecte de preuves et nettoyage du Job.

@@ -63,6 +63,11 @@ class ComposeMcpSecurityTest {
             assertEquals(List.of("ALL"), runner.get("cap_drop"));
             assertTrue(((List<String>) runner.get("security_opt")).contains("no-new-privileges:true"));
         }
+        List<String> readOnlyVolumes = (List<String>) services.get("sandbox-runner-readonly").get("volumes");
+        List<String> writeVolumes = (List<String>) services.get("sandbox-runner-write").get("volumes");
+        assertTrue(readOnlyVolumes.stream().anyMatch(volume -> volume.endsWith(":/factory-tasks:ro")));
+        assertTrue(writeVolumes.stream().anyMatch(volume -> volume.endsWith(":/factory-tasks")));
+        assertTrue(writeVolumes.stream().noneMatch(volume -> volume.endsWith(":/factory-tasks:ro")));
     }
 
     private static Path composeFile() {

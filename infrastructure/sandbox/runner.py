@@ -9,7 +9,9 @@ import os
 from pathlib import Path
 import re
 import signal
+import shutil
 import subprocess
+import tempfile
 import threading
 import sys
 
@@ -75,49 +77,57 @@ ACTIVE_LOCK = threading.Lock()
 
 
 def bounded_process(script, workspace, execution_id, timeout_seconds, max_output):
-    process = subprocess.Popen(
-        ["bash", "-lc", script], cwd=workspace, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, start_new_session=True,
-    )
-    with ACTIVE_LOCK:
-        ACTIVE[execution_id] = process
-    chunks = deque()
-    retained = 0
-    truncated = False
-
-    def read_output():
-        nonlocal retained, truncated
-        while True:
-            chunk = process.stdout.read(4096)
-            if not chunk:
-                return
-            chunks.append(chunk)
-            retained += len(chunk)
-            while retained > max_output and chunks:
-                overflow = retained - max_output
-                first = chunks[0]
-                if len(first) <= overflow:
-                    retained -= len(chunks.popleft())
-                else:
-                    chunks[0] = first[overflow:]
-                    retained -= overflow
-                truncated = True
-
-    reader = threading.Thread(target=read_output, name=f"runner-output-{execution_id}", daemon=True)
-    reader.start()
-    timed_out = False
+    execution_temp = Path(tempfile.mkdtemp(prefix=f"ai-factory-sandbox-{execution_id}-"))
+    environment = os.environ.copy()
+    environment["TMPDIR"] = str(execution_temp)
     try:
-        process.wait(timeout=timeout_seconds)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        os.killpg(process.pid, signal.SIGKILL)
-        process.wait(timeout=10)
-    finally:
-        reader.join(timeout=10)
+        process = subprocess.Popen(
+            ["bash", "-lc", script], cwd=workspace, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, start_new_session=True, env=environment,
+        )
         with ACTIVE_LOCK:
-            ACTIVE.pop(execution_id, None)
-    output = b"".join(chunks).decode("utf-8", errors="replace")
-    return process.returncode, output, truncated, timed_out
+            ACTIVE[execution_id] = process
+        chunks = deque()
+        retained = 0
+        truncated = False
+
+        def read_output():
+            nonlocal retained, truncated
+            while True:
+                chunk = process.stdout.read(4096)
+                if not chunk:
+                    return
+                chunks.append(chunk)
+                retained += len(chunk)
+                while retained > max_output and chunks:
+                    overflow = retained - max_output
+                    first = chunks[0]
+                    if len(first) <= overflow:
+                        retained -= len(chunks.popleft())
+                    else:
+                        chunks[0] = first[overflow:]
+                        retained -= overflow
+                    truncated = True
+
+        reader = threading.Thread(target=read_output, name=f"runner-output-{execution_id}", daemon=True)
+        reader.start()
+        timed_out = False
+        try:
+            process.wait(timeout=timeout_seconds)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait(timeout=10)
+        finally:
+            reader.join(timeout=10)
+            if process.stdout is not None:
+                process.stdout.close()
+            with ACTIVE_LOCK:
+                ACTIVE.pop(execution_id, None)
+        output = b"".join(chunks).decode("utf-8", errors="replace")
+        return process.returncode, output, truncated, timed_out
+    finally:
+        shutil.rmtree(execution_temp, ignore_errors=True)
 
 
 class Handler(BaseHTTPRequestHandler):
