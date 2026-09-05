@@ -1,0 +1,3115 @@
+{
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-09-05",
+  "metadata": {
+    "ack_level_update": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "ack_level_update counter"
+      }
+    ],
+    "acquire_shards_count": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "acquire_shards_count counter"
+      }
+    ],
+    "acquire_shards_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "acquire_shards_latency histogram"
+      }
+    ],
+    "action": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "action counter"
+      }
+    ],
+    "activity_info_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "activity_info_count histogram"
+      }
+    ],
+    "activity_info_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "activity_info_size histogram"
+      }
+    ],
+    "ai_evidence_altered": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_active_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_active_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_client_calls": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_client_duration_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_client_duration_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_client_errors": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_sandbox_calls": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_sandbox_duration_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_sandbox_duration_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_sandbox_errors": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_mcp_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_planner_contract_retries": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "Planner calls retried once after an invalid response contract"
+      }
+    ],
+    "ai_factory_sandbox_heartbeat_invalid": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_factory_tasks_completed": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "Tasks that completed validation"
+      }
+    ],
+    "ai_factory_tasks_failed": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "Tasks that failed before approval"
+      }
+    ],
+    "ai_factory_tasks_submitted": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "Tasks submitted to the factory"
+      }
+    ],
+    "ai_task_queue_active": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "ai_task_queue_saturation_ratio": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "application_ready_time_seconds": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "Time taken for the application to be ready to service requests"
+      }
+    ],
+    "application_started_time_seconds": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "Time taken to start the application"
+      }
+    ],
+    "approximate_backlog_age_seconds": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "approximate_backlog_age_seconds gauge"
+      }
+    ],
+    "approximate_backlog_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "approximate_backlog_count gauge"
+      }
+    ],
+    "buffered_events_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "buffered_events_count histogram"
+      }
+    ],
+    "buffered_events_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "buffered_events_size histogram"
+      }
+    ],
+    "build_age": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "build_age gauge"
+      }
+    ],
+    "build_information": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "build_information gauge"
+      }
+    ],
+    "cache_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "cache_latency histogram"
+      }
+    ],
+    "cache_miss": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "cache_miss counter"
+      }
+    ],
+    "cache_pinned_usage": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "cache_pinned_usage gauge"
+      }
+    ],
+    "cache_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "cache_requests counter"
+      }
+    ],
+    "cache_size": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "cache_size gauge"
+      }
+    ],
+    "cache_ttl": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "cache_ttl histogram"
+      }
+    ],
+    "cache_usage": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "cache_usage gauge"
+      }
+    ],
+    "chasm_total_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "chasm_total_size histogram"
+      }
+    ],
+    "child_info_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "child_info_count histogram"
+      }
+    ],
+    "child_info_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "child_info_size histogram"
+      }
+    ],
+    "client_errors": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "client_errors counter"
+      }
+    ],
+    "client_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "client_latency histogram"
+      }
+    ],
+    "client_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "client_requests counter"
+      }
+    ],
+    "dd_cluster_metadata_callback_lock_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "dd_cluster_metadata_callback_lock_latency histogram"
+      }
+    ],
+    "dd_cluster_metadata_lock_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "dd_cluster_metadata_lock_latency histogram"
+      }
+    ],
+    "dd_namespace_registry_lock_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "dd_namespace_registry_lock_latency histogram"
+      }
+    ],
+    "dd_shard_controller_lock_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "dd_shard_controller_lock_latency histogram"
+      }
+    ],
+    "dd_shard_io_semaphore_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "dd_shard_io_semaphore_latency histogram"
+      }
+    ],
+    "dd_shard_lock_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "dd_shard_lock_latency histogram"
+      }
+    ],
+    "disk_free_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "Usable space for path"
+      }
+    ],
+    "disk_total_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "Total space for path"
+      }
+    ],
+    "dynamic_config_update_failure": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "dynamic_config_update_failure gauge"
+      }
+    ],
+    "event_blob_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "event_blob_size histogram"
+      }
+    ],
+    "execution_info_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "execution_info_size histogram"
+      }
+    ],
+    "execution_state_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "execution_state_size histogram"
+      }
+    ],
+    "executor_active_threads": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The approximate number of threads that are actively executing tasks"
+      }
+    ],
+    "executor_completed_tasks": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "The approximate total number of tasks that have completed execution"
+      }
+    ],
+    "executor_pool_core_threads": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The core number of threads for the pool"
+      }
+    ],
+    "executor_pool_max_threads": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The maximum allowed number of threads in the pool"
+      }
+    ],
+    "executor_pool_size_threads": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The current number of threads in the pool"
+      }
+    ],
+    "executor_queue_remaining_tasks": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The number of additional elements that this queue can ideally accept without blocking"
+      }
+    ],
+    "executor_queued_tasks": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The approximate number of tasks that are queued for execution"
+      }
+    ],
+    "fair_lease_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "fair_lease_requests counter"
+      }
+    ],
+    "fair_physical_approximate_backlog_age_seconds": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "fair_physical_approximate_backlog_age_seconds gauge"
+      }
+    ],
+    "fair_physical_approximate_backlog_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "fair_physical_approximate_backlog_count gauge"
+      }
+    ],
+    "fair_task_lag_per_tl": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "fair_task_lag_per_tl gauge"
+      }
+    ],
+    "force_loaded_task_queue_partition_unnecessarily_count": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "force_loaded_task_queue_partition_unnecessarily_count counter"
+      }
+    ],
+    "force_loaded_task_queue_partitions_count": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "force_loaded_task_queue_partitions_count counter"
+      }
+    ],
+    "forwarded": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "forwarded counter"
+      }
+    ],
+    "forwarded_per_tl": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "forwarded_per_tl counter"
+      }
+    ],
+    "get_engine_for_shard_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "get_engine_for_shard_latency histogram"
+      }
+    ],
+    "gomaxprocs": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "gomaxprocs gauge"
+      }
+    ],
+    "header_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "header_size histogram"
+      }
+    ],
+    "history_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "history_count histogram"
+      }
+    ],
+    "history_event_notification_inflight_message_gauge": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "history_event_notification_inflight_message_gauge gauge"
+      }
+    ],
+    "history_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "history_size histogram"
+      }
+    ],
+    "history_workflow_execution_cache_lock_hold_duration": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "history_workflow_execution_cache_lock_hold_duration histogram"
+      }
+    ],
+    "host_rps_limit": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "host_rps_limit gauge"
+      }
+    ],
+    "http_client_requests_active_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "http_client_requests_active_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "http_client_requests_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "http_client_requests_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "http_server_requests_active_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "http_server_requests_active_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "http_server_requests_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "http_server_requests_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "jvm": [
+      {
+        "type": "info",
+        "unit": "",
+        "help": "JVM version info"
+      }
+    ],
+    "jvm_buffer_count_buffers": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "An estimate of the number of buffers in the pool"
+      }
+    ],
+    "jvm_buffer_memory_used_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "An estimate of the memory that the Java virtual machine is using for this buffer pool"
+      }
+    ],
+    "jvm_buffer_total_capacity_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "An estimate of the total capacity of the buffers in this pool"
+      }
+    ],
+    "jvm_classes_loaded_classes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The number of classes that are currently loaded in the Java virtual machine"
+      }
+    ],
+    "jvm_classes_loaded_count_classes": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "The number of classes loaded in the Java virtual machine"
+      }
+    ],
+    "jvm_classes_unloaded_classes": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "The number of classes unloaded in the Java virtual machine"
+      }
+    ],
+    "jvm_compilation_time_ms": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "The approximate accumulated elapsed time spent in compilation"
+      }
+    ],
+    "jvm_gc_live_data_size_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "Size of long-lived heap memory pool after reclamation"
+      }
+    ],
+    "jvm_gc_max_data_size_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "Max size of long-lived heap memory pool"
+      }
+    ],
+    "jvm_gc_memory_allocated_bytes": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "Incremented for an increase in the size of the (young) heap memory pool after one GC to before the next"
+      }
+    ],
+    "jvm_gc_memory_promoted_bytes": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "Count of positive increases in the size of the old generation memory pool before GC to after GC"
+      }
+    ],
+    "jvm_gc_overhead": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "An approximation of the percent of CPU time used by GC activities over the last lookback period or since monitoring began, whichever is shorter, in the range [0..1]"
+      }
+    ],
+    "jvm_memory_committed_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The amount of memory in bytes that is committed for the Java virtual machine to use"
+      }
+    ],
+    "jvm_memory_max_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The maximum amount of memory in bytes that can be used for memory management"
+      }
+    ],
+    "jvm_memory_usage_after_gc": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The percentage of long-lived heap pool used after the last GC event, in the range [0..1]"
+      }
+    ],
+    "jvm_memory_used_bytes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The amount of used memory"
+      }
+    ],
+    "jvm_threads_daemon_threads": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The current number of live daemon threads"
+      }
+    ],
+    "jvm_threads_live_threads": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The current number of live threads including both daemon and non-daemon threads"
+      }
+    ],
+    "jvm_threads_peak_threads": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The peak live thread count since the Java virtual machine started or peak was reset"
+      }
+    ],
+    "jvm_threads_started_threads": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "The total number of application threads started in the JVM"
+      }
+    ],
+    "jvm_threads_states_threads": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The current number of threads"
+      }
+    ],
+    "lease_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "lease_requests counter"
+      }
+    ],
+    "loaded_physical_task_queue_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "loaded_physical_task_queue_count gauge"
+      }
+    ],
+    "loaded_task_queue_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "loaded_task_queue_count gauge"
+      }
+    ],
+    "loaded_task_queue_family_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "loaded_task_queue_family_count gauge"
+      }
+    ],
+    "loaded_task_queue_partition_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "loaded_task_queue_partition_count gauge"
+      }
+    ],
+    "lock_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "lock_latency histogram"
+      }
+    ],
+    "lock_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "lock_requests counter"
+      }
+    ],
+    "logback_events": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "Number of log events that were enabled by the effective log level"
+      }
+    ],
+    "mcp_client_calls": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "mcp_client_duration_seconds": [
+      {
+        "type": "summary",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "mcp_client_duration_seconds_max": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "mcp_client_inflight": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": " "
+      }
+    ],
+    "membership_changed_count": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "membership_changed_count counter"
+      }
+    ],
+    "memo_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "memo_size histogram"
+      }
+    ],
+    "memory_allocated": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_allocated gauge"
+      }
+    ],
+    "memory_frees": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_frees gauge"
+      }
+    ],
+    "memory_gc_pause_ms": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "memory_gc_pause_ms histogram"
+      }
+    ],
+    "memory_heap": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_heap gauge"
+      }
+    ],
+    "memory_heap_objects": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_heap_objects gauge"
+      }
+    ],
+    "memory_heapidle": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_heapidle gauge"
+      }
+    ],
+    "memory_heapinuse": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_heapinuse gauge"
+      }
+    ],
+    "memory_heapreleased": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_heapreleased gauge"
+      }
+    ],
+    "memory_mallocs": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_mallocs gauge"
+      }
+    ],
+    "memory_num_gc": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "memory_num_gc histogram"
+      }
+    ],
+    "memory_num_gc_last": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_num_gc_last gauge"
+      }
+    ],
+    "memory_pause_total_ns_last": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_pause_total_ns_last gauge"
+      }
+    ],
+    "memory_stack": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "memory_stack gauge"
+      }
+    ],
+    "mutable_state_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "mutable_state_size histogram"
+      }
+    ],
+    "namespace_registry_refresh_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "namespace_registry_refresh_latency histogram"
+      }
+    ],
+    "new_timer_notifications": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "new_timer_notifications counter"
+      }
+    ],
+    "num_goroutines": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "num_goroutines gauge"
+      }
+    ],
+    "numshards_gauge": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "numshards_gauge gauge"
+      }
+    ],
+    "operation": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "operation counter"
+      }
+    ],
+    "pending_tasks": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "pending_tasks histogram"
+      }
+    ],
+    "persistence_error_with_type": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "persistence_error_with_type counter"
+      }
+    ],
+    "persistence_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "persistence_latency histogram"
+      }
+    ],
+    "persistence_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "persistence_requests counter"
+      }
+    ],
+    "persistence_session_refresh_attempts": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "persistence_session_refresh_attempts counter"
+      }
+    ],
+    "persistence_shard_rps": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "persistence_shard_rps histogram"
+      }
+    ],
+    "persistence_sql_idle_conn": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "persistence_sql_idle_conn gauge"
+      }
+    ],
+    "persistence_sql_in_use": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "persistence_sql_in_use gauge"
+      }
+    ],
+    "persistence_sql_max_open_conn": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "persistence_sql_max_open_conn gauge"
+      }
+    ],
+    "persistence_sql_open_conn": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "persistence_sql_open_conn gauge"
+      }
+    ],
+    "physical_approximate_backlog_age_seconds": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "physical_approximate_backlog_age_seconds gauge"
+      }
+    ],
+    "physical_approximate_backlog_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "physical_approximate_backlog_count gauge"
+      }
+    ],
+    "poll_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "poll_latency histogram"
+      }
+    ],
+    "poll_timeouts": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "poll_timeouts counter"
+      }
+    ],
+    "pri_lease_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "pri_lease_requests counter"
+      }
+    ],
+    "pri_physical_approximate_backlog_age_seconds": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "pri_physical_approximate_backlog_age_seconds gauge"
+      }
+    ],
+    "pri_physical_approximate_backlog_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "pri_physical_approximate_backlog_count gauge"
+      }
+    ],
+    "pri_poll_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "pri_poll_latency histogram"
+      }
+    ],
+    "pri_poll_timeouts": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "pri_poll_timeouts counter"
+      }
+    ],
+    "pri_task_lag_per_tl": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "pri_task_lag_per_tl gauge"
+      }
+    ],
+    "process_cpu_time_ns": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "The \"cpu time\" used by the Java Virtual Machine process"
+      }
+    ],
+    "process_cpu_usage": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The \"recent cpu usage\" for the Java Virtual Machine process"
+      }
+    ],
+    "process_files_max_files": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The maximum file descriptor count"
+      }
+    ],
+    "process_files_open_files": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The open file descriptor count"
+      }
+    ],
+    "process_start_time_seconds": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "Start time of the process since unix epoch."
+      }
+    ],
+    "process_uptime_seconds": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The uptime of the Java virtual machine"
+      }
+    ],
+    "queue_reader_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "queue_reader_count histogram"
+      }
+    ],
+    "queue_slice_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "queue_slice_count histogram"
+      }
+    ],
+    "replication_task_cleanup_count": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "replication_task_cleanup_count counter"
+      }
+    ],
+    "replication_tasks_lag": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "replication_tasks_lag histogram"
+      }
+    ],
+    "request_cancel_info_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "request_cancel_info_count histogram"
+      }
+    ],
+    "request_cancel_info_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "request_cancel_info_size histogram"
+      }
+    ],
+    "restarts": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "restarts counter"
+      }
+    ],
+    "semaphore_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "semaphore_latency histogram"
+      }
+    ],
+    "semaphore_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "semaphore_requests counter"
+      }
+    ],
+    "service_authorization_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "service_authorization_latency histogram"
+      }
+    ],
+    "service_dial_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "service_dial_latency histogram"
+      }
+    ],
+    "service_dial_success": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "service_dial_success counter"
+      }
+    ],
+    "service_error_with_type": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "service_error_with_type counter"
+      }
+    ],
+    "service_grpc_conn_accepted": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "service_grpc_conn_accepted counter"
+      }
+    ],
+    "service_grpc_conn_active": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "service_grpc_conn_active gauge"
+      }
+    ],
+    "service_grpc_conn_closed": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "service_grpc_conn_closed counter"
+      }
+    ],
+    "service_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "service_latency histogram"
+      }
+    ],
+    "service_latency_nouserlatency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "service_latency_nouserlatency histogram"
+      }
+    ],
+    "service_latency_userlatency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "service_latency_userlatency histogram"
+      }
+    ],
+    "service_pending_requests": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "service_pending_requests gauge"
+      }
+    ],
+    "service_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "service_requests counter"
+      }
+    ],
+    "shardinfo_immediate_queue_lag": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "shardinfo_immediate_queue_lag histogram"
+      }
+    ],
+    "shardinfo_scheduled_queue_lag": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "shardinfo_scheduled_queue_lag histogram"
+      }
+    ],
+    "sharditem_acquisition_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "sharditem_acquisition_latency histogram"
+      }
+    ],
+    "sharditem_created_count": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "sharditem_created_count counter"
+      }
+    ],
+    "signal_info_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "signal_info_count histogram"
+      }
+    ],
+    "signal_info_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "signal_info_size histogram"
+      }
+    ],
+    "signal_request_id_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "signal_request_id_count histogram"
+      }
+    ],
+    "signal_request_id_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "signal_request_id_size histogram"
+      }
+    ],
+    "state_transition_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "state_transition_count histogram"
+      }
+    ],
+    "system_cpu_count": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The number of processors available to the Java virtual machine"
+      }
+    ],
+    "system_cpu_usage": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The \"recent cpu usage\" of the system the application is running in"
+      }
+    ],
+    "system_load_average_1m": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "The sum of the number of runnable entities queued to available processors and the number of runnable entities running on the available processors averaged over a period of time"
+      }
+    ],
+    "tally_internal_counter_cardinality": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "tally_internal_counter_cardinality gauge"
+      }
+    ],
+    "tally_internal_gauge_cardinality": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "tally_internal_gauge_cardinality gauge"
+      }
+    ],
+    "tally_internal_histogram_cardinality": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "tally_internal_histogram_cardinality gauge"
+      }
+    ],
+    "tally_internal_num_active_scopes": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "tally_internal_num_active_scopes gauge"
+      }
+    ],
+    "task_attempt": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "task_attempt histogram"
+      }
+    ],
+    "task_batch_complete_counter": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "task_batch_complete_counter counter"
+      }
+    ],
+    "task_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "task_count histogram"
+      }
+    ],
+    "task_lag_per_tl": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "task_lag_per_tl gauge"
+      }
+    ],
+    "task_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "task_latency histogram"
+      }
+    ],
+    "task_latency_load": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "task_latency_load histogram"
+      }
+    ],
+    "task_latency_processing": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "task_latency_processing histogram"
+      }
+    ],
+    "task_latency_queue": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "task_latency_queue histogram"
+      }
+    ],
+    "task_latency_schedule": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "task_latency_schedule histogram"
+      }
+    ],
+    "task_processing_no_persistence_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "task_processing_no_persistence_latency histogram"
+      }
+    ],
+    "task_queue_started": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "task_queue_started counter"
+      }
+    ],
+    "task_queue_stopped": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "task_queue_stopped counter"
+      }
+    ],
+    "task_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "task_requests counter"
+      }
+    ],
+    "tasks_per_shardinfo_update": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "tasks_per_shardinfo_update histogram"
+      }
+    ],
+    "temporal_activity_poll_no_task": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "temporal_activity_poll_no_task counter"
+      }
+    ],
+    "temporal_long_request": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "temporal_long_request counter"
+      }
+    ],
+    "temporal_long_request_attempt": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "temporal_long_request_attempt counter"
+      }
+    ],
+    "temporal_long_request_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "temporal_long_request_latency histogram"
+      }
+    ],
+    "temporal_long_request_latency_attempt": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "temporal_long_request_latency_attempt histogram"
+      }
+    ],
+    "temporal_num_pollers": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "temporal_num_pollers gauge"
+      }
+    ],
+    "temporal_poller_start": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "temporal_poller_start counter"
+      }
+    ],
+    "temporal_request": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "temporal_request counter"
+      }
+    ],
+    "temporal_request_attempt": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "temporal_request_attempt counter"
+      }
+    ],
+    "temporal_request_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "temporal_request_latency histogram"
+      }
+    ],
+    "temporal_request_latency_attempt": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "temporal_request_latency_attempt histogram"
+      }
+    ],
+    "temporal_worker_start": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "temporal_worker_start counter"
+      }
+    ],
+    "temporal_worker_task_slots_available": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "temporal_worker_task_slots_available gauge"
+      }
+    ],
+    "temporal_worker_task_slots_used": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "temporal_worker_task_slots_used gauge"
+      }
+    ],
+    "temporal_workflow_task_queue_poll_empty": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "temporal_workflow_task_queue_poll_empty counter"
+      }
+    ],
+    "time_between_shardinfo_update": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "time_between_shardinfo_update histogram"
+      }
+    ],
+    "timer_info_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "timer_info_count histogram"
+      }
+    ],
+    "timer_info_size": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "timer_info_size histogram"
+      }
+    ],
+    "total_activity_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "total_activity_count histogram"
+      }
+    ],
+    "total_child_execution_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "total_child_execution_count histogram"
+      }
+    ],
+    "total_namespaces": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "total_namespaces gauge"
+      }
+    ],
+    "total_request_cancel_external_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "total_request_cancel_external_count histogram"
+      }
+    ],
+    "total_signal_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "total_signal_count histogram"
+      }
+    ],
+    "total_signal_external_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "total_signal_external_count histogram"
+      }
+    ],
+    "total_user_timer_count": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "total_user_timer_count histogram"
+      }
+    ],
+    "version_check_failed": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "version_check_failed counter"
+      }
+    ],
+    "version_check_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "version_check_latency histogram"
+      }
+    ],
+    "version_check_request_failed": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "version_check_request_failed counter"
+      }
+    ],
+    "visibility_persistence_latency": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "visibility_persistence_latency histogram"
+      }
+    ],
+    "visibility_persistence_requests": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "visibility_persistence_requests counter"
+      }
+    ],
+    "worker_registry_activity_slots_used": [
+      {
+        "type": "histogram",
+        "unit": "",
+        "help": "worker_registry_activity_slots_used histogram"
+      }
+    ],
+    "worker_registry_capacity_utilization": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "worker_registry_capacity_utilization gauge"
+      }
+    ],
+    "worker_registry_eviction_blocked_by_age": [
+      {
+        "type": "gauge",
+        "unit": "",
+        "help": "worker_registry_eviction_blocked_by_age gauge"
+      }
+    ],
+    "worker_registry_workers_added": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "worker_registry_workers_added counter"
+      }
+    ],
+    "workflow_context_cleared": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "workflow_context_cleared counter"
+      }
+    ],
+    "workflow_task_timeout_overrides": [
+      {
+        "type": "counter",
+        "unit": "",
+        "help": "workflow_task_timeout_overrides counter"
+      }
+    ]
+  },
+  "orchestratorLabelProfiles": {
+    "ai_evidence_altered_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_active_seconds_count": {
+      "seriesCount": 6,
+      "labelNames": [
+        "ai_kind",
+        "ai_operation",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "ai_kind": 1,
+        "ai_operation": 6,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_active_seconds_max": {
+      "seriesCount": 6,
+      "labelNames": [
+        "ai_kind",
+        "ai_operation",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "ai_kind": 1,
+        "ai_operation": 6,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_active_seconds_sum": {
+      "seriesCount": 6,
+      "labelNames": [
+        "ai_kind",
+        "ai_operation",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "ai_kind": 1,
+        "ai_operation": 6,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_client_calls_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "server"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "server": 1
+      }
+    },
+    "ai_factory_mcp_client_duration_seconds_count": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "server"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "server": 1
+      }
+    },
+    "ai_factory_mcp_client_duration_seconds_max": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "server"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "server": 1
+      }
+    },
+    "ai_factory_mcp_client_duration_seconds_sum": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "server"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "server": 1
+      }
+    },
+    "ai_factory_mcp_client_errors_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "server"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "server": 1
+      }
+    },
+    "ai_factory_mcp_sandbox_calls_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_sandbox_duration_seconds_count": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_sandbox_duration_seconds_max": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_sandbox_duration_seconds_sum": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_sandbox_errors_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_seconds_count": {
+      "seriesCount": 6,
+      "labelNames": [
+        "ai_kind",
+        "ai_operation",
+        "error",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "ai_kind": 1,
+        "ai_operation": 6,
+        "error": 1,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_seconds_max": {
+      "seriesCount": 6,
+      "labelNames": [
+        "ai_kind",
+        "ai_operation",
+        "error",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "ai_kind": 1,
+        "ai_operation": 6,
+        "error": 1,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_mcp_seconds_sum": {
+      "seriesCount": 6,
+      "labelNames": [
+        "ai_kind",
+        "ai_operation",
+        "error",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "ai_kind": 1,
+        "ai_operation": 6,
+        "error": 1,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_planner_contract_retries_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_sandbox_heartbeat_invalid_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_tasks_completed_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_tasks_failed_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_factory_tasks_submitted_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "ai_task_queue_active": {
+      "seriesCount": 7,
+      "labelNames": [
+        "instance",
+        "job",
+        "perimeter"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "perimeter": 7
+      }
+    },
+    "ai_task_queue_saturation_ratio": {
+      "seriesCount": 7,
+      "labelNames": [
+        "instance",
+        "job",
+        "perimeter"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "perimeter": 7
+      }
+    },
+    "application_ready_time_seconds": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "main_application_class"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "main_application_class": 1
+      }
+    },
+    "application_started_time_seconds": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "main_application_class"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "main_application_class": 1
+      }
+    },
+    "disk_free_bytes": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "path"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "path": 1
+      }
+    },
+    "disk_total_bytes": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "path"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "path": 1
+      }
+    },
+    "executor_active_threads": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "name"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "name": 1
+      }
+    },
+    "executor_completed_tasks_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "name"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "name": 1
+      }
+    },
+    "executor_pool_core_threads": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "name"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "name": 1
+      }
+    },
+    "executor_pool_max_threads": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "name"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "name": 1
+      }
+    },
+    "executor_pool_size_threads": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "name"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "name": 1
+      }
+    },
+    "executor_queue_remaining_tasks": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "name"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "name": 1
+      }
+    },
+    "executor_queued_tasks": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "name"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "name": 1
+      }
+    },
+    "http_client_requests_active_seconds_count": {
+      "seriesCount": 11,
+      "labelNames": [
+        "client_name",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "client_name": 6,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 1,
+        "uri": 1
+      }
+    },
+    "http_client_requests_active_seconds_max": {
+      "seriesCount": 11,
+      "labelNames": [
+        "client_name",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "client_name": 6,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 1,
+        "uri": 1
+      }
+    },
+    "http_client_requests_active_seconds_sum": {
+      "seriesCount": 11,
+      "labelNames": [
+        "client_name",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "client_name": 6,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 1,
+        "uri": 1
+      }
+    },
+    "http_client_requests_seconds_count": {
+      "seriesCount": 16,
+      "labelNames": [
+        "client_name",
+        "error",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "client_name": 6,
+        "error": 1,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 2,
+        "status": 3,
+        "uri": 2
+      }
+    },
+    "http_client_requests_seconds_max": {
+      "seriesCount": 16,
+      "labelNames": [
+        "client_name",
+        "error",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "client_name": 6,
+        "error": 1,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 2,
+        "status": 3,
+        "uri": 2
+      }
+    },
+    "http_client_requests_seconds_sum": {
+      "seriesCount": 16,
+      "labelNames": [
+        "client_name",
+        "error",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "client_name": 6,
+        "error": 1,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 2,
+        "status": 3,
+        "uri": 2
+      }
+    },
+    "http_server_requests_active_seconds_count": {
+      "seriesCount": 2,
+      "labelNames": [
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 1,
+        "uri": 1
+      }
+    },
+    "http_server_requests_active_seconds_max": {
+      "seriesCount": 2,
+      "labelNames": [
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 1,
+        "uri": 1
+      }
+    },
+    "http_server_requests_active_seconds_sum": {
+      "seriesCount": 2,
+      "labelNames": [
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 1,
+        "uri": 1
+      }
+    },
+    "http_server_requests_seconds_count": {
+      "seriesCount": 6,
+      "labelNames": [
+        "error",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "error": 1,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 2,
+        "uri": 5
+      }
+    },
+    "http_server_requests_seconds_max": {
+      "seriesCount": 6,
+      "labelNames": [
+        "error",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "error": 1,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 2,
+        "uri": 5
+      }
+    },
+    "http_server_requests_seconds_sum": {
+      "seriesCount": 6,
+      "labelNames": [
+        "error",
+        "exception",
+        "instance",
+        "job",
+        "method",
+        "outcome",
+        "status",
+        "uri"
+      ],
+      "labelCardinality": {
+        "error": 1,
+        "exception": 1,
+        "instance": 1,
+        "job": 1,
+        "method": 2,
+        "outcome": 1,
+        "status": 2,
+        "uri": 5
+      }
+    },
+    "jvm_buffer_count_buffers": {
+      "seriesCount": 3,
+      "labelNames": [
+        "id",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "id": 3,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_buffer_memory_used_bytes": {
+      "seriesCount": 3,
+      "labelNames": [
+        "id",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "id": 3,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_buffer_total_capacity_bytes": {
+      "seriesCount": 3,
+      "labelNames": [
+        "id",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "id": 3,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_classes_loaded_classes": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_classes_loaded_count_classes_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_classes_unloaded_classes_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_compilation_time_ms_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "compiler",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "compiler": 1,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_gc_live_data_size_bytes": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_gc_max_data_size_bytes": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_gc_memory_allocated_bytes_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_gc_memory_promoted_bytes_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_gc_overhead": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_gc_pause_seconds_count": {
+      "seriesCount": 1,
+      "labelNames": [
+        "action",
+        "cause",
+        "gc",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "action": 1,
+        "cause": 1,
+        "gc": 1,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_gc_pause_seconds_max": {
+      "seriesCount": 1,
+      "labelNames": [
+        "action",
+        "cause",
+        "gc",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "action": 1,
+        "cause": 1,
+        "gc": 1,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_gc_pause_seconds_sum": {
+      "seriesCount": 1,
+      "labelNames": [
+        "action",
+        "cause",
+        "gc",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "action": 1,
+        "cause": 1,
+        "gc": 1,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_info": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job",
+        "runtime",
+        "vendor",
+        "version"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "runtime": 1,
+        "vendor": 1,
+        "version": 1
+      }
+    },
+    "jvm_memory_committed_bytes": {
+      "seriesCount": 8,
+      "labelNames": [
+        "area",
+        "id",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "area": 2,
+        "id": 8,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_memory_max_bytes": {
+      "seriesCount": 8,
+      "labelNames": [
+        "area",
+        "id",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "area": 2,
+        "id": 8,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_memory_usage_after_gc": {
+      "seriesCount": 1,
+      "labelNames": [
+        "area",
+        "instance",
+        "job",
+        "pool"
+      ],
+      "labelCardinality": {
+        "area": 1,
+        "instance": 1,
+        "job": 1,
+        "pool": 1
+      }
+    },
+    "jvm_memory_used_bytes": {
+      "seriesCount": 8,
+      "labelNames": [
+        "area",
+        "id",
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "area": 2,
+        "id": 8,
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_threads_daemon_threads": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_threads_live_threads": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_threads_peak_threads": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_threads_started_threads_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "jvm_threads_states_threads": {
+      "seriesCount": 6,
+      "labelNames": [
+        "instance",
+        "job",
+        "state"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "state": 6
+      }
+    },
+    "logback_events_total": {
+      "seriesCount": 5,
+      "labelNames": [
+        "instance",
+        "job",
+        "level"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "level": 5
+      }
+    },
+    "mcp_client_calls_total": {
+      "seriesCount": 6,
+      "labelNames": [
+        "instance",
+        "job",
+        "outcome",
+        "server",
+        "tool"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "outcome": 1,
+        "server": 2,
+        "tool": 6
+      }
+    },
+    "mcp_client_duration_seconds_count": {
+      "seriesCount": 6,
+      "labelNames": [
+        "instance",
+        "job",
+        "outcome",
+        "server",
+        "tool"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "outcome": 1,
+        "server": 2,
+        "tool": 6
+      }
+    },
+    "mcp_client_duration_seconds_max": {
+      "seriesCount": 6,
+      "labelNames": [
+        "instance",
+        "job",
+        "outcome",
+        "server",
+        "tool"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "outcome": 1,
+        "server": 2,
+        "tool": 6
+      }
+    },
+    "mcp_client_duration_seconds_sum": {
+      "seriesCount": 6,
+      "labelNames": [
+        "instance",
+        "job",
+        "outcome",
+        "server",
+        "tool"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "outcome": 1,
+        "server": 2,
+        "tool": 6
+      }
+    },
+    "mcp_client_inflight": {
+      "seriesCount": 5,
+      "labelNames": [
+        "instance",
+        "job",
+        "server"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1,
+        "server": 5
+      }
+    },
+    "process_cpu_time_ns_total": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "process_cpu_usage": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "process_files_max_files": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "process_files_open_files": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "process_start_time_seconds": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "process_uptime_seconds": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "scrape_duration_seconds": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "scrape_samples_post_metric_relabeling": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "scrape_samples_scraped": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "scrape_series_added": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "system_cpu_count": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "system_cpu_usage": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "system_load_average_1m": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    },
+    "up": {
+      "seriesCount": 1,
+      "labelNames": [
+        "instance",
+        "job"
+      ],
+      "labelCardinality": {
+        "instance": 1,
+        "job": 1
+      }
+    }
+  },
+  "temporalCardinalityReference": "See runtime.tsdb in prometheus-grafana-baseline-2026-09-05.json; full Temporal labels are intentionally not duplicated."
+}

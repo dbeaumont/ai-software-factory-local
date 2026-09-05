@@ -1,0 +1,948 @@
+{
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-09-05",
+  "sourceCommit": "33884ec6f2e0b74b0728bc91fa95e12106300fff",
+  "purpose": "Offline parity reference captured before the immediate OpenTelemetry/SigNoz cutover.",
+  "runtime": {
+    "metricsByTarget": {
+      "orchestrator": [
+        "ai_evidence_altered_total",
+        "ai_factory_mcp_active_seconds_count",
+        "ai_factory_mcp_active_seconds_max",
+        "ai_factory_mcp_active_seconds_sum",
+        "ai_factory_mcp_client_calls_total",
+        "ai_factory_mcp_client_duration_seconds_count",
+        "ai_factory_mcp_client_duration_seconds_max",
+        "ai_factory_mcp_client_duration_seconds_sum",
+        "ai_factory_mcp_client_errors_total",
+        "ai_factory_mcp_sandbox_calls_total",
+        "ai_factory_mcp_sandbox_duration_seconds_count",
+        "ai_factory_mcp_sandbox_duration_seconds_max",
+        "ai_factory_mcp_sandbox_duration_seconds_sum",
+        "ai_factory_mcp_sandbox_errors_total",
+        "ai_factory_mcp_seconds_count",
+        "ai_factory_mcp_seconds_max",
+        "ai_factory_mcp_seconds_sum",
+        "ai_factory_planner_contract_retries_total",
+        "ai_factory_sandbox_heartbeat_invalid_total",
+        "ai_factory_tasks_completed_total",
+        "ai_factory_tasks_failed_total",
+        "ai_factory_tasks_submitted_total",
+        "ai_task_queue_active",
+        "ai_task_queue_saturation_ratio",
+        "application_ready_time_seconds",
+        "application_started_time_seconds",
+        "disk_free_bytes",
+        "disk_total_bytes",
+        "executor_active_threads",
+        "executor_completed_tasks_total",
+        "executor_pool_core_threads",
+        "executor_pool_max_threads",
+        "executor_pool_size_threads",
+        "executor_queue_remaining_tasks",
+        "executor_queued_tasks",
+        "http_client_requests_active_seconds_count",
+        "http_client_requests_active_seconds_max",
+        "http_client_requests_active_seconds_sum",
+        "http_client_requests_seconds_count",
+        "http_client_requests_seconds_max",
+        "http_client_requests_seconds_sum",
+        "http_server_requests_active_seconds_count",
+        "http_server_requests_active_seconds_max",
+        "http_server_requests_active_seconds_sum",
+        "http_server_requests_seconds_count",
+        "http_server_requests_seconds_max",
+        "http_server_requests_seconds_sum",
+        "jvm_buffer_count_buffers",
+        "jvm_buffer_memory_used_bytes",
+        "jvm_buffer_total_capacity_bytes",
+        "jvm_classes_loaded_classes",
+        "jvm_classes_loaded_count_classes_total",
+        "jvm_classes_unloaded_classes_total",
+        "jvm_compilation_time_ms_total",
+        "jvm_gc_live_data_size_bytes",
+        "jvm_gc_max_data_size_bytes",
+        "jvm_gc_memory_allocated_bytes_total",
+        "jvm_gc_memory_promoted_bytes_total",
+        "jvm_gc_overhead",
+        "jvm_gc_pause_seconds_count",
+        "jvm_gc_pause_seconds_max",
+        "jvm_gc_pause_seconds_sum",
+        "jvm_info",
+        "jvm_memory_committed_bytes",
+        "jvm_memory_max_bytes",
+        "jvm_memory_usage_after_gc",
+        "jvm_memory_used_bytes",
+        "jvm_threads_daemon_threads",
+        "jvm_threads_live_threads",
+        "jvm_threads_peak_threads",
+        "jvm_threads_started_threads_total",
+        "jvm_threads_states_threads",
+        "logback_events_total",
+        "mcp_client_calls_total",
+        "mcp_client_duration_seconds_count",
+        "mcp_client_duration_seconds_max",
+        "mcp_client_duration_seconds_sum",
+        "mcp_client_inflight",
+        "process_cpu_time_ns_total",
+        "process_cpu_usage",
+        "process_files_max_files",
+        "process_files_open_files",
+        "process_start_time_seconds",
+        "process_uptime_seconds",
+        "scrape_duration_seconds",
+        "scrape_samples_post_metric_relabeling",
+        "scrape_samples_scraped",
+        "scrape_series_added",
+        "system_cpu_count",
+        "system_cpu_usage",
+        "system_load_average_1m",
+        "up"
+      ],
+      "temporal": [
+        "ack_level_update",
+        "acquire_shards_count",
+        "acquire_shards_latency_bucket",
+        "acquire_shards_latency_count",
+        "acquire_shards_latency_sum",
+        "action",
+        "activity_info_count_bucket",
+        "activity_info_count_count",
+        "activity_info_count_sum",
+        "activity_info_size_bucket",
+        "activity_info_size_count",
+        "activity_info_size_sum",
+        "approximate_backlog_age_seconds",
+        "approximate_backlog_count",
+        "buffered_events_count_bucket",
+        "buffered_events_count_count",
+        "buffered_events_count_sum",
+        "buffered_events_size_bucket",
+        "buffered_events_size_count",
+        "buffered_events_size_sum",
+        "build_age",
+        "build_information",
+        "cache_latency_bucket",
+        "cache_latency_count",
+        "cache_latency_sum",
+        "cache_miss",
+        "cache_pinned_usage",
+        "cache_requests",
+        "cache_size",
+        "cache_ttl_bucket",
+        "cache_ttl_count",
+        "cache_ttl_sum",
+        "cache_usage",
+        "chasm_total_size_bucket",
+        "chasm_total_size_count",
+        "chasm_total_size_sum",
+        "child_info_count_bucket",
+        "child_info_count_count",
+        "child_info_count_sum",
+        "child_info_size_bucket",
+        "child_info_size_count",
+        "child_info_size_sum",
+        "client_errors",
+        "client_latency_bucket",
+        "client_latency_count",
+        "client_latency_sum",
+        "client_requests",
+        "dd_cluster_metadata_callback_lock_latency_bucket",
+        "dd_cluster_metadata_callback_lock_latency_count",
+        "dd_cluster_metadata_callback_lock_latency_sum",
+        "dd_cluster_metadata_lock_latency_bucket",
+        "dd_cluster_metadata_lock_latency_count",
+        "dd_cluster_metadata_lock_latency_sum",
+        "dd_namespace_registry_lock_latency_bucket",
+        "dd_namespace_registry_lock_latency_count",
+        "dd_namespace_registry_lock_latency_sum",
+        "dd_shard_controller_lock_latency_bucket",
+        "dd_shard_controller_lock_latency_count",
+        "dd_shard_controller_lock_latency_sum",
+        "dd_shard_io_semaphore_latency_bucket",
+        "dd_shard_io_semaphore_latency_count",
+        "dd_shard_io_semaphore_latency_sum",
+        "dd_shard_lock_latency_bucket",
+        "dd_shard_lock_latency_count",
+        "dd_shard_lock_latency_sum",
+        "dynamic_config_update_failure",
+        "event_blob_size_bucket",
+        "event_blob_size_count",
+        "event_blob_size_sum",
+        "execution_info_size_bucket",
+        "execution_info_size_count",
+        "execution_info_size_sum",
+        "execution_state_size_bucket",
+        "execution_state_size_count",
+        "execution_state_size_sum",
+        "fair_lease_requests",
+        "fair_physical_approximate_backlog_age_seconds",
+        "fair_physical_approximate_backlog_count",
+        "fair_task_lag_per_tl",
+        "force_loaded_task_queue_partition_unnecessarily_count",
+        "force_loaded_task_queue_partitions_count",
+        "forwarded",
+        "forwarded_per_tl",
+        "get_engine_for_shard_latency_bucket",
+        "get_engine_for_shard_latency_count",
+        "get_engine_for_shard_latency_sum",
+        "gomaxprocs",
+        "header_size_bucket",
+        "header_size_count",
+        "header_size_sum",
+        "history_count_bucket",
+        "history_count_count",
+        "history_count_sum",
+        "history_event_notification_inflight_message_gauge",
+        "history_size_bucket",
+        "history_size_count",
+        "history_size_sum",
+        "history_workflow_execution_cache_lock_hold_duration_bucket",
+        "history_workflow_execution_cache_lock_hold_duration_count",
+        "history_workflow_execution_cache_lock_hold_duration_sum",
+        "host_rps_limit",
+        "lease_requests",
+        "loaded_physical_task_queue_count",
+        "loaded_task_queue_count",
+        "loaded_task_queue_family_count",
+        "loaded_task_queue_partition_count",
+        "lock_latency_bucket",
+        "lock_latency_count",
+        "lock_latency_sum",
+        "lock_requests",
+        "membership_changed_count",
+        "memo_size_bucket",
+        "memo_size_count",
+        "memo_size_sum",
+        "memory_allocated",
+        "memory_frees",
+        "memory_gc_pause_ms_bucket",
+        "memory_gc_pause_ms_count",
+        "memory_gc_pause_ms_sum",
+        "memory_heap",
+        "memory_heap_objects",
+        "memory_heapidle",
+        "memory_heapinuse",
+        "memory_heapreleased",
+        "memory_mallocs",
+        "memory_num_gc_bucket",
+        "memory_num_gc_count",
+        "memory_num_gc_last",
+        "memory_num_gc_sum",
+        "memory_pause_total_ns_last",
+        "memory_stack",
+        "mutable_state_size_bucket",
+        "mutable_state_size_count",
+        "mutable_state_size_sum",
+        "namespace_registry_refresh_latency_bucket",
+        "namespace_registry_refresh_latency_count",
+        "namespace_registry_refresh_latency_sum",
+        "new_timer_notifications",
+        "num_goroutines",
+        "numshards_gauge",
+        "operation",
+        "pending_tasks_bucket",
+        "pending_tasks_count",
+        "pending_tasks_sum",
+        "persistence_error_with_type",
+        "persistence_latency_bucket",
+        "persistence_latency_count",
+        "persistence_latency_sum",
+        "persistence_requests",
+        "persistence_session_refresh_attempts",
+        "persistence_shard_rps_bucket",
+        "persistence_shard_rps_count",
+        "persistence_shard_rps_sum",
+        "persistence_sql_idle_conn",
+        "persistence_sql_in_use",
+        "persistence_sql_max_open_conn",
+        "persistence_sql_open_conn",
+        "physical_approximate_backlog_age_seconds",
+        "physical_approximate_backlog_count",
+        "poll_latency_bucket",
+        "poll_latency_count",
+        "poll_latency_sum",
+        "poll_timeouts",
+        "pri_lease_requests",
+        "pri_physical_approximate_backlog_age_seconds",
+        "pri_physical_approximate_backlog_count",
+        "pri_poll_latency_bucket",
+        "pri_poll_latency_count",
+        "pri_poll_latency_sum",
+        "pri_poll_timeouts",
+        "pri_task_lag_per_tl",
+        "queue_reader_count_bucket",
+        "queue_reader_count_count",
+        "queue_reader_count_sum",
+        "queue_slice_count_bucket",
+        "queue_slice_count_count",
+        "queue_slice_count_sum",
+        "replication_task_cleanup_count",
+        "replication_tasks_lag_bucket",
+        "replication_tasks_lag_count",
+        "replication_tasks_lag_sum",
+        "request_cancel_info_count_bucket",
+        "request_cancel_info_count_count",
+        "request_cancel_info_count_sum",
+        "request_cancel_info_size_bucket",
+        "request_cancel_info_size_count",
+        "request_cancel_info_size_sum",
+        "restarts",
+        "scrape_duration_seconds",
+        "scrape_samples_post_metric_relabeling",
+        "scrape_samples_scraped",
+        "scrape_series_added",
+        "semaphore_latency_bucket",
+        "semaphore_latency_count",
+        "semaphore_latency_sum",
+        "semaphore_requests",
+        "service_authorization_latency_bucket",
+        "service_authorization_latency_count",
+        "service_authorization_latency_sum",
+        "service_dial_latency_bucket",
+        "service_dial_latency_count",
+        "service_dial_latency_sum",
+        "service_dial_success",
+        "service_error_with_type",
+        "service_grpc_conn_accepted",
+        "service_grpc_conn_active",
+        "service_grpc_conn_closed",
+        "service_latency_bucket",
+        "service_latency_count",
+        "service_latency_nouserlatency_bucket",
+        "service_latency_nouserlatency_count",
+        "service_latency_nouserlatency_sum",
+        "service_latency_sum",
+        "service_latency_userlatency_bucket",
+        "service_latency_userlatency_count",
+        "service_latency_userlatency_sum",
+        "service_pending_requests",
+        "service_requests",
+        "shardinfo_immediate_queue_lag_bucket",
+        "shardinfo_immediate_queue_lag_count",
+        "shardinfo_immediate_queue_lag_sum",
+        "shardinfo_scheduled_queue_lag_bucket",
+        "shardinfo_scheduled_queue_lag_count",
+        "shardinfo_scheduled_queue_lag_sum",
+        "sharditem_acquisition_latency_bucket",
+        "sharditem_acquisition_latency_count",
+        "sharditem_acquisition_latency_sum",
+        "sharditem_created_count",
+        "signal_info_count_bucket",
+        "signal_info_count_count",
+        "signal_info_count_sum",
+        "signal_info_size_bucket",
+        "signal_info_size_count",
+        "signal_info_size_sum",
+        "signal_request_id_count_bucket",
+        "signal_request_id_count_count",
+        "signal_request_id_count_sum",
+        "signal_request_id_size_bucket",
+        "signal_request_id_size_count",
+        "signal_request_id_size_sum",
+        "state_transition_count_bucket",
+        "state_transition_count_count",
+        "state_transition_count_sum",
+        "tally_internal_counter_cardinality",
+        "tally_internal_gauge_cardinality",
+        "tally_internal_histogram_cardinality",
+        "tally_internal_num_active_scopes",
+        "task_attempt_bucket",
+        "task_attempt_count",
+        "task_attempt_sum",
+        "task_batch_complete_counter",
+        "task_count_bucket",
+        "task_count_count",
+        "task_count_sum",
+        "task_lag_per_tl",
+        "task_latency_bucket",
+        "task_latency_count",
+        "task_latency_load_bucket",
+        "task_latency_load_count",
+        "task_latency_load_sum",
+        "task_latency_processing_bucket",
+        "task_latency_processing_count",
+        "task_latency_processing_sum",
+        "task_latency_queue_bucket",
+        "task_latency_queue_count",
+        "task_latency_queue_sum",
+        "task_latency_schedule_bucket",
+        "task_latency_schedule_count",
+        "task_latency_schedule_sum",
+        "task_latency_sum",
+        "task_processing_no_persistence_latency_bucket",
+        "task_processing_no_persistence_latency_count",
+        "task_processing_no_persistence_latency_sum",
+        "task_queue_started",
+        "task_queue_stopped",
+        "task_requests",
+        "tasks_per_shardinfo_update_bucket",
+        "tasks_per_shardinfo_update_count",
+        "tasks_per_shardinfo_update_sum",
+        "temporal_activity_poll_no_task",
+        "temporal_long_request",
+        "temporal_long_request_attempt",
+        "temporal_long_request_latency_attempt_bucket",
+        "temporal_long_request_latency_attempt_count",
+        "temporal_long_request_latency_attempt_sum",
+        "temporal_long_request_latency_bucket",
+        "temporal_long_request_latency_count",
+        "temporal_long_request_latency_sum",
+        "temporal_num_pollers",
+        "temporal_poller_start",
+        "temporal_request",
+        "temporal_request_attempt",
+        "temporal_request_latency_attempt_bucket",
+        "temporal_request_latency_attempt_count",
+        "temporal_request_latency_attempt_sum",
+        "temporal_request_latency_bucket",
+        "temporal_request_latency_count",
+        "temporal_request_latency_sum",
+        "temporal_worker_start",
+        "temporal_worker_task_slots_available",
+        "temporal_worker_task_slots_used",
+        "temporal_workflow_task_queue_poll_empty",
+        "time_between_shardinfo_update_bucket",
+        "time_between_shardinfo_update_count",
+        "time_between_shardinfo_update_sum",
+        "timer_info_count_bucket",
+        "timer_info_count_count",
+        "timer_info_count_sum",
+        "timer_info_size_bucket",
+        "timer_info_size_count",
+        "timer_info_size_sum",
+        "total_activity_count_bucket",
+        "total_activity_count_count",
+        "total_activity_count_sum",
+        "total_child_execution_count_bucket",
+        "total_child_execution_count_count",
+        "total_child_execution_count_sum",
+        "total_namespaces",
+        "total_request_cancel_external_count_bucket",
+        "total_request_cancel_external_count_count",
+        "total_request_cancel_external_count_sum",
+        "total_signal_count_bucket",
+        "total_signal_count_count",
+        "total_signal_count_sum",
+        "total_signal_external_count_bucket",
+        "total_signal_external_count_count",
+        "total_signal_external_count_sum",
+        "total_user_timer_count_bucket",
+        "total_user_timer_count_count",
+        "total_user_timer_count_sum",
+        "up",
+        "version_check_failed",
+        "version_check_latency_bucket",
+        "version_check_latency_count",
+        "version_check_latency_sum",
+        "version_check_request_failed",
+        "visibility_persistence_latency_bucket",
+        "visibility_persistence_latency_count",
+        "visibility_persistence_latency_sum",
+        "visibility_persistence_requests",
+        "worker_registry_activity_slots_used_bucket",
+        "worker_registry_activity_slots_used_count",
+        "worker_registry_activity_slots_used_sum",
+        "worker_registry_capacity_utilization",
+        "worker_registry_eviction_blocked_by_age",
+        "worker_registry_workers_added",
+        "workflow_context_cleared",
+        "workflow_task_timeout_overrides"
+      ],
+      "repository-context-mcp": [],
+      "sandbox-execution-mcp": [],
+      "scm-delivery-mcp": [],
+      "assurance-mcp": [],
+      "evidence-mcp": []
+    },
+    "targetStatus": [
+      {
+        "job": "orchestrator",
+        "health": "up",
+        "lastError": "",
+        "scrapeUrl": "http://orchestrator:8080/actuator/prometheus"
+      },
+      {
+        "job": "repository-context-mcp",
+        "health": "down",
+        "lastError": "server returned HTTP status 404 Not Found",
+        "scrapeUrl": "http://repository-context-mcp:8091/actuator/prometheus"
+      },
+      {
+        "job": "sandbox-execution-mcp",
+        "health": "down",
+        "lastError": "server returned HTTP status 404 Not Found",
+        "scrapeUrl": "http://sandbox-execution-mcp:8092/actuator/prometheus"
+      },
+      {
+        "job": "temporal",
+        "health": "up",
+        "lastError": "",
+        "scrapeUrl": "http://temporal:8000/metrics"
+      }
+    ],
+    "mcpEndpointObservation": "All five MCP /actuator/prometheus endpoints returned HTTP 404; only two were configured as Prometheus targets.",
+    "tsdb": {
+      "headStats": {
+        "numSeries": 9841,
+        "numLabelPairs": 734,
+        "chunkCount": 9841,
+        "minTime": 1788603670982,
+        "maxTime": 1788604450991
+      },
+      "seriesCountByMetricName": [
+        {
+          "name": "persistence_latency_bucket",
+          "value": 1300
+        },
+        {
+          "name": "poll_latency_bucket",
+          "value": 960
+        },
+        {
+          "name": "pri_poll_latency_bucket",
+          "value": 960
+        },
+        {
+          "name": "service_latency_nouserlatency_bucket",
+          "value": 460
+        },
+        {
+          "name": "service_latency_bucket",
+          "value": 460
+        },
+        {
+          "name": "client_latency_bucket",
+          "value": 280
+        },
+        {
+          "name": "temporal_request_latency_bucket",
+          "value": 160
+        },
+        {
+          "name": "temporal_request_latency_attempt_bucket",
+          "value": 160
+        },
+        {
+          "name": "pending_tasks_bucket",
+          "value": 85
+        },
+        {
+          "name": "queue_slice_count_bucket",
+          "value": 85
+        }
+      ],
+      "labelValueCountByLabelName": [
+        {
+          "name": "__name__",
+          "value": 435
+        },
+        {
+          "name": "operation",
+          "value": 74
+        },
+        {
+          "name": "le",
+          "value": 41
+        },
+        {
+          "name": "id",
+          "value": 11
+        },
+        {
+          "name": "task_queue",
+          "value": 9
+        },
+        {
+          "name": "uri",
+          "value": 9
+        },
+        {
+          "name": "taskqueue",
+          "value": 9
+        },
+        {
+          "name": "perimeter",
+          "value": 7
+        },
+        {
+          "name": "client_name",
+          "value": 7
+        },
+        {
+          "name": "ai_operation",
+          "value": 6
+        }
+      ],
+      "memoryInBytesByLabelName": [
+        {
+          "name": "__name__",
+          "value": 358059
+        },
+        {
+          "name": "operation",
+          "value": 246395
+        },
+        {
+          "name": "instance",
+          "value": 227626
+        },
+        {
+          "name": "service_name",
+          "value": 204677
+        },
+        {
+          "name": "namespace",
+          "value": 194547
+        },
+        {
+          "name": "taskqueue",
+          "value": 129713
+        },
+        {
+          "name": "job",
+          "value": 129216
+        },
+        {
+          "name": "worker_version",
+          "value": 92969
+        },
+        {
+          "name": "namespace_state",
+          "value": 69851
+        },
+        {
+          "name": "task_type",
+          "value": 63944
+        }
+      ],
+      "seriesCountByLabelValuePair": [
+        {
+          "name": "job=temporal",
+          "value": 9544
+        },
+        {
+          "name": "instance=temporal:8000",
+          "value": 9544
+        },
+        {
+          "name": "namespace=temporal_system",
+          "value": 5415
+        },
+        {
+          "name": "service_name=matching",
+          "value": 4233
+        },
+        {
+          "name": "namespace_state=active",
+          "value": 3037
+        },
+        {
+          "name": "worker_version=__unversioned__",
+          "value": 2999
+        },
+        {
+          "name": "operation=TaskQueueMgr",
+          "value": 2891
+        },
+        {
+          "name": "service_name=history",
+          "value": 2863
+        },
+        {
+          "name": "forwarded=false",
+          "value": 2112
+        },
+        {
+          "name": "task_type=Workflow",
+          "value": 1558
+        }
+      ]
+    },
+    "containerFootprint": [
+      {
+        "name": "ai-software-factory-prometheus-1",
+        "cpu": "0.07%",
+        "memory": "60.02MiB / 31.29GiB",
+        "network": "6.02MB / 206kB",
+        "blockIo": "0B / 2.64MB"
+      },
+      {
+        "name": "ai-software-factory-grafana-1",
+        "cpu": "0.62%",
+        "memory": "98.12MiB / 31.29GiB",
+        "network": "23.3MB / 98.9kB",
+        "blockIo": "0B / 89.7MB"
+      }
+    ]
+  },
+  "dashboards": [
+    {
+      "file": "infrastructure/observability/grafana/dashboards/agents.json",
+      "title": "AI Factory Agents",
+      "expressions": [
+        "sum by (role, direction) (rate(ai_agent_tokens_total[5m]))",
+        "sum by (role) (rate(ai_agent_cost_micros_total[5m])) / 1000000",
+        "histogram_quantile(0.95, sum by (le, role) (rate(ai_agent_duration_seconds_bucket[5m])))",
+        "sum by (role, outcome) (rate(ai_agent_duration_seconds_count[5m]))"
+      ]
+    },
+    {
+      "file": "infrastructure/observability/grafana/dashboards/mcp.json",
+      "title": "AI Factory MCP",
+      "expressions": [
+        "sum by (server, outcome) (rate(mcp_client_calls_total[5m]))",
+        "histogram_quantile(0.95, sum by (le, server) (rate(mcp_client_duration_seconds_bucket[5m])))",
+        "sum by (server) (rate(mcp_client_retries_total[5m]))",
+        "sum by (server) (rate(mcp_client_errors_total[5m]))",
+        "sum by (server) (mcp_client_inflight)"
+      ]
+    },
+    {
+      "file": "infrastructure/observability/grafana/dashboards/orchestrator.json",
+      "title": "AI Factory Global",
+      "expressions": [
+        "rate(http_server_requests_seconds_count[5m])",
+        "sum(ai_factory_tasks_submitted_total)",
+        "sum(ai_factory_tasks_completed_total)",
+        "sum(ai_factory_tasks_failed_total)",
+        "sum(rate(ai_agent_duration_seconds_count{outcome=\"success\"}[5m])) / clamp_min(sum(rate(ai_agent_duration_seconds_count[5m])), 1e-9)",
+        "max by (perimeter) (ai_task_queue_saturation_ratio)",
+        "sum by (server) (rate(mcp_client_errors_total[5m]))"
+      ]
+    },
+    {
+      "file": "infrastructure/observability/grafana/dashboards/sandbox.json",
+      "title": "AI Factory Sandbox",
+      "expressions": [
+        "rate(ai_factory_sandbox_jobs_completed_total[5m])",
+        "rate(ai_factory_sandbox_jobs_failed_total[5m])",
+        "sum by (reason) (rate(ai_factory_sandbox_jobs_rejected_total[5m]))",
+        "ai_factory_sandbox_jobs_running",
+        "ai_factory_sandbox_jobs_queued",
+        "histogram_quantile(0.95, sum(rate(ai_factory_sandbox_job_queue_duration_seconds_bucket[5m])) by (le))",
+        "ai_task_queue_saturation_ratio{perimeter=\"sandbox\"}"
+      ]
+    },
+    {
+      "file": "infrastructure/observability/grafana/dashboards/supervisor.json",
+      "title": "AI Factory Supervisor",
+      "expressions": [
+        "sum by (outcome) (rate(ai_agent_duration_seconds_count{role=\"supervisor\"}[5m]))",
+        "sum by (event) (rate(ai_workflow_events_total{event=~\"replan|contradiction|escalation\"}[5m]))",
+        "max by (role) (ai_delegation_fan_out_max)",
+        "max by (role) (ai_delegation_depth_max)"
+      ]
+    },
+    {
+      "file": "infrastructure/observability/grafana/dashboards/temporal.json",
+      "title": "AI Factory Temporal",
+      "expressions": [
+        "up{job=\"temporal\"}",
+        "sum(rate(service_requests{service_name=\"frontend\"}[5m]))",
+        "sum(rate(service_errors{service_name=\"frontend\"}[5m]))",
+        "histogram_quantile(0.95, sum(rate(workflow_task_schedule_to_start_latency_bucket[5m])) by (le))",
+        "sum(rate(persistence_errors[5m]))"
+      ]
+    }
+  ],
+  "alertRules": [
+    {
+      "name": "AiFactoryAgentLoopDetected",
+      "state": "inactive",
+      "query": "increase(ai_agent_failures_total{reason=~\"repeated_call|max_turns\"}[5m]) > 0",
+      "durationSeconds": 60,
+      "labels": {
+        "component": "agents",
+        "severity": "warning"
+      },
+      "annotations": {
+        "description": "An agent stopped after repeating an identical call or exhausting its turn limit.",
+        "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md",
+        "summary": "Agent loop or turn limit detected"
+      }
+    },
+    {
+      "name": "AiFactoryAgentBudgetExhausted",
+      "state": "inactive",
+      "query": "increase(ai_agent_failures_total{stop_condition=\"BUDGET_EXHAUSTED\"}[5m]) > 0",
+      "durationSeconds": 60,
+      "labels": {
+        "component": "agents",
+        "severity": "warning"
+      },
+      "annotations": {
+        "description": "A host-enforced token, cost, turn or fan-out budget stopped an agent.",
+        "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md",
+        "summary": "Agent execution budget exhausted"
+      }
+    },
+    {
+      "name": "AiFactoryAgentCostSpike",
+      "state": "inactive",
+      "query": "sum(increase(ai_agent_cost_micros_total[15m])) > 5000000",
+      "durationSeconds": 300,
+      "labels": {
+        "component": "agents",
+        "severity": "warning"
+      },
+      "annotations": {
+        "description": "Agent usage exceeded 5,000,000 cost micros over fifteen minutes.",
+        "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md",
+        "summary": "Aggregate agent cost exceeds the operational threshold"
+      }
+    },
+    {
+      "name": "AiFactoryTaskQueueBacklog",
+      "state": "inactive",
+      "query": "max(ai_factory_sandbox_jobs_queued) > 20 or max(ai_task_queue_saturation_ratio) > 0.9",
+      "durationSeconds": 600,
+      "labels": {
+        "component": "queues",
+        "severity": "warning"
+      },
+      "annotations": {
+        "description": "More than twenty sandbox jobs are queued or a worker perimeter remains above 90 percent saturation.",
+        "runbook_url": "/docs/operations/runbooks/SATURATION.md",
+        "summary": "Worker backlog or saturation is sustained"
+      }
+    },
+    {
+      "name": "AiFactorySandboxHeartbeatInvalid",
+      "state": "inactive",
+      "query": "increase(ai_factory_sandbox_heartbeat_invalid_total[5m]) > 0",
+      "durationSeconds": 60,
+      "labels": {
+        "component": "sandbox",
+        "severity": "critical"
+      },
+      "annotations": {
+        "description": "The orchestrator rejected a sandbox heartbeat and failed the execution closed.",
+        "runbook_url": "/docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md",
+        "summary": "Sandbox execution heartbeat is absent, invalid or stale"
+      }
+    },
+    {
+      "name": "AiFactorySandboxExecutionFailures",
+      "state": "inactive",
+      "query": "increase(ai_factory_sandbox_jobs_failed_total[10m]) > 5",
+      "durationSeconds": 300,
+      "labels": {
+        "component": "sandbox",
+        "severity": "warning"
+      },
+      "annotations": {
+        "description": "More than five sandbox executions failed, timed out or were cancelled in ten minutes.",
+        "runbook_url": "/docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md",
+        "summary": "Sandbox executions are repeatedly failing"
+      }
+    },
+    {
+      "name": "AiFactorySandboxMaintenanceFailure",
+      "state": "inactive",
+      "query": "increase(ai_factory_sandbox_maintenance_failures_total[10m]) > 0",
+      "durationSeconds": 120,
+      "labels": {
+        "component": "sandbox",
+        "severity": "critical"
+      },
+      "annotations": {
+        "description": "The sandbox controller could not maintain persisted jobs or clean expired state.",
+        "runbook_url": "/docs/operations/runbooks/SANDBOX-BACKEND-INDISPONIBLE.md",
+        "summary": "Sandbox cleanup or retention maintenance is failing"
+      }
+    },
+    {
+      "name": "AiFactoryAgentContractError",
+      "state": "inactive",
+      "query": "increase(ai_agent_failures_total{stop_condition=\"CONTRACT_ERROR\"}[5m]) > 0",
+      "durationSeconds": 60,
+      "labels": {
+        "component": "contracts",
+        "severity": "warning"
+      },
+      "annotations": {
+        "description": "An agent emitted a malformed final turn or a result outside its declared output contract.",
+        "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md",
+        "summary": "Agent output contract validation failed"
+      }
+    },
+    {
+      "name": "AiFactoryEvidenceAltered",
+      "state": "inactive",
+      "query": "increase(ai_evidence_altered_total[5m]) > 0",
+      "durationSeconds": 0,
+      "labels": {
+        "component": "evidence",
+        "severity": "critical"
+      },
+      "annotations": {
+        "description": "Evidence MCP metadata, content or digest diverged from its workflow binding.",
+        "runbook_url": "/docs/operations/runbooks/MCP-COMPROMIS.md",
+        "summary": "Evidence integrity verification failed"
+      }
+    }
+  ],
+  "documentationReferences": [
+    "Makefile",
+    "README.md",
+    "apps/mcp/assurance-server/src/main/resources/application.yml",
+    "apps/mcp/evidence-server/src/main/resources/application.yml",
+    "apps/mcp/repository-context-server/src/main/resources/application.yml",
+    "apps/mcp/sandbox-execution-server/src/main/resources/application.yml",
+    "apps/mcp/scm-delivery-server/src/main/resources/application.yml",
+    "apps/orchestrator/pom.xml",
+    "apps/orchestrator/src/main/resources/application.yml",
+    "apps/orchestrator/src/test/java/com/example/aifactory/config/MultiAgentAlertRulesTest.java",
+    "apps/orchestrator/src/test/java/com/example/aifactory/config/MultiAgentDashboardsTest.java",
+    "apps/orchestrator/src/test/java/com/example/aifactory/config/TemporalObservabilityTest.java",
+    "apps/web/index.html",
+    "docs/architecture/mcp/MCP-003-inventaire-dependances-runtime.md",
+    "docs/architecture/mcp/MCP-015-slo-initiaux.md",
+    "docs/assets/cible-architecture-cible-gcp-ai-software-factory.svg",
+    "docs/assets/proto-software-factory-workflow.svg",
+    "docs/delivery/roadmap/OPENTELEMETRY.md",
+    "docs/delivery/roadmap/README.md",
+    "docs/delivery/roadmap/ameliorations-usine-logicielle-ia.md",
+    "docs/delivery/roadmap/strategie-opentelemetry.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260831-211514.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260831-213418.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260901-043350.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260901-045327.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260901-143253.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260901-144626.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260901-152635.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260901-154935.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-20260901-205843.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-AF-0001-2026-08-31.md",
+    "docs/evidence/mcp/baselines/MCP-shadow-initial-2026-08-31.md",
+    "docs/operations/maintenance.md",
+    "docs/operations/runbooks/SATURATION.md",
+    "docs/overview/architecture-overview.md",
+    "docs/overview/current-state.md",
+    "docs/overview/executive-summary.md",
+    "docs/qualification/mcp/reports/MCP-054-055-campagne-shadow.md",
+    "docs/qualification/multi-agents/gates/GATE-LOT-11-OBSERVABILITE-AUDIT.md",
+    "infrastructure/compose.yaml",
+    "infrastructure/observability/grafana/provisioning/dashboards/default.yml",
+    "infrastructure/observability/grafana/provisioning/datasources/prometheus.yml",
+    "infrastructure/observability/prometheus.yml"
+  ],
+  "observedScenario": {
+    "taskId": "b7da9afc",
+    "expectedOutcome": "security-policy-rejection",
+    "values": {
+      "tasksSubmitted": 1,
+      "tasksCompleted": 0,
+      "tasksFailed": 1,
+      "maxTaskQueueSaturation": 0
+    },
+    "missingQuantiles": [
+      "agent p50",
+      "agent p95",
+      "agent p99",
+      "MCP p95"
+    ],
+    "missingQuantilesReason": "No histogram bucket series were published for the queried one-hour window."
+  }
+}

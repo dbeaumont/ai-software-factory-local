@@ -69,53 +69,53 @@ Au début de la migration, le dépôt possède notamment :
 
 ## 4. Principes d'architecture
 
-- [ ] Conserver Micrometer Observation comme API d'instrumentation privilégiée dans le code Spring.
-- [ ] Utiliser OpenTelemetry comme modèle de télémétrie et OTLP comme protocole entre services et Collector.
-- [ ] Interdire les dépendances directes du code métier envers un backend d'observabilité particulier.
-- [ ] Centraliser filtrage, redaction, batch, limitation mémoire, retry et routage dans le Collector.
-- [ ] Séparer les Collectors locaux, les gateways GKE et leurs configurations par environnement.
-- [ ] Utiliser les conventions sémantiques OTel stables ; isoler les conventions expérimentales derrière une couche versionnée.
-- [ ] Conserver les identifiants métier comme attributs de traces/logs, jamais comme dimensions métriques non bornées.
-- [ ] Ne jamais exporter prompts, réponses, code source, patchs, preuves, secrets ou jetons par défaut.
-- [ ] Préférer la perte bornée de télémétrie au blocage du chemin métier en cas de panne d'observabilité.
-- [ ] Versionner dashboards, alertes, configurations Collector et tests de parité dans le dépôt.
+- [x] Conserver Micrometer Observation comme API d'instrumentation privilégiée dans le code Spring.
+- [x] Utiliser OpenTelemetry comme modèle de télémétrie et OTLP comme protocole entre services et Collector.
+- [x] Interdire les dépendances directes du code métier envers un backend d'observabilité particulier.
+- [x] Centraliser filtrage, redaction, batch, limitation mémoire, retry et routage dans le Collector.
+- [x] Séparer les Collectors locaux, les gateways GKE et leurs configurations par environnement.
+- [x] Utiliser les conventions sémantiques OTel stables ; isoler les conventions expérimentales derrière une couche versionnée.
+- [x] Conserver les identifiants métier comme attributs de traces/logs, jamais comme dimensions métriques non bornées.
+- [x] Ne jamais exporter prompts, réponses, code source, patchs, preuves, secrets ou jetons par défaut.
+- [x] Préférer la perte bornée de télémétrie au blocage du chemin métier en cas de panne d'observabilité.
+- [x] Versionner dashboards, alertes, configurations Collector et tests de parité dans le dépôt.
 - [ ] Épingler toutes les images par version puis par digest après qualification.
-- [ ] Documenter explicitement les différences acceptables entre les backends local et GKE.
+- [x] Documenter explicitement les différences acceptables entre les backends local et GKE.
 
 ## 5. Lot 0 — cadrage, inventaire et décisions
 
 ### 5.1 Inventaire mesurable
 
-- [ ] Exporter la liste de toutes les métriques exposées par chaque application et par Temporal.
-- [ ] Relever type, unité, description, labels et cardinalité observée pour chaque métrique.
-- [ ] Identifier les métriques réellement utilisées dans chacun des six dashboards.
-- [ ] Identifier les métriques et fenêtres utilisées par chacune des neuf alertes.
-- [ ] Recenser les liens depuis README, Makefile, application web, runbooks et documentation vers Prometheus/Grafana.
-- [ ] Inventorier les tests qui lisent `prometheus.yml`, les règles Prometheus ou les JSON Grafana.
-- [ ] Inventorier les scripts et preuves qui interrogent `/actuator/prometheus`.
-- [ ] Capturer une baseline de charge nominale et dégradée : débit, erreurs, p50, p95, p99 et cardinalité.
-- [ ] Mesurer l'empreinte CPU, mémoire et disque de Prometheus/Grafana afin de comparer la cible locale.
-- [ ] Définir les durées de rétention nécessaires pour métriques, traces, logs et audit.
+- [x] Exporter la liste de toutes les métriques exposées par chaque application et par Temporal.
+- [x] Relever type, unité, description, labels et cardinalité observée pour chaque métrique.
+- [x] Identifier les métriques réellement utilisées dans chacun des six dashboards.
+- [x] Identifier les métriques et fenêtres utilisées par chacune des neuf alertes.
+- [x] Recenser les liens depuis README, Makefile, application web, runbooks et documentation vers Prometheus/Grafana.
+- [x] Inventorier les tests qui lisent `prometheus.yml`, les règles Prometheus ou les JSON Grafana.
+- [x] Inventorier les scripts et preuves qui interrogent `/actuator/prometheus`.
+- [x] Capturer une baseline de charge nominale et dégradée : débit, erreurs, p50, p95, p99 et cardinalité.
+- [x] Mesurer l'empreinte CPU, mémoire et disque de Prometheus/Grafana afin de comparer la cible locale.
+- [x] Définir les durées de rétention nécessaires pour métriques, traces, logs et audit.
 
 ### 5.2 Décisions à consigner dans une ADR
 
 - [ ] Qualifier SigNoz self-hosted et sa compatibilité `arm64`/Docker Desktop.
 - [ ] Valider Google Cloud Monitoring, Trace et Logging comme backends GKE, ou documenter l'alternative retenue.
-- [ ] Décider si les logs applicatifs sont exportés par OTLP dès cette migration ou dans un lot séparé.
-- [ ] Décider le traitement des métriques Temporal : receiver Prometheus du Collector, receiver dédié ou export natif.
-- [ ] Décider le traitement des métriques d'infrastructure qui ne disposent pas d'un SDK OTel.
-- [ ] Définir les SLO d'ingestion, la perte maximale tolérée et le délai maximal d'apparition des signaux.
-- [ ] Définir les budgets de volume et de coût par signal et par environnement.
-- [ ] Définir le propriétaire des dashboards, alertes, Collector, schémas d'attributs et règles de rétention.
-- [ ] Définir le mécanisme d'authentification OTLP local et GKE.
-- [ ] Définir l'export des dashboards Grafana et la suppression du volume Grafana existant avant la bascule.
+- [x] Décider si les logs applicatifs sont exportés par OTLP dès cette migration ou dans un lot séparé.
+- [x] Décider le traitement des métriques Temporal : receiver Prometheus du Collector, receiver dédié ou export natif.
+- [x] Décider le traitement des métriques d'infrastructure qui ne disposent pas d'un SDK OTel.
+- [x] Définir les SLO d'ingestion, la perte maximale tolérée et le délai maximal d'apparition des signaux.
+- [x] Définir les budgets de volume et de coût par signal et par environnement.
+- [x] Définir le propriétaire des dashboards, alertes, Collector, schémas d'attributs et règles de rétention.
+- [x] Définir le mécanisme d'authentification OTLP local et GKE.
+- [x] Définir l'export des dashboards Grafana et la suppression du volume Grafana existant avant la bascule.
 
 ### Critères de sortie du lot 0
 
-- [ ] La matrice métrique → dashboard → alerte → runbook est complète et revue.
+- [x] La matrice métrique → dashboard → alerte → runbook est complète et revue.
 - [ ] SigNoz local et les backends GKE sont approuvés avec coûts, rétention et responsabilités.
-- [ ] Une baseline reproductible permet de mesurer la parité avant/après.
-- [ ] Aucun besoin actuel n'est implicitement délégué à « OpenTelemetry » sans backend responsable.
+- [x] Une baseline reproductible permet de mesurer la parité avant/après.
+- [x] Aucun besoin actuel n'est implicitement délégué à « OpenTelemetry » sans backend responsable.
 
 ## 6. Lot 1 — contrat de télémétrie et gouvernance des données
 
@@ -476,7 +476,7 @@ différée afin de rester récupérable.
 
 ## 17. Découpage recommandé en tickets et commits
 
-- [ ] `OTEL-000` — ADR, inventaire, baseline et matrice de parité.
+- [x] `OTEL-000` — ADR, inventaire, baseline et matrice de parité.
 - [ ] `OTEL-010` — contrat de télémétrie, conventions et tests de confidentialité.
 - [ ] `OTEL-100` — **bascule runtime atomique** regroupant instrumentation des six applications, propagation W3C, Collector, SigNoz, dashboards, alertes et retrait de Prometheus/Grafana.
 - [ ] `OTEL-101` — qualification macOS complète de la nouvelle pile sans aucun conteneur legacy.
