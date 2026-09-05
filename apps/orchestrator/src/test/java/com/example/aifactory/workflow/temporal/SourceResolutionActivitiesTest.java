@@ -41,7 +41,7 @@ class SourceResolutionActivitiesTest {
         var delegation = new DelegationWorkflow.Request("task-1", "attempt-1", "node-1", null,
                 "developer", "a".repeat(40), "implement", java.util.Set.of(),
                 new DelegationWorkflow.Budget(10, 1_000, 2));
-        var request = new SoftwareFactoryWorkflow.Request("task-1", "attempt-1", "acme/repo",
+        var request = new SoftwareFactoryWorkflow.Request("task-1", "attempt-1", "repo",
                 "UNRESOLVED", "change", List.of(delegation), null, List.of(), null, null, null,
                 new SoftwareFactoryWorkflow.SourceLocation(
                         "http://gitea:3000/acme/repo.git", "main", "ai-factory-context"));
@@ -70,7 +70,7 @@ class SourceResolutionActivitiesTest {
         });
         SourceResolutionActivitiesImpl activities = new SourceResolutionActivitiesImpl(runner, properties);
         SourceResolutionActivities.Request request = new SourceResolutionActivities.Request(
-                "task-1", "attempt-1", "acme/customer-api", url, "main", "effect-" + "b".repeat(64));
+                "task-1", "attempt-1", "customer-api", url, "main", "effect-" + "b".repeat(64));
 
         SourceResolutionActivities.Result first = activities.resolve(request);
         SourceResolutionActivities.Result replay = activities.resolve(request);
@@ -102,7 +102,7 @@ class SourceResolutionActivitiesTest {
                     SoftwareFactoryExecutionWorkflowV1.class, WorkflowOptions.newBuilder()
                             .setTaskQueue("ai-factory-workflows").setWorkflowId("source-resolution-test").build());
             SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
-                    "task-1", "attempt-1", "acme/customer-api", "UNRESOLVED", "change", List.of(), null,
+                    "task-1", "attempt-1", "customer-api", "UNRESOLVED", "change", List.of(), null,
                     List.of(), null, null, null,
                     new SoftwareFactoryWorkflow.SourceLocation(
                             "http://gitea:3000/acme/customer-api.git", "main", "ai-factory-context"));
@@ -213,7 +213,7 @@ class SourceResolutionActivitiesTest {
                 Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts) {
             var command = new com.example.aifactory.service.PipelineStepContracts.Command(
                     com.example.aifactory.service.PipelineStepContracts.SCHEMA_VERSION, step, taskId, attemptId,
-                    TemporalIds.workflow(taskId, attemptId), "acme/customer-api", sourceCommit,
+                    TemporalIds.workflow(taskId, attemptId), "customer-api", sourceCommit,
                     Map.of("input", "f".repeat(64)));
             return com.example.aifactory.service.PipelineStepContracts.Result.from(command, sourceCommit, artifacts);
         }

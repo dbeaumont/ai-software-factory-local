@@ -259,8 +259,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 9. Lot 4 — commandes applicatives et signaux
 
-- [ ] **TEMP-060 — Créer un `TemporalWorkflowCoordinator`.** Implémenter `start` et `resumeAfterApproval` avec des
+- [x] **TEMP-060 — Créer un `TemporalWorkflowCoordinator`.** Implémenter `start` et `resumeAfterApproval` avec des
   stubs typés et des options de démarrage déterministes ; en faire l'unique bean `WorkflowCoordinator`.
+  _(Le coordinateur démarre le type V1 sur la file workflow avec l'identité canonique, projette le Run ID/Build ID
+  et adresse l'approbation au même Workflow ID ; le coordinateur local n'est plus enregistré dans Spring.)_
 - [ ] **TEMP-061 — Supprimer le routage de moteur.** Retirer toute sélection `LOCAL`/`TEMPORAL` et vérifier qu'un
   ticket ou une sortie de modèle ne peut modifier que le mode métier autorisé, jamais le moteur.
 - [ ] **TEMP-062 — Signaler l'approbation.** Transformer `approve`/`approve-manifest` en signal lié à task,

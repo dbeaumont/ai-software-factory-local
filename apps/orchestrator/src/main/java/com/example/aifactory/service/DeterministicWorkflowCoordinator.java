@@ -11,7 +11,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.file.Path;
@@ -24,7 +23,6 @@ import java.util.function.Supplier;
  * <p>This class owns ordering only. All business effects live in {@link PipelineStepService}, which has no
  * executor or scheduler and can therefore be called by Temporal activities during the cutover.</p>
  */
-@Service
 public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
     private static final Logger log = LoggerFactory.getLogger(DeterministicWorkflowCoordinator.class);
 

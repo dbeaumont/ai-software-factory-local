@@ -60,7 +60,7 @@ public final class SourceResolutionActivitiesImpl implements SourceResolutionAct
     private static void requireValid(Request request) {
         if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
-                || request.repositoryId() == null || !request.repositoryId().matches("[A-Za-z0-9._-]+/[A-Za-z0-9._-]+")
+                || request.repositoryId() == null || !request.repositoryId().matches("[a-z0-9][a-z0-9-]{1,62}")
                 || request.branch() == null || !request.branch().matches("[A-Za-z0-9._/-]{1,128}")
                 || request.branch().contains("..") || request.idempotencyKey() == null
                 || !request.idempotencyKey().matches("effect-[0-9a-f]{64}")) {
@@ -77,7 +77,8 @@ public final class SourceResolutionActivitiesImpl implements SourceResolutionAct
                 || uri.getPath() == null || !uri.getPath().matches("/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+\\.git")) {
             throw new IllegalArgumentException("Source repository URL is not an authorized clone URL");
         }
-        String pathId = uri.getPath().substring(1, uri.getPath().length() - 4);
+        String path = uri.getPath();
+        String pathId = path.substring(path.lastIndexOf('/') + 1, path.length() - 4);
         if (!request.repositoryId().equals(pathId)) {
             throw new SecurityException("Source repository identity does not match its URL");
         }
