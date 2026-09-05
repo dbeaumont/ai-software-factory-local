@@ -444,7 +444,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester child workflows parallèles, échec en cascade et revue indépendante. _(Les tests démarrent tous les
   enfants prêts avant toute attente, propagent transitivement l'échec aux seuls dépendants, annulent enfant et
   activité avec la racine, et imposent une revue indépendante lancée par la racine après consolidation.)_
-- [ ] Tester l'unicité de l'effet SCM après perte d'accusé de réception.
+- [x] Tester l'unicité de l'effet SCM après perte d'accusé de réception. _(La première tentative crée l'effet puis
+  perd son accusé ; la tentative Temporal suivante et même un service SCM recréé récupèrent le résultat par la clé
+  d'idempotence persistée, avec deux appels d'activité mais un seul effet externe.)_
 
 ### 12.3 Tests de replay et compatibilité
 
