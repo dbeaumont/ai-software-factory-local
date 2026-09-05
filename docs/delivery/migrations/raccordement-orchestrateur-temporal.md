@@ -411,8 +411,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester identifiants, clés d'idempotence, classification des erreurs et politiques de retry. _(Les identités sont
   déterministes et bornées, les effets survivent à un store recréé, les erreurs pilotent retry/non-retry et les profils
   par périmètre valident délais, heartbeat et tentatives.)_
-- [ ] Interdire par test d'architecture réseau, filesystem, horloge système, thread, random et client MCP dans les
-  implémentations de workflow.
+- [x] Interdire par test d'architecture réseau, filesystem, horloge système, thread, random et client MCP dans les
+  implémentations de workflow. _(Le scan exhaustif des implémentations interdit I/O, HTTP/MCP, processus, horloges,
+  aléatoire, threads/concurrence Java et clients Temporal ; les effets passent uniquement par des Activities.)_
 - [ ] Tester la taille maximale des inputs/résultats et l'externalisation des contenus vers Evidence MCP.
 - [ ] Tester les transitions et commandes invalides sur la projection.
 

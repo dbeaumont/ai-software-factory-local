@@ -126,6 +126,12 @@ class WorkflowDeterminismArchitectureTest {
         patterns.put("SecureRandom", "direct randomness");
         patterns.put("ProcessBuilder", "direct process execution");
         patterns.put("Runtime.getRuntime(", "direct process/runtime access");
+        patterns.put("Thread.", "native thread access");
+        patterns.put("new Thread(", "native thread creation");
+        patterns.put("java.util.concurrent", "non-Temporal concurrency");
+        patterns.put("CompletableFuture", "non-Temporal concurrency");
+        patterns.put("WorkflowClient", "Temporal client calls belong outside workflow implementations");
+        patterns.put("WorkflowServiceStubs", "raw Temporal service calls belong outside workflow implementations");
         return Map.copyOf(patterns);
     }
 }
