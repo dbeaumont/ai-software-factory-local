@@ -9,7 +9,8 @@ public interface SecurityAuditJournal {
     List<Entry> list();
     boolean verifyIntegrity();
 
-    enum EventType { AUTHORIZATION, REFUSAL, APPROVAL, MODE_CHANGE }
+    enum EventType { AUTHORIZATION, REFUSAL, APPROVAL, MODE_CHANGE,
+        COMMAND_INTENT, COMMAND_ACCEPTED, COMMAND_REJECTED }
 
     record Entry(long sequence, EventType type, String taskId, String actor, String objectReference,
                  String decision, Instant occurredAt, String previousDigest, String digest) {}

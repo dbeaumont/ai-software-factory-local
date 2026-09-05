@@ -288,8 +288,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   approbation expirée, digest périmé, signal dupliqué et projection en retard. _(Une erreur applicative 409 expose
   un code stable pour chaque conflit ; approbation, décision et annulation identiques sont idempotentes une fois
   projetées, tandis que les divergences et expirations ferment la commande avant signal.)_
-- [ ] **TEMP-067 — Auditer les commandes.** Journaliser l'intention et le résultat avec corrélation, sans contenu
-  sensible ni secret.
+- [x] **TEMP-067 — Auditer les commandes.** Journaliser l'intention et le résultat avec corrélation, sans contenu
+  sensible ni secret. _(Approbation, décision, annulation et retry produisent `COMMAND_INTENT` puis
+  `COMMAND_ACCEPTED` ou `COMMAND_REJECTED`, corrélés à task/attempt/opération/objet. Motifs libres, réponses et
+  messages d'exception ne sont jamais écrits.)_
 
 ### Critères de sortie du lot 4
 

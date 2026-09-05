@@ -254,7 +254,38 @@ class TaskServiceTest {
         service.approve(approval.id);
 
         assertThat(journal.list()).extracting(SecurityAuditJournal.Entry::type)
-                .containsExactly(SecurityAuditJournal.EventType.APPROVAL);
+                .containsExactly(SecurityAuditJournal.EventType.COMMAND_INTENT,
+                        SecurityAuditJournal.EventType.COMMAND_ACCEPTED,
+                        SecurityAuditJournal.EventType.APPROVAL);
+        assertThat(journal.list()).extracting(SecurityAuditJournal.Entry::objectReference)
+                .allMatch(reference -> reference.startsWith("pipeline-1/APPROVE/"));
+        assertThat(journal.verifyIntegrity()).isTrue();
+    }
+
+    @Test
+    void auditsARejectedCommandWithoutItsFreeFormReason() {
+        InMemoryTaskMemory memory = new InMemoryTaskMemory();
+        HashChainedSecurityAuditJournal journal = new HashChainedSecurityAuditJournal(new byte[32]);
+        WorkflowCoordinator rejecting = new WorkflowCoordinator() {
+            @Override public void start(TaskState task) {}
+            @Override public void resumeAfterApproval(TaskState task) {}
+            @Override public void cancel(TaskState task, com.example.aifactory.model.TaskCancellationRequest request) {
+                throw new IllegalStateException("internal detail that must not be audited");
+            }
+        };
+        TaskService service = new TaskService(null, null, rejecting, memory,
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), journal,
+                reactor.core.publisher.Mono::empty);
+        TaskState state = new TaskState("task-audit", "AF-0300", new TaskRequest(
+                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
+        memory.save(state);
+
+        assertThrows(IllegalStateException.class, () -> service.cancel(state.id,
+                new com.example.aifactory.model.TaskCancellationRequest("sensitive reason", "operator")));
+
+        assertThat(journal.list()).extracting(SecurityAuditJournal.Entry::type).containsExactly(
+                SecurityAuditJournal.EventType.COMMAND_INTENT, SecurityAuditJournal.EventType.COMMAND_REJECTED);
+        assertThat(journal.list().toString()).doesNotContain("sensitive reason", "internal detail");
         assertThat(journal.verifyIntegrity()).isTrue();
     }
 

@@ -135,32 +135,56 @@ public class TaskService {
                 || !"ALLOW".equals(state.pendingEffect.policyDecision())) {
             throw new IllegalStateException("No policy-approved effect is awaiting confirmation");
         }
+        String object = state.pendingEffect.manifestId() == null
+                ? state.pendingEffect.tool() : state.pendingEffect.manifestId();
+        auditCommand(state, "human-approver", "APPROVE", object,
+                () -> coordinator.resumeAfterApproval(state));
         if (audit != null) audit.append(SecurityAuditJournal.EventType.APPROVAL, state.id,
-                "human-approver", state.pendingEffect.manifestId() == null
-                        ? state.pendingEffect.tool() : state.pendingEffect.manifestId(), "APPROVE");
-        coordinator.resumeAfterApproval(state);
+                "human-approver", correlated(state, "APPROVE", object), "APPROVE");
         return state.view();
     }
 
     public TaskView cancel(String id, TaskCancellationRequest request) {
         if (request == null) throw new IllegalArgumentException("Cancellation request is required");
         TaskState state = requireTask(id);
-        coordinator.cancel(state, request);
+        auditCommand(state, request.actor(), "CANCEL", "task",
+                () -> coordinator.cancel(state, request));
         return state.view();
     }
 
     public TaskView answerDecision(String id, String requestId, HumanDecisionResponse response) {
         if (response == null) throw new IllegalArgumentException("Human decision response is required");
         TaskState state = requireTask(id);
-        coordinator.answerHumanDecision(state, requestId, response);
+        auditCommand(state, response.actor(), "HUMAN_DECISION", requestId + ':' + response.objectDigest(),
+                () -> coordinator.answerHumanDecision(state, requestId, response));
         return state.view();
     }
 
     public TaskView retryDelegation(String id, String delegationId, OperatorActionRequest request) {
         if (request == null) throw new IllegalArgumentException("Operator action request is required");
         TaskState state = requireTask(id);
-        coordinator.retry(state, delegationId, request);
+        auditCommand(state, request.actor(), "RETRY", delegationId,
+                () -> coordinator.retry(state, delegationId, request));
         return state.view();
+    }
+
+    private void auditCommand(TaskState state, String actor, String operation, String object, Runnable command) {
+        String reference = correlated(state, operation, object);
+        if (audit != null) audit.append(SecurityAuditJournal.EventType.COMMAND_INTENT,
+                state.id, actor, reference, "REQUESTED");
+        try {
+            command.run();
+            if (audit != null) audit.append(SecurityAuditJournal.EventType.COMMAND_ACCEPTED,
+                    state.id, actor, reference, "ACCEPTED");
+        } catch (RuntimeException failure) {
+            if (audit != null) audit.append(SecurityAuditJournal.EventType.COMMAND_REJECTED,
+                    state.id, actor, reference, failure.getClass().getSimpleName());
+            throw failure;
+        }
+    }
+
+    private static String correlated(TaskState state, String operation, String object) {
+        return state.workflowAttemptId + '/' + operation + '/' + object;
     }
 
     String nextTicketNumber() {
