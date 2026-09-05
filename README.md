@@ -50,7 +50,7 @@ La stack actuelle contient :
 | Point d'entrée HTTP | `reverse-proxy` Nginx (port 8080) |
 | Interface de saisie & suivi | `factory-web` (SPA HTML/JS/CSS servie par Nginx) |
 | Orchestration | Spring Boot 4.1 / Spring AI 2.0 / Java 25 (`orchestrator`) |
-| Workflow | Coordinateur déterministe actif ; workflows Temporal implémentés mais désactivés par défaut |
+| Workflow | Temporal obligatoire ; workflow V1 et workers spécialisés actifs |
 | Hiérarchie en qualification | Supervisor, agents Architecture, Code, Tests, Sécurité et Independent Reviewer |
 | Mémoire de tâche | Adaptateur en mémoire actif ; schémas PostgreSQL et projections Temporal préparés pour la cible durable |
 | Contexte MCP | Serveur MCP stateless en lecture seule (`repository-context-mcp`) |
@@ -138,10 +138,9 @@ livraison SCM. Les endpoints MCP ne sont pas publiés sur l'hôte. Le réseau Co
 le trafic applicatif (`factory`), MCP (`mcp-internal`), workflow (`workflow-internal`) et les deux niveaux d'accès
 des sandboxes (`sandbox-egress` et `sandbox-quality`).
 
-> **État du prototype.** `DeterministicWorkflowCoordinator` et `InMemoryTaskMemory` sont les adaptateurs actifs de
-> la configuration locale. Les workflows Temporal, les migrations SQL et les projections sont présents dans le
-> code afin de préparer la cible durable. Le sélecteur de moteur historique a été retiré pendant le raccordement ;
-> aucun adaptateur PostgreSQL de `TaskMemory` n'est encore câblé dans la stack Compose actuelle.
+> **État du prototype.** `TemporalWorkflowCoordinator` et `InMemoryTaskMemory` sont les adaptateurs actifs de la
+> configuration locale. Temporal est obligatoire pour toute nouvelle tâche et aucun sélecteur de moteur local
+> n'existe. Les migrations SQL et les projections préparent encore le remplacement de la mémoire JVM.
 
 ### Repères dans l'implémentation
 
@@ -149,9 +148,9 @@ des sandboxes (`sandbox-egress` et `sandbox-quality`).
 |---|---|
 | API de tâches et commandes opérateur | [`TaskController`](apps/orchestrator/src/main/java/com/example/aifactory/controller/TaskController.java) |
 | Admission et mémoire des tâches | [`TaskService`](apps/orchestrator/src/main/java/com/example/aifactory/service/TaskService.java), [`InMemoryTaskMemory`](apps/orchestrator/src/main/java/com/example/aifactory/service/InMemoryTaskMemory.java) |
-| Pipeline de référence | [`DeterministicWorkflowCoordinator`](apps/orchestrator/src/main/java/com/example/aifactory/service/DeterministicWorkflowCoordinator.java) |
+| Commandes de workflow | [`TemporalWorkflowCoordinator`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/TemporalWorkflowCoordinator.java) |
 | Runtime et permissions des agents | [`AgentRuntime`](apps/orchestrator/src/main/java/com/example/aifactory/service/AgentRuntime.java), [`ToolPermissionMatrix`](apps/orchestrator/src/main/java/com/example/aifactory/service/ToolPermissionMatrix.java) |
-| Workflow durable cible | [`SoftwareFactoryWorkflowImpl`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/SoftwareFactoryWorkflowImpl.java) |
+| Workflow durable actif | [`SoftwareFactoryExecutionWorkflowV1Impl`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/SoftwareFactoryExecutionWorkflowV1Impl.java) |
 | Contexte dépôt | [`McpRepositoryContextService`](apps/orchestrator/src/main/java/com/example/aifactory/service/McpRepositoryContextService.java) |
 | Exécution isolée | [`McpSandboxService`](apps/orchestrator/src/main/java/com/example/aifactory/service/McpSandboxService.java), [`SandboxJobService`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/SandboxJobService.java) |
 | Profils et limites sandbox | [`SandboxProfiles`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/SandboxProfiles.java), [`ComposeSandboxRuntime`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/ComposeSandboxRuntime.java), [`GkeSandboxRuntime`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/GkeSandboxRuntime.java) |
@@ -573,7 +572,7 @@ contrats MCP pour pouvoir remplacer les backends sans donner davantage de pouvoi
 | Capacité | Local actuel | Cible recommandée | Motivation |
 |---|---|---|---|
 | Web et API | Nginx + Spring sur Compose | Cloud Run ou GKE derrière HTTPS/IAP | Authentification, autoscaling et exposition maîtrisée |
-| Workflow | Coordinateur en processus ; Temporal disponible mais désactivé | Temporal managé ou opéré, workers séparés par task queue | Reprise durable, signaux humains, retries et versionnement |
+| Workflow | Temporal local, workers séparés par task queue | Temporal managé ou opéré avec la même topologie | Reprise durable, signaux humains, retries et versionnement |
 | État | Mémoire JVM et volumes locaux | PostgreSQL/Cloud SQL + stockage objet des preuves | Transactions, sauvegardes, rétention et restauration |
 | Sandbox | Runners Compose statiques sans socket Docker | GKE dédié avec gVisor/Agent Sandbox et Jobs éphémères | Séparer le code non fiable du plan de contrôle |
 | Réseau | Réseaux Compose et proxy Squid allow-listé | `default deny`, egress explicite, VPC séparé, aucun accès metadata/control plane | Réduire mouvement latéral et exfiltration |

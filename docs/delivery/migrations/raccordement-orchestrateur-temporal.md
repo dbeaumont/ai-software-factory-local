@@ -263,8 +263,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   stubs typés et des options de démarrage déterministes ; en faire l'unique bean `WorkflowCoordinator`.
   _(Le coordinateur démarre le type V1 sur la file workflow avec l'identité canonique, projette le Run ID/Build ID
   et adresse l'approbation au même Workflow ID ; le coordinateur local n'est plus enregistré dans Spring.)_
-- [ ] **TEMP-061 — Supprimer le routage de moteur.** Retirer toute sélection `LOCAL`/`TEMPORAL` et vérifier qu'un
-  ticket ou une sortie de modèle ne peut modifier que le mode métier autorisé, jamais le moteur.
+- [x] **TEMP-061 — Supprimer le routage de moteur.** Retirer toute sélection `LOCAL`/`TEMPORAL` et vérifier qu'un
+  ticket ou une sortie de modèle ne peut modifier que le mode métier autorisé, jamais le moteur. _(Aucune propriété
+  ni branche de sélection de moteur ne subsiste ; le seul bean coordinateur est Temporal. `executionMode` demeure
+  un choix métier borné, transmis dans le payload du workflow et sans pouvoir sur le runtime.)_
 - [ ] **TEMP-062 — Signaler l'approbation.** Transformer `approve`/`approve-manifest` en signal lié à task,
   tentative, manifeste, digest, acteur et horodatage.
 - [ ] **TEMP-063 — Signaler les décisions humaines.** Vérifier domaine, rôle, options et object digest avant

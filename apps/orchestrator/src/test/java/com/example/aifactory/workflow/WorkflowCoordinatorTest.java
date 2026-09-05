@@ -1,7 +1,10 @@
 package com.example.aifactory.workflow;
 
 import com.example.aifactory.model.TaskState;
+import com.example.aifactory.service.DeterministicWorkflowCoordinator;
+import com.example.aifactory.workflow.temporal.TemporalWorkflowCoordinator;
 import org.junit.jupiter.api.Test;
+import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 
@@ -18,5 +21,11 @@ class WorkflowCoordinatorTest {
                 .containsOnly(TaskState.class);
         assertThat(WorkflowCoordinator.class.getDeclaredMethods())
                 .allMatch(method -> method.getReturnType() == Void.TYPE);
+    }
+
+    @Test
+    void exposesTemporalAsTheOnlyProductionCoordinator() {
+        assertThat(TemporalWorkflowCoordinator.class.isAnnotationPresent(Component.class)).isTrue();
+        assertThat(DeterministicWorkflowCoordinator.class.isAnnotationPresent(Component.class)).isFalse();
     }
 }

@@ -57,19 +57,19 @@ Cette distinction est indispensable pour lire le dépôt sans confondre code pr�
 
 | Niveau | Signification | Exemples |
 |---|---|---|
-| **Actif** | Câblé dans le parcours lancé par `POST /api/tasks` avec la configuration Compose par défaut | pipeline déterministe, MCP contexte/sandbox/assurance/SCM, mémoire en RAM |
-| **Disponible** | Implémenté et testé en partie, mais désactivé, non généralisé ou non relié de bout en bout | Temporal, DAG multi-agent, Evidence MCP dans le chemin durable, projections SQL |
+| **Actif** | Câblé dans le parcours lancé par `POST /api/tasks` avec la configuration Compose par défaut | Temporal, MCP contexte/sandbox/assurance/SCM, mémoire en RAM |
+| **Disponible** | Implémenté et testé en partie, mais non généralisé ou non relié de bout en bout | DAG multi-agent, projections SQL |
 | **Cible** | Contrat, port ou conception préparatoire sans adaptateur de production complet | jobs GKE, stockage GCS immuable, déploiement distribué des agents |
 
 ### 1.4 Matrice de vérité d'exécution
 
 | Capacité | État | Observation |
 |---|---|---|
-| Pipeline mono-processus | Actif | `DeterministicWorkflowCoordinator` coordonne la tâche avec un pool de deux threads |
+| Workflow Temporal V1 | Actif | `TemporalWorkflowCoordinator` démarre chaque tâche sur la file workflow dédiée |
 | État des tâches | Actif, volatile | `InMemoryTaskMemory` repose sur un `ConcurrentHashMap` |
 | Appels LLM | Actif, cloud uniquement | `TaskRequest.effectiveLlmMode()` force le mode `CLOUD`, via LiteLLM |
 | Serveurs MCP | Actifs | Contexte, sandbox, SCM, assurance et evidence sont démarrés par Compose |
-| Temporal | Disponible, raccordement en cours | services Compose et classes de workflow présents ; sélecteur historique retiré |
+| Temporal | Actif et obligatoire | services Compose, workflow V1 et workers spécialisés ; aucun moteur local sélectionnable |
 | Agents hiérarchiques | Disponible, non qualifié | rôles vides et verdict `INCOMPLETE` par défaut |
 | Evidence durable de bout en bout | Partiel | le serveur existe ; le pipeline de référence garde surtout fichiers et état en mémoire |
 | Projection PostgreSQL métier | Disponible, non câblée | migrations présentes, aucun adaptateur `TaskMemory` PostgreSQL actif |
@@ -485,12 +485,10 @@ et leur propre cycle de construction.
 
 ### 4.2 Coordination active
 
-`DeterministicWorkflowCoordinator` est l'implémentation active de `WorkflowCoordinator`. Il lance le parcours dans
-un `ExecutorService` fixe de deux threads. `InMemoryTaskMemory` sauvegarde chaque `TaskState` dans le processus.
-L'approbation reprend la tâche et délègue l'effet final à `ScmDeliveryGateway`.
-
-Cette architecture est simple et lisible pour un prototype, mais elle n'offre ni reprise après redémarrage de
-l'orchestrateur, ni verrouillage distribué, ni montée en charge horizontale sûre.
+`TemporalWorkflowCoordinator` est l'unique implémentation Spring de `WorkflowCoordinator`. Il démarre le workflow
+V1 avec un identifiant déterministe et transforme les commandes humaines en signaux Temporal. Les activités
+spécialisées appellent les services métier sur leurs files dédiées. `InMemoryTaskMemory` sauvegarde encore chaque
+`TaskState` dans le processus jusqu'au raccordement de la projection PostgreSQL.
 
 ### 4.3 Capacités MCP
 
@@ -535,9 +533,9 @@ activation opérationnelle nécessite encore le cluster, le PVC, les secrets et 
 
 ### 4.6 Modes durable et hiérarchique
 
-Les classes de workflow Temporal, les files de tâches spécialisées, le DAG, les délégations, les décisions humaines,
-les contradictions, les budgets et l'Evidence MCP existent dans le code. Ils ne remplacent pas le coordinateur
-déterministe dans le parcours public par défaut. Leur activation exige au minimum :
+Le workflow Temporal V1 et ses files spécialisées sont actifs dans le parcours public. Le DAG, les délégations,
+les contradictions et les budgets restent soumis à leur mode métier et à leurs gates de qualification ; ce mode
+ne sélectionne jamais le moteur d'exécution. Leur activation exige au minimum :
 
 - une qualification complète des rôles ;
 - une persistance métier réellement branchée ;
