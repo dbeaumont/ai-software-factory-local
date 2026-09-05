@@ -29,3 +29,4 @@ A voir :
 - Mise en place d'acrans de supervision :
   . fonctionnelle :   ajouter des opérations de maintenance (logs, stop, retry, continue, ...)
   . technique : performances, finops
+- Protocole A2A entre les agents
