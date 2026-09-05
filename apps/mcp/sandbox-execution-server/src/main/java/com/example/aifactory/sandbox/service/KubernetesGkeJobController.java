@@ -2,7 +2,14 @@ package com.example.aifactory.sandbox.service;
 
 import com.example.aifactory.sandbox.config.GkeControllerProperties;
 import com.example.aifactory.sandbox.service.GkeJobController.JobRequest;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -33,30 +40,62 @@ import java.util.Set;
 @Service
 @ConditionalOnProperty(prefix = "ai-factory.sandbox", name = "runtime", havingValue = "gke")
 public class KubernetesGkeJobController implements GkeJobController {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KubernetesGkeJobController.class);
     private static final String LABEL_SELECTOR = "app.kubernetes.io/name=ai-factory-sandbox-job";
     private static final int MAX_API_ATTEMPTS = 3;
     private static final int MAX_LOG_CHARS = 65_536;
     private final GkeControllerProperties properties;
     private final ObjectMapper mapper;
     private final HttpClient client;
+    private final ObservationRegistry observations;
+    private final Counter submissions;
+    private final Counter completions;
+    private final Counter cancellations;
+    private final Counter orphanDeletions;
 
-    public KubernetesGkeJobController(GkeControllerProperties properties, ObjectMapper mapper) throws Exception {
-        this(properties, mapper, clusterClient(properties));
+    public KubernetesGkeJobController(GkeControllerProperties properties, ObjectMapper mapper,
+                                      MeterRegistry metrics, ObservationRegistry observations) throws Exception {
+        this(properties, mapper, clusterClient(properties), metrics, observations);
     }
 
     KubernetesGkeJobController(GkeControllerProperties properties, ObjectMapper mapper, HttpClient client) {
+        this(properties, mapper, client, new SimpleMeterRegistry(), ObservationRegistry.NOOP);
+    }
+
+    KubernetesGkeJobController(GkeControllerProperties properties, ObjectMapper mapper, HttpClient client,
+                               MeterRegistry metrics, ObservationRegistry observations) {
         this.properties = properties;
         this.mapper = mapper;
         this.client = client;
+        this.observations = observations;
+        this.submissions = counter(metrics, "submitted");
+        this.completions = counter(metrics, "completed");
+        this.cancellations = counter(metrics, "cancelled");
+        this.orphanDeletions = counter(metrics, "orphan_deleted");
     }
 
     @Override
     public SandboxRuntime.RuntimeResult run(JobRequest request) throws Exception {
+        Observation observation = observation("run", request.executionId());
+        try (Observation.Scope ignored = observation.openScope()) {
+            return runObserved(request);
+        } catch (Exception exception) {
+            observation.error(exception);
+            throw exception;
+        } finally {
+            observation.stop();
+        }
+    }
+
+    private SandboxRuntime.RuntimeResult runObserved(JobRequest request) throws Exception {
         String name = jobName(request.executionId());
         HttpResponse<byte[]> created = send("POST", jobsUri(), mapper.writeValueAsBytes(job(request, name)));
         if (created.statusCode() != 201 && created.statusCode() != 409) {
             throw failure("create", created);
         }
+        submissions.increment();
+        LOGGER.info("sandbox_gke_audit event=job_submitted execution_id={} profile_id={} namespace={}",
+                request.executionId(), request.profileId(), properties.namespace());
         Instant deadline = Instant.now().plus(request.timeout()).plusSeconds(10);
         while (Instant.now().isBefore(deadline)) {
             HttpResponse<byte[]> response = send("GET", jobUri(name), null);
@@ -66,22 +105,30 @@ public class KubernetesGkeJobController implements GkeJobController {
             JsonNode status = mapper.readTree(response.body()).path("status");
             if (status.path("succeeded").asInt() > 0) {
                 LogOutput logs = boundedLogs(name);
+                completions.increment();
+                LOGGER.info("sandbox_gke_audit event=job_completed execution_id={} outcome=succeeded",
+                        request.executionId());
                 return new SandboxRuntime.RuntimeResult(0, logs.value(), logs.truncated());
             }
             if (status.path("failed").asInt() > 0) {
                 LogOutput logs = boundedLogs(name);
+                completions.increment();
+                LOGGER.info("sandbox_gke_audit event=job_completed execution_id={} outcome=rejected",
+                        request.executionId());
                 return new SandboxRuntime.RuntimeResult(1, logs.value(), logs.truncated());
             }
             Thread.sleep(properties.pollInterval());
         }
         LogOutput logs = boundedLogs(name);
         cancel(request.executionId());
+        LOGGER.warn("sandbox_gke_audit event=job_timed_out execution_id={}", request.executionId());
         throw new SandboxRuntime.RuntimeTimeoutException("GKE sandbox job timed out", logs.value(), logs.truncated());
     }
 
     @Override
     public void cancel(String executionId) {
-        try {
+        Observation observation = observation("cancel", executionId);
+        try (Observation.Scope ignored = observation.openScope()) {
             HttpResponse<byte[]> response = send("DELETE", jobUri(jobName(executionId)),
                     mapper.writeValueAsBytes(Map.of(
                             "apiVersion", "v1", "kind", "DeleteOptions",
@@ -89,8 +136,16 @@ public class KubernetesGkeJobController implements GkeJobController {
             if (response.statusCode() != 200 && response.statusCode() != 202 && response.statusCode() != 404) {
                 throw failure("delete", response);
             }
+            if (response.statusCode() != 404) {
+                cancellations.increment();
+                LOGGER.info("sandbox_gke_audit event=job_cancelled execution_id={} namespace={}",
+                        executionId, properties.namespace());
+            }
         } catch (Exception exception) {
+            observation.error(exception);
             throw new IllegalStateException("failed to cancel GKE sandbox job", exception);
+        } finally {
+            observation.stop();
         }
     }
 
@@ -114,9 +169,26 @@ public class KubernetesGkeJobController implements GkeJobController {
                         .path("ai-factory.io/execution-id").asText();
                 if (!retainedExecutionIds.contains(executionId)) {
                     cancel(executionId);
+                    orphanDeletions.increment();
+                    LOGGER.info("sandbox_gke_audit event=orphan_deleted execution_id={} namespace={}",
+                            executionId, properties.namespace());
                 }
             }
         }
+    }
+
+    private Observation observation(String operation, String executionId) {
+        return Observation.createNotStarted("ai.factory.sandbox.gke", observations)
+                .contextualName("gke sandbox " + operation)
+                .lowCardinalityKeyValue("ai.operation", operation)
+                .highCardinalityKeyValue("execution_id", executionId)
+                .start();
+    }
+
+    private static Counter counter(MeterRegistry metrics, String event) {
+        return Counter.builder("ai_factory_sandbox_gke_events")
+                .tag("event", event)
+                .register(metrics);
     }
 
     Map<String, Object> job(JobRequest request, String name) {

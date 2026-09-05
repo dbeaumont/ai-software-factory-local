@@ -1,6 +1,8 @@
 package com.example.aifactory.sandbox.service;
 
 import com.example.aifactory.sandbox.config.GkeControllerProperties;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
@@ -65,6 +67,18 @@ class KubernetesGkeJobControllerTest {
         assertTrue(KubernetesGkeJobController.transientStatus(503));
         assertFalse(KubernetesGkeJobController.transientStatus(400));
         assertFalse(KubernetesGkeJobController.transientStatus(409));
+    }
+
+    @Test
+    void registersBoundedGkeLifecycleMetrics() {
+        SimpleMeterRegistry metrics = new SimpleMeterRegistry();
+
+        new KubernetesGkeJobController(properties(), new ObjectMapper(), HttpClient.newHttpClient(),
+                metrics, ObservationRegistry.NOOP);
+
+        for (String event : List.of("submitted", "completed", "cancelled", "orphan_deleted")) {
+            assertNotNull(metrics.find("ai_factory_sandbox_gke_events").tag("event", event).counter());
+        }
     }
 
     private static GkeControllerProperties properties() {

@@ -143,7 +143,7 @@ cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir l
 - [x] Implémenter l'annulation par suppression contrôlée du Job.
 - [x] Réconcilier les Jobs orphelins au démarrage et périodiquement.
 - [x] Gérer les indisponibilités temporaires de l'API Kubernetes avec retry borné et backoff.
-- [ ] Exporter métriques, traces et événements d'audit sans données sensibles.
+- [x] Exporter métriques, traces et événements d'audit sans données sensibles.
 
 ### 7.2 Isolation GKE
 
