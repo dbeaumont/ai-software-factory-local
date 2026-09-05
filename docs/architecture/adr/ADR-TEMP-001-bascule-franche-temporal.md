@@ -58,6 +58,24 @@ reconstruit pas une chronologie et PostgreSQL applicatif ne commande jamais dire
 - les sauvegardes Temporal sont opérées comme une unité d'infrastructure, hors du code applicatif ;
 - un test d'architecture bloque les références aux hôtes et schémas internes connus.
 
+## Workflow racine et versionnement
+
+Le workflow public de production est introduit sous le type immuable `SoftwareFactoryExecutionWorkflowV1`.
+`SoftwareFactoryWorkflow` reste un contrat de préparation multi-agent tant que ses responsabilités n'ont pas été
+intégrées au nouveau workflow racine ; il n'est pas utilisé comme point d'admission de production.
+
+Les règles suivantes s'appliquent :
+
+1. le nom de type `SoftwareFactoryExecutionWorkflowV1` n'est jamais réaffecté à une sémantique incompatible ;
+2. les évolutions compatibles utilisent Worker Versioning et des Build IDs explicites ;
+3. une branche de code dont le résultat de commandes déjà planifiées change utilise `Workflow.getVersion` ;
+4. une rupture de contrat d'entrée ou de résultat introduit un type `V2` et conserve les workers `V1` jusqu'au
+   drainage complet ;
+5. chaque release rejoue les historiques versionnés avant publication de l'image worker.
+
+Ce choix évite de donner une autorité de production rétroactive au workflow expérimental déjà présent et permet
+de conserver ses historiques de test comme fixtures indépendantes.
+
 ## Vérification
 
 - aucun contrat public ne permet de choisir le moteur ;

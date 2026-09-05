@@ -74,9 +74,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-003 — Interdire l'accès applicatif à la base Temporal.** Les lectures passent par le SDK/API Temporal
   et jamais par les tables PostgreSQL internes de Temporal. _(Frontière documentée et protégée par
   `TemporalDatabaseBoundaryTest`.)_
-- [ ] **TEMP-004 — Choisir un workflow racine de production versionné.** Introduire
+- [x] **TEMP-004 — Choisir un workflow racine de production versionné.** Introduire
   `SoftwareFactoryExecutionWorkflowV1` ou faire évoluer le contrat existant avec une stratégie explicite
-  `Workflow.getVersion`; documenter le choix dans une ADR.
+  `Workflow.getVersion`; documenter le choix dans une ADR. _(Le nouveau type V1, ses règles d'évolution et de
+  drainage sont fixés dans `ADR-TEMP-001`.)_
 - [ ] **TEMP-005 — Définir le workflow ID.** Utiliser un identifiant stable tel que
   `ai-factory/{taskId}/{attemptId}`, avec une politique de réutilisation qui refuse les doublons non terminés.
 - [ ] **TEMP-006 — Définir les Run IDs et tentatives.** Ne jamais utiliser un Run ID aléatoire comme clé métier ;
