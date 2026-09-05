@@ -140,8 +140,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   l'historique Temporal ; stocker les contenus dans Evidence MCP et retourner URI, digest, taille et verdict.
   _(Plans, patchs, tests, qualité, sécurité, SBOM et revues sont stockés par `EvidenceRepository` ; les résultats
   d'étape ne contiennent que des `ArtifactReference` compactes.)_
-- [ ] **TEMP-023 — Retirer les écritures implicites dans `TaskState`.** Faire retourner aux étapes des événements
-  métier explicites appliqués ensuite à la projection.
+- [x] **TEMP-023 — Retirer les écritures implicites dans `TaskState`.** Faire retourner aux étapes des événements
+  métier explicites appliqués ensuite à la projection. _(`PipelineProjectionEvent` modélise chaque mutation ; le
+  service d'étapes émet les événements et seul l'applier met à jour `TaskState`.)_
 - [ ] **TEMP-024 — Formaliser l'idempotence.** Dériver les clés des effets depuis workflow ID, étape, séquence,
   source commit et digest d'entrée ; rejeter une réutilisation avec un payload différent.
 - [ ] **TEMP-025 — Classer les erreurs.** Distinguer erreurs métier non retryables, erreurs de contrat, saturation,

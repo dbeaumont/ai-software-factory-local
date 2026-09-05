@@ -67,7 +67,8 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
     public void resumeAfterApproval(TaskState state) {
         taskTracer.submit(executor, state, "resume-after-approval", () -> {
             try {
-                steps.deliver(state, command(state, "delivery", java.util.Map.of("patch", state.patch)));
+                apply(state, steps.deliver(state,
+                        command(state, "delivery", java.util.Map.of("patch", state.patch))));
                 state.transition(TaskStatus.PR_CREATED, "Pull request created: " + state.pullRequestUrl);
                 log.info("Task {} ({}) created pull request", state.id, state.ticketNumber);
             } catch (Exception exception) {
@@ -78,31 +79,39 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
 
     private void runPipeline(TaskState state) {
         try {
-            Path workspace = steps.initializeWorkspace(state);
+            PipelineProjectionEvent.Applier.apply(state, steps.initializeWorkspace(state));
+            Path workspace = Path.of(state.workspace);
             state.transition(TaskStatus.CLONING, "Cloning repository");
-            steps.cloneSource(state, workspace, command(state, "clone", java.util.Map.of(
-                    "repositoryUrl", state.request.repositoryUrl(), "branch", state.request.effectiveBranch())));
+            apply(state, steps.cloneSource(state, workspace, command(state, "clone", java.util.Map.of(
+                    "repositoryUrl", state.request.repositoryUrl(), "branch", state.request.effectiveBranch()))));
+            steps.writeRunMetadata(workspace, state);
             state.transition(TaskStatus.PLANNING, "Planner agent analyzing requirement and repository context");
-            steps.plan(state, workspace, command(state, "plan", java.util.Map.of(
-                    "requirement", state.request.requirement())));
+            apply(state, steps.plan(state, workspace, command(state, "plan", java.util.Map.of(
+                    "requirement", state.request.requirement()))));
+            steps.writeRunMetadata(workspace, state);
             state.transition(TaskStatus.GENERATING_PATCH, "Developer agent generating a unified diff");
-            steps.generateAndRepairPatch(state, workspace, command(state, "generate-patch", java.util.Map.of(
-                    "requirement", state.request.requirement(), "plan", state.plan)));
+            apply(state, steps.generateAndRepairPatch(state, workspace, command(state, "generate-patch", java.util.Map.of(
+                    "requirement", state.request.requirement(), "plan", state.plan))));
+            steps.writeRunMetadata(workspace, state);
             state.transition(TaskStatus.APPLYING_PATCH, "Applying generated patch inside isolated Docker sandbox");
-            steps.applyPatch(state, workspace, command(state, "apply-patch", java.util.Map.of("patch", state.patch)));
+            apply(state, steps.applyPatch(state, workspace,
+                    command(state, "apply-patch", java.util.Map.of("patch", state.patch))));
             state.transition(TaskStatus.TESTING, "Running deterministic build and tests in sandbox");
-            steps.test(state, workspace, command(state, "test", java.util.Map.of("patch", state.patch)));
+            apply(state, steps.test(state, workspace,
+                    command(state, "test", java.util.Map.of("patch", state.patch))));
+            steps.writeRunMetadata(workspace, state);
             state.transition(TaskStatus.QUALITY_SCANNING, "Running SonarQube quality analysis");
-            steps.quality(state, workspace, command(state, "quality", java.util.Map.of(
-                    "testSummary", state.testSummary)));
+            apply(state, steps.quality(state, workspace, command(state, "quality", java.util.Map.of(
+                    "testSummary", state.testSummary))));
             state.transition(TaskStatus.SECURITY_SCANNING, "Generating SBOM and running Trivy");
-            steps.security(state, workspace, command(state, "security", java.util.Map.of(
-                    "qualitySummary", state.qualitySummary)));
+            apply(state, steps.security(state, workspace, command(state, "security", java.util.Map.of(
+                    "qualitySummary", state.qualitySummary))));
             state.transition(TaskStatus.REVIEWING, "Reviewer agent assessing plan, patch and deterministic evidence");
-            steps.review(state, workspace, command(state, "review", java.util.Map.of(
+            apply(state, steps.review(state, workspace, command(state, "review", java.util.Map.of(
                     "plan", state.plan, "patch", state.patch,
-                    "assurance", state.assuranceResults.toString())));
-            steps.prepareDelivery(state);
+                    "assurance", state.assuranceResults.toString()))));
+            steps.writeRunMetadata(workspace, state);
+            PipelineProjectionEvent.Applier.apply(state, steps.prepareDelivery(state));
             state.transition(TaskStatus.WAITING_APPROVAL,
                     "Pipeline complete. Human approval required before commit/push/PR.");
             completedTasks.increment();
@@ -116,6 +125,10 @@ public class DeterministicWorkflowCoordinator implements WorkflowCoordinator {
     private static PipelineStepContracts.Command command(TaskState state, String step,
                                                          java.util.Map<String, String> inputs) {
         return PipelineStepContracts.Command.forTask(state, step, inputs);
+    }
+
+    private static void apply(TaskState state, PipelineProjectionEvent.StepExecution execution) {
+        execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
     }
 
     static String stripFence(String value) {
