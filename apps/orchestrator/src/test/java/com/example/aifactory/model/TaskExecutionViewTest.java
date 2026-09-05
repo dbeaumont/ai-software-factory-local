@@ -16,6 +16,7 @@ class TaskExecutionViewTest {
         TaskView view = state.view();
 
         assertThat(view.executionMode()).isEqualTo("HIERARCHICAL_ACTIVE");
+        assertThat(view.workflowAttemptId()).isEqualTo("pipeline-1");
         assertThat(view.workflowRunId()).isEqualTo("run-123");
         assertThat(view.dagVersion()).isEqualTo("dag-v4");
         assertThat(view.globalBudget()).isEqualTo(

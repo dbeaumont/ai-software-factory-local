@@ -389,7 +389,8 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### Critères de sortie du lot 6
 
-- [ ] Une tâche est navigable de l'interface vers SigNoz, Temporal UI, Evidence MCP et Gitea.
+- [x] Une tâche est navigable de l'interface vers SigNoz, Temporal UI, Evidence MCP et Gitea. _(La fiche expose des
+  liens corrélés au task/workflow/run, un endpoint de métadonnées Evidence sans contenu brut et le dépôt Gitea.)_
 - [ ] Les alertes sont testées par injection de panne et reviennent automatiquement à l'état normal.
 - [ ] La restauration conserve l'idempotence et n'entraîne aucun rejeu SCM non autorisé.
 

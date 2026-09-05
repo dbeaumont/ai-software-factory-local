@@ -123,6 +123,10 @@
 .evidence-item small { overflow-wrap: anywhere; color: var(--muted); font-size: 8px; }
 .evidence-item.status-complete { border-left-color: #22a06b; }
 .evidence-item.status-partial,.evidence-item.status-corrupted,.evidence-item.status-missing { border-left-color: var(--red); }
+.task-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
+.task-navigation a { padding: 7px; border: 1px solid #bcd5ff; border-radius: 3px; color: var(--blue); background: var(--blue-soft); font-size: 10px; font-weight: 700; text-align: center; text-decoration: none; }
+.task-navigation a:hover { border-color: var(--blue); }
+.evidence-item a { overflow-wrap: anywhere; color: var(--blue); font-size: 8px; }
 .human-decision-panel { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
 .human-decision-list { display: grid; gap: 8px; margin-top: 10px; }
 .human-decision { display: grid; gap: 6px; padding: 9px; border: 1px solid #f5cd47; border-radius: 4px; background: #fff7d6; }

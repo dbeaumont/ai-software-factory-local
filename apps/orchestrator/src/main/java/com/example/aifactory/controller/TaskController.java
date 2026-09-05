@@ -36,6 +36,14 @@ public class TaskController {
         return tasks.projectionStatus(id);
     }
 
+    @GetMapping("/{id}/evidence/{artifactId}")
+    public TaskView.ArtifactView evidenceSummary(@PathVariable String id, @PathVariable String artifactId) {
+        return tasks.get(id).artifacts().stream()
+                .filter(artifact -> artifact.artifactId().equals(artifactId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown evidence artifact " + artifactId));
+    }
+
     @PostMapping("/{id}/approve")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public TaskView approve(@PathVariable String id) { return tasks.approve(id); }

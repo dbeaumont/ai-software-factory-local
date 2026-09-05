@@ -94,7 +94,7 @@ public class TaskState {
                 testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), evaluationMetrics(),
                 review, pendingEffect,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt,
-                executionMode, workflowRunId, dagVersion,
+                executionMode, workflowAttemptId, workflowRunId, dagVersion,
                 new TaskView.GlobalBudget(globalMaxTokens, globalMaxCostMicros, globalMaxTurns,
                         llmTokens, llmCostMicros, agentTurns), List.copyOf(delegations.values()),
                 artifacts.values().stream().map(ArtifactMetadata::project).toList(),

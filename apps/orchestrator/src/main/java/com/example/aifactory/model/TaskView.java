@@ -30,6 +30,7 @@ public record TaskView(
         Instant createdAt,
         Instant updatedAt,
         String executionMode,
+        String workflowAttemptId,
         String workflowRunId,
         String dagVersion,
         GlobalBudget globalBudget,

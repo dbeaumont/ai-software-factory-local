@@ -11,6 +11,11 @@ const ticketTitle = document.querySelector('#ticket-title');
 const taskSummary = document.querySelector('#task-summary');
 const taskDetail = document.querySelector('#task-detail');
 const projectionWarning = document.querySelector('#projection-warning');
+const taskNavigation = document.querySelector('#task-navigation');
+const taskTemporalLink = document.querySelector('#task-temporal-link');
+const taskSignozLink = document.querySelector('#task-signoz-link');
+const taskEvidenceLink = document.querySelector('#task-evidence-link');
+const taskRepositoryLink = document.querySelector('#task-repository-link');
 const progressBar = document.querySelector('#progress-bar');
 const steps = document.querySelector('#steps');
 const pipelineProgress = document.querySelector('#pipeline-progress');
@@ -362,6 +367,41 @@ function browserPullRequestUrl(value) {
   return url.toString();
 }
 
+function localToolUrl(port, path) {
+  const url = new URL(path, window.location.origin);
+  url.protocol = window.location.protocol;
+  url.hostname = window.location.hostname;
+  url.port = port;
+  return url.toString();
+}
+
+function browserRepositoryUrl(value) {
+  const url = new URL(value, window.location.origin);
+  if (url.hostname === 'gitea') {
+    url.protocol = window.location.protocol;
+    url.hostname = window.location.hostname;
+    url.port = '3000';
+  }
+  url.pathname = url.pathname.replace(/\.git\/?$/, '');
+  return url.toString();
+}
+
+function renderTaskNavigation(task) {
+  const hasExecution = Boolean(task.id && task.workflowAttemptId && task.workflowRunId);
+  taskNavigation.hidden = !hasExecution;
+  if (!hasExecution) return;
+
+  const workflowId = `ai-factory/${task.id}/${task.workflowAttemptId}`;
+  taskTemporalLink.href = localToolUrl('8233', `/namespaces/ai-factory-local/workflows/${encodeURIComponent(workflowId)}/${encodeURIComponent(task.workflowRunId)}/history`);
+  taskSignozLink.href = localToolUrl('3301', `/logs-explorer?searchText=${encodeURIComponent(task.id)}`);
+  taskRepositoryLink.href = browserRepositoryUrl(task.repositoryUrl);
+  const evidence = Array.isArray(task.artifacts) ? task.artifacts.find((artifact) => artifact.artifactId) : null;
+  taskEvidenceLink.hidden = !evidence;
+  if (evidence) {
+    taskEvidenceLink.href = `/api/tasks/${encodeURIComponent(task.id)}/evidence/${encodeURIComponent(evidence.artifactId)}`;
+  }
+}
+
 function isFinished(status) {
   return ['WAITING_APPROVAL', 'PR_CREATED', 'CANCELLED', 'FAILED'].includes(status);
 }
@@ -582,8 +622,13 @@ function renderEvidence(task) {
     metadata.textContent = `${artifact.classification || 'NON CLASSIFIÉ'} · ${formatBytes(artifact.sizeBytes)}`;
     const digest = document.createElement('code');
     digest.textContent = `SHA-256 ${artifact.digest || 'indisponible'}`;
-    const uri = document.createElement('small');
+    const uri = document.createElement(artifact.artifactId ? 'a' : 'small');
     uri.textContent = artifact.uri ? `URI autorisée : ${artifact.uri}` : 'URI masquée par la politique d’accès';
+    if (artifact.artifactId) {
+      uri.href = `/api/tasks/${encodeURIComponent(task.id)}/evidence/${encodeURIComponent(artifact.artifactId)}`;
+      uri.target = '_blank';
+      uri.rel = 'noreferrer';
+    }
     item.append(header, metadata, digest, uri);
     return item;
   }));
@@ -659,6 +704,7 @@ function renderTask(task) {
   taskDetail.textContent = task.error || statusDescription(task.status);
   progressBar.style.width = `${progress[task.status] || 10}%`;
   renderPipeline(task);
+  renderTaskNavigation(task);
   renderDelegationDag(task);
   renderEvidence(task);
   renderHumanDecisions(task);
