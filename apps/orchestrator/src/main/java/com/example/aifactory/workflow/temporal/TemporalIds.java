@@ -11,7 +11,8 @@ public final class TemporalIds {
     private TemporalIds() {}
 
     public static String workflow(String taskId, String attemptId) {
-        return bounded("sf", require(taskId), require(attemptId));
+        String value = "ai-factory/" + require(taskId) + '/' + require(attemptId);
+        return value.length() <= MAX_ID_LENGTH ? value : "ai-factory/" + digest(value);
     }
 
     public static String delegation(String taskId, String attemptId, String nodeId) {

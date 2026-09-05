@@ -78,8 +78,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   `SoftwareFactoryExecutionWorkflowV1` ou faire évoluer le contrat existant avec une stratégie explicite
   `Workflow.getVersion`; documenter le choix dans une ADR. _(Le nouveau type V1, ses règles d'évolution et de
   drainage sont fixés dans `ADR-TEMP-001`.)_
-- [ ] **TEMP-005 — Définir le workflow ID.** Utiliser un identifiant stable tel que
+- [x] **TEMP-005 — Définir le workflow ID.** Utiliser un identifiant stable tel que
   `ai-factory/{taskId}/{attemptId}`, avec une politique de réutilisation qui refuse les doublons non terminés.
+  _(Format implémenté dans `TemporalIds`, doublons refusés pour toute tentative déjà créée.)_
 - [ ] **TEMP-006 — Définir les Run IDs et tentatives.** Ne jamais utiliser un Run ID aléatoire comme clé métier ;
   conserver `taskId`, `attemptId`, `sourceCommit` et `repositoryId` dans chaque entrée, activité et preuve.
 - [ ] **TEMP-007 — Définir le fail-closed.** Si Temporal est indisponible, refuser ou mettre en attente

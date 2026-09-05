@@ -76,6 +76,15 @@ Les règles suivantes s'appliquent :
 Ce choix évite de donner une autorité de production rétroactive au workflow expérimental déjà présent et permet
 de conserver ses historiques de test comme fixtures indépendantes.
 
+## Identité du workflow racine
+
+- Le Workflow ID canonique est `ai-factory/{taskId}/{attemptId}`.
+- Lorsque sa longueur dépasserait 200 caractères, les composants sont remplacés par un SHA-256 déterministe.
+- Le client utilise `WorkflowIdConflictPolicy.FAIL` pour refuser un workflow ouvert portant le même ID.
+- Le client utilise `WorkflowIdReusePolicy.REJECT_DUPLICATE` : une nouvelle exécution exige toujours un nouvel
+  `attemptId`, y compris après un échec ou une annulation.
+- Un rejeu opérateur crée une tentative liée ; il ne réutilise ni Workflow ID ni clé d'effet.
+
 ## Vérification
 
 - aucun contrat public ne permet de choisir le moteur ;
