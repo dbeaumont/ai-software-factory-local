@@ -27,6 +27,7 @@ class PostgresTaskMemoryTest {
     private JdbcTemplate jdbc;
     private FakeEvidenceRepository evidence;
     private PostgresTaskMemory memory;
+    private ObjectMapper mapper;
 
     @BeforeEach
     void setUp() {
@@ -102,10 +103,24 @@ class PostgresTaskMemoryTest {
                   version bigint NOT NULL DEFAULT 0
                 )
                 """);
+        jdbc.execute("""
+                CREATE TABLE legacy_task_imports (
+                  task_id varchar(64) PRIMARY KEY REFERENCES tasks(task_id),
+                  attempt_id varchar(128) NOT NULL,
+                  source_commit char(40) NOT NULL,
+                  source_commit_verified boolean NOT NULL,
+                  legacy_status varchar(48) NOT NULL,
+                  snapshot_uri varchar(1024) NOT NULL,
+                  snapshot_digest char(64) NOT NULL,
+                  snapshot_classification varchar(32) NOT NULL,
+                  migrated_at timestamp with time zone NOT NULL
+                )
+                """);
         evidence = new FakeEvidenceRepository();
+        mapper = new ObjectMapper();
         memory = new PostgresTaskMemory(jdbc,
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)),
-                evidence, new ObjectMapper());
+                evidence, mapper);
     }
 
     @Test
@@ -232,6 +247,35 @@ class PostgresTaskMemoryTest {
         assertThat(status.ageMillis()).isGreaterThanOrEqualTo(59_000);
         assertThat(status.potentiallyStale()).isTrue();
         assertThat(memory.find(task.id).orElseThrow().status).isEqualTo(TaskStatus.QUEUED);
+    }
+
+    @Test
+    void servesAVerifiedLegacyProjectionWithoutInventingATemporalRun() throws Exception {
+        TaskState legacy = task("task-legacy");
+        legacy.status = TaskStatus.PR_CREATED;
+        legacy.sourceCommit = "c".repeat(40);
+        byte[] snapshot = mapper.writeValueAsBytes(legacy.view());
+        String digest = FakeEvidenceRepository.sha256(snapshot);
+        EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
+                legacy.id, "legacy-" + legacy.id, "legacy-task-snapshot", "application/json",
+                snapshot, digest, "workflow"));
+        jdbc.update("INSERT INTO tasks(task_id, ticket_number, repository_id, current_attempt_id, source_commit, "
+                        + "requirement_digest, status, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                legacy.id, legacy.ticketNumber, "legacy-repo", "legacy-" + legacy.id, legacy.sourceCommit,
+                "d".repeat(64), "COMPLETED", legacy.createdAt, legacy.updatedAt);
+        jdbc.update("INSERT INTO legacy_task_imports(task_id, attempt_id, source_commit, source_commit_verified, "
+                        + "legacy_status, snapshot_uri, snapshot_digest, snapshot_classification, migrated_at) "
+                        + "VALUES (?, ?, ?, true, 'PR_CREATED', ?, ?, 'CONFIDENTIAL', ?)",
+                legacy.id, "legacy-" + legacy.id, legacy.sourceCommit, stored.uri(), stored.digest(), Instant.now());
+
+        TaskState restored = memory.find(legacy.id).orElseThrow();
+
+        assertThat(restored.status).isEqualTo(TaskStatus.PR_CREATED);
+        assertThat(restored.executionMode).isEqualTo("LEGACY_LOCAL");
+        assertThat(restored.workflowAttemptId).isEqualTo("legacy-" + legacy.id);
+        assertThat(restored.workflowRunId).isNull();
+        assertThat(memory.list()).extracting(value -> value.id).containsExactly(legacy.id);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM workflow_runs", Integer.class)).isZero();
     }
 
     private static TaskState task(String id) {

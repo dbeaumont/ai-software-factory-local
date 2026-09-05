@@ -8,6 +8,7 @@ import com.example.aifactory.service.ScmDeliveryGateway;
 import com.example.aifactory.workflow.EvidenceRepository;
 import com.example.aifactory.workflow.TaskMemory;
 import com.example.aifactory.workflow.temporal.TemporalIds;
+import com.example.aifactory.workflow.migration.LegacyTaskMigrationTarget;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -228,16 +229,60 @@ public final class PostgresTaskMemory implements TaskMemory {
                 "SELECT attempt_id, snapshot_uri, snapshot_digest, version FROM task_projection_snapshots "
                         + "WHERE task_id = ?", (row, index) -> new ProjectionReference(
                         row.getString(1), row.getString(2), row.getString(3), row.getLong(4)), taskId);
-        return references.stream().findFirst().map(reference -> restore(taskId, reference));
+        Optional<TaskState> current = references.stream().findFirst().map(reference -> restore(taskId, reference));
+        return current.isPresent() ? current : findLegacy(taskId).map(this::restoreLegacy);
     }
 
     @Override
     public List<TaskState> list() {
-        return jdbc.query("SELECT p.task_id, p.attempt_id, p.snapshot_uri, p.snapshot_digest, p.version "
+        List<TaskState> current = jdbc.query("SELECT p.task_id, p.attempt_id, p.snapshot_uri, p.snapshot_digest, p.version "
                         + "FROM task_projection_snapshots p JOIN tasks t ON t.task_id = p.task_id "
                         + "ORDER BY t.created_at, p.task_id",
                 (row, index) -> restore(row.getString(1), new ProjectionReference(
                         row.getString(2), row.getString(3), row.getString(4), row.getLong(5))));
+        java.util.ArrayList<TaskState> all = new java.util.ArrayList<>(current);
+        jdbc.query("SELECT l.task_id FROM legacy_task_imports l LEFT JOIN task_projection_snapshots p "
+                        + "ON p.task_id = l.task_id WHERE p.task_id IS NULL ORDER BY l.migrated_at, l.task_id",
+                (row, index) -> row.getString(1)).stream().map(this::findLegacy).flatMap(Optional::stream)
+                .map(this::restoreLegacy).forEach(all::add);
+        return all.stream().sorted(java.util.Comparator.comparing(state -> state.createdAt)).toList();
+    }
+
+    private Optional<LegacyTaskMigrationTarget.TaskRecord> findLegacy(String taskId) {
+        return jdbc.query("SELECT t.task_id, t.ticket_number, t.repository_id, l.attempt_id, l.source_commit, "
+                        + "l.source_commit_verified, t.requirement_digest, t.status, l.legacy_status, t.created_at, "
+                        + "t.updated_at, l.snapshot_uri, l.snapshot_digest, l.snapshot_classification "
+                        + "FROM legacy_task_imports l JOIN tasks t ON t.task_id = l.task_id WHERE l.task_id = ?",
+                (row, index) -> new LegacyTaskMigrationTarget.TaskRecord(row.getString(1), row.getString(2),
+                        row.getString(3), row.getString(4), row.getString(5), row.getBoolean(6), row.getString(7),
+                        row.getString(8), row.getString(9),
+                        row.getObject(10, java.time.OffsetDateTime.class).toInstant(),
+                        row.getObject(11, java.time.OffsetDateTime.class).toInstant(), row.getString(12),
+                        row.getString(13), row.getString(14)), taskId).stream().findFirst();
+    }
+
+    private TaskState restoreLegacy(LegacyTaskMigrationTarget.TaskRecord record) {
+        EvidenceRepository.RawEvidence raw = evidence.read(new EvidenceRepository.ReadRequest(
+                record.taskId(), record.attemptId(), record.snapshotUri(), "workflow", "legacy-task-read"));
+        if (!record.snapshotUri().equals(raw.uri()) || !record.snapshotDigest().equals(raw.digest())
+                || !record.snapshotDigest().equals(sha256(raw.content())) || !"COMPLETE".equals(raw.status())) {
+            throw new SecurityException("Legacy task snapshot failed Evidence verification");
+        }
+        TaskView view;
+        try {
+            view = mapper.readValue(raw.content(), TaskView.class);
+        } catch (Exception failure) {
+            throw new IllegalStateException("Legacy task snapshot cannot be decoded", failure);
+        }
+        if (!record.taskId().equals(view.id()) || !record.ticketNumber().equals(view.ticketNumber())
+                || !record.legacyStatus().equals(view.status().name())) {
+            throw new SecurityException("Legacy task snapshot identity diverged");
+        }
+        TaskState state = restoreState(new ProjectionSnapshot(view, record.attemptId(), null), 0);
+        state.executionMode = "LEGACY_LOCAL";
+        state.workflowRunId = null;
+        state.dagVersion = "legacy-local-v1";
+        return state;
     }
 
     private TaskState restore(String taskId, ProjectionReference reference) {

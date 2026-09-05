@@ -23,7 +23,7 @@ public final class MigratedTaskReader {
     public TaskView read(LegacyTaskMigrationTarget.TaskRecord record) {
         EvidenceRepository.RawEvidence evidence = evidenceRepository.read(new EvidenceRepository.ReadRequest(
                 record.taskId(), record.attemptId(), record.snapshotUri(), "workflow",
-                "serve migrated terminal task"));
+                "legacy-task-read"));
         String digest = sha256(evidence.content());
         if (!record.snapshotUri().equals(evidence.uri()) || !record.snapshotDigest().equals(evidence.digest())
                 || !digest.equals(evidence.digest()) || !"COMPLETE".equals(evidence.status())) {

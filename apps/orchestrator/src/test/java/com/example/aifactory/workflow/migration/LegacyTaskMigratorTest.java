@@ -47,6 +47,7 @@ class LegacyTaskMigratorTest {
         assertThat(completed.view()).isEqualTo(before);
         LegacyTaskMigrationTarget.TaskRecord record = target.records.getFirst();
         assertThat(record.targetStatus()).isEqualTo("COMPLETED");
+        assertThat(record.ticketNumber()).isEqualTo("AF-0042");
         assertThat(record.legacyStatus()).isEqualTo("PR_CREATED");
         assertThat(record.sourceCommitVerified()).isTrue();
         assertThat(record.sourceCommit()).isEqualTo(completed.sourceCommit);

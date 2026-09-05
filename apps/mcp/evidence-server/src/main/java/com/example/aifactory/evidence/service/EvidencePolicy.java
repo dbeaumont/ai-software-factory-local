@@ -40,7 +40,7 @@ public class EvidencePolicy {
         Rule rule = require(type);
         if (!("workflow".equals(actor) || "reviewer".equals(actor) || "independent-reviewer".equals(actor))
                 || !("human-review".equals(purpose) || "incident-investigation".equals(purpose)
-                || "projection-recovery".equals(purpose))
+                || "projection-recovery".equals(purpose) || "legacy-task-read".equals(purpose))
                 || ("approval".equals(type) && !"workflow".equals(actor))) {
             throw new SecurityException("raw evidence read is not authorized");
         }

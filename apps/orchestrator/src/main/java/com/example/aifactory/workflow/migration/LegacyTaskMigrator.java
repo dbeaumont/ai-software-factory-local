@@ -15,7 +15,7 @@ import java.util.Set;
 
 /** Imports terminal in-memory tasks without mutating or re-running their legacy instances. */
 public final class LegacyTaskMigrator {
-    private static final Set<TaskStatus> TERMINAL = Set.of(TaskStatus.PR_CREATED, TaskStatus.CANCELLED, TaskStatus.FAILED);
+    private static final Set<TaskStatus> TERMINAL = Set.of(TaskStatus.PR_CREATED, TaskStatus.FAILED);
     private static final String UNKNOWN_COMMIT = "0".repeat(40);
 
     private final TaskMemory legacyMemory;
@@ -64,7 +64,7 @@ public final class LegacyTaskMigrator {
         boolean commitVerified = state.sourceCommit != null && state.sourceCommit.matches("[0-9a-f]{40}");
         String repositoryId = "legacy-" + sha256(state.request.repositoryUrl().getBytes(StandardCharsets.UTF_8))
                 .substring(0, 32);
-        return new LegacyTaskMigrationTarget.TaskRecord(state.id, repositoryId, attemptId,
+        return new LegacyTaskMigrationTarget.TaskRecord(state.id, state.ticketNumber, repositoryId, attemptId,
                 commitVerified ? state.sourceCommit : UNKNOWN_COMMIT, commitVerified,
                 sha256(state.request.requirement().getBytes(StandardCharsets.UTF_8)), targetStatus(state.status),
                 state.status.name(), state.createdAt, state.updatedAt, stored.uri(), stored.digest(),
@@ -74,7 +74,6 @@ public final class LegacyTaskMigrator {
     private static String targetStatus(TaskStatus status) {
         return switch (status) {
             case PR_CREATED -> "COMPLETED";
-            case CANCELLED -> "CANCELLED";
             case FAILED -> "FAILED";
             default -> throw new IllegalArgumentException("legacy task is not terminal");
         };

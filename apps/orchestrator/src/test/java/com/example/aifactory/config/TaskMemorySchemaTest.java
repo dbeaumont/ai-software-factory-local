@@ -187,5 +187,8 @@ class TaskMemorySchemaTest {
                 .contains("UNIQUE (ticket_number)")
                 .contains("nextval('task_ticket_number_seq')")
                 .contains("^AF-[0-9]{4,}$");
+        assertThat(Files.readString(DATABASE.resolve("V014__legacy_task_import_compatibility.sql")))
+                .contains("ALTER COLUMN ticket_number SET DEFAULT")
+                .contains("task_ticket_number_seq");
     }
 }

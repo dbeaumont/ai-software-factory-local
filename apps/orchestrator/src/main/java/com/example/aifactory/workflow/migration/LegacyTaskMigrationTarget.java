@@ -8,7 +8,7 @@ public interface LegacyTaskMigrationTarget {
     /** The batch must be idempotent by task id and reject any divergent re-import. */
     void importAtomically(List<TaskRecord> tasks);
 
-    record TaskRecord(String taskId, String repositoryId, String attemptId, String sourceCommit,
+    record TaskRecord(String taskId, String ticketNumber, String repositoryId, String attemptId, String sourceCommit,
                       boolean sourceCommitVerified, String requirementDigest, String targetStatus,
                       String legacyStatus, Instant createdAt, Instant updatedAt, String snapshotUri,
                       String snapshotDigest, String snapshotClassification) {}

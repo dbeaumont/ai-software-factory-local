@@ -368,11 +368,14 @@ public class TaskState {
     }
 
     public synchronized void restoreProjectionMetadata(String attemptId, long version, Instant expiresAt) {
-        if (attemptId == null || !attemptId.matches("pipeline-[1-9][0-9]*") || version < 0) {
+        if (attemptId == null || !(attemptId.matches("pipeline-[1-9][0-9]*")
+                || attemptId.matches("legacy-[A-Za-z0-9_-]{1,64}")) || version < 0) {
             throw new IllegalArgumentException("Task projection metadata is invalid");
         }
         workflowAttemptId = attemptId;
-        workflowAttemptSequence = Integer.parseInt(attemptId.substring("pipeline-".length()));
+        if (attemptId.startsWith("pipeline-")) {
+            workflowAttemptSequence = Integer.parseInt(attemptId.substring("pipeline-".length()));
+        }
         projectionVersion = version;
         approvalExpiresAt = expiresAt;
     }
