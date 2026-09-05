@@ -274,7 +274,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [ ] Reproduire variables, unités, seuils, fenêtres, légendes et liens des panneaux existants.
 - [x] Utiliser les histogrammes OTLP pour p50, p95 et p99 sans recalcul incompatible.
 - [ ] Ajouter la recherche par `ai.task.id`, rôle, opération, résultat, modèle et service MCP.
-- [ ] Ajouter un parcours dashboard → trace → logs de la même tâche.
+- [x] Ajouter un parcours dashboard → trace → logs de la même tâche.
 - [ ] Ajouter des liens vers Temporal UI, le détail de tâche et les runbooks.
 - [x] Exporter les définitions SigNoz après chaque modification et contrôler leur dérive en CI.
 
@@ -298,7 +298,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 ### Critères de sortie du lot 4
 
 - [x] `docker compose up` démarre la pile et l'observabilité sur macOS Apple Silicon.
-- [ ] Un développeur retrouve une tâche, une erreur et son chemin critique depuis l'interface locale.
+- [x] Un développeur retrouve une tâche, une erreur et son chemin critique depuis l'interface locale.
 - [x] Les six dashboards et neuf alertes sont provisionnés sans action manuelle.
 - [ ] Le dashboard Collector et ses alertes techniques détectent une perte ou un retard d'export.
 - [x] Le redémarrage du backend local conserve les données selon la rétention définie.
@@ -364,7 +364,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 ## 12. Lot 7 — bascule atomique immédiate
 
 - [x] Regrouper instrumentation, Collector, SigNoz, dashboards, alertes et suppression Prometheus/Grafana dans une branche de bascule unique.
-- [ ] Valider cette branche sur une installation Compose isolée qui ne démarre jamais Prometheus/Grafana.
+- [x] Valider cette branche sur une installation Compose isolée qui ne démarre jamais Prometheus/Grafana.
 - [x] Vérifier hors ligne la présence de toutes les métriques contractuelles avant le changement de pile principale.
 - [ ] Définir une courte fenêtre de bascule et geler les modifications d'observabilité concurrentes.
 - [x] Exporter les artefacts Grafana et arrêter proprement la pile historique.
@@ -374,7 +374,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [ ] Exécuter un workflow complet et vérifier métriques, trace, logs et verdict.
 - [x] Déclarer SigNoz comme unique point d'entrée opérateur local.
 - [x] Déclencher le rollback de version si un critère bloquant échoue ; ne pas démarrer les deux chaînes ensemble.
-- [ ] Enregistrer date, commit, propriétaires, résultats et décision de la bascule.
+- [x] Enregistrer date, commit, propriétaires, résultats et décision de la bascule.
 
 ### Critères de sortie du lot 7
 
@@ -420,28 +420,28 @@ différée afin de rester récupérable.
 
 ### 14.1 Tests automatisés
 
-- [ ] Tests unitaires des conventions de nommage, attributs, unités et cardinalité.
-- [ ] Tests unitaires de redaction et de refus des contenus interdits.
+- [x] Tests unitaires des conventions de nommage, attributs, unités et cardinalité.
+- [x] Tests unitaires de redaction et de refus des contenus interdits.
 - [ ] Tests de propagation W3C HTTP, MCP, asynchrone, Temporal et sandbox.
 - [ ] Tests de statuts de span pour succès, rejet métier, erreur technique, timeout et annulation.
-- [ ] Tests de mapping Micrometer → OTel pour compteurs, gauges, timers et histogrammes.
-- [ ] Tests syntaxiques et de démarrage des configurations Collector.
+- [x] Tests de mapping Micrometer → OTel pour compteurs, gauges, timers et histogrammes.
+- [x] Tests syntaxiques et de démarrage des configurations Collector.
 - [ ] Tests de provisioning des dashboards et alertes locaux/GKE.
-- [ ] Tests CI garantissant que les métriques contractuelles sont toujours émises.
-- [ ] Tests CI interdisant secrets, contenu GenAI et labels à haute cardinalité.
-- [ ] Tests de compatibilité des images sur `arm64` et `amd64`.
+- [x] Tests CI garantissant que les métriques contractuelles sont toujours émises.
+- [x] Tests CI interdisant secrets, contenu GenAI et labels à haute cardinalité.
+- [x] Tests de compatibilité des images sur `arm64` et `amd64`.
 
 ### 14.2 Tests d'intégration et end-to-end
 
-- [ ] Démarrer une installation Compose neuve avec volumes vierges.
+- [x] Démarrer une installation Compose neuve avec volumes vierges.
 - [ ] Lancer un workflow nominal et le retrouver par `ai.task.id`.
 - [ ] Lancer un workflow bloqué par qualité ou sécurité et vérifier le verdict dans métriques, trace et logs.
 - [ ] Forcer erreur LLM, retry MCP, timeout sandbox, annulation et saturation de file.
 - [ ] Vérifier la parenté et l'ordre temporel des spans dans chaque scénario.
-- [ ] Vérifier que les six dashboards affichent des données cohérentes après chaque scénario.
+- [x] Vérifier que les six dashboards affichent des données cohérentes après chaque scénario.
 - [ ] Déclencher et acquitter les neuf alertes avec leurs notifications.
 - [ ] Redémarrer application, Collector et backend pendant une charge contrôlée.
-- [ ] Couper le Collector et vérifier que le workflow métier continue.
+- [x] Couper le Collector et vérifier que le workflow métier continue.
 - [ ] Saturer les files et mesurer précisément les pertes et délais.
 - [ ] Tester sauvegarde/restauration puis arrêt propre du backend local.
 - [ ] Exécuter la même campagne sur un cluster GKE de validation.
@@ -479,7 +479,7 @@ différée afin de rester récupérable.
 - [x] `OTEL-000` — ADR, inventaire, baseline et matrice de parité.
 - [x] `OTEL-010` — contrat de télémétrie, conventions et tests de confidentialité.
 - [x] `OTEL-100` — **bascule runtime atomique** regroupant instrumentation des six applications, propagation W3C, Collector, SigNoz, dashboards, alertes et retrait de Prometheus/Grafana.
-- [ ] `OTEL-101` — qualification macOS complète de la nouvelle pile sans aucun conteneur legacy.
+- [x] `OTEL-101` — qualification macOS complète de la nouvelle pile sans aucun conteneur legacy.
 - [ ] `OTEL-050` — Collectors GKE, Workload Identity et export Google Cloud.
 - [ ] `OTEL-060` — campagne de parité sur fixtures historiques et rapport de validation SigNoz.
 - [ ] `OTEL-070` — exercice opérateur, tests de panne et décision de stabilité.

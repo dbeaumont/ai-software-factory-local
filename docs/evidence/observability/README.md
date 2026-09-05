@@ -38,4 +38,5 @@ Cette fixture ne contient ni secret, ni prompt, ni résultat LLM, ni code source
 ## Preuves après bascule
 
 - `otel-100-runtime-cutover-2026-09-05.md` consigne les contrôles de la bascule atomique.
+- `otel-101-macos-qualification-2026-09-05.md` consigne la qualification Docker Desktop Apple Silicon.
 - `grafana-volume-backup-2026-09-05.md` consigne les sauvegardes récupérables et leur expiration.

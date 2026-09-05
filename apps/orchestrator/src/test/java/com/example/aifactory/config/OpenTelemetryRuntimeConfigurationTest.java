@@ -82,7 +82,7 @@ class OpenTelemetryRuntimeConfigurationTest {
                     .doesNotContain("captureCodeAttributes>true", "captureExperimentalAttributes>true");
         }
         assertThat(Files.readString(root.resolve("apps/orchestrator/src/main/resources/application.yml")))
-                .contains("propagate-context: true", "type: W3C");
+                .contains("propagate-context: true", "context-propagation: auto", "type: W3C");
     }
 
     private static List<Path> applicationFiles(Path root, String relative) {

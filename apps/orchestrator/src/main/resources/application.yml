@@ -18,6 +18,8 @@ spring:
   task:
     execution:
       propagate-context: true
+  reactor:
+    context-propagation: auto
   ai:
     mcp:
       client:
