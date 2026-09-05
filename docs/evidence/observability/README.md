@@ -45,4 +45,5 @@ Cette fixture ne contient ni secret, ni prompt, ni résultat LLM, ni code source
 - `otel-075-backup-restore-2026-09-05.md` consigne la sauvegarde cohérente et la restauration dans des volumes isolés.
 - `otel-076-persistent-queue-load-2026-09-05.md` mesure la charge courte et le drainage de la file persistante après panne.
 - `otel-077-rollback-drill-2026-09-05.md` prouve le rollback complet legacy puis le retour atomique à OpenTelemetry.
+- `otel-078-image-digests-2026-09-05.md` inventorie la qualification des images runtime et de build épinglées.
 - `grafana-volume-backup-2026-09-05.md` consigne les sauvegardes récupérables et leur expiration.

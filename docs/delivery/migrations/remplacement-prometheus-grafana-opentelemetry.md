@@ -79,7 +79,7 @@ Au début de la migration, le dépôt possède notamment :
 - [x] Ne jamais exporter prompts, réponses, code source, patchs, preuves, secrets ou jetons par défaut.
 - [x] Préférer la perte bornée de télémétrie au blocage du chemin métier en cas de panne d'observabilité.
 - [x] Versionner dashboards, alertes, configurations Collector et tests de parité dans le dépôt.
-- [ ] Épingler toutes les images par version puis par digest après qualification.
+- [x] Épingler toutes les images par version puis par digest après qualification.
 - [x] Documenter explicitement les différences acceptables entre les backends local et GKE.
 
 ## 5. Lot 0 — cadrage, inventaire et décisions

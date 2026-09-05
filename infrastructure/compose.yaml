@@ -7,7 +7,7 @@ include:
 services:
   # Align named-volume ownership with the non-root orchestrator and sandbox runners.
   sandbox-storage-init:
-    image: busybox:1.37
+    image: busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0
     command: ["sh", "-c", "chown -R 10000:10000 /workspace /m2 /trivy && chown -R 10001:10001 /otelqueue"]
     volumes:
       - factory-workspace:/workspace
@@ -19,7 +19,7 @@ services:
 
   # Durable workflow engine and its dedicated PostgreSQL persistence for local development.
   temporal-db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2
     environment:
       POSTGRES_USER: temporal
       POSTGRES_PASSWORD: temporal
@@ -38,7 +38,7 @@ services:
     networks: [workflow-internal]
 
   temporal-schema:
-    image: temporalio/admin-tools:${TEMPORAL_ADMINTOOLS_VERSION:-1.31.2}
+    image: temporalio/admin-tools:1.31.2@sha256:dbc5fcd6ee8f0f4d808bf765af9a87dea9d8a283abfdcfbd2fc148496ba66107
     depends_on:
       temporal-db:
         condition: service_healthy
@@ -61,7 +61,7 @@ services:
     networks: [workflow-internal]
 
   temporal:
-    image: temporalio/server:${TEMPORAL_VERSION:-1.31.2}
+    image: temporalio/server:1.31.2@sha256:b5ecdb8282bededae2a10c36e8d862e27d0bc2d247fc73c5416025997ab4a1da
     depends_on:
       temporal-schema:
         condition: service_completed_successfully
@@ -89,7 +89,7 @@ services:
     networks: [workflow-internal]
 
   temporal-namespace:
-    image: temporalio/admin-tools:${TEMPORAL_ADMINTOOLS_VERSION:-1.31.2}
+    image: temporalio/admin-tools:1.31.2@sha256:dbc5fcd6ee8f0f4d808bf765af9a87dea9d8a283abfdcfbd2fc148496ba66107
     depends_on:
       temporal:
         condition: service_healthy
@@ -110,7 +110,7 @@ services:
 
   # Developer diagnostics only; never routed through the product reverse proxy.
   temporal-ui:
-    image: temporalio/ui:${TEMPORAL_UI_VERSION:-2.53.0}
+    image: temporalio/ui:2.53.0@sha256:810eba47f77a89b0e64e2e751478ca585d037bbd90c0951a2974a92a6c5adeb9
     depends_on:
       temporal-namespace:
         condition: service_completed_successfully
@@ -127,7 +127,7 @@ services:
 
   # Source-control service and its dedicated persistent PostgreSQL database.
   gitea-db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2
     environment:
       POSTGRES_USER: gitea
       POSTGRES_PASSWORD: gitea
@@ -142,7 +142,7 @@ services:
     networks: [factory]
 
   gitea:
-    image: gitea/gitea:1.23.7
+    image: gitea/gitea:1.23.7@sha256:e39a5a7eb0b2aca06169b6d7a0fde1d4b00f86eb3dd5d9167232b4752bad7281
     depends_on:
       gitea-db:
         condition: service_healthy
@@ -173,7 +173,7 @@ services:
     build:
       context: ./litellm
       args:
-        LITELLM_IMAGE: ${LITELLM_IMAGE}
+        LITELLM_IMAGE: docker.litellm.ai/berriai/litellm:main-latest@sha256:a3596b705e24f83ede26b38fb8df002b44ef4ef9ae9a8aaef731f18892a1b30a
     env_file:
       - ../.vault
     environment:
@@ -661,7 +661,7 @@ services:
 
   # Public HTTP entry point: serves the frontend and forwards API requests to the orchestrator.
   reverse-proxy:
-    image: nginx:1.27-alpine
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     ports:
       - "${WEB_APP_PORT}:80"
     volumes:
@@ -681,7 +681,7 @@ services:
 
   # SonarQube and its dedicated persistent PostgreSQL database.
   sonar-db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2
     environment:
       POSTGRES_USER: sonar
       POSTGRES_PASSWORD: sonar
@@ -696,7 +696,7 @@ services:
     networks: [factory]
 
   sonarqube:
-    image: sonarqube:community
+    image: sonarqube:community@sha256:9026624a61cd25542a402a9e7213dd7dbb39724ac9597e331e6b85362558c079
     depends_on:
       sonar-db:
         condition: service_healthy
@@ -719,7 +719,7 @@ services:
 
   # Artifactory OSS requires PostgreSQL; embedded Derby is no longer supported.
   artifactory-db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2
     environment:
       POSTGRES_USER: ${ARTIFACTORY_DB_USER}
       POSTGRES_PASSWORD: ${ARTIFACTORY_DB_PASSWORD}
@@ -736,7 +736,7 @@ services:
   # Artifactory OSS does not expose repository-administration REST APIs.
   # Seed the supported first-start bootstrap file into its persistent volume.
   artifactory-config:
-    image: busybox:1.37
+    image: busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0
     command: ["sh", "-c", "mkdir -p /data/etc/artifactory && cp /bootstrap/artifactory.config.import.yml /data/etc/artifactory/artifactory.config.import.yml"]
     volumes:
       - artifactory-data:/data
@@ -745,7 +745,7 @@ services:
 
   # Local artifact repository used for local artifact storage.
   artifactory:
-    image: releases-docker.jfrog.io/jfrog/artifactory-oss:7.104.6
+    image: releases-docker.jfrog.io/jfrog/artifactory-oss:7.104.6@sha256:f9ecd8795e3947a7c990d5835499d28facd79e21660c28f030d7352847c6fde7
     # Security keys and the database password come from .vault and must remain
     # stable while the Artifactory data volume exists.
     env_file:

@@ -1,4 +1,4 @@
-FROM maven:3.9.16-eclipse-temurin-25 AS build
+FROM maven:3.9.16-eclipse-temurin-25@sha256:d67198007bb4441b07d45587320f83154de80ece3608f80408ef14c6ea847753 AS build
 ARG MAVEN_MIRROR_URL
 WORKDIR /src
 COPY pom.xml ./
@@ -12,7 +12,7 @@ RUN --mount=type=secret,id=artifactory_token \
       mvn -B -DskipTests package; \
     fi
 
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:25-jre@sha256:f9e65324a37f28209ce7dd0e5149a7aa954520ed936fb87813cf6ded2400a112
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates git \
     && rm -rf /var/lib/apt/lists/* \
