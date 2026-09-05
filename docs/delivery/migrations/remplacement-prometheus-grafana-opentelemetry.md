@@ -189,7 +189,7 @@ Au début de la migration, le dépôt possède notamment :
 
 - [x] Les six applications Spring démarrent avec et sans Collector disponible.
 - [ ] Une trace locale relie une requête API aux appels LLM, MCP et sandbox correspondants.
-- [ ] Les tests de retry, timeout, annulation et exception produisent les statuts attendus.
+- [x] Les tests de retry, timeout, annulation et exception produisent les statuts attendus.
 - [x] Les métriques métier historiques sont présentes dans un export OTLP de référence.
 - [x] Aucun test ne détecte de donnée sensible ou de cardinalité non bornée.
 

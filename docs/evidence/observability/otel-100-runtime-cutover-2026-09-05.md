@@ -42,6 +42,11 @@ La suite `SandboxJobServiceTest` vérifie en outre les cinq issues de span contr
 sans transformer la demande opérateur en panne. Chaque observation couvre la soumission, l'attente en file et le
 résultat asynchrone complet.
 
+`ResilientMcpToolInvokerTest` complète cette matrice au niveau MCP : un premier essai retryable suivi d'un succès
+arrête le span sans erreur, un dépassement du délai l'arrête avec `McpInvocationException/TIMEOUT`, et une réponse
+de contrat invalide l'arrête avec l'exception terminale sans retry. La combinaison avec les cas sandbox couvre donc
+retry, timeout, annulation, rejet métier et exception technique.
+
 ## Résilience observée
 
 - L'arrêt complet du Collector n'a interrompu aucune des six applications ; l'ingestion a repris après son

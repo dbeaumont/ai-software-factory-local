@@ -4,6 +4,9 @@ import com.example.aifactory.config.McpClientProperties;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationHandler;
+import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +20,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -50,6 +55,58 @@ class ResilientMcpToolInvokerTest {
         assertThat(calls).hasValue(2);
         assertThat(metrics.get("mcp_client_retries").counter().count()).isEqualTo(1);
         assertThat(metrics.get("mcp_client_calls").tag("outcome", "success").counter().count()).isEqualTo(1);
+    }
+
+    @Test
+    void recordsRetrySuccessTimeoutAndTerminalExceptionSpanStatuses() {
+        ObservationRegistry registry = ObservationRegistry.create();
+        List<Observation.Context> stopped = new CopyOnWriteArrayList<>();
+        registry.observationConfig().observationHandler(new ObservationHandler<>() {
+            @Override public void onStop(Observation.Context context) { stopped.add(context); }
+            @Override public boolean supportsContext(Observation.Context context) { return true; }
+        });
+        AtomicInteger calls = new AtomicInteger();
+        McpToolInvoker recovering = delegate((server, tool, arguments) -> {
+            if (calls.incrementAndGet() == 1) {
+                throw new McpInvocationException("DEPENDENCY_UNAVAILABLE", true, "temporary failure");
+            }
+            return new ObjectMapper().createObjectNode().put("ok", true);
+        });
+        invoker = new ResilientMcpToolInvoker(recovering, properties(2, Duration.ofSeconds(1)),
+                new SimpleMeterRegistry(), new ObjectMapper(), new TaskUsageLedger(new HierarchicalBudgetPolicy()),
+                new ExecutionTracer(registry));
+
+        assertThat(invoker.call("repository-context-mcp", "context.list_tree", arguments()).path("ok").asBoolean())
+                .isTrue();
+        assertThat(stopped).singleElement().satisfies(context -> {
+            assertThat(context.getName()).isEqualTo("ai.factory.mcp");
+            assertThat(context.getError()).isNull();
+        });
+
+        invoker.close();
+        McpToolInvoker timingOut = delegate((server, tool, arguments) -> {
+            long end = System.nanoTime() + Duration.ofMillis(200).toNanos();
+            while (System.nanoTime() < end) Thread.onSpinWait();
+            return new ObjectMapper().createObjectNode();
+        });
+        invoker = new ResilientMcpToolInvoker(timingOut, properties(1, Duration.ofMillis(20)),
+                new SimpleMeterRegistry(), new ObjectMapper(), new TaskUsageLedger(new HierarchicalBudgetPolicy()),
+                new ExecutionTracer(registry));
+        assertThatThrownBy(() -> invoker.call("repository-context-mcp", "context.list_tree", arguments()))
+                .isInstanceOf(McpInvocationException.class)
+                .extracting(error -> ((McpInvocationException) error).code()).isEqualTo("TIMEOUT");
+        assertThat(stopped).hasSize(2);
+        assertThat(stopped.get(1).getError()).isInstanceOf(McpInvocationException.class);
+
+        invoker.close();
+        invoker = new ResilientMcpToolInvoker(delegate((server, tool, arguments) -> {
+            throw new McpResponseValidator.McpResponseValidationException(tool, "malformed");
+        }), properties(3, Duration.ofSeconds(1)), new SimpleMeterRegistry(), new ObjectMapper(),
+                new TaskUsageLedger(new HierarchicalBudgetPolicy()), new ExecutionTracer(registry));
+        assertThatThrownBy(() -> invoker.call("repository-context-mcp", "context.list_tree", arguments()))
+                .isInstanceOf(McpResponseValidator.McpResponseValidationException.class);
+        assertThat(stopped).hasSize(3);
+        assertThat(stopped.get(2).getError()).isInstanceOf(McpResponseValidator.McpResponseValidationException.class);
     }
 
     @Test
