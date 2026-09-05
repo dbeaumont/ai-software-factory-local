@@ -219,7 +219,7 @@ cluster, un PVC, Workload Identity et les secrets de la plateforme cible. Voir l
 
 - [x] La recherche `rg '(docker\.sock|DOCKER_SOCKET_GID|AI_FACTORY_SANDBOX_RUNTIME=docker)'` ne retourne aucune dépendance active.
 - [x] La recherche des appels `docker run|docker ps|docker inspect|docker rm` ne retourne aucun appel applicatif.
-- [ ] Tous les tests unitaires, d'intégration et de sécurité passent.
+- [x] Tous les tests unitaires, d'intégration et de sécurité passent.
 - [ ] Une installation neuve fonctionne sur macOS avec Docker Compose sans configuration de groupe Docker.
 - [x] Le risque de contrôle quasi-root de l'hôte via la socket est clôturé dans le threat model.
 

@@ -28,6 +28,8 @@ indiquées par la base commencent à Tomcat `11.0.25`.
 
 ## Contrôles automatisés complémentaires
 
+- `make test` : suite complète réussie pour l'orchestrateur et les cinq serveurs MCP après réalignement des
+  contrats d'alertes et de runbooks.
 - `python3 -W error::ResourceWarning -m unittest infrastructure/sandbox/test_runner.py` : 7 tests réussis.
 - `ComposeMcpSecurityTest` : réussi avec un dépôt Maven temporaire alimenté depuis Central, le miroir Maven
   configuré sur l'hôte étant momentanément indisponible.
