@@ -492,13 +492,13 @@ retirer Prometheus/Grafana sans SigNoz fonctionnel, ni activer les deux chaînes
 
 ## 18. Définition de terminé
 
-- [ ] La télémétrie de tous les services actifs transite par OTLP et le Collector.
+- [x] La télémétrie de tous les services actifs transite par OTLP et le Collector.
 - [ ] Les métriques, traces et logs autorisés sont corrélés de bout en bout.
 - [ ] Les six dashboards et neuf alertes ont une parité approuvée.
 - [ ] Les parcours local macOS et GKE sont testés en conditions nominales et dégradées.
 - [ ] Les SLO d'ingestion, de perte, de latence et de notification sont respectés.
-- [ ] Aucun contenu sensible ou attribut à cardinalité non bornée n'est exporté.
-- [ ] Prometheus et Grafana ne figurent plus dans la configuration active, les dépendances ou les interfaces.
+- [x] Aucun contenu sensible ou attribut à cardinalité non bornée n'est exporté.
+- [x] Prometheus et Grafana ne figurent plus dans la configuration active, les dépendances ou les interfaces.
 - [ ] Le rollback complet de version a été testé puis ses artefacts ont été retirés après la fenêtre de stabilité.
 - [ ] Les runbooks, la formation, la sécurité et l'exploitation sont validés.
 - [ ] La migration est approuvée par les propriétaires application, plateforme, sécurité et exploitation.
