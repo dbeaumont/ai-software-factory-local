@@ -152,6 +152,7 @@ class SandboxJobServiceTest {
     void separatesACompletedExecutionFromARejectedBusinessVerdictAndRedactsOutput() throws Exception {
         runtime.result = new SandboxRuntime.RuntimeResult(1,
                 "SONAR_TOKEN=top-secret\nraw artifact-token must also disappear\ntests failed\n");
+        AtomicReference<Observation.Context> stopped = observeNextJob();
 
         ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
                 request("workflow", "stable-key-for-tests-run", patchDigest));
@@ -165,12 +166,14 @@ class SandboxJobServiceTest {
         assertTrue(completed.output().contains("[REDACTED]"));
         assertEquals(EvidenceStatus.COMPLETE, completed.evidenceStatus());
         assertEquals(digest(completed.output()), completed.outputDigest());
+        assertObservedOutcome(stopped, "rejected", false);
     }
 
     @Test
     void mapsRuntimeTimeoutToABlockingIndeterminateResult() throws Exception {
         runtime.failure = new SandboxRuntime.RuntimeTimeoutException("profile deadline exceeded",
                 "API_TOKEN=top-secret\npartial timeout output", true);
+        AtomicReference<Observation.Context> stopped = observeNextJob();
 
         ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
                 request("workflow", "stable-key-for-timeout", patchDigest));
@@ -185,6 +188,21 @@ class SandboxJobServiceTest {
         assertFalse(completed.output().contains("top-secret"));
         assertTrue(completed.output().contains("[REDACTED]"));
         assertEquals(digest(completed.output()), completed.outputDigest());
+        assertObservedOutcome(stopped, "timed_out", true);
+    }
+
+    @Test
+    void recordsTechnicalRuntimeFailuresAsErroredSpans() throws Exception {
+        runtime.failure = new IllegalStateException("synthetic runtime failure");
+        AtomicReference<Observation.Context> stopped = observeNextJob();
+
+        ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
+                request("workflow", "stable-key-for-runtime-failure", patchDigest));
+        ExecutionView completed = await(submitted.executionId());
+
+        assertEquals(ExecutionStatus.FAILED, completed.status());
+        assertEquals(Verdict.INDETERMINATE, completed.verdict());
+        assertObservedOutcome(stopped, "failed", true);
     }
 
     @Test
@@ -365,6 +383,7 @@ class SandboxJobServiceTest {
     @Test
     void cancelsARunningJobAndInvokesRuntimeCleanup() throws Exception {
         runtime.block = true;
+        AtomicReference<Observation.Context> stopped = observeNextJob();
         ExecutionView submitted = jobs.submit(Operation.RUN_TESTS,
                 request("workflow", "cancellable-test-key", patchDigest));
         assertTrue(runtime.started.await(2, TimeUnit.SECONDS));
@@ -377,6 +396,35 @@ class SandboxJobServiceTest {
         assertEquals(EvidenceStatus.NONE, cancelled.evidenceStatus());
         assertNull(cancelled.outputDigest());
         assertEquals(submitted.executionId(), runtime.cancelledExecutionId);
+        assertObservedOutcome(stopped, "cancelled", false);
+    }
+
+    private AtomicReference<Observation.Context> observeNextJob() {
+        jobs.shutdown();
+        AtomicReference<Observation.Context> stopped = new AtomicReference<>();
+        ObservationRegistry registry = ObservationRegistry.create();
+        registry.observationConfig().observationHandler(new ObservationHandler<>() {
+            @Override
+            public void onStop(Observation.Context context) {
+                if ("ai.factory.sandbox.job".equals(context.getName())) stopped.set(context);
+            }
+
+            @Override
+            public boolean supportsContext(Observation.Context context) {
+                return true;
+            }
+        });
+        jobs = new SandboxJobService(properties, runtime, new SimpleMeterRegistry(), store, clock, registry);
+        return stopped;
+    }
+
+    private static void assertObservedOutcome(AtomicReference<Observation.Context> stopped,
+                                              String expected, boolean errored) throws InterruptedException {
+        for (int attempt = 0; attempt < 50 && stopped.get() == null; attempt++) Thread.sleep(10);
+        assertNotNull(stopped.get());
+        assertEquals(expected, stopped.get().getLowCardinalityKeyValue("ai.outcome").getValue());
+        if (errored) assertNotNull(stopped.get().getError());
+        else assertNull(stopped.get().getError());
     }
 
     @Test

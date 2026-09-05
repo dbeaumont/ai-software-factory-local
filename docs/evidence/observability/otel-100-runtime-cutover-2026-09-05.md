@@ -37,6 +37,11 @@ barrière commune et vérifie que les deux spans sont démarrés avant que l'un 
 même parent HTTP tout en restant deux enfants distincts : le fan-out parallèle est donc représenté par des spans
 frères réellement superposés, et non par une chaîne séquentielle artificielle.
 
+La suite `SandboxJobServiceTest` vérifie en outre les cinq issues de span contractuelles : `succeeded` sans erreur,
+`rejected` métier sans erreur technique, `failed` avec exception, `timed_out` avec exception de délai et `cancelled`
+sans transformer la demande opérateur en panne. Chaque observation couvre la soumission, l'attente en file et le
+résultat asynchrone complet.
+
 ## Résilience observée
 
 - L'arrêt complet du Collector n'a interrompu aucune des six applications ; l'ingestion a repris après son

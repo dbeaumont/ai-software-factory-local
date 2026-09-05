@@ -423,7 +423,7 @@ différée afin de rester récupérable.
 - [x] Tests unitaires des conventions de nommage, attributs, unités et cardinalité.
 - [x] Tests unitaires de redaction et de refus des contenus interdits.
 - [ ] Tests de propagation W3C HTTP, MCP, asynchrone, Temporal et sandbox.
-- [ ] Tests de statuts de span pour succès, rejet métier, erreur technique, timeout et annulation.
+- [x] Tests de statuts de span pour succès, rejet métier, erreur technique, timeout et annulation.
 - [x] Tests de mapping Micrometer → OTel pour compteurs, gauges, timers et histogrammes.
 - [x] Tests syntaxiques et de démarrage des configurations Collector.
 - [ ] Tests de provisioning des dashboards et alertes locaux/GKE.

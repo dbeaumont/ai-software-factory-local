@@ -291,7 +291,7 @@ public class SandboxJobService {
                     failLocked(job, ExecutionStatus.CANCELLED, "sandbox execution interrupted");
                 }
             }
-            stopObservation(job, exception, "cancelled");
+            stopObservation(job, null, "cancelled");
         } catch (Exception exception) {
             fail(job, ExecutionStatus.FAILED, "sandbox runtime unavailable");
             stopObservation(job, exception, "failed");
