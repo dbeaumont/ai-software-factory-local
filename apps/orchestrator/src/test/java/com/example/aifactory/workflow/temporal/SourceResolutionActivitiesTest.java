@@ -63,7 +63,7 @@ class SourceResolutionActivitiesTest {
             Worker workflowWorker = environment.newWorker("ai-factory-workflows");
             workflowWorker.registerWorkflowImplementationTypes(SoftwareFactoryExecutionWorkflowV1Impl.class);
             Worker contextWorker = environment.newWorker("ai-factory-context");
-            PipelineExecutionActivities pipeline = new CompactPipelineActivities();
+            CompactPipelineActivities pipeline = new CompactPipelineActivities();
             contextWorker.registerActivitiesImplementations((SourceResolutionActivities) request ->
                     new SourceResolutionActivities.Result(request.repositoryId(), request.branch(), "c".repeat(40),
                             "/workspace/" + request.taskId(), "d".repeat(64)), pipeline);
@@ -86,10 +86,14 @@ class SourceResolutionActivitiesTest {
             assertThat(result.sourceCommit()).isEqualTo("c".repeat(40));
             assertThat(result.status()).isEqualTo("WAITING_APPROVAL");
             assertThat(result.chronology()).contains("STEP_COMPLETED:plan", "STEP_COMPLETED:review");
+            assertThat(pipeline.repairs).isEqualTo(1);
         }
     }
 
     private static final class CompactPipelineActivities implements PipelineExecutionActivities {
+        private int validations;
+        private int repairs;
+
         @Override
         public com.example.aifactory.service.PipelineStepContracts.Result bindSource(SourceBinding binding) {
             return result("bind-source", binding.taskId(), binding.attemptId(), binding.sourceCommit(), Map.of());
@@ -108,6 +112,34 @@ class SourceResolutionActivitiesTest {
         }
 
         @Override
+        public com.example.aifactory.service.PipelineStepContracts.Result generatePatchCandidate(StepRequest request) {
+            return com.example.aifactory.service.PipelineStepContracts.Result.from(request.command(),
+                    request.command().sourceCommit(), Map.of("patch-candidate", artifact("patch-candidate", "GENERATED")));
+        }
+
+        @Override
+        public PatchValidationResult validatePatchCandidate(StepRequest request) {
+            validations++;
+            if (validations == 1) {
+                var error = artifact("patch-validation-error", "INVALID");
+                return new PatchValidationResult(false,
+                        com.example.aifactory.service.PipelineStepContracts.Result.from(request.command(),
+                                request.command().sourceCommit(), Map.of("patch-validation-error", error)), error);
+            }
+            return new PatchValidationResult(true,
+                    com.example.aifactory.service.PipelineStepContracts.Result.from(request.command(),
+                            request.command().sourceCommit(), Map.of("patch", artifact("patch", "VALID"))), null);
+        }
+
+        @Override
+        public com.example.aifactory.service.PipelineStepContracts.Result repairPatchCandidate(
+                PatchRepairRequest request) {
+            repairs++;
+            return com.example.aifactory.service.PipelineStepContracts.Result.from(request.command(),
+                    request.command().sourceCommit(), Map.of("patch-candidate", artifact("patch-candidate", "REPAIRED")));
+        }
+
+        @Override
         public com.example.aifactory.model.PendingEffect prepareDelivery(DeliveryRequest request) {
             return new com.example.aifactory.model.PendingEffect("scm.create_draft_pull_request", Map.of(),
                     "draft PR", "ALLOW", true);
@@ -119,6 +151,12 @@ class SourceResolutionActivitiesTest {
                 case "test" -> "tests";
                 default -> step;
             };
+        }
+
+        private static com.example.aifactory.service.PipelineStepContracts.ArtifactReference artifact(
+                String name, String verdict) {
+            return new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                    "evidence://task-1/attempt-1/" + name, "e".repeat(64), 1, "COMPLETE", verdict);
         }
 
         private static com.example.aifactory.service.PipelineStepContracts.Result result(

@@ -38,8 +38,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 request.repositoryId(), resolved.sourceCommit(), resolved.workspace(), resolved.attestationDigest()));
         runStep(source, request, resolved, "plan", TemporalActivityPolicies.Kind.LLM,
                 Map.of("requirement", TemporalIds.sha256(request.requirement())));
-        runStep(source, request, resolved, "generate-patch", TemporalActivityPolicies.Kind.LLM,
-                Map.of("plan", artifacts.get("plan").digest()));
+        generateAndRepairPatch(source, request, resolved);
         runStep(source, request, resolved, "apply-patch", TemporalActivityPolicies.Kind.SANDBOX,
                 Map.of("patch", artifacts.get("patch").digest()));
         runStep(source, request, resolved, "test", TemporalActivityPolicies.Kind.SANDBOX,
@@ -67,14 +66,51 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 coordinated.cancellationReason(), coordinated.independentReview());
     }
 
+    private void generateAndRepairPatch(SoftwareFactoryWorkflow.SourceLocation source,
+                                        SoftwareFactoryWorkflow.Request request,
+                                        SourceResolutionActivities.Result resolved) {
+        PipelineExecutionActivities llm = pipeline(source, "llm", TemporalActivityPolicies.Kind.LLM);
+        PipelineExecutionActivities sandbox = pipeline(source, "sandbox", TemporalActivityPolicies.Kind.SANDBOX);
+        var generated = command(request, resolved, "generate-patch-candidate",
+                Map.of("plan", artifacts.get("plan").digest()));
+        var candidate = llm.generatePatchCandidate(
+                new PipelineExecutionActivities.StepRequest(generated, resolved.workspace()));
+        artifacts.putAll(candidate.artifacts());
+        for (int repairAttempt = 0; repairAttempt <= 2; repairAttempt++) {
+            var validationCommand = command(request, resolved, "validate-patch-candidate", Map.of(
+                    "candidate", artifacts.get("patch-candidate").digest(),
+                    "attempt", TemporalIds.sha256(Integer.toString(repairAttempt))));
+            var validation = sandbox.validatePatchCandidate(
+                    new PipelineExecutionActivities.StepRequest(validationCommand, resolved.workspace()));
+            artifacts.putAll(validation.result().artifacts());
+            if (validation.valid()) return;
+            if (repairAttempt == 2) {
+                throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                        "Patch remains invalid after two workflow repair attempts", "BUSINESS_REJECTION");
+            }
+            var repairCommand = command(request, resolved, "repair-patch-candidate", Map.of(
+                    "candidate", artifacts.get("patch-candidate").digest(),
+                    "validation-error", validation.validationError().digest()));
+            var repaired = llm.repairPatchCandidate(new PipelineExecutionActivities.PatchRepairRequest(
+                    repairCommand, resolved.workspace(), validation.validationError(), repairAttempt + 1));
+            artifacts.putAll(repaired.artifacts());
+        }
+    }
+
+    private static com.example.aifactory.service.PipelineStepContracts.Command command(
+            SoftwareFactoryWorkflow.Request request, SourceResolutionActivities.Result resolved,
+            String step, Map<String, String> inputDigests) {
+        return new com.example.aifactory.service.PipelineStepContracts.Command(
+                com.example.aifactory.service.PipelineStepContracts.SCHEMA_VERSION, step, request.taskId(),
+                request.attemptId(), TemporalIds.workflow(request.taskId(), request.attemptId()),
+                request.repositoryId(), resolved.sourceCommit(), inputDigests);
+    }
+
     private void runStep(SoftwareFactoryWorkflow.SourceLocation source, SoftwareFactoryWorkflow.Request request,
                          SourceResolutionActivities.Result resolved, String step,
                          TemporalActivityPolicies.Kind kind, Map<String, String> inputDigests) {
         phase = "RUNNING_" + step.toUpperCase(java.util.Locale.ROOT).replace('-', '_');
-        var command = new com.example.aifactory.service.PipelineStepContracts.Command(
-                com.example.aifactory.service.PipelineStepContracts.SCHEMA_VERSION, step, request.taskId(),
-                request.attemptId(), TemporalIds.workflow(request.taskId(), request.attemptId()),
-                request.repositoryId(), resolved.sourceCommit(), inputDigests);
+        var command = command(request, resolved, step, inputDigests);
         var result = pipeline(source, workerKind(step), kind).execute(
                 new PipelineExecutionActivities.StepRequest(command, resolved.workspace()));
         artifacts.putAll(result.artifacts());

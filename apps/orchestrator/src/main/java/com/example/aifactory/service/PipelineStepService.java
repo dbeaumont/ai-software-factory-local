@@ -131,6 +131,76 @@ public class PipelineStepService {
                 repaired.patch(), repaired.repairs(), generated.metadata().plus(repaired.agentMetadata())));
     }
 
+    public PipelineProjectionEvent.StepExecution generatePatchCandidate(TaskState state, Path workspace,
+                                                                         PipelineStepContracts.Command command)
+            throws Exception {
+        command.requireStep("generate-patch-candidate");
+        String developerContext = contextService.collectForRole(workspace, state.id, state.sourceCommit, "developer");
+        AgentOutput generated = chat(state, "developer", untrusted("REQUIREMENT", state.request.requirement())
+                + untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", developerContext));
+        String patch = PatchIntegrator.normalize(generated.content());
+        var artifact = persist(command, "patch-candidate", "text/x-diff", patch, "GENERATED");
+        return PipelineProjectionEvent.StepExecution.of(
+                PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch-candidate", artifact)),
+                new PipelineProjectionEvent.PatchProduced(patch, 0, generated.metadata()));
+    }
+
+    public PatchValidationOutcome validatePatchCandidate(TaskState state, Path workspace,
+                                                          PipelineStepContracts.Command command) {
+        command.requireStep("validate-patch-candidate");
+        try {
+            String patch = patchIntegrator.validate(workspace, state.id, state.sourceCommit, state.patch).content();
+            var artifact = persist(command, "patch", "text/x-diff", patch, "VALID");
+            var execution = PipelineProjectionEvent.StepExecution.of(
+                    PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch", artifact)),
+                    new PipelineProjectionEvent.PatchProduced(patch, 0, PipelineProjectionEvent.AgentMetadata.none()));
+            return new PatchValidationOutcome(true, execution, null);
+        } catch (Exception invalid) {
+            String error = invalid.getMessage() == null ? invalid.getClass().getSimpleName() : invalid.getMessage();
+            var artifact = persist(command, "patch-validation-error", "text/plain",
+                    tail(error, 4_000), "INVALID");
+            return new PatchValidationOutcome(false,
+                    new PipelineProjectionEvent.StepExecution(PipelineStepContracts.Result.from(
+                            command, state.sourceCommit, Map.of("patch-validation-error", artifact)), List.of()),
+                    artifact);
+        }
+    }
+
+    public PipelineProjectionEvent.StepExecution repairPatchCandidate(TaskState state, Path workspace,
+                                                                       PipelineStepContracts.Command command,
+                                                                       PipelineStepContracts.ArtifactReference error,
+                                                                       int repairAttempt) throws Exception {
+        command.requireStep("repair-patch-candidate");
+        if (repairAttempt < 1 || repairAttempt > MAX_PATCH_REPAIR_ATTEMPTS || error == null) {
+            throw new IllegalArgumentException("Patch repair attempt is invalid");
+        }
+        EvidenceRepository.RawEvidence failure = evidence.read(new EvidenceRepository.ReadRequest(
+                command.taskId(), command.attemptId(), error.uri(), "workflow", "repair-patch"));
+        String context = contextService.collectForRole(workspace, state.id, state.sourceCommit, "patch-repair");
+        AgentOutput repaired = chat(state, "patch-repair", untrusted("REQUIREMENT", state.request.requirement())
+                + untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", context)
+                + untrusted("CURRENT_FILE_CONTENTS", safeAffectedFileContext(workspace, state.patch))
+                + untrusted("INVALID_PATCH", state.patch)
+                + untrusted("GIT_APPLY_ERROR", new String(failure.content(), StandardCharsets.UTF_8))
+                + untrusted("REPAIR_ATTEMPT", Integer.toString(repairAttempt)));
+        String patch = PatchIntegrator.normalize(repaired.content());
+        var artifact = persist(command, "patch-candidate", "text/x-diff", patch, "REPAIRED");
+        return PipelineProjectionEvent.StepExecution.of(
+                PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch-candidate", artifact)),
+                new PipelineProjectionEvent.PatchProduced(patch, 1, repaired.metadata()));
+    }
+
+    private static String safeAffectedFileContext(Path workspace, String patch) {
+        try {
+            return affectedFileContext(workspace, patch);
+        } catch (Exception failure) {
+            throw new IllegalStateException("Cannot collect patch repair context", failure);
+        }
+    }
+
+    public record PatchValidationOutcome(boolean valid, PipelineProjectionEvent.StepExecution execution,
+                                         PipelineStepContracts.ArtifactReference error) {}
+
     public PipelineProjectionEvent.StepExecution applyPatch(TaskState state, Path workspace,
                                                             PipelineStepContracts.Command command) throws Exception {
         command.requireStep("apply-patch");

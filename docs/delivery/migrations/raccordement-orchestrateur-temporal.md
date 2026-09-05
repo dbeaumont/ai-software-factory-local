@@ -214,8 +214,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   enregistrer uniquement des références de preuves compactes dans l'historique. _(Le workflow V1 enchaîne source,
   plan, génération, application, tests, qualité, sécurité, revue et préparation ; chaque résultat ne conserve que
   les URI/digests/tailles/verdicts Evidence et chaque activité contrôle sa file spécialisée.)_
-- [ ] **TEMP-042 — Intégrer la réparation de patch.** Modéliser les tentatives comme une boucle workflow bornée,
-  déterministe et observable, sans retry d'activité aveugle sur une erreur de patch.
+- [x] **TEMP-042 — Intégrer la réparation de patch.** Modéliser les tentatives comme une boucle workflow bornée,
+  déterministe et observable, sans retry d'activité aveugle sur une erreur de patch. _(Génération LLM, validation
+  sandbox et réparation sont trois activités ; le workflow conserve candidat/erreur par digest, borne à deux
+  réparations et termine en `BUSINESS_REJECTION` non retryable si le patch reste invalide.)_
 - [ ] **TEMP-043 — Intégrer les gates.** Une gate refusée termine la tentative avec un état métier explicite et
   conserve toutes les preuves déjà produites.
 - [ ] **TEMP-044 — Intégrer le DAG multi-agent.** N'activer les child workflows hiérarchiques que pour les modes

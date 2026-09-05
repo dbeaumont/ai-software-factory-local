@@ -89,6 +89,55 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     }
 
     @Override
+    public PipelineStepContracts.Result generatePatchCandidate(StepRequest request) {
+        requireStepRequest(request, "generate-patch-candidate", "llm");
+        TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
+        try {
+            state.transition(TaskStatus.GENERATING_PATCH, "Temporal activity: generate patch candidate");
+            PipelineProjectionEvent.StepExecution execution = steps.generatePatchCandidate(
+                    state, Path.of(request.workspace()), request.command());
+            applyAndSave(state, execution);
+            return execution.result();
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Patch candidate generation failed", failure));
+        }
+    }
+
+    @Override
+    public PatchValidationResult validatePatchCandidate(StepRequest request) {
+        requireStepRequest(request, "validate-patch-candidate", "sandbox");
+        TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
+        state.transition(TaskStatus.APPLYING_PATCH, "Temporal activity: validate patch candidate");
+        PipelineStepService.PatchValidationOutcome outcome = steps.validatePatchCandidate(
+                state, Path.of(request.workspace()), request.command());
+        applyAndSave(state, outcome.execution());
+        return new PatchValidationResult(outcome.valid(), outcome.execution().result(), outcome.error());
+    }
+
+    @Override
+    public PipelineStepContracts.Result repairPatchCandidate(PatchRepairRequest request) {
+        if (request == null) throw new IllegalArgumentException("Patch repair request is invalid");
+        StepRequest step = new StepRequest(request.command(), request.workspace());
+        requireStepRequest(step, "repair-patch-candidate", "llm");
+        TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
+        try {
+            PipelineProjectionEvent.StepExecution execution = steps.repairPatchCandidate(state,
+                    Path.of(request.workspace()), request.command(), request.validationError(),
+                    request.repairAttempt());
+            applyAndSave(state, execution);
+            return execution.result();
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Patch repair failed", failure));
+        }
+    }
+
+    @Override
     public PendingEffect prepareDelivery(DeliveryRequest request) {
         requireQueue("scm");
         TaskState state = requireTask(request.taskId(), request.attemptId());
@@ -107,6 +156,24 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             throw new IllegalArgumentException("Unknown pipeline attempt");
         }
         return memory.find(taskId).orElseThrow(() -> new IllegalArgumentException("Unknown task " + taskId));
+    }
+
+    private void requireStepRequest(StepRequest request, String step, String workerKind) {
+        if (request == null || request.command() == null || request.workspace() == null
+                || !step.equals(request.command().step())) {
+            throw new IllegalArgumentException("Pipeline activity request is invalid");
+        }
+        requireQueue(workerKind);
+        TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
+        if (!request.command().sourceCommit().equals(state.sourceCommit)
+                || !request.workspace().equals(state.workspace)) {
+            throw new SecurityException("Pipeline step is not bound to the projected source");
+        }
+    }
+
+    private void applyAndSave(TaskState state, PipelineProjectionEvent.StepExecution execution) {
+        execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
+        memory.save(state);
     }
 
     private void requireQueue(String workerKind) {
