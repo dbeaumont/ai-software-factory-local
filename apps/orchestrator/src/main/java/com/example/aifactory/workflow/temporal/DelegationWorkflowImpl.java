@@ -12,7 +12,7 @@ public final class DelegationWorkflowImpl implements DelegationWorkflow {
                 || request.nodeId() == null || !request.nodeId().matches("[A-Za-z0-9_-]{1,128}")
                 || request.role() == null || !request.role().matches("[a-z][a-z0-9-]{1,63}")
                 || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
-                || request.objective() == null || request.objective().isBlank()) {
+                || request.objectiveDigest() == null || !request.objectiveDigest().matches("[0-9a-f]{64}")) {
             throw new IllegalArgumentException("Delegation workflow request is invalid");
         }
         return new Result(request.nodeId(), request.role(), "READY_FOR_ACTIVITIES");

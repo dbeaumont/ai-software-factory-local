@@ -37,7 +37,7 @@ class ContradictionEvidenceDelegatorTest {
         assertThat(triggered.request().role()).isEqualTo("test-agent");
         assertThat(triggered.request().parentNodeId()).isEqualTo("supervisor");
         assertThat(triggered.request().sourceCommit()).isEqualTo(root.sourceCommit());
-        assertThat(triggered.request().objective()).contains("contradiction-1", "acceptance-42");
+        assertThat(triggered.request().objectiveDigest()).matches("[0-9a-f]{64}");
         assertThat(triggered.request().budget()).isEqualTo(new DelegationWorkflow.Budget(5_000, 5_000_000, 4, 360));
     }
 

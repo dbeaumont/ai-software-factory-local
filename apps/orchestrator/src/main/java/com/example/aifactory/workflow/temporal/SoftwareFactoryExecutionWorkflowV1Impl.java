@@ -44,7 +44,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         try {
             throwIfCancelled();
             runStep(source, request, resolved, "plan", TemporalActivityPolicies.Kind.LLM,
-                    Map.of("requirement", TemporalIds.sha256(request.requirement())));
+                    Map.of("requirement", request.requirementDigest()));
             generateAndRepairPatch(source, request, resolved);
             runStep(source, request, resolved, "apply-patch", TemporalActivityPolicies.Kind.SANDBOX,
                     Map.of("patch", artifacts.get("patch").digest()));
@@ -119,7 +119,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         return new SoftwareFactoryWorkflow.Result(coordinated.taskId(), coordinated.attemptId(),
                 coordinated.sourceCommit(), phase, chronology, coordinated.delegations(),
                 coordinated.humanDecisions(), coordinated.approvedManifestId(), coordinated.approvedBy(),
-                coordinated.cancellationReason(), coordinated.independentReview());
+                coordinated.cancellationReasonDigest(), coordinated.independentReview());
     }
 
     private SoftwareFactoryWorkflow.Result cancelBeforeApproval(SoftwareFactoryWorkflow.SourceLocation source,
@@ -128,17 +128,18 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         phase = "CANCELLED";
         pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordCancellation(
                 new PipelineExecutionActivities.Cancellation(request.taskId(), request.attemptId(),
-                        resolved.sourceCommit(), cancellation.reason(), cancellation.actor()));
+                        resolved.sourceCommit(), cancellation.reasonDigest(), cancellation.actor()));
         List<String> chronology = new java.util.ArrayList<>();
         chronology.add("SOURCE_RESOLVED:" + resolved.sourceCommit());
         artifacts.keySet().forEach(name -> chronology.add("EVIDENCE_PRESERVED:" + name));
         chronology.add("CANCELLED");
         return new SoftwareFactoryWorkflow.Result(request.taskId(), request.attemptId(), resolved.sourceCommit(),
-                "CANCELLED", chronology, List.of(), Map.of(), null, null, cancellation.reason(), null);
+                "CANCELLED", chronology, List.of(), Map.of(), null, null, cancellation.reasonDigest(), null);
     }
 
     private void throwIfCancelled() {
-        if (cancellation != null && cancellation.reason() != null && !cancellation.reason().isBlank()
+        if (cancellation != null && cancellation.reasonDigest() != null
+                && cancellation.reasonDigest().matches("[0-9a-f]{64}")
                 && cancellation.actor() != null && !cancellation.actor().isBlank()) {
             throw new RequestedCancellation();
         }

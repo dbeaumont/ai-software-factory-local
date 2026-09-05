@@ -68,7 +68,7 @@ public final class ProjectionRebuilder {
         String status = history.result() == null ? history.terminalStatus() : history.result().status();
         UiProjectionSnapshot snapshot = new UiProjectionSnapshot(
                 new UiProjectionSnapshot.Task(request.taskId(), request.repositoryId(), request.attemptId(),
-                        request.sourceCommit(), sha256(request.requirement()), status,
+                        request.sourceCommit(), request.requirementDigest(), status,
                         history.startedAt(), history.completedAt() == null ? history.startedAt() : history.completedAt()),
                 new UiProjectionSnapshot.WorkflowRun(workflowRunId, history.workflowId(), history.runId(),
                         request.taskId(), request.attemptId(), request.sourceCommit(), status,

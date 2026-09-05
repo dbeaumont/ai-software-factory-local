@@ -184,7 +184,8 @@ class SoftwareFactoryWorkflowTest {
             SoftwareFactoryWorkflow.Result cancelledResult = WorkflowStub.fromTyped(cancelled)
                     .getResult(SoftwareFactoryWorkflow.Result.class);
             assertThat(cancelledResult.status()).isEqualTo("CANCELLED");
-            assertThat(cancelledResult.cancellationReason()).isEqualTo("request withdrawn");
+            assertThat(cancelledResult.cancellationReasonDigest()).isEqualTo(
+                    TemporalIds.sha256("request withdrawn"));
         }
     }
 

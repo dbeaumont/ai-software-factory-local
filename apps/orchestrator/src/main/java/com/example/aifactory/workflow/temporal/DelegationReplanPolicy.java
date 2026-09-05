@@ -88,7 +88,7 @@ public final class DelegationReplanPolicy {
                 update(digest, node.parentNodeId());
                 update(digest, node.role());
                 update(digest, node.sourceCommit());
-                update(digest, node.objective());
+                update(digest, node.objectiveDigest());
                 update(digest, node.priority());
                 node.dependsOn().stream().sorted().forEach(dependency -> update(digest, dependency));
                 update(digest, node.budget().maxTokens());
@@ -132,7 +132,7 @@ public final class DelegationReplanPolicy {
     }
 
     private static String workSignature(DelegationWorkflow.Request node) {
-        return String.join("\u0000", node.role(), node.objective().strip(), Integer.toString(node.priority()),
+        return String.join("\u0000", node.role(), node.objectiveDigest(), Integer.toString(node.priority()),
                 Long.toString(node.budget().maxTokens()), Long.toString(node.budget().maxCostMicros()),
                 Integer.toString(node.budget().maxTurns()), Long.toString(node.budget().timeoutSeconds()),
                 Boolean.toString(node.parentNodeId() != null && !"supervisor".equals(node.parentNodeId())),

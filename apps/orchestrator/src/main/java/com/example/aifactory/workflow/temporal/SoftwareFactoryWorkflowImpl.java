@@ -196,7 +196,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
                 || request.repositoryId() == null || !request.repositoryId().matches("[A-Za-z0-9._/-]{1,63}")
                 || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
-                || request.requirement() == null || request.requirement().isBlank()
+                || request.requirementDigest() == null || !request.requirementDigest().matches("[0-9a-f]{64}")
                 || request.continuationState().nextDelegationIndex() < 0
                 || request.continuationState().nextDelegationIndex() > request.delegations().size()
                 || request.continuationState().generation() < 0
@@ -268,7 +268,8 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         return receivedCancellation != null && request != null
                 && request.taskId().equals(receivedCancellation.taskId())
                 && request.attemptId().equals(receivedCancellation.attemptId())
-                && receivedCancellation.reason() != null && !receivedCancellation.reason().isBlank()
+                && receivedCancellation.reasonDigest() != null
+                && receivedCancellation.reasonDigest().matches("[0-9a-f]{64}")
                 && receivedCancellation.actor() != null && !receivedCancellation.actor().isBlank()
                 && receivedCancellation.decidedAt() != null && !receivedCancellation.decidedAt().isBlank();
     }
@@ -288,7 +289,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
     private static void requireDecision(HumanDecisionRequest decision) {
         if (decision == null || decision.decisionId() == null
                 || !decision.decisionId().matches("[A-Za-z0-9_-]{1,128}")
-                || decision.question() == null || decision.question().isBlank()
+                || decision.questionDigest() == null || !decision.questionDigest().matches("[0-9a-f]{64}")
                 || decision.allowedDecisions().isEmpty()
                 || decision.objectDigest() != null && !decision.objectDigest().matches("[0-9a-f]{64}")
                 || decision.requiredApproverRoles().stream().anyMatch(role -> !Set.of(
@@ -302,7 +303,7 @@ public final class SoftwareFactoryWorkflowImpl implements SoftwareFactoryWorkflo
         chronology.add("CANCELLED");
         phase = "CANCELLED";
         return new Result(request.taskId(), request.attemptId(), request.sourceCommit(), "CANCELLED",
-                chronology, results, decisions, null, null, receivedCancellation.reason(), completedReview);
+                chronology, results, decisions, null, null, receivedCancellation.reasonDigest(), completedReview);
     }
 
     private void restoreContinuationState(ContinuationState state) {

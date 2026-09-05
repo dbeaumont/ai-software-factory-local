@@ -61,7 +61,7 @@ public interface PipelineExecutionActivities {
 
     record GateRejection(String taskId, String attemptId, String sourceCommit, String gate) {}
 
-    record Cancellation(String taskId, String attemptId, String sourceCommit, String reason, String actor) {}
+    record Cancellation(String taskId, String attemptId, String sourceCommit, String reasonDigest, String actor) {}
 
     record Approval(String taskId, String attemptId, String sourceCommit, String manifestId,
                     String manifestDigest, String actor, String decidedAt) {}

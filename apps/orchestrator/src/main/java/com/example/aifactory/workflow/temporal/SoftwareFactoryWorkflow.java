@@ -38,13 +38,14 @@ public interface SoftwareFactoryWorkflow {
     @QueryMethod(name = "pendingEffects")
     List<PendingEffectView> pendingEffects();
 
-    record Request(String taskId, String attemptId, String repositoryId, String sourceCommit, String requirement,
+    record Request(String taskId, String attemptId, String repositoryId, String sourceCommit, String requirementDigest,
                    List<DelegationWorkflow.Request> delegations, ApprovalRequest approvalRequest,
                    List<HumanDecisionRequest> humanDecisionRequests, ExecutionPolicy executionPolicy,
                    ContinuationState continuationState, IndependentReviewWorkflow.Request independentReview,
                    SourceLocation sourceLocation, WorkflowExecutionMode executionMode,
                    AttemptLineage attemptLineage) {
         public Request {
+            requirementDigest = digestText(requirementDigest);
             delegations = delegations == null ? List.of() : List.copyOf(delegations);
             humanDecisionRequests = humanDecisionRequests == null ? List.of() : List.copyOf(humanDecisionRequests);
             executionPolicy = executionPolicy == null ? ExecutionPolicy.defaults() : executionPolicy;
@@ -127,19 +128,19 @@ public interface SoftwareFactoryWorkflow {
         }
 
         Request continuedWith(ContinuationState state) {
-            return new Request(taskId, attemptId, repositoryId, sourceCommit, requirement, delegations, approvalRequest,
+            return new Request(taskId, attemptId, repositoryId, sourceCommit, requirementDigest, delegations, approvalRequest,
                     humanDecisionRequests, executionPolicy, state, independentReview, sourceLocation, executionMode,
                     attemptLineage);
         }
 
         public Request withResolvedSource(String commit) {
-            return new Request(taskId, attemptId, repositoryId, commit, requirement, delegations, approvalRequest,
+            return new Request(taskId, attemptId, repositoryId, commit, requirementDigest, delegations, approvalRequest,
                     humanDecisionRequests, executionPolicy, continuationState, independentReview, sourceLocation,
                     executionMode, attemptLineage);
         }
 
         Request withApprovalRequest(ApprovalRequest approval) {
-            return new Request(taskId, attemptId, repositoryId, sourceCommit, requirement, delegations, approval,
+            return new Request(taskId, attemptId, repositoryId, sourceCommit, requirementDigest, delegations, approval,
                     humanDecisionRequests, executionPolicy, continuationState, independentReview, sourceLocation,
                     executionMode, attemptLineage);
         }
@@ -204,7 +205,7 @@ public interface SoftwareFactoryWorkflow {
 
     record Result(String taskId, String attemptId, String sourceCommit, String status, List<String> chronology,
                   List<DelegationWorkflow.Result> delegations, Map<String, String> humanDecisions,
-                  String approvedManifestId, String approvedBy, String cancellationReason,
+                  String approvedManifestId, String approvedBy, String cancellationReasonDigest,
                   IndependentReviewWorkflow.Result independentReview) {
         public Result {
             chronology = List.copyOf(chronology);
@@ -215,9 +216,9 @@ public interface SoftwareFactoryWorkflow {
         public Result(String taskId, String attemptId, String sourceCommit, String status,
                       List<String> chronology, List<DelegationWorkflow.Result> delegations,
                       Map<String, String> humanDecisions, String approvedManifestId,
-                      String approvedBy, String cancellationReason) {
+                      String approvedBy, String cancellationReasonDigest) {
             this(taskId, attemptId, sourceCommit, status, chronology, delegations, humanDecisions,
-                    approvedManifestId, approvedBy, cancellationReason, null);
+                    approvedManifestId, approvedBy, cancellationReasonDigest, null);
         }
     }
 
@@ -226,10 +227,11 @@ public interface SoftwareFactoryWorkflow {
     record ApprovalSignal(String taskId, String attemptId, String manifestId, String manifestDigest,
                           String decision, String approver, String decidedAt) {}
 
-    record HumanDecisionRequest(String decisionId, String question, Set<String> allowedDecisions,
+    record HumanDecisionRequest(String decisionId, String questionDigest, Set<String> allowedDecisions,
                                 List<String> evidenceUris, String objectDigest,
                                 Set<String> requiredApproverRoles) {
         public HumanDecisionRequest {
+            questionDigest = digestText(questionDigest);
             allowedDecisions = Set.copyOf(allowedDecisions);
             evidenceUris = List.copyOf(evidenceUris);
             requiredApproverRoles = requiredApproverRoles == null ? Set.of() : Set.copyOf(requiredApproverRoles);
@@ -249,9 +251,18 @@ public interface SoftwareFactoryWorkflow {
         }
     }
 
-    record CancellationSignal(String taskId, String attemptId, String reason, String actor, String decidedAt) {}
+    record CancellationSignal(String taskId, String attemptId, String reasonDigest, String actor, String decidedAt) {
+        public CancellationSignal {
+            reasonDigest = digestText(reasonDigest);
+        }
+    }
 
     record DelegationView(String nodeId, String parentNodeId, String role, String status) {}
 
     record PendingEffectView(String type, String id) {}
+
+    private static String digestText(String value) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("Workflow text is required");
+        return value.matches("[0-9a-f]{64}") ? value : TemporalIds.sha256(value);
+    }
 }

@@ -11,12 +11,17 @@ public interface DelegationWorkflow {
     Result run(Request request);
 
     record Request(String taskId, String attemptId, String nodeId, String parentNodeId,
-                   String role, String sourceCommit, String objective, int priority,
+                   String role, String sourceCommit, String objectiveDigest, int priority,
                    Set<String> dependsOn, Budget budget) {
         private static final int DEFAULT_PRIORITY = 100;
 
         public Request {
             if (priority < 0) throw new IllegalArgumentException("Delegation priority is invalid");
+            if (objectiveDigest == null || objectiveDigest.isBlank()) {
+                throw new IllegalArgumentException("Delegation objective is required");
+            }
+            objectiveDigest = objectiveDigest.matches("[0-9a-f]{64}")
+                    ? objectiveDigest : TemporalIds.sha256(objectiveDigest);
             dependsOn = dependsOn == null ? Set.of() : Set.copyOf(dependsOn);
         }
 

@@ -16,6 +16,7 @@ final class TemporalWorkflowCommands {
     }
 
     ExecutionIdentity start(WorkflowOptions options, SoftwareFactoryWorkflow.Request request) {
+        TemporalPayloadGuard.requireSafeStart(options, request);
         SoftwareFactoryExecutionWorkflowV1 workflow = client.newWorkflowStub(
                 SoftwareFactoryExecutionWorkflowV1.class, options);
         try {
@@ -28,14 +29,17 @@ final class TemporalWorkflowCommands {
     }
 
     void approve(String workflowId, SoftwareFactoryWorkflow.ApprovalSignal signal) {
+        TemporalPayloadGuard.requireSafePayload(signal);
         signal(workflowId, workflow -> workflow.approve(signal));
     }
 
     void decide(String workflowId, SoftwareFactoryWorkflow.HumanDecisionSignal signal) {
+        TemporalPayloadGuard.requireSafePayload(signal);
         signal(workflowId, workflow -> workflow.decide(signal));
     }
 
     void cancel(String workflowId, SoftwareFactoryWorkflow.CancellationSignal signal) {
+        TemporalPayloadGuard.requireSafePayload(signal);
         signal(workflowId, workflow -> workflow.cancel(signal));
     }
 

@@ -365,8 +365,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   projection en retard, activité bloquée et échec de continue-as-new. _(Six règles SigNoz dédiées s'appuient sur
   des métriques explicites et bornées ; la sonde publie le retard de projection, les workflows annoncent leur
   rollover, et les 15 alertes métier/Temporal ont été déclenchées par une fixture OTLP contre SigNoz local.)_
-- [ ] **TEMP-084 — Protéger les données.** Vérifier qu'aucun secret, patch complet, log volumineux ou donnée
-  confidentielle n'entre dans les inputs, search attributes ou memo Temporal.
+- [x] **TEMP-084 — Protéger les données.** Vérifier qu'aucun secret, patch complet, log volumineux ou donnée
+  confidentielle n'entre dans les inputs, search attributes ou memo Temporal. _(Une garde fail-closed contrôle tout
+  démarrage/signal avant le SDK et refuse secrets, credentials URI, diff brut, contenu classifié, texte/collection ou
+  payload hors bornes ; besoin, objectif, question et motif deviennent des digests, les contenus restent dans Evidence,
+  et les anciens adapters textuels agent/MCP ne sont plus enregistrés.)_
 - [ ] **TEMP-085 — Définir les Search Attributes.** N'enregistrer que les dimensions nécessaires, bornées et non
   sensibles ; versionner leur création locale.
 - [ ] **TEMP-086 — Sauvegarder et restaurer.** Tester sauvegarde cohérente de `temporal-db`, `orchestrator-db` et

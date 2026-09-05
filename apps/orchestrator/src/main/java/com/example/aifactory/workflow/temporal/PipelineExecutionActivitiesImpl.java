@@ -199,7 +199,8 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     @Override
     public void recordCancellation(Cancellation cancellation) {
         requireQueue("evidence");
-        if (cancellation == null || cancellation.reason() == null || cancellation.reason().isBlank()
+        if (cancellation == null || cancellation.reasonDigest() == null
+                || !cancellation.reasonDigest().matches("[0-9a-f]{64}")
                 || cancellation.actor() == null || cancellation.actor().isBlank()) {
             throw new IllegalArgumentException("Pipeline cancellation is invalid");
         }
@@ -207,7 +208,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         if (!cancellation.sourceCommit().equals(state.sourceCommit)) {
             throw new SecurityException("Pipeline cancellation is not source-bound");
         }
-        state.cancel(cancellation.reason(), cancellation.actor());
+        state.cancel(cancellation.reasonDigest(), cancellation.actor());
         project(state);
     }
 

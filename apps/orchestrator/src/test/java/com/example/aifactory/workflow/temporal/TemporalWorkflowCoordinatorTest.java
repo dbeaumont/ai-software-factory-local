@@ -128,7 +128,7 @@ class TemporalWorkflowCoordinatorTest {
 
         verify(commands).cancel(org.mockito.ArgumentMatchers.eq(
                 TemporalIds.workflow(task.id, PipelineStepContracts.INITIAL_ATTEMPT_ID)), signal.capture());
-        assertThat(signal.getValue().reason()).isEqualTo("request withdrawn");
+        assertThat(signal.getValue().reasonDigest()).isEqualTo(TemporalIds.sha256("request withdrawn"));
         assertThat(signal.getValue().actor()).isEqualTo("product-owner");
         assertThat(task.status).isEqualTo(TaskStatus.QUEUED);
     }
