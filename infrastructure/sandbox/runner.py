@@ -34,6 +34,8 @@ PROFILES = {
         "git diff --check && git diff --stat"
     ),
     "test-maven-v1": (
+        "mkdir -p \"$HOME/.m2/tmp\"; "
+        "export MAVEN_OPTS=\"${MAVEN_OPTS:-} -Djansi.tmpdir=$HOME/.m2/tmp -Djansi.force=false\"; "
         "if [ -z \"$MAVEN_MIRROR_URL\" ]; then echo 'Required Maven mirror is unavailable'; exit 2; fi; "
         "if [ -n \"$ARTIFACTORY_TOKEN\" ]; then MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; "
         "else MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings-public.xml'; fi; "
@@ -51,6 +53,8 @@ PROFILES = {
         "else echo 'The immutable Node profile requires package-lock.json'; exit 2; fi; npm test -- --runInBand"
     ),
     "quality-sonar-v1": (
+        "mkdir -p \"$HOME/.m2/tmp\"; "
+        "export MAVEN_OPTS=\"${MAVEN_OPTS:-} -Djansi.tmpdir=$HOME/.m2/tmp -Djansi.force=false\"; "
         "if [ -z \"$SONAR_TOKEN\" ]; then echo 'Required Sonar token is unavailable'; exit 2; "
         "elif [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && "
         "if [ -n \"$ARTIFACTORY_TOKEN\" ]; then MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; "

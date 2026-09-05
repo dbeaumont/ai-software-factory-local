@@ -21,7 +21,9 @@ final class SandboxProfiles {
                     List.of(), false, false);
             case RUN_TESTS -> throw new IllegalArgumentException("test profile selection requires a workspace");
             case RUN_QUALITY -> new Profile("quality-sonar-v1", "quality", Duration.ofMinutes(15),
-                    "if [ -z \"$SONAR_TOKEN\" ]; then echo 'Required Sonar token is unavailable'; exit 2; " +
+                    "mkdir -p \"$HOME/.m2/tmp\"; " +
+                            "export MAVEN_OPTS=\"${MAVEN_OPTS:-} -Djansi.tmpdir=$HOME/.m2/tmp -Djansi.force=false\"; " +
+                            "if [ -z \"$SONAR_TOKEN\" ]; then echo 'Required Sonar token is unavailable'; exit 2; " +
                             "elif [ -f pom.xml ]; then mkdir -p .ai-factory && set -o pipefail && " +
                             "if [ -n \"$ARTIFACTORY_TOKEN\" ]; then " +
                             "MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; else " +
@@ -53,7 +55,9 @@ final class SandboxProfiles {
         }
         if (regular(workspace, "mvnw") || regular(workspace, "pom.xml")) {
             return new Profile("test-maven-v1", "factory", Duration.ofMinutes(15),
-                    "if [ -z \"$MAVEN_MIRROR_URL\" ]; then echo 'Required Maven mirror is unavailable'; exit 2; fi; " +
+                    "mkdir -p \"$HOME/.m2/tmp\"; " +
+                            "export MAVEN_OPTS=\"${MAVEN_OPTS:-} -Djansi.tmpdir=$HOME/.m2/tmp -Djansi.force=false\"; " +
+                            "if [ -z \"$MAVEN_MIRROR_URL\" ]; then echo 'Required Maven mirror is unavailable'; exit 2; fi; " +
                             "if [ -n \"$ARTIFACTORY_TOKEN\" ]; then " +
                             "MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings.xml'; else " +
                             "MAVEN_SETTINGS='-s /opt/ai-factory/maven-settings-public.xml'; fi; " +
