@@ -3,7 +3,7 @@
 ## Principe
 
 Il n'existe plus de coordinateur local supporté. Un rollback ne modifie jamais l'autorité d'exécution : il remet en
-service un build worker compatible avec les historiques existants ou restaure le triplet Evidence/Temporal/projection
+service un build worker compatible avec les historiques existants ou restaure le registre SCM et le triplet Evidence/Temporal/projection
 après perte avérée. Toute nouvelle admission reste gelée pendant l'opération.
 
 ## Procédure
@@ -13,7 +13,8 @@ après perte avérée. Toute nouvelle admission reste gelée pendant l'opératio
 3. Vérifier le replay des historiques représentatifs avec le dernier build qualifié.
 4. Redéployer ce build avec son build ID d'origine et la même politique de queues/versionnement.
 5. Pour une corruption/perte d'état seulement, vérifier le manifeste de sauvegarde puis suivre
-   [TEMP-086](../../qualification/temporal/TEMP-086-BACKUP-RESTORE.md). Ne jamais restaurer la seule projection.
+   [TEMP-086](../../qualification/temporal/TEMP-086-BACKUP-RESTORE.md). Ne jamais restaurer la seule projection ni
+   reprendre Temporal sans le registre d'idempotence SCM correspondant.
 6. Réconcilier chaque effet inconnu par sa clé d'idempotence avant de laisser Temporal reprendre ses retries.
 7. Contrôler pollers, backlog, non-déterminisme, projection et références Evidence avant réouverture.
 

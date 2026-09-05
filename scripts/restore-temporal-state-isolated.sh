@@ -30,8 +30,9 @@ expected_temporal_tables=$(tr -d '\r\n' < "$backup_directory/temporal-table-coun
 expected_visibility_tables=$(tr -d '\r\n' < "$backup_directory/temporal-visibility-table-count.txt")
 expected_projection_tables=$(tr -d '\r\n' < "$backup_directory/orchestrator-table-count.txt")
 expected_evidence_files=$(tr -d '\r\n' < "$backup_directory/evidence-file-count.txt")
+expected_scm_files=$(tr -d '\r\n' < "$backup_directory/scm-delivery-file-count.txt")
 for count in "$expected_temporal_tables" "$expected_visibility_tables" \
-  "$expected_projection_tables" "$expected_evidence_files"; do
+  "$expected_projection_tables" "$expected_evidence_files" "$expected_scm_files"; do
   [[ "$count" =~ ^[0-9]+$ ]] || { echo "Invalid source count in backup" >&2; exit 2; }
 done
 
@@ -40,9 +41,10 @@ busybox_image='busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3af
 temporal_volume="$prefix-temporal-db-data"
 orchestrator_volume="$prefix-orchestrator-db-data"
 evidence_volume="$prefix-evidence-state"
+scm_volume="$prefix-scm-delivery-state"
 temporal_container="$prefix-temporal-db"
 orchestrator_container="$prefix-orchestrator-db"
-volumes=("$evidence_volume" "$temporal_volume" "$orchestrator_volume")
+volumes=("$scm_volume" "$evidence_volume" "$temporal_volume" "$orchestrator_volume")
 containers=("$temporal_container" "$orchestrator_container")
 created_volumes=()
 
@@ -66,7 +68,11 @@ for volume in "${volumes[@]}"; do
   created_volumes+=("$volume")
 done
 
-# Restore referenced evidence first, then the workflow authority, and only then its rebuildable projection.
+# Restore the external-effect ledger and referenced evidence first, then Temporal, then its rebuildable projection.
+docker run --rm --network none -v "$scm_volume:/target" -v "$backup_directory:/backup:ro" \
+  "$busybox_image" tar -xzf /backup/scm-delivery-state.tgz -C /target
+scm_files=$(docker run --rm --network none -v "$scm_volume:/target:ro" "$busybox_image" \
+  sh -c 'find /target -type f | wc -l')
 docker run --rm --network none -v "$evidence_volume:/target" -v "$backup_directory:/backup:ro" \
   "$busybox_image" tar -xzf /backup/evidence-state.tgz -C /target
 evidence_files=$(docker run --rm --network none -v "$evidence_volume:/target:ro" "$busybox_image" \
@@ -108,14 +114,16 @@ projection_tables=$(docker exec "$orchestrator_container" psql -U ai_factory -d 
 [ "$temporal_tables" = "$expected_temporal_tables" ] \
   && [ "$visibility_tables" = "$expected_visibility_tables" ] \
   && [ "$projection_tables" = "$expected_projection_tables" ] \
-  && [ "$evidence_files" = "$expected_evidence_files" ] || {
+  && [ "$evidence_files" = "$expected_evidence_files" ] \
+  && [ "$scm_files" = "$expected_scm_files" ] || {
   echo "Restored state counts differ from the coherent source snapshot" >&2
   exit 1
 }
 
 cleanup_containers
 trap - ERR
-printf '%s\n' "Evidence restored: $evidence_volume ($evidence_files files)" \
+printf '%s\n' "SCM idempotency restored: $scm_volume ($scm_files files)" \
+  "Evidence restored: $evidence_volume ($evidence_files files)" \
   "Temporal restored: $temporal_volume ($temporal_tables + $visibility_tables tables)" \
   "Projection restored: $orchestrator_volume ($projection_tables tables)" \
   "No active volume was modified."

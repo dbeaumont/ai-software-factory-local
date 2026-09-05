@@ -394,7 +394,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Les alertes sont testées par injection de panne et reviennent automatiquement à l'état normal. _(La fixture
   OTLP évalue les 15 règles métier/Temporal en état déclenché, injecte des compteurs stables et jauges saines après la
   fenêtre PromQL maximale, puis exige que les 15 conditions ne retournent plus aucune série.)_
-- [ ] La restauration conserve l'idempotence et n'entraîne aucun rejeu SCM non autorisé.
+- [x] La restauration conserve l'idempotence et n'entraîne aucun rejeu SCM non autorisé. _(Le snapshot gèle et
+  restaure désormais `scm-delivery-state` avant Temporal ; le test SCM recrée explicitement le store depuis le disque
+  et prouve que la même clé retourne le résultat existant sans second appel au backend.)_
 
 ## 12. Lot 7 — stratégie de tests
 

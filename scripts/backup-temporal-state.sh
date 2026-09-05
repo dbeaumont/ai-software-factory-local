@@ -21,10 +21,10 @@ mkdir -p "$destination"
 destination=$(cd "$destination" && pwd -P)
 
 compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
-writers=(orchestrator temporal evidence-mcp)
+writers=(orchestrator temporal evidence-mcp scm-delivery-mcp)
 
 restart_writers() {
-  "${compose[@]}" up -d evidence-mcp temporal orchestrator >/dev/null 2>&1 || true
+  "${compose[@]}" up -d evidence-mcp scm-delivery-mcp temporal orchestrator >/dev/null 2>&1 || true
 }
 trap restart_writers EXIT
 
@@ -58,16 +58,26 @@ docker run --rm --network none --volumes-from "$evidence_container:ro" \
   busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 \
   sh -c 'find /var/lib/ai-factory/evidence -type f | wc -l' > "$destination/evidence-file-count.txt"
 
+scm_container=$("${compose[@]}" ps -aq scm-delivery-mcp)
+[ -n "$scm_container" ] || { echo "SCM delivery MCP container is missing" >&2; exit 1; }
+docker run --rm --network none --volumes-from "$scm_container:ro" \
+  -v "$destination:/backup" \
+  busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 \
+  tar -czf /backup/scm-delivery-state.tgz -C /var/lib/ai-factory/scm .
+docker run --rm --network none --volumes-from "$scm_container:ro" \
+  busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 \
+  sh -c 'find /var/lib/ai-factory/scm -type f | wc -l' > "$destination/scm-delivery-file-count.txt"
+
 (
   cd "$destination"
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum temporal.dump temporal-visibility.dump orchestrator.dump evidence-state.tgz \
+    sha256sum temporal.dump temporal-visibility.dump orchestrator.dump evidence-state.tgz scm-delivery-state.tgz \
       orchestrator-database.txt temporal-table-count.txt temporal-visibility-table-count.txt \
-      orchestrator-table-count.txt evidence-file-count.txt > manifest.sha256
+      orchestrator-table-count.txt evidence-file-count.txt scm-delivery-file-count.txt > manifest.sha256
   else
-    shasum -a 256 temporal.dump temporal-visibility.dump orchestrator.dump evidence-state.tgz \
+    shasum -a 256 temporal.dump temporal-visibility.dump orchestrator.dump evidence-state.tgz scm-delivery-state.tgz \
       orchestrator-database.txt temporal-table-count.txt temporal-visibility-table-count.txt \
-      orchestrator-table-count.txt evidence-file-count.txt > manifest.sha256
+      orchestrator-table-count.txt evidence-file-count.txt scm-delivery-file-count.txt > manifest.sha256
   fi
   git -C "$repository" rev-parse HEAD > source-commit.txt
   date -u +%FT%TZ > created-at.txt

@@ -79,11 +79,15 @@ class ScmDeliveryServiceTest {
                 "workflow", "delivery-task-1-attempt-1", proof);
         ScmDeliveryBackend.DeliveryResult result = service.create(request);
         ScmDeliveryBackend.DeliveryResult replay = service.create(request);
+        ScmDeliveryService restoredService = new ScmDeliveryService(properties, credentials, registry, backend,
+                stager, new ScmIdempotencyStore(properties, new ObjectMapper()), audit);
+        ScmDeliveryBackend.DeliveryResult replayAfterStateRestore = restoredService.create(request);
 
         assertEquals(42, result.pullRequestId());
         assertEquals("ai-factory/task-1-attempt-1", captured.get().branch());
         assertEquals(root.resolve("state/worktrees/task-1-attempt-1"), captured.get().workspace());
         assertEquals(result, replay);
+        assertEquals(result, replayAfterStateRestore);
         assertEquals(1, creates.get());
         ScmDeliveryService.CreateRequest conflictingReplay = new ScmDeliveryService.CreateRequest("1", "task-1",
                 "attempt-1", "customer-api", sourceCommit, patchDigest, evidenceDigests, "main", "Other title",

@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 backup_directory=$(mktemp -d /private/tmp/ai-factory-temporal-backup-test-XXXXXX)
 prefix="ai-factory-temporal-restore-test-$(date +%s)"
 volumes=(
+  "$prefix-scm-delivery-state"
   "$prefix-evidence-state"
   "$prefix-temporal-db-data"
   "$prefix-orchestrator-db-data"
