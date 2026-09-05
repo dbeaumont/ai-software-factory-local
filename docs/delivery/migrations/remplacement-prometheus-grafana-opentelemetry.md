@@ -293,7 +293,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [x] Ajouter les alertes de santé du Collector, d'ingestion SigNoz et de stockage ClickHouse.
 - [x] Tester chaque règle par injection d'une fixture OTLP déterministe.
 - [x] Mettre à jour `make status`, `make urls`, l'application web et les guides pour pointer vers SigNoz.
-- [ ] Tester sauvegarde, restauration, rétention, compactage et suppression contrôlée des données locales.
+- [x] Tester sauvegarde, restauration, rétention, compactage et suppression contrôlée des données locales.
 
 ### Critères de sortie du lot 4
 

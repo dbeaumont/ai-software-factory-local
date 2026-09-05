@@ -893,6 +893,7 @@ Avant chaque release modifiant instrumentation, Collector, dashboard ou alerte :
 - [ ] aucune image flottante, socket Docker, port OTLP public ou secret versionné n'est introduit ;
 - [ ] `check-signoz-telemetry.sh`, `validate-signoz-queries.sh`, `check-signoz-dashboard-parity.py`,
   `test-signoz-metric-semantics.sh` et `test-otel-redaction.sh` passent ;
+- [ ] `test-signoz-data-lifecycle.sh` passe sur la base ClickHouse jetable et sa base temporaire est supprimée ;
 - [ ] les attributs nouveaux ont type, unité, cardinalité, rétention et propriétaire documentés ;
 - [ ] prompts, résultats, code, patchs, preuves, credentials et paramètres d'URL restent absents ;
 - [ ] dashboards, alertes, notifications, runbooks et liens sont cohérents avec la définition versionnée ;
