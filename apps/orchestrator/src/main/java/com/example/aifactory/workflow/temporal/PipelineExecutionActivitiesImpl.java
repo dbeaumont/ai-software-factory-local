@@ -210,6 +210,33 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     }
 
     @Override
+    public void recordApproval(Approval approval) {
+        requireQueue("evidence");
+        if (approval == null || approval.manifestId() == null
+                || !approval.manifestId().matches("[0-9a-f]{64}")
+                || approval.manifestDigest() == null || !approval.manifestDigest().matches("[0-9a-f]{64}")
+                || approval.actor() == null || approval.actor().isBlank()) {
+            throw new IllegalArgumentException("Pipeline approval is invalid");
+        }
+        try {
+            java.time.Instant.parse(approval.decidedAt());
+        } catch (RuntimeException invalid) {
+            throw new IllegalArgumentException("Pipeline approval timestamp is invalid", invalid);
+        }
+        TaskState state = requireTask(approval.taskId(), approval.attemptId());
+        if (!approval.sourceCommit().equals(state.sourceCommit) || state.pendingEffect == null
+                || !approval.manifestId().equals(state.pendingEffect.manifestId())
+                || !approval.manifestDigest().equals(state.pendingEffect.manifestDigest())) {
+            throw new SecurityException("Pipeline approval is not bound to the projected manifest");
+        }
+        if (!state.humanApproved) {
+            state.humanApproved = true;
+            state.transition(TaskStatus.APPROVED, "Temporal approval recorded for manifest " + approval.manifestId());
+            memory.save(state);
+        }
+    }
+
+    @Override
     public EvidenceRepository.StoredManifest createApprovalManifest(ApprovalManifestRequest request) {
         requireQueue("evidence");
         TaskState state = requireTask(request.taskId(), request.attemptId());
@@ -227,9 +254,13 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         EvidenceRepository.PolicyDecision policy = new EvidenceRepository.PolicyDecision(
                 "1", request.taskId(), request.attemptId(), "pipeline-gates", "1", "ALLOW", java.util.List.of(),
                 Map.copyOf(digests), java.time.Instant.now());
-        return evidence.createManifest(new EvidenceRepository.ManifestRequest(request.taskId(), request.attemptId(),
+        EvidenceRepository.StoredManifest manifest = evidence.createManifest(new EvidenceRepository.ManifestRequest(
+                request.taskId(), request.attemptId(),
                 request.repositoryId(), request.sourceCommit(), request.artifacts().get("patch").digest(),
                 Map.copyOf(references), policy, "workflow"));
+        state.bindApprovalManifest(manifest.manifestId(), manifest.uri(), manifest.digest());
+        memory.save(state);
+        return manifest;
     }
 
     private TaskState requireTask(String taskId, String attemptId) {

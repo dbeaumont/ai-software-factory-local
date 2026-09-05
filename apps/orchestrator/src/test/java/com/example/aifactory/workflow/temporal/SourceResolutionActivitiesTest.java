@@ -117,6 +117,7 @@ class SourceResolutionActivitiesTest {
             assertThat(result.status()).isEqualTo("PR_CREATED");
             assertThat(result.chronology()).contains("STEP_COMPLETED:plan", "STEP_COMPLETED:review");
             assertThat(pipeline.repairs).isEqualTo(1);
+            assertThat(pipeline.approvals).isEqualTo(1);
             assertThat(pipeline.deliveries).isEqualTo(1);
         }
     }
@@ -124,6 +125,7 @@ class SourceResolutionActivitiesTest {
     private static final class CompactPipelineActivities implements PipelineExecutionActivities {
         private int validations;
         private int repairs;
+        private int approvals;
         private int deliveries;
 
         @Override
@@ -184,6 +186,14 @@ class SourceResolutionActivitiesTest {
 
         @Override public void recordGateRejection(GateRejection rejection) { }
         @Override public void recordCancellation(Cancellation cancellation) { }
+        @Override public void recordApproval(Approval approval) {
+            if (!"a".repeat(64).equals(approval.manifestId())
+                    || !"b".repeat(64).equals(approval.manifestDigest())
+                    || !"operator".equals(approval.actor())) {
+                throw new AssertionError("Approval activity is not bound to the accepted signal");
+            }
+            approvals++;
+        }
 
         @Override
         public com.example.aifactory.workflow.EvidenceRepository.StoredManifest createApprovalManifest(

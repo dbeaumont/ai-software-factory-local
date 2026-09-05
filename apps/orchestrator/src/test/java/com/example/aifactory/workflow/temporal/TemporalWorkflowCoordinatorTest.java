@@ -57,7 +57,6 @@ class TemporalWorkflowCoordinatorTest {
         TaskState task = task();
         task.pendingEffect = new PendingEffect("scm.create_draft_pull_request", Map.of(), "Create draft PR",
                 "ALLOW", true, "a".repeat(64), "evidence://manifest/a", "b".repeat(64));
-        task.humanApproved = true;
         ArgumentCaptor<SoftwareFactoryWorkflow.ApprovalSignal> signal =
                 ArgumentCaptor.forClass(SoftwareFactoryWorkflow.ApprovalSignal.class);
 

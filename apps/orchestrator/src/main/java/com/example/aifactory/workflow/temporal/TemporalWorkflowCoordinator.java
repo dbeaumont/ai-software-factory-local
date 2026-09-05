@@ -57,7 +57,7 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
     public void resumeAfterApproval(TaskState task) {
         requireTask(task);
         if (task.pendingEffect == null || task.pendingEffect.manifestId() == null
-                || task.pendingEffect.manifestDigest() == null || !task.humanApproved) {
+                || task.pendingEffect.manifestDigest() == null) {
             throw new IllegalStateException("A manifest-bound human approval is required");
         }
         String attemptId = PipelineStepContracts.INITIAL_ATTEMPT_ID;

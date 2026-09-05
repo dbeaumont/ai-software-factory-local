@@ -13,6 +13,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     private String phase = "CREATED";
     private String currentStep = "source";
     private SoftwareFactoryWorkflow.CancellationSignal cancellation;
+    private SoftwareFactoryWorkflow.ApprovalSignal approval;
     private final Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts =
             new LinkedHashMap<>();
 
@@ -96,6 +97,10 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         artifacts.keySet().forEach(name -> chronology.add("STEP_COMPLETED:" + name));
         chronology.addAll(coordinated.chronology());
         if ("APPROVED".equals(coordinated.status())) {
+            pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordApproval(
+                    new PipelineExecutionActivities.Approval(request.taskId(), request.attemptId(),
+                            resolved.sourceCommit(), approval.manifestId(), approval.manifestDigest(),
+                            approval.approver(), approval.decidedAt()));
             currentStep = "delivery";
             pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).deliver(
                     new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
@@ -215,7 +220,10 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 TemporalActivityPolicies.forKind(kind, queue));
     }
 
-    @Override public void approve(SoftwareFactoryWorkflow.ApprovalSignal signal) { delegate.approve(signal); }
+    @Override public void approve(SoftwareFactoryWorkflow.ApprovalSignal signal) {
+        approval = signal;
+        delegate.approve(signal);
+    }
     @Override public void cancel(SoftwareFactoryWorkflow.CancellationSignal signal) {
         cancellation = signal;
         delegate.cancel(signal);

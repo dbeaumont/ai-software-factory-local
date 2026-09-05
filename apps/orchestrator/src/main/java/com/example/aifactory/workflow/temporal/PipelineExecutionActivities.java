@@ -37,6 +37,9 @@ public interface PipelineExecutionActivities {
     @ActivityMethod(name = "RecordPipelineCancellation")
     void recordCancellation(Cancellation cancellation);
 
+    @ActivityMethod(name = "RecordPipelineApproval")
+    void recordApproval(Approval approval);
+
     @ActivityMethod(name = "CreatePipelineApprovalManifest")
     EvidenceRepository.StoredManifest createApprovalManifest(ApprovalManifestRequest request);
 
@@ -56,6 +59,9 @@ public interface PipelineExecutionActivities {
     record GateRejection(String taskId, String attemptId, String sourceCommit, String gate) {}
 
     record Cancellation(String taskId, String attemptId, String sourceCommit, String reason, String actor) {}
+
+    record Approval(String taskId, String attemptId, String sourceCommit, String manifestId,
+                    String manifestDigest, String actor, String decidedAt) {}
 
     record ApprovalManifestRequest(String taskId, String attemptId, String repositoryId, String sourceCommit,
                                    Map<String, PipelineStepContracts.ArtifactReference> artifacts) {

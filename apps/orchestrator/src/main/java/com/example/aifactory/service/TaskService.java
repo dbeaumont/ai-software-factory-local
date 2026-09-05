@@ -122,8 +122,6 @@ public class TaskService {
                 || !"ALLOW".equals(state.pendingEffect.policyDecision())) {
             throw new IllegalStateException("No policy-approved effect is awaiting confirmation");
         }
-        state.humanApproved = true;
-        state.transition(TaskStatus.APPROVED, "Human approval recorded");
         if (audit != null) audit.append(SecurityAuditJournal.EventType.APPROVAL, state.id,
                 "human-approver", state.pendingEffect.manifestId() == null
                         ? state.pendingEffect.tool() : state.pendingEffect.manifestId(), "APPROVE");

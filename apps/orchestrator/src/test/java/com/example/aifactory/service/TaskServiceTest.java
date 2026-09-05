@@ -222,7 +222,7 @@ class TaskServiceTest {
         assertEquals(TaskStatus.WAITING_APPROVAL, state.status);
 
         service.approveManifest(state.id, new ManifestApprovalRequest("a".repeat(64), "b".repeat(64)));
-        assertEquals(TaskStatus.APPROVED, state.status);
+        assertEquals(TaskStatus.WAITING_APPROVAL, state.status);
     }
 
     @Test

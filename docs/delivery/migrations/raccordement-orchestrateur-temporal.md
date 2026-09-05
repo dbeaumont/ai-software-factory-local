@@ -267,8 +267,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   ticket ou une sortie de modèle ne peut modifier que le mode métier autorisé, jamais le moteur. _(Aucune propriété
   ni branche de sélection de moteur ne subsiste ; le seul bean coordinateur est Temporal. `executionMode` demeure
   un choix métier borné, transmis dans le payload du workflow et sans pouvoir sur le runtime.)_
-- [ ] **TEMP-062 — Signaler l'approbation.** Transformer `approve`/`approve-manifest` en signal lié à task,
-  tentative, manifeste, digest, acteur et horodatage.
+- [x] **TEMP-062 — Signaler l'approbation.** Transformer `approve`/`approve-manifest` en signal lié à task,
+  tentative, manifeste, digest, acteur et horodatage. _(La commande ne termine plus localement la tâche : elle
+  signale le workflow V1. Celui-ci projette ensuite l'approbation via une activité Evidence, vérifie exactement le
+  manifeste courant et son digest, puis seulement autorise l'activité SCM.)_
 - [ ] **TEMP-063 — Signaler les décisions humaines.** Vérifier domaine, rôle, options et object digest avant
   émission du signal.
 - [ ] **TEMP-064 — Signaler l'annulation.** Rendre l'opération idempotente et retourner l'état projeté sans
