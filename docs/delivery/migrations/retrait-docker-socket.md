@@ -68,7 +68,7 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 - [x] Définir les erreurs normalisées : refus de profil, saturation, timeout, annulation, indisponibilité et erreur d'infrastructure.
 - [x] Garantir l'idempotence sur `execution_id`.
 - [x] Vérifier qu'aucun champ du contrat ne permet de choisir une commande, un chemin hôte ou une option privilégiée.
-- [ ] Ajouter les tests de contrat communs applicables aux runtimes Compose et GKE.
+- [x] Ajouter les tests de contrat communs applicables aux runtimes Compose et GKE.
 
 ### Critères de sortie du lot 1
 
@@ -237,7 +237,7 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 ## 11. Stratégie de tests finale
 
 - [x] Tests unitaires des mappings opération/profil et profil/politique réseau.
-- [ ] Tests de contrat identiques pour `ComposeSandboxRuntime` et `GkeSandboxRuntime`.
+- [x] Tests de contrat identiques pour `ComposeSandboxRuntime` et `GkeSandboxRuntime`.
 - [x] Tests négatifs : commande libre, chemin arbitraire, profil inconnu, digest absent et secret non autorisé.
 - [x] Tests de concurrence sur une même tâche et sur plusieurs tâches.
 - [x] Tests de timeout et suppression de tout le groupe de processus local.
