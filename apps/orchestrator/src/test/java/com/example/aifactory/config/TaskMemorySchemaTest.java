@@ -133,4 +133,17 @@ class TaskMemorySchemaTest {
                 .contains("FOREIGN KEY (task_id, attempt_id, source_commit)")
                 .contains("REVOKE UPDATE, DELETE, TRUNCATE");
     }
+
+    @Test
+    void projectionSchemaCoversAttemptsTransitionsHumanActionsAndPendingEffects() throws Exception {
+        String sql = Files.readString(DATABASE.resolve("V009__workflow_projection_completeness.sql"));
+
+        for (String table : List.of("workflow_attempts", "task_transitions", "human_actions", "pending_effects")) {
+            assertThat(sql).contains("CREATE TABLE " + table + " (");
+        }
+        assertThat(sql).contains("previous_attempt_id", "reason_digest", "summary_digest", "question_digest",
+                        "object_digest", "allowed_options", "arguments_digest", "manifest_digest", "expires_at")
+                .contains("version             bigint NOT NULL DEFAULT 0")
+                .doesNotContain("raw_content", "patch_content", "prompt_content");
+    }
 }

@@ -304,8 +304,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-070 — Ajouter une base applicative dédiée.** Déployer `orchestrator-db` dans Compose ; ne pas
   réutiliser `temporal-db` ni ses identifiants. _(PostgreSQL 16 possède son volume, son compte, son mot de passe,
   son healthcheck et sa dépendance Compose propres sur le réseau workflow privé ; `make init` génère le secret.)_
-- [ ] **TEMP-071 — Versionner le schéma.** Créer les migrations pour tâches, tentatives, runs, transitions,
-  délégations, artefacts, contradictions, décisions, actions humaines et effets en attente.
+- [x] **TEMP-071 — Versionner le schéma.** Créer les migrations pour tâches, tentatives, runs, transitions,
+  délégations, artefacts, contradictions, décisions, actions humaines et effets en attente. _(Les migrations
+  V001–V009 couvrent le modèle, ses filiations, contraintes et versions optimistes ; Flyway les charge depuis le
+  JAR avant le démarrage et l'orchestrateur reçoit uniquement les identifiants de sa base dédiée.)_
 - [ ] **TEMP-072 — Implémenter `PostgresTaskMemory`.** Fournir lectures et écritures transactionnelles avec
   verrouillage optimiste et contraintes d'unicité.
 - [ ] **TEMP-073 — Persister l'admission avant le démarrage.** Utiliser une outbox ou une procédure de
