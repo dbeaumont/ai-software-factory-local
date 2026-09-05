@@ -382,8 +382,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   comportement de la projection lorsque l'historique n'est plus disponible. _(Le namespace local est contrôlé à
   7 jours ; un legal hold Evidence autorisé, borné et audité bloque réellement la purge en fail-closed ; une histoire
   expirée produit une erreur stable par tâche sans remplacer la projection par des faits incomplets.)_
-- [ ] **TEMP-088 — Mettre à jour les runbooks.** Compléter indisponibilité Temporal, worker défaillant, saturation,
-  rollback, projection incohérente et effet à issue inconnue.
+- [x] **TEMP-088 — Mettre à jour les runbooks.** Compléter indisponibilité Temporal, worker défaillant, saturation,
+  rollback, projection incohérente et effet à issue inconnue. _(L'index opérateur relie six procédures fail-closed ;
+  elles actent la bascule franche sans fallback local, le retour à un build compatible, la reconstruction atomique et
+  la réconciliation en lecture seule de tout effet incertain.)_
 
 ### Critères de sortie du lot 6
 

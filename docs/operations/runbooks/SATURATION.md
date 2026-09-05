@@ -8,8 +8,8 @@ runbook couvre `AiFactoryTaskQueueBacklog`, les files Temporal et la file de job
 ## Confinement immédiat
 
 1. Ouvrir un incident et relever l'heure, les files, le premier workflow affecté et les changements récents.
-2. Suspendre les nouvelles admissions hiérarchiques ; conserver le pipeline pour les seules tâches prioritaires
-   si sa capacité est saine.
+2. Suspendre toutes les nouvelles admissions : la bascule Temporal est complète et le pipeline n'est pas une voie
+   locale de secours.
 3. Ne pas relancer manuellement une activité avec effet. Une issue inconnue est réconciliée par sa clé
    d'idempotence.
 4. Ne supprimer ni historique Temporal, ni volume `sandbox-job-state`, ni preuve pour vider une file.
@@ -17,8 +17,9 @@ runbook couvre `AiFactoryTaskQueueBacklog`, les files Temporal et la file de job
 ## Diagnostic
 
 ```bash
-docker compose -f infrastructure/compose.yaml ps
-docker compose -f infrastructure/compose.yaml logs --tail=200 orchestrator temporal sandbox-execution-mcp
+docker compose --env-file .env -f infrastructure/compose.yaml ps
+docker compose --env-file .env -f infrastructure/compose.yaml logs --tail=200 orchestrator temporal sandbox-execution-mcp
+make temporal-status
 ```
 
 Dans le dashboard SigNoz « AI Factory Global », comparer :
@@ -35,11 +36,12 @@ latence LLM, base Temporal ou ressource hôte. Distinguer backlog croissant et b
 
 ## Rétablissement
 
-1. Restaurer d'abord la dépendance défaillante ou le worker qui ne poll plus.
+1. Restaurer d'abord la dépendance défaillante ou appliquer le
+   [runbook worker](WORKER-TEMPORAL-DEFAILLANT.md) à la file qui ne poll plus.
 2. Laisser les retries Temporal et le backpressure sandbox préserver l'ordre ; n'autoriser une relance opérateur
    que pour une délégation marquée récupérable.
 3. N'augmenter capacité ou quotas qu'après vérification CPU, mémoire, PID, licences et isolation par tâche.
-4. Réouvrir graduellement les admissions quand le backlog décroît sur deux fenêtres de dix minutes.
+4. Réouvrir les admissions par décision opérateur quand le backlog décroît sur deux fenêtres de dix minutes.
 
 ## Vérification et clôture
 

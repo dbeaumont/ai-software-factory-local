@@ -1,9 +1,8 @@
 # Runbooks multi-agents
 
-> Applicabilité : Temporal et les modes hiérarchiques sont désactivés par défaut. Les procédures correspondantes
-> décrivent la cible d'exploitation et ne deviennent exécutables qu'après câblage des configurations, identités,
-> montages et commandes opérateur. Le kill switch existe dans le code mais son fichier n'est pas monté par le
-> Compose courant.
+> Applicabilité : Temporal est l'unique coordinateur, y compris pour le pipeline. Il n'existe aucun fallback local.
+> Les procédures multi-agents qui parlent de canary restent applicables aux rôles hiérarchiques, pas au raccordement
+> Temporal lui-même.
 
 | Situation | Action initiale | Runbook |
 |---|---|---|
@@ -13,6 +12,10 @@
 | Serveur MCP suspect ou preuve altérée | couper serveur/outils et geler les effets | [MCP compromis](MCP-COMPROMIS.md) |
 | Backlog ou saturation | suspendre les admissions hiérarchiques | [Saturation](SATURATION.md) |
 | Temporal indisponible | préserver l'historique et geler les effets inconnus | [Temporal indisponible](TEMPORAL-INDISPONIBLE.md) |
+| Worker Temporal absent ou incompatible | geler les admissions de la file et conserver le build ID | [Worker Temporal défaillant](WORKER-TEMPORAL-DEFAILLANT.md) |
+| Rollback de la couche d'exécution | revenir à un build worker compatible, jamais au coordinateur local | [Rollback Temporal](ROLLBACK-TEMPORAL.md) |
+| Projection incohérente | preview depuis l'autorité puis remplacement atomique | [Projection incohérente](PROJECTION-INCOHERENTE.md) |
+| Effet externe à issue inconnue | réconcilier par clé d'idempotence sans rejouer | [Effet à issue inconnue](EFFET-ISSUE-INCONNUE.md) |
 | Backend sandbox indisponible | suspendre les admissions et réconcilier les exécutions | [Sandbox indisponible](SANDBOX-BACKEND-INDISPONIBLE.md) |
 | Collector indisponible ou saturé | préserver le métier et borner la perte de télémétrie | [Collector indisponible](COLLECTOR-INDISPONIBLE.md) |
 | Télémétrie absente, retardée ou rejetée | localiser la rupture du pipeline OTLP | [Télémétrie absente](TELEMETRIE-ABSENTE.md) |
