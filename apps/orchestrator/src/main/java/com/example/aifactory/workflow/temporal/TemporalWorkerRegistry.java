@@ -1,5 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.config.TemporalProperties;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.temporal.worker.WorkerOptions;
@@ -20,9 +21,15 @@ public final class TemporalWorkerRegistry {
 
     public TemporalWorkerRegistry(WorkerFactory factory, Map<String, String> taskQueues,
                                   String deploymentName, String buildId) {
+        this(factory, taskQueues, deploymentName, buildId, TemporalProperties.Capacity.defaults());
+    }
+
+    public TemporalWorkerRegistry(WorkerFactory factory, Map<String, String> taskQueues,
+                                  String deploymentName, String buildId,
+                                  TemporalProperties.Capacity capacity) {
         if (factory == null || taskQueues == null || !taskQueues.keySet().containsAll(REQUIRED)
                 || taskQueues.values().stream().distinct().count() != taskQueues.size()
-                || deploymentName == null || buildId == null) {
+                || deploymentName == null || buildId == null || capacity == null) {
             throw new IllegalArgumentException("Temporal worker topology is incomplete or ambiguous");
         }
         WorkerDeploymentOptions deployment = WorkerDeploymentOptions.newBuilder()
@@ -30,7 +37,15 @@ public final class TemporalWorkerRegistry {
                 .setVersion(new WorkerDeploymentVersion(deploymentName, buildId))
                 .setDefaultVersioningBehavior(VersioningBehavior.PINNED)
                 .build();
-        WorkerOptions options = WorkerOptions.newBuilder().setDeploymentOptions(deployment).build();
+        WorkerOptions options = WorkerOptions.newBuilder()
+                .setDeploymentOptions(deployment)
+                .setMaxConcurrentWorkflowTaskPollers(capacity.workflowTaskPollers())
+                .setMaxConcurrentActivityTaskPollers(capacity.activityTaskPollers())
+                .setMaxConcurrentWorkflowTaskExecutionSize(capacity.maxConcurrentWorkflowTasks())
+                .setMaxConcurrentActivityExecutionSize(capacity.maxConcurrentActivities())
+                .setMaxTaskQueueActivitiesPerSecond(capacity.maxTaskQueueActivitiesPerSecond())
+                .setStickyTaskQueueDrainTimeout(capacity.stickyQueueDrainTimeout())
+                .build();
         Map<String, Worker> registered = new LinkedHashMap<>();
         REQUIRED.stream().sorted().forEach(kind -> registered.put(kind,
                 factory.newWorker(taskQueues.get(kind), options)));

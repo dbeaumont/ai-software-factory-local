@@ -143,6 +143,16 @@ ai-factory:
       assurance: ${AI_FACTORY_TEMPORAL_ASSURANCE_TASK_QUEUE:ai-factory-assurance}
       evidence: ${AI_FACTORY_TEMPORAL_EVIDENCE_TASK_QUEUE:ai-factory-evidence}
       scm: ${AI_FACTORY_TEMPORAL_SCM_TASK_QUEUE:ai-factory-scm}
+    capacity:
+      workflow-cache-size: ${AI_FACTORY_TEMPORAL_WORKFLOW_CACHE_SIZE:100}
+      max-workflow-threads: ${AI_FACTORY_TEMPORAL_MAX_WORKFLOW_THREADS:200}
+      workflow-task-pollers: ${AI_FACTORY_TEMPORAL_WORKFLOW_TASK_POLLERS:2}
+      activity-task-pollers: ${AI_FACTORY_TEMPORAL_ACTIVITY_TASK_POLLERS:2}
+      max-concurrent-workflow-tasks: ${AI_FACTORY_TEMPORAL_MAX_CONCURRENT_WORKFLOW_TASKS:4}
+      max-concurrent-activities: ${AI_FACTORY_TEMPORAL_MAX_CONCURRENT_ACTIVITIES:4}
+      max-task-queue-activities-per-second: ${AI_FACTORY_TEMPORAL_MAX_TASK_QUEUE_ACTIVITIES_PER_SECOND:10}
+      sticky-queue-drain-timeout: ${AI_FACTORY_TEMPORAL_STICKY_QUEUE_DRAIN_TIMEOUT:10s}
+      graceful-shutdown-timeout: ${AI_FACTORY_TEMPORAL_GRACEFUL_SHUTDOWN_TIMEOUT:30s}
     security:
       tls-enabled: ${AI_FACTORY_TEMPORAL_TLS_ENABLED:false}
       client-certificate-path: ${AI_FACTORY_TEMPORAL_CLIENT_CERTIFICATE_PATH:}

@@ -10,7 +10,7 @@ import java.util.Set;
 @ConfigurationProperties(prefix = "ai-factory.temporal")
 public record TemporalProperties(String target, String namespace, Duration namespaceRetention,
                                  String deploymentName, String buildId,
-                                 Map<String, String> taskQueues, Security security) {
+                                 Map<String, String> taskQueues, Capacity capacity, Security security) {
     private static final Set<String> REQUIRED_QUEUES = Set.of(
             "workflow", "context", "llm", "sandbox", "assurance", "evidence", "scm");
 
@@ -36,6 +36,7 @@ public record TemporalProperties(String target, String namespace, Duration names
                 || taskQueues.values().stream().distinct().count() != taskQueues.size()) {
             throw new IllegalArgumentException("Temporal task queues are incomplete or invalid");
         }
+        capacity = capacity == null ? Capacity.defaults() : capacity;
         security = security == null ? new Security(false, "", "", "", "") : security;
     }
 
@@ -43,6 +44,34 @@ public record TemporalProperties(String target, String namespace, Duration names
         if (target == null || !target.matches("[A-Za-z0-9._-]+:[0-9]{1,5}")) return false;
         int port = Integer.parseInt(target.substring(target.lastIndexOf(':') + 1));
         return port >= 1 && port <= 65_535;
+    }
+
+    public record Capacity(int workflowCacheSize, int maxWorkflowThreads, int workflowTaskPollers,
+                           int activityTaskPollers, int maxConcurrentWorkflowTasks,
+                           int maxConcurrentActivities, double maxTaskQueueActivitiesPerSecond,
+                           Duration stickyQueueDrainTimeout, Duration gracefulShutdownTimeout) {
+        public Capacity {
+            if (workflowCacheSize < 1 || workflowCacheSize > 10_000
+                    || maxWorkflowThreads < workflowCacheSize || maxWorkflowThreads > 20_000
+                    || workflowTaskPollers < 1 || workflowTaskPollers > 32
+                    || activityTaskPollers < 1 || activityTaskPollers > 64
+                    || maxConcurrentWorkflowTasks < 1 || maxConcurrentWorkflowTasks > 1_000
+                    || maxConcurrentActivities < 1 || maxConcurrentActivities > 1_000
+                    || !Double.isFinite(maxTaskQueueActivitiesPerSecond)
+                    || maxTaskQueueActivitiesPerSecond <= 0 || maxTaskQueueActivitiesPerSecond > 10_000
+                    || stickyQueueDrainTimeout == null || stickyQueueDrainTimeout.isNegative()
+                    || stickyQueueDrainTimeout.compareTo(Duration.ofMinutes(5)) > 0
+                    || gracefulShutdownTimeout == null || gracefulShutdownTimeout.isZero()
+                    || gracefulShutdownTimeout.isNegative()
+                    || gracefulShutdownTimeout.compareTo(Duration.ofMinutes(10)) > 0) {
+                throw new IllegalArgumentException("Temporal worker capacity is outside operational bounds");
+            }
+        }
+
+        public static Capacity defaults() {
+            return new Capacity(100, 200, 2, 2, 4, 4, 10.0,
+                    Duration.ofSeconds(10), Duration.ofSeconds(30));
+        }
     }
 
     public record Security(boolean tlsEnabled, String clientCertificatePath, String privateKeyPath,

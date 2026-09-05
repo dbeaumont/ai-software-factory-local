@@ -25,6 +25,9 @@ class TemporalPropertiesTest {
             assertThat(properties.buildId()).isEqualTo("0.1.0");
             assertThat(properties.taskQueues()).containsKeys(
                     "workflow", "context", "llm", "sandbox", "assurance", "evidence", "scm");
+            assertThat(properties.capacity().workflowCacheSize()).isEqualTo(100);
+            assertThat(properties.capacity().maxConcurrentActivities()).isEqualTo(4);
+            assertThat(properties.capacity().gracefulShutdownTimeout()).isEqualTo(Duration.ofSeconds(30));
             assertThat(properties.security().tlsEnabled()).isFalse();
         });
     }
@@ -50,6 +53,12 @@ class TemporalPropertiesTest {
                 .run(context -> assertThat(context).hasFailed());
     }
 
+    @Test
+    void rejectsUnsafeWorkerCapacity() {
+        runner.withPropertyValues("ai-factory.temporal.capacity.max-concurrent-activities=0")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
     private static String[] valid() {
         return new String[]{"ai-factory.temporal.target=temporal:7233",
                 "ai-factory.temporal.namespace=ai-factory-local", "ai-factory.temporal.namespace-retention=P7D",
@@ -62,6 +71,15 @@ class TemporalPropertiesTest {
                 "ai-factory.temporal.task-queues.assurance=ai-factory-assurance",
                 "ai-factory.temporal.task-queues.evidence=ai-factory-evidence",
                 "ai-factory.temporal.task-queues.scm=ai-factory-scm",
+                "ai-factory.temporal.capacity.workflow-cache-size=100",
+                "ai-factory.temporal.capacity.max-workflow-threads=200",
+                "ai-factory.temporal.capacity.workflow-task-pollers=2",
+                "ai-factory.temporal.capacity.activity-task-pollers=2",
+                "ai-factory.temporal.capacity.max-concurrent-workflow-tasks=4",
+                "ai-factory.temporal.capacity.max-concurrent-activities=4",
+                "ai-factory.temporal.capacity.max-task-queue-activities-per-second=10",
+                "ai-factory.temporal.capacity.sticky-queue-drain-timeout=10s",
+                "ai-factory.temporal.capacity.graceful-shutdown-timeout=30s",
                 "ai-factory.temporal.security.tls-enabled=false"};
     }
 

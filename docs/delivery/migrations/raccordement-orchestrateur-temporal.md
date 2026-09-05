@@ -184,8 +184,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-034 — Enregistrer les activités.** Câbler les adaptateurs contexte, LLM, sandbox, assurance,
   evidence et SCM sur leurs files respectives. _(Chaque worker spécialisé reçoit une façade à capacité minimale ;
   le worker sandbox enregistre également l'intégration de patch, sans exposer ces effets au worker workflow.)_
-- [ ] **TEMP-035 — Configurer la capacité.** Fixer concurrence des pollers et activités, débit, cache workflows,
-  graceful shutdown et durée maximale de drainage.
+- [x] **TEMP-035 — Configurer la capacité.** Fixer concurrence des pollers et activités, débit, cache workflows,
+  graceful shutdown et durée maximale de drainage. _(Bornes validées au démarrage et valeurs Compose explicites :
+  cache/threads, pollers, concurrences, débit, drainage sticky et arrêt gracieux.)_
 - [ ] **TEMP-036 — Ajouter les interceptors.** Propager `traceparent`/baggage validés, identité d'exécution et
   métriques sans produire de spans lors d'un replay.
 - [ ] **TEMP-037 — Exposer la readiness.** Considérer l'orchestrateur prêt en mode Temporal seulement si le

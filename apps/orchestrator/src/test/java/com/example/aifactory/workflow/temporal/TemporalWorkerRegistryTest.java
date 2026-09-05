@@ -54,6 +54,12 @@ class TemporalWorkerRegistryTest {
             assertThat(value.getDeploymentOptions().getVersion().getBuildId()).isEqualTo("0.1.0");
             assertThat(value.getDeploymentOptions().getDefaultVersioningBehavior())
                     .isEqualTo(io.temporal.common.VersioningBehavior.PINNED);
+            assertThat(value.getMaxConcurrentWorkflowTaskPollers()).isEqualTo(2);
+            assertThat(value.getMaxConcurrentActivityTaskPollers()).isEqualTo(2);
+            assertThat(value.getMaxConcurrentWorkflowTaskExecutionSize()).isEqualTo(4);
+            assertThat(value.getMaxConcurrentActivityExecutionSize()).isEqualTo(4);
+            assertThat(value.getMaxTaskQueueActivitiesPerSecond()).isEqualTo(10.0);
+            assertThat(value.getStickyTaskQueueDrainTimeout()).isEqualTo(java.time.Duration.ofSeconds(10));
         });
     }
 

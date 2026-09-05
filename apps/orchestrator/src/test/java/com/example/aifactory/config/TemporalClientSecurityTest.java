@@ -72,6 +72,6 @@ class TemporalClientSecurityTest {
                 Map.of("workflow", "ai-factory-workflows", "context", "ai-factory-context",
                         "llm", "ai-factory-llm", "sandbox", "ai-factory-sandbox",
                         "assurance", "ai-factory-assurance", "evidence", "ai-factory-evidence",
-                        "scm", "ai-factory-scm"), security);
+                        "scm", "ai-factory-scm"), TemporalProperties.Capacity.defaults(), security);
     }
 }
