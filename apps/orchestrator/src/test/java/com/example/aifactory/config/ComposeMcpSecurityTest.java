@@ -68,6 +68,10 @@ class ComposeMcpSecurityTest {
         assertTrue(readOnlyVolumes.stream().anyMatch(volume -> volume.endsWith(":/factory-tasks:ro")));
         assertTrue(writeVolumes.stream().anyMatch(volume -> volume.endsWith(":/factory-tasks")));
         assertTrue(writeVolumes.stream().noneMatch(volume -> volume.endsWith(":/factory-tasks:ro")));
+        List<String> dependencyVolumes = (List<String>) services.get("sandbox-runner-dependency").get("volumes");
+        assertTrue(dependencyVolumes.stream()
+                .anyMatch(volume -> volume.endsWith(":/home/sandbox/.cache")),
+                "security tools need a writable persistent cache outside the bounded tmpfs");
     }
 
     private static Path composeFile() {

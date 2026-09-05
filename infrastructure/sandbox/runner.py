@@ -66,7 +66,8 @@ PROFILES = {
         "else echo 'SonarQube analysis supports Maven repositories only'; exit 2; fi"
     ),
     "security-syft-trivy-v2": (
-        "set -o pipefail && mkdir -p .ai-factory && "
+        "set -o pipefail && mkdir -p .ai-factory \"$HOME/.cache/syft\" \"$HOME/.cache/trivy/tmp\" && "
+        "export XDG_CACHE_HOME=\"$HOME/.cache\" TMPDIR=\"$HOME/.cache/trivy/tmp\" && "
         "syft dir:. -o cyclonedx-json=.ai-factory/sbom.cdx.json >/dev/null && "
         "for attempt in 1 2 3; do trivy fs --download-db-only --timeout 2m && break; "
         "if [ \"$attempt\" -eq 3 ]; then exit 2; fi; sleep \"$attempt\"; done && "
