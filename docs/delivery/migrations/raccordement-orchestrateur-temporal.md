@@ -68,9 +68,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-001 — Séparer moteur et mode d'exécution.** Faire de Temporal l'unique moteur de production, tout en
   conservant `executionMode` comme caractéristique métier indépendante du workflow technique. _(Décision consignée
   dans `ADR-TEMP-001`.)_
-- [ ] **TEMP-002 — Définir l'autorité des données.** Temporal porte la chronologie et l'état de coordination ;
+- [x] **TEMP-002 — Définir l'autorité des données.** Temporal porte la chronologie et l'état de coordination ;
   PostgreSQL porte une projection reconstruisible ; Evidence MCP porte les artefacts et leurs digests ; Gitea
-  reste l'autorité des effets SCM.
+  reste l'autorité des effets SCM. _(Matrice normative ajoutée à `ADR-TEMP-001`.)_
 - [ ] **TEMP-003 — Interdire l'accès applicatif à la base Temporal.** Les lectures passent par le SDK/API Temporal
   et jamais par les tables PostgreSQL internes de Temporal.
 - [ ] **TEMP-004 — Choisir un workflow racine de production versionné.** Introduire
