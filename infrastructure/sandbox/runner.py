@@ -140,6 +140,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             self.send_json(200, {"status": "UP"})
+        elif self.path == "/v1/executions":
+            if not self.authorized():
+                self.send_json(401, {"error": "unauthorized"})
+                return
+            with ACTIVE_LOCK:
+                execution_ids = sorted(ACTIVE)
+            self.send_json(200, {"execution_ids": execution_ids})
         else:
             self.send_json(404, {"error": "not_found"})
 

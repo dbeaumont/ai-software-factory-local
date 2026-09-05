@@ -55,6 +55,14 @@ class SandboxRunnerTest(unittest.TestCase):
         )
         return urllib.request.urlopen(request, timeout=5)
 
+    def test_lists_active_executions_only_with_authentication(self):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{PORT}/v1/executions",
+            headers={"Authorization": "Bearer " + TOKEN},
+        )
+        with urllib.request.urlopen(request, timeout=2) as response:
+            self.assertEqual([], json.load(response)["execution_ids"])
+
     def valid_payload(self):
         return {
             "execution_id": "c" * 32,

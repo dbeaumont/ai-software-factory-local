@@ -88,9 +88,22 @@ public class ComposeSandboxRuntime implements SandboxRuntime {
     }
 
     @Override
-    public void reconcileOrphans() {
-        // Runners own process groups and terminate them when their container stops.
-        // Persisted active jobs are marked failed by SandboxJobService after this hook.
+    public void reconcileOrphans() throws Exception {
+        for (URI runner : runners) {
+            HttpRequest request = HttpRequest.newBuilder(runner.resolve("/v1/executions"))
+                    .timeout(Duration.ofSeconds(5))
+                    .header("Authorization", "Bearer " + compose.token())
+                    .GET().build();
+            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException("compose sandbox orphan discovery failed with HTTP "
+                        + response.statusCode());
+            }
+            ActiveExecutions active = objectMapper.readValue(response.body(), ActiveExecutions.class);
+            for (String executionId : active.executionIds()) {
+                cancel(executionId);
+            }
+        }
     }
 
     private URI runner(SandboxProfiles.Profile profile) {
@@ -105,5 +118,11 @@ public class ComposeSandboxRuntime implements SandboxRuntime {
     }
 
     record RunnerResponse(int exitCode, String output, boolean outputTruncated, boolean timedOut) {
+    }
+
+    record ActiveExecutions(List<String> executionIds) {
+        ActiveExecutions {
+            executionIds = List.copyOf(executionIds);
+        }
     }
 }
