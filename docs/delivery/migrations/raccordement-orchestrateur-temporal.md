@@ -117,8 +117,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-015 — Corriger l'accès à Temporal UI.** Vérifier que `127.0.0.1:8233` est réellement publié sur
   macOS malgré le réseau Compose interne, sans exposer le frontend gRPC Temporal sur l'hôte. _(Bridge hôte dédié
   à la seule UI ; accès HTTP validé sur Docker Desktop, frontend gRPC toujours privé.)_
-- [ ] **TEMP-016 — Ajouter des cibles opérateur.** Fournir `make temporal-status`, `make temporal-logs` et
-  `make temporal-ui` sans commande d'activation/désactivation du moteur et sans afficher de secret.
+- [x] **TEMP-016 — Ajouter des cibles opérateur.** Fournir `make temporal-status`, `make temporal-logs` et
+  `make temporal-ui` sans commande d'activation/désactivation du moteur et sans afficher de secret. _(Statut
+  cluster/pollers séparé, logs ciblés et ouverture de l'UI loopback ajoutés au Makefile.)_
 
 ### Critères de sortie du lot 0
 

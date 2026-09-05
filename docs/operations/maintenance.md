@@ -91,7 +91,7 @@ flowchart TB
 | MCP | `evidence-mcp` | Stockage local chiffré et immuable des preuves |
 | MCP | `scm-delivery-mcp` | Livraison Gitea après approbation |
 | Sandbox | `sandbox-egress-proxy` | Proxy Squid à destinations autorisées |
-| Workflow | `temporal-db`, `temporal-schema`, `temporal`, `temporal-namespace`, `temporal-ui` | Socle durable préparé ; client orchestrateur désactivé par défaut |
+| Workflow | `temporal-db`, `temporal-schema`, `temporal`, `temporal-namespace`, `temporal-ui` | Moteur durable obligatoire ; `make temporal-status` distingue serveur et pollers applicatifs |
 | Qualité | `sonarqube`, `sonar-db` | Analyse et quality gate |
 | Artefacts | `artifactory`, `artifactory-db`, `artifactory-config` | Dépôt local et initialisation one-shot |
 | Observabilité | `otel-collector`, SigNoz, `signoz-bootstrap`, `alert-sink` | OTLP, stockage, dashboards et alertes |
@@ -106,12 +106,18 @@ normalement après succès. Leur état `Exited (0)` n’est pas une panne.
 | `ai-factory-network` | Accès externe possible | Web, orchestrateur, Gitea, LiteLLM, SonarQube, Artifactory et Collector |
 | `ai-factory-mcp-internal` | `internal: true` | Orchestrateur, MCP et Collector |
 | `ai-factory-workflow-internal` | `internal: true` | Temporal, orchestrateur et Collector |
+| `ai-factory-temporal-ui-host` | bridge local | Temporal UI uniquement, pour publier son port loopback sur Docker Desktop |
 | `ai-factory-sandbox-egress` | `internal: true` | Jobs de test, Artifactory et proxy egress |
 | `ai-factory-sandbox-quality` | `internal: true` | Jobs qualité, SonarQube, Artifactory et proxy egress |
 
 Ports hôte par défaut : Web `8080`, orchestrateur `8088`, Gitea HTTP `3000`, Gitea SSH `2222`, SonarQube
 `9000`, Artifactory `8082`, SigNoz `3301` et Temporal UI sur `127.0.0.1:8233`. Les cinq
 serveurs MCP, LiteLLM, Temporal gRPC et les bases PostgreSQL ne publient pas de port hôte.
+
+Les commandes opérateur Temporal ne révèlent aucun secret : `make temporal-status` affiche la santé du cluster et
+les pollers du moteur de tickets, `make temporal-logs` suit les journaux utiles et `make temporal-ui` ouvre l'UI
+locale. Une infrastructure `SERVING` sans poller de workflow signifie que Temporal fonctionne mais que le moteur
+de tickets n'est pas encore actif.
 
 ### 2.3 Persistance réelle
 

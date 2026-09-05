@@ -17,7 +17,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -42,6 +42,9 @@ help:
 	@echo -e "  $(CYAN)make restart$(NC)    - restart the orchestrator"
 	@echo -e "  $(CYAN)make logs$(NC)       - follow orchestrator logs"
 	@echo -e "  $(CYAN)make urls$(NC)       - list available service and API URLs"
+	@echo -e "  $(CYAN)make temporal-status$(NC) - show Temporal infrastructure health and workflow pollers"
+	@echo -e "  $(CYAN)make temporal-logs$(NC) - follow Temporal server, UI and orchestrator logs"
+	@echo -e "  $(CYAN)make temporal-ui$(NC) - open the loopback-only Temporal UI"
 	@echo -e "  $(CYAN)make down$(NC)       - stop stack"
 	@echo -e "  $(CYAN)make clean$(NC)      - stop and remove volumes (destructive)"
 
@@ -178,6 +181,23 @@ logs:
 	$(log-target)
 	$(COMPOSE) logs -f orchestrator
 
+temporal-status:
+	$(log-target)
+	@echo -e "$(BLUE)Temporal infrastructure:$(NC)"
+	$(COMPOSE) ps temporal temporal-namespace temporal-ui
+	$(COMPOSE) run --rm --no-deps --entrypoint temporal temporal-namespace operator cluster health --address temporal:7233
+	@echo -e "$(BLUE)Ticket engine pollers ($(AI_FACTORY_TEMPORAL_WORKFLOW_TASK_QUEUE)):$(NC)"
+	$(COMPOSE) run --rm --no-deps --entrypoint temporal temporal-namespace task-queue describe --namespace "$(AI_FACTORY_TEMPORAL_NAMESPACE)" --task-queue "$(AI_FACTORY_TEMPORAL_WORKFLOW_TASK_QUEUE)" --address temporal:7233
+
+temporal-logs:
+	$(log-target)
+	$(COMPOSE) logs --tail=200 -f temporal temporal-namespace temporal-ui orchestrator
+
+temporal-ui:
+	$(log-target)
+	@echo -e "$(GREEN)http://$(TEMPORAL_UI_BIND_ADDRESS):$(TEMPORAL_UI_PORT)$(NC)"
+	@open "http://$(TEMPORAL_UI_BIND_ADDRESS):$(TEMPORAL_UI_PORT)"
+
 urls:
 	$(log-target)
 	@echo ""
@@ -202,6 +222,7 @@ urls:
 	@echo -e "  - SonarQube:    $(GREEN)http://localhost:$(SONAR_PORT)$(NC) (user: $(SONAR_ADMIN_LOGIN), password: $(SONAR_ADMIN_PASSWORD))"
 	@echo -e "  - Artifactory:  $(GREEN)http://localhost:$(ARTIFACTORY_PORT)$(NC) (user: admin, password: password)"
 	@echo -e "  - SigNoz:       $(GREEN)http://localhost:$(SIGNOZ_PORT)$(NC) (user: $(SIGNOZ_ROOT_EMAIL), password: $(SIGNOZ_ROOT_PASSWORD))"
+	@echo -e "  - Temporal UI:  $(GREEN)http://$(TEMPORAL_UI_BIND_ADDRESS):$(TEMPORAL_UI_PORT)$(NC)"
 	@echo ""
 
 clean:
