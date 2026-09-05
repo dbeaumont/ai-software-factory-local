@@ -432,7 +432,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester retries déterministes, heartbeat, timeout et activité non retryable. _(Les tests embarqués imposent deux
   tentatives après timeout en ignorant la réponse tardive, reprennent le même job sandbox via les détails de
   heartbeat et prouvent qu'une erreur métier `nonRetryable` ne déclenche qu'une seule tentative.)_
-- [ ] Tester signaux reçus avant et pendant `Workflow.await`.
+- [x] Tester signaux reçus avant et pendant `Workflow.await`. _(Un `signalWithStart` atomique prouve que
+  l'approbation reçue avant l'attente est mémorisée ; un second scénario attend explicitement
+  `WAITING_APPROVAL`, ignore un signal non lié puis reprend sur le signal valide.)_
 - [ ] Tester annulation en clonage, LLM, sandbox, attente humaine et livraison.
 - [ ] Tester `continue-as-new` et propagation de l'état minimal.
 - [ ] Tester child workflows parallèles, échec en cascade et revue indépendante.

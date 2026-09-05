@@ -121,6 +121,36 @@ class SoftwareFactoryWorkflowTest {
     }
 
     @Test
+    void consumesAnApprovalDeliveredAtomicallyWithWorkflowStartBeforeAwait() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("software-factory-test");
+            worker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
+                    IndependentReviewWorkflowImpl.class);
+            environment.start();
+            SoftwareFactoryWorkflow workflow = stub(environment, "task-signal-before-await");
+            String manifestId = "6".repeat(64);
+            String manifestDigest = "7".repeat(64);
+            SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
+                    "task-signal-before-await", "attempt-1", "a".repeat(40), "change", java.util.List.of(),
+                    new SoftwareFactoryWorkflow.ApprovalRequest(manifestId,
+                            "evidence://task-signal-before-await/manifest/" + manifestId, manifestDigest));
+            SoftwareFactoryWorkflow.ApprovalSignal approval = new SoftwareFactoryWorkflow.ApprovalSignal(
+                    "task-signal-before-await", "attempt-1", manifestId, manifestDigest,
+                    "APPROVE", "reviewer@example.test", "2026-09-02T09:59:00Z");
+
+            WorkflowStub untyped = WorkflowStub.fromTyped(workflow);
+            untyped.signalWithStart("approve", new Object[]{approval}, new Object[]{request});
+            SoftwareFactoryWorkflow.Result result = untyped.getResult(SoftwareFactoryWorkflow.Result.class);
+
+            assertThat(result.status()).isEqualTo("APPROVED");
+            assertThat(result.approvedManifestId()).isEqualTo(manifestId);
+            assertThat(result.chronology()).containsExactly(
+                    "WORKFLOW_STARTED", "WAITING_APPROVAL:" + manifestId, "APPROVED:" + manifestId);
+        }
+    }
+
+    @Test
     void terminatesOnARefusalBoundToTheSubmittedManifest() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("software-factory-test");
