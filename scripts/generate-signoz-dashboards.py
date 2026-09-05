@@ -37,6 +37,20 @@ OPERATIONAL_LINKS = (
     },
 )
 
+TEMPORAL_LINKS = OPERATIONAL_LINKS + (
+    {
+        "name": "Temporal workflow history",
+        "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+        "renderVariables": True,
+    },
+)
+
+TEMPORAL_VARIABLES = (
+    ("temporal_namespace", "Temporal namespace", "Namespace containing the workflow execution."),
+    ("workflow_id", "Temporal workflow ID", "Workflow execution identifier from traces or the task API."),
+    ("run_id", "Temporal run ID", "Optional run identifier used for an exact history deep link."),
+)
+
 DASHBOARDS = {
     "orchestrator": {
         "name": "AI Factory Global",
@@ -91,11 +105,21 @@ DASHBOARDS = {
     },
     "temporal": {
         "name": "AI Factory Temporal",
-        "description": "Santé, débit, latence et persistance Temporal collectés par le receiver du Collector.",
+        "description": "Santé client/worker, files, erreurs et attente humaine Temporal via OpenTelemetry.",
+        "variables": TEMPORAL_VARIABLES,
+        "links": TEMPORAL_LINKS,
         "panels": [
             ("Temporal scrape readiness", ["up{job=\"temporal\"}"]),
             ("Frontend request and error rates", ["sum(rate(service_requests{service_name=\"frontend\"}[5m]))", "sum(rate(service_errors{service_name=\"frontend\"}[5m]))"]),
+            ("SDK client requests and failures", ["sum(rate(temporal_request[5m]))", "sum(rate(temporal_request_failure[5m]))"]),
+            ("Worker pollers by task queue", ["sum by (task_queue, worker_type) (temporal_num_pollers)"]),
+            ("Worker slot saturation", ["sum by (task_queue, worker_type) (temporal_worker_task_slots_used) / clamp_min(sum by (task_queue, worker_type) (temporal_worker_task_slots_used + temporal_worker_task_slots_available), 1)"]),
+            ("Application queue backlog", ["max by (perimeter, task_type) (ai_temporal_task_queue_backlog)"]),
+            ("Application queue pollers", ["max by (perimeter, task_type) (ai_temporal_task_queue_pollers)"]),
             ("Workflow task schedule-to-start p95", ['histogram_quantile(0.95, sum by (le) (rate({__name__="workflow_task_schedule_to_start_latency.bucket"}[5m])))']),
+            ("SDK activity schedule-to-start p95", ['histogram_quantile(0.95, sum by (le, task_queue) (rate({__name__="temporal_activity_schedule_to_start_latency.bucket"}[5m])))']),
+            ("Activity errors, retries and timeouts", ["sum by (activity_type) (rate(temporal_activity_execution_failed[5m]))", "sum by (perimeter) (rate(ai_temporal_activity_retries[5m]))", "sum by (perimeter) (rate(ai_temporal_timeouts[5m]))"]),
+            ("Workflows waiting for a human", ["ai_temporal_workflows_waiting_human"]),
             ("Persistence errors", ["sum(rate(persistence_error_with_type[5m]))"]),
         ],
     },
@@ -120,7 +144,7 @@ def query(name: str, expression: str) -> dict:
     }
 
 
-def panel(title: str, expressions: list[str]) -> dict:
+def panel(title: str, expressions: list[str], links: tuple[dict, ...] = OPERATIONAL_LINKS) -> dict:
     return {
         "kind": "Panel",
         "spec": {
@@ -153,7 +177,7 @@ def panel(title: str, expressions: list[str]) -> dict:
                     },
                 }
             ],
-            "links": list(OPERATIONAL_LINKS),
+            "links": list(links),
         },
     }
 
@@ -173,9 +197,10 @@ def text_variable(name: str, label: str, description: str) -> dict:
 def dashboard(slug: str, definition: dict) -> dict:
     panels = {}
     items = []
+    links = definition.get("links", OPERATIONAL_LINKS)
     for index, (title, expressions) in enumerate(definition["panels"]):
         panel_id = str(uuid.uuid5(NAMESPACE, f"{slug}:{index}:{title}"))
-        panels[panel_id] = panel(title, expressions)
+        panels[panel_id] = panel(title, expressions, links)
         items.append(
             {
                 "x": 0 if index % 2 == 0 else 6,
@@ -192,12 +217,12 @@ def dashboard(slug: str, definition: dict) -> dict:
         "tags": [{"key": "project", "value": "ai-software-factory"}, {"key": "domain", "value": slug}],
         "spec": {
             "display": {"name": definition["name"], "description": definition["description"]},
-            "variables": [text_variable(*definition) for definition in SEARCH_VARIABLES],
+            "variables": [text_variable(*variable) for variable in SEARCH_VARIABLES + definition.get("variables", ())],
             "panels": panels,
             "layouts": [{"kind": "Grid", "spec": {"items": items}}],
             "duration": "6h",
             "refreshInterval": "30s",
-            "links": list(OPERATIONAL_LINKS),
+            "links": list(links),
         },
     }
 

@@ -15,7 +15,7 @@
   "spec": {
     "display": {
       "name": "AI Factory Temporal",
-      "description": "Santé, débit, latence et persistance Temporal collectés par le receiver du Collector."
+      "description": "Santé client/worker, files, erreurs et attente humaine Temporal via OpenTelemetry."
     },
     "variables": [
       {
@@ -85,6 +85,42 @@
           "display": {
             "name": "MCP service",
             "description": "Bounded server or mcp.server.name value."
+          },
+          "value": "",
+          "constant": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "temporal_namespace",
+          "display": {
+            "name": "Temporal namespace",
+            "description": "Namespace containing the workflow execution."
+          },
+          "value": "",
+          "constant": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "workflow_id",
+          "display": {
+            "name": "Temporal workflow ID",
+            "description": "Workflow execution identifier from traces or the task API."
+          },
+          "value": "",
+          "constant": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "run_id",
+          "display": {
+            "name": "Temporal run ID",
+            "description": "Optional run identifier used for an exact history deep link."
           },
           "value": "",
           "constant": false
@@ -182,6 +218,11 @@
             {
               "name": "Observability runbooks",
               "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
               "renderVariables": true
             }
           ]
@@ -289,11 +330,527 @@
               "name": "Observability runbooks",
               "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
               "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
             }
           ]
         }
       },
-      "94465cd2-5366-5864-9baf-e56281741a8b": {
+      "b7440112-7182-53ca-817c-c951efdf916e": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "SDK client requests and failures",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum(rate(temporal_request[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "B",
+                          "query": "sum(rate(temporal_request_failure[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "5b2d77e9-a997-5533-bcb1-eb0690d90007": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Worker pollers by task queue",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (task_queue, worker_type) (temporal_num_pollers)",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "b4afffb7-16d9-5ae7-967d-3c8e9363061c": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Worker slot saturation",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (task_queue, worker_type) (temporal_worker_task_slots_used) / clamp_min(sum by (task_queue, worker_type) (temporal_worker_task_slots_used + temporal_worker_task_slots_available), 1)",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "c200cd4f-8d40-5f8a-83b2-67759ff2d9bb": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Application queue backlog",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "max by (perimeter, task_type) (ai_temporal_task_queue_backlog)",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "67f3663f-850d-5570-b946-29e88fa91667": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Application queue pollers",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "max by (perimeter, task_type) (ai_temporal_task_queue_pollers)",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "f68877d5-51d3-5319-a7eb-1a9189976e31": {
         "kind": "Panel",
         "spec": {
           "display": {
@@ -384,11 +941,338 @@
               "name": "Observability runbooks",
               "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
               "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
             }
           ]
         }
       },
-      "5fb44c64-cc6c-5e14-8d0a-65dc31f361c2": {
+      "b931c7c1-1848-594e-b38f-e775ded4fb18": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "SDK activity schedule-to-start p95",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "histogram_quantile(0.95, sum by (le, task_queue) (rate({__name__=\"temporal_activity_schedule_to_start_latency.bucket\"}[5m])))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "f9175e72-e246-5422-9c06-8514dd74ecef": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Activity errors, retries and timeouts",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum by (activity_type) (rate(temporal_activity_execution_failed[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "B",
+                          "query": "sum by (perimeter) (rate(ai_temporal_activity_retries[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "C",
+                          "query": "sum by (perimeter) (rate(ai_temporal_timeouts[5m]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "101a1e84-bdd1-52a6-adcb-678ffe907b8a": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Workflows waiting for a human",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "ai_temporal_workflows_waiting_human",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "af50f884-6d08-5b6e-bbc2-855681c295e7": {
         "kind": "Panel",
         "spec": {
           "display": {
@@ -479,6 +1363,11 @@
               "name": "Observability runbooks",
               "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
               "renderVariables": true
+            },
+            {
+              "name": "Temporal workflow history",
+              "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
+              "renderVariables": true
             }
           ]
         }
@@ -513,7 +1402,7 @@
               "width": 6,
               "height": 6,
               "content": {
-                "$ref": "#/spec/panels/94465cd2-5366-5864-9baf-e56281741a8b"
+                "$ref": "#/spec/panels/b7440112-7182-53ca-817c-c951efdf916e"
               }
             },
             {
@@ -522,7 +1411,79 @@
               "width": 6,
               "height": 6,
               "content": {
-                "$ref": "#/spec/panels/5fb44c64-cc6c-5e14-8d0a-65dc31f361c2"
+                "$ref": "#/spec/panels/5b2d77e9-a997-5533-bcb1-eb0690d90007"
+              }
+            },
+            {
+              "x": 0,
+              "y": 12,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/b4afffb7-16d9-5ae7-967d-3c8e9363061c"
+              }
+            },
+            {
+              "x": 6,
+              "y": 12,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/c200cd4f-8d40-5f8a-83b2-67759ff2d9bb"
+              }
+            },
+            {
+              "x": 0,
+              "y": 18,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/67f3663f-850d-5570-b946-29e88fa91667"
+              }
+            },
+            {
+              "x": 6,
+              "y": 18,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/f68877d5-51d3-5319-a7eb-1a9189976e31"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/b931c7c1-1848-594e-b38f-e775ded4fb18"
+              }
+            },
+            {
+              "x": 6,
+              "y": 24,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/f9175e72-e246-5422-9c06-8514dd74ecef"
+              }
+            },
+            {
+              "x": 0,
+              "y": 30,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/101a1e84-bdd1-52a6-adcb-678ffe907b8a"
+              }
+            },
+            {
+              "x": 6,
+              "y": 30,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/af50f884-6d08-5b6e-bbc2-855681c295e7"
               }
             }
           ]
@@ -555,6 +1516,11 @@
       {
         "name": "Observability runbooks",
         "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+        "renderVariables": true
+      },
+      {
+        "name": "Temporal workflow history",
+        "url": "http://localhost:8233/namespaces/$temporal_namespace/workflows/$workflow_id/$run_id/history",
         "renderVariables": true
       }
     ]

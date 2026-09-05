@@ -13,6 +13,8 @@ BASELINE = ROOT / "docs/evidence/observability/prometheus-grafana-baseline-2026-
 DASHBOARDS = ROOT / "infrastructure/observability/signoz/dashboards"
 REQUIRED_VARIABLES = {"task_id", "role", "operation", "outcome", "model", "mcp_server"}
 REQUIRED_LINKS = {"Search traces", "Search logs", "Temporal UI", "Task API", "Observability runbooks"}
+TEMPORAL_VARIABLES = {"temporal_namespace", "workflow_id", "run_id"}
+TEMPORAL_LINKS = {"Temporal workflow history"}
 
 
 def normalize(expression: str) -> str:
@@ -76,10 +78,12 @@ def main() -> None:
         if missing_queries:
             failures.append(f"{slug}: missing normalized queries: {missing_queries}")
         variables = {variable["spec"]["name"] for variable in spec["variables"]}
-        if variables != REQUIRED_VARIABLES:
+        expected_variables = REQUIRED_VARIABLES | (TEMPORAL_VARIABLES if slug == "temporal" else set())
+        if variables != expected_variables:
             failures.append(f"{slug}: search variables differ: {sorted(variables)}")
         links = {link["name"] for link in spec["links"]}
-        if links != REQUIRED_LINKS:
+        expected_links = REQUIRED_LINKS | (TEMPORAL_LINKS if slug == "temporal" else set())
+        if links != expected_links:
             failures.append(f"{slug}: operational links differ: {sorted(links)}")
         if spec["duration"] != "6h" or spec["refreshInterval"] != "30s":
             failures.append(f"{slug}: time window or refresh differs")
@@ -87,7 +91,7 @@ def main() -> None:
             plugin = item["spec"]["plugin"]["spec"]
             if plugin["formatting"]["unit"] != "none" or plugin["thresholds"] is not None:
                 failures.append(f"{slug}: legacy neutral unit/threshold semantics differ")
-            if {link["name"] for link in item["spec"]["links"]} != REQUIRED_LINKS:
+            if {link["name"] for link in item["spec"]["links"]} != expected_links:
                 failures.append(f"{slug}: a panel lacks operational links")
     if failures:
         raise SystemExit("\n".join(failures))

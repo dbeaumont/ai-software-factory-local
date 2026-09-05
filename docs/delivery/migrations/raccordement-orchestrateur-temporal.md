@@ -357,8 +357,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   saturation et workflows bloqués en attente humaine. _(Le reporter Micrometer natif du SDK publie pollers, slots,
   erreurs et latences schedule-to-start ; une sonde bornée `DescribeTaskQueue` complète backlog et pollers par
   périmètre/type, l'intercepteur compte retries et timeouts, et PostgreSQL alimente la jauge d'attente humaine.)_
-- [ ] **TEMP-082 — Compléter le dashboard SigNoz Temporal.** Ajouter santé client/worker, files par périmètre,
-  erreurs d'activités et liens profonds vers Temporal UI.
+- [x] **TEMP-082 — Compléter le dashboard SigNoz Temporal.** Ajouter santé client/worker, files par périmètre,
+  erreurs d'activités et liens profonds vers Temporal UI. _(Le dashboard généré couvre désormais les requêtes
+  client, pollers et slots worker, backlog/pollers applicatifs, schedule-to-start, erreurs/retries/timeouts et attente
+  humaine ; namespace, workflow ID et run ID construisent un lien direct vers l'historique Temporal UI.)_
 - [ ] **TEMP-083 — Ajouter les alertes.** Couvrir absence de poller, backlog durable, erreur non déterministe,
   projection en retard, activité bloquée et échec de continue-as-new.
 - [ ] **TEMP-084 — Protéger les données.** Vérifier qu'aucun secret, patch complet, log volumineux ou donnée
