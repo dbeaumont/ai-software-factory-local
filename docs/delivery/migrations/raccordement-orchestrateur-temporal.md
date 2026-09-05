@@ -206,8 +206,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 8. Lot 3 — implémenter le workflow racine de production
 
-- [ ] **TEMP-040 — Déplacer la résolution de source dans une activité.** Résoudre et attester la branche avant tout
-  travail ; figer `sourceCommit` pour toute la tentative.
+- [x] **TEMP-040 — Déplacer la résolution de source dans une activité.** Résoudre et attester la branche avant tout
+  travail ; figer `sourceCommit` pour toute la tentative. _(Le workflow V1 appelle `ResolveAndAttestSource` sur la
+  file contexte ; URL sans credentials, identité, branche, workspace et clé d'idempotence sont validés et liés au
+  commit SHA-1 avant toute coordination.)_
 - [ ] **TEMP-041 — Orchestrer le pipeline étape par étape.** Appeler les activités extraites dans l'ordre et
   enregistrer uniquement des références de preuves compactes dans l'historique.
 - [ ] **TEMP-042 — Intégrer la réparation de patch.** Modéliser les tentatives comme une boucle workflow bornée,

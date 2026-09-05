@@ -36,6 +36,11 @@ public final class TemporalIds {
         return "effect-" + digest(String.join("\u0000", workflowId, activityId, sourceCommit, inputDigest));
     }
 
+    public static String sha256(String value) {
+        if (value == null) throw new IllegalArgumentException("Value to digest is required");
+        return digest(value);
+    }
+
     private static String bounded(String prefix, String... parts) {
         String value = prefix + '-' + String.join("-", parts);
         if (value.length() <= MAX_ID_LENGTH) return value;

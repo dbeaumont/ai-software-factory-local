@@ -13,9 +13,10 @@ public final class TemporalActivityAdapters {
     private final Map<String, Object[]> registrations;
 
     public TemporalActivityAdapters(DurableExecutionActivities durable,
-                                    PatchIntegrationActivities patchIntegration) {
+                                    PatchIntegrationActivities patchIntegration,
+                                    SourceResolutionActivities sourceResolution) {
         registrations = Map.of(
-                "context", new Object[]{new ContextAdapter(durable)},
+                "context", new Object[]{new ContextAdapter(durable), sourceResolution},
                 "llm", new Object[]{new LlmAdapter(durable)},
                 "sandbox", new Object[]{new SandboxAdapter(durable), patchIntegration},
                 "assurance", new Object[]{new AssuranceAdapter(durable)},

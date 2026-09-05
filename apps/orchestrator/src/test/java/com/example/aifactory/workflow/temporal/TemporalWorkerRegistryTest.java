@@ -67,10 +67,12 @@ class TemporalWorkerRegistryTest {
     void exposesOnlyTheActivitiesAssignedToEachSpecializedWorker() {
         DurableExecutionActivities durable = mock(DurableExecutionActivities.class);
         PatchIntegrationActivities patch = mock(PatchIntegrationActivities.class);
-        TemporalActivityAdapters adapters = new TemporalActivityAdapters(durable, patch);
+        SourceResolutionActivities source = mock(SourceResolutionActivities.class);
+        TemporalActivityAdapters adapters = new TemporalActivityAdapters(durable, patch, source);
 
-        assertThat(adapters.forWorker("context")).hasSize(1)
-                .allMatch(TemporalActivityAdapters.ContextActivities.class::isInstance);
+        assertThat(adapters.forWorker("context")).hasSize(2)
+                .anyMatch(TemporalActivityAdapters.ContextActivities.class::isInstance)
+                .anyMatch(SourceResolutionActivities.class::isInstance);
         assertThat(adapters.forWorker("llm")).hasSize(1)
                 .allMatch(TemporalActivityAdapters.LlmActivities.class::isInstance);
         assertThat(adapters.forWorker("sandbox")).hasSize(2)

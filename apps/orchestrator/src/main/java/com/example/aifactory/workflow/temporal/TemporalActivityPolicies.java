@@ -23,6 +23,13 @@ public final class TemporalActivityPolicies {
         return options;
     }
 
+    public static ActivityOptions forKind(Kind kind, String taskQueue) {
+        if (taskQueue == null || !taskQueue.matches("[a-z][a-z0-9-]{2,63}")) {
+            throw new IllegalArgumentException("Temporal activity task queue is invalid");
+        }
+        return ActivityOptions.newBuilder(forKind(kind)).setTaskQueue(taskQueue).build();
+    }
+
     private static Map<Kind, ActivityOptions> build() {
         EnumMap<Kind, ActivityOptions> options = new EnumMap<>(Kind.class);
         options.put(Kind.READ, activity(Duration.ofMinutes(2), Duration.ofSeconds(30), Duration.ofSeconds(30), null,
