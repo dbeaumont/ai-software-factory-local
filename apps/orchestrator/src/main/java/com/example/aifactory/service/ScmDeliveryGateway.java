@@ -35,12 +35,11 @@ public class ScmDeliveryGateway {
     }
 
     public String createDraftPullRequest(Path workspace, String repositoryUrl, String baseBranch,
-                                         String taskId, String sourceCommit, String title) throws Exception {
+                                         String taskId, String attemptId, String sourceCommit, String title) throws Exception {
         if (!properties.enabled()) {
             throw new IllegalStateException("SCM delivery MCP is disabled");
         }
         String repositoryId = repositoryId(repositoryUrl);
-        String attemptId = "approval-1";
         String patchDigest = digest(workspace.resolve("changes.patch"));
         Map<String, String> evidence = new LinkedHashMap<>();
         EVIDENCE_PATHS.forEach((name, relative) -> evidence.put(name, digest(workspace.resolve(relative))));

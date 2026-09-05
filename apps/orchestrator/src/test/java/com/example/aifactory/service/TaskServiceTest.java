@@ -226,7 +226,7 @@ class TaskServiceTest {
     }
 
     @Test
-    void auditsApprovalAndExecutionModeChange() {
+    void auditsApprovalIntent() {
         HashChainedSecurityAuditJournal journal = new HashChainedSecurityAuditJournal(new byte[32]);
         TestableTaskService service = new TestableTaskService(new InMemoryTaskMemory(), journal);
         TaskState approval = new TaskState("task-approval", "AF-0200", new TaskRequest(
@@ -235,16 +235,10 @@ class TaskServiceTest {
         approval.pendingEffect = new PendingEffect("scm.create_draft_pull_request", java.util.Map.of(),
                 "Create PR", "ALLOW", true);
         service.memory.save(approval);
-        TaskState fallback = new TaskState("task-fallback", "AF-0201", new TaskRequest(
-                "http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
-        fallback.bindExecution("HIERARCHICAL_ACTIVE", "run-1", "dag-v4", 10_000, 1_000_000, 20);
-        service.memory.save(fallback);
-
         service.approve(approval.id);
-        service.fallback(fallback.id, new OperatorActionRequest("dependency unavailable", "operator"));
 
-        assertThat(journal.list()).extracting(SecurityAuditJournal.Entry::type).containsExactly(
-                SecurityAuditJournal.EventType.APPROVAL, SecurityAuditJournal.EventType.MODE_CHANGE);
+        assertThat(journal.list()).extracting(SecurityAuditJournal.Entry::type)
+                .containsExactly(SecurityAuditJournal.EventType.APPROVAL);
         assertThat(journal.verifyIntegrity()).isTrue();
     }
 

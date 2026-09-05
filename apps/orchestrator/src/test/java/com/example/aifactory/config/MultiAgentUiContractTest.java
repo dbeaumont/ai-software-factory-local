@@ -91,14 +91,14 @@ class MultiAgentUiContractTest {
     }
 
     @Test
-    void offersOnlyServerValidatedCancelRetryAndFallbackActions() throws Exception {
+    void offersOnlyServerValidatedCancelAndRetryActions() throws Exception {
         String html = Files.readString(WEB.resolve("index.html"));
         String javascript = Files.readString(WEB.resolve("app.js"));
 
-        assertThat(html).contains("id=\"cancel-task-button\"", "id=\"fallback-button\"");
+        assertThat(html).contains("id=\"cancel-task-button\"").doesNotContain("id=\"fallback-button\"");
         assertThat(javascript).contains("function isDelegationRetryAuthorized(node)",
-                "/delegations/${encodeURIComponent(node.delegationId)}/retry", "/cancel", "/fallback",
-                "function executeOperatorCommand(url, reason)");
+                "/delegations/${encodeURIComponent(node.delegationId)}/retry", "/cancel",
+                "function executeOperatorCommand(url, reason)").doesNotContain("/fallback");
     }
 
     @Test

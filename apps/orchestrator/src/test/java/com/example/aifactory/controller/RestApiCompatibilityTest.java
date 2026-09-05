@@ -38,9 +38,6 @@ class RestApiCompatibilityTest {
                 HumanDecisionResponse.class), PostMapping.class, "/{id}/decisions/{requestId}", true);
         assertRoute(TaskController.class.getMethod("retryDelegation", String.class, String.class,
                 OperatorActionRequest.class), PostMapping.class, "/{id}/delegations/{delegationId}/retry", true);
-        assertRoute(TaskController.class.getMethod("fallback", String.class, OperatorActionRequest.class),
-                PostMapping.class, "/{id}/fallback", true);
-
         assertThat(FactoryController.class.getAnnotation(RequestMapping.class).value()).containsExactly("/api");
         assertRoute(FactoryController.class.getMethod("capabilities"), GetMapping.class, "/capabilities", false);
     }

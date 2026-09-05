@@ -181,7 +181,7 @@ class TaskExecutionViewTest {
     }
 
     @Test
-    void authorizesOnlyRetryableDelegationFailuresAndHierarchicalFallback() {
+    void authorizesOnlyRetryableDelegationFailures() {
         TaskState state = new TaskState("task-1", "AF-0001",
                 new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
         state.bindExecution("HIERARCHICAL_ACTIVE", "run-1", "dag-v4", 10_000, 1_000_000, 20);
@@ -196,9 +196,6 @@ class TaskExecutionViewTest {
         assertThatThrownBy(() -> state.requestDelegationRetry("security-1", "Add budget", "operator"))
                 .isInstanceOf(IllegalStateException.class);
 
-        state.switchToPipelineFallback("Canary divergence", "operator");
-        assertThat(state.executionMode).isEqualTo("PIPELINE");
-        assertThat(state.dagVersion).isEqualTo("pipeline-v1");
-        assertThat(state.steps).extracting(AgentStep::name).contains("RETRY:code-1", "FALLBACK_REQUESTED");
+        assertThat(state.steps).extracting(AgentStep::name).contains("RETRY:code-1");
     }
 }

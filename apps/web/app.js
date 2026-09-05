@@ -24,7 +24,6 @@ const humanDecisionList = document.querySelector('#human-decision-list');
 const humanDecisionCount = document.querySelector('#human-decision-count');
 const operatorActions = document.querySelector('#operator-actions');
 const cancelTaskButton = document.querySelector('#cancel-task-button');
-const fallbackButton = document.querySelector('#fallback-button');
 const prLink = document.querySelector('#pr-link');
 const approveButton = document.querySelector('#approve-button');
 const effectConfirmation = document.querySelector('#effect-confirmation');
@@ -665,8 +664,6 @@ function renderTask(task) {
   approveButton.hidden = task.status !== 'WAITING_APPROVAL' || hasPendingHumanDecision;
   operatorActions.hidden = ['APPROVED', 'PR_CREATED', 'CANCELLED', 'FAILED'].includes(task.status);
   cancelTaskButton.hidden = operatorActions.hidden;
-  fallbackButton.hidden = !['HIERARCHICAL_SHADOW', 'HIERARCHICAL_CANARY', 'HIERARCHICAL_ACTIVE']
-    .includes(task.executionMode) || operatorActions.hidden;
   renderPendingEffect(task.pendingEffect, task.status === 'WAITING_APPROVAL');
   prLink.hidden = !task.pullRequestUrl;
   if (task.pullRequestUrl) prLink.href = browserPullRequestUrl(task.pullRequestUrl);
@@ -826,11 +823,6 @@ async function executeOperatorCommand(url, reason) {
 cancelTaskButton.addEventListener('click', () => {
   const reason = window.prompt("Motif de l'annulation");
   if (reason?.trim()) executeOperatorCommand(`/api/tasks/${activeTaskId}/cancel`, reason.trim());
-});
-
-fallbackButton.addEventListener('click', () => {
-  const reason = window.prompt('Motif de la bascule vers le pipeline');
-  if (reason?.trim()) executeOperatorCommand(`/api/tasks/${activeTaskId}/fallback`, reason.trim());
 });
 
 async function refreshTask() {

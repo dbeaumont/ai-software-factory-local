@@ -279,8 +279,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   supposer que le workflow est déjà terminé. _(L'API valide puis signale sans mutation optimiste ; le workflow
   arrête le parcours entre activités et fait appliquer `CANCELLED` par Evidence. Une projection déjà annulée rend
   la même commande sans second signal.)_
-- [ ] **TEMP-065 — Implémenter retry opérateur.** Créer une nouvelle tentative Temporal liée à l'ancienne et
+- [x] **TEMP-065 — Implémenter retry opérateur.** Créer une nouvelle tentative Temporal liée à l'ancienne et
   supprimer le fallback vers le pipeline local ; ne jamais répéter un effet au milieu du même historique.
+  _(Le retry autorisé ouvre `pipeline-N` avec un nouveau Workflow ID et un payload de filiation contenant la
+  tentative précédente et le digest du motif. L'idempotence SCM inclut le nouvel attempt ID ; la route, le bouton
+  et la mutation de fallback local sont supprimés.)_
 - [ ] **TEMP-066 — Gérer les conflits de commande.** Définir les réponses pour workflow absent, terminé,
   approbation expirée, digest périmé, signal dupliqué et projection en retard.
 - [ ] **TEMP-067 — Auditer les commandes.** Journaliser l'intention et le résultat avec corrélation, sans contenu

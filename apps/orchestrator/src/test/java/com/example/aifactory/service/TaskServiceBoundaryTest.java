@@ -20,7 +20,7 @@ class TaskServiceBoundaryTest {
                 .collect(Collectors.toSet());
         assertThat(publicMethods).containsExactlyInAnyOrder(
                 "create", "get", "list", "approve", "approveManifest", "cancel", "answerDecision",
-                "retryDelegation", "fallback");
+                "retryDelegation");
         assertThat(Arrays.stream(TaskService.class.getDeclaredFields())
                 .anyMatch(field -> field.getType() == WorkflowCoordinator.class)).isTrue();
         assertThat(Arrays.stream(TaskService.class.getDeclaredFields())

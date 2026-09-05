@@ -43,6 +43,8 @@ public class TaskState {
     public final Instant createdAt = Instant.now();
     public Instant updatedAt = Instant.now();
     public String executionMode = "PIPELINE";
+    public String workflowAttemptId = "pipeline-1";
+    private int workflowAttemptSequence = 1;
     public String workflowRunId;
     public String dagVersion = "pipeline-v1";
     public Long globalMaxTokens;
@@ -307,12 +309,8 @@ public class TaskState {
     }
 
     public synchronized void requestDelegationRetry(String delegationId, String reason, String actor) {
+        requireDelegationRetry(delegationId, reason, actor);
         TaskView.DelegationView current = delegations.get(delegationId);
-        if (current == null) throw new IllegalArgumentException("Unknown delegation " + delegationId);
-        if (!"FAILED".equals(current.status()) || !RETRYABLE_STOP_REASONS.contains(current.stopReason())) {
-            throw new IllegalStateException("Delegation is not authorized for retry");
-        }
-        validateOperatorAction(reason, actor);
         delegations.put(delegationId, new TaskView.DelegationView(current.delegationId(),
                 current.parentDelegationId(), current.role(), current.dependsOn(), "RETRY_REQUESTED",
                 "Requested by " + actor + ": " + reason, current.durationMillis(), current.turns(),
@@ -321,17 +319,43 @@ public class TaskState {
         steps.add(new AgentStep("RETRY:" + delegationId, "OK", reason, updatedAt));
     }
 
-    public synchronized void switchToPipelineFallback(String reason, String actor) {
-        if (!List.of("HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY", "HIERARCHICAL_ACTIVE")
-                .contains(executionMode) || List.of(TaskStatus.APPROVED, TaskStatus.PR_CREATED,
-                TaskStatus.CANCELLED, TaskStatus.FAILED).contains(status)) {
-            throw new IllegalStateException("Pipeline fallback is not available for this task");
+    public synchronized void requireDelegationRetry(String delegationId, String reason, String actor) {
+        TaskView.DelegationView current = delegations.get(delegationId);
+        if (current == null) throw new IllegalArgumentException("Unknown delegation " + delegationId);
+        if (!"FAILED".equals(current.status()) || !RETRYABLE_STOP_REASONS.contains(current.stopReason())) {
+            throw new IllegalStateException("Delegation is not authorized for retry");
         }
         validateOperatorAction(reason, actor);
-        executionMode = "PIPELINE";
-        dagVersion = "pipeline-v1";
+    }
+
+    public synchronized RetryAttempt prepareTemporalRetry(String delegationId, String reason, String actor) {
+        requireDelegationRetry(delegationId, reason, actor);
+        String previousAttemptId = workflowAttemptId;
+        String nextAttemptId = "pipeline-" + (++workflowAttemptSequence);
+        requestDelegationRetry(delegationId, reason, actor);
+        workflowAttemptId = nextAttemptId;
+        status = TaskStatus.QUEUED;
+        workspace = null;
+        sourceCommit = null;
+        plan = null;
+        patch = null;
+        testSummary = null;
+        qualitySummary = null;
+        securitySummary = null;
+        assuranceResults.clear();
+        testsPassed = false;
+        reviewAccepted = false;
+        humanApproved = false;
+        review = null;
+        pendingEffect = null;
+        pullRequestUrl = null;
+        error = null;
+        artifacts.clear();
+        humanActions.clear();
         updatedAt = Instant.now();
-        steps.add(new AgentStep("FALLBACK_REQUESTED", "OK", "Requested by " + actor + ": " + reason, updatedAt));
+        steps.add(new AgentStep("TEMPORAL_RETRY:" + nextAttemptId, "OK",
+                "New attempt from " + previousAttemptId + " requested by " + actor, updatedAt));
+        return new RetryAttempt(previousAttemptId, nextAttemptId);
     }
 
     private static void validateOperatorAction(String reason, String actor) {
@@ -372,4 +396,6 @@ public class TaskState {
         if (message == null || message.isBlank()) return ex.getClass().getSimpleName();
         return message.length() <= 2_000 ? message : message.substring(0, 2_000) + "...[truncated]";
     }
+
+    public record RetryAttempt(String previousAttemptId, String attemptId) {}
 }

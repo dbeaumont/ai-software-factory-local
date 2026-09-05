@@ -5,6 +5,7 @@ import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.HumanDecisionResponse;
 import com.example.aifactory.model.TaskCancellationRequest;
+import com.example.aifactory.model.OperatorActionRequest;
 import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.service.ScmDeliveryGateway;
 import com.example.aifactory.workflow.WorkflowCoordinator;
@@ -35,7 +36,10 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
     @Override
     public void start(TaskState task) {
         requireTask(task);
-        String attemptId = PipelineStepContracts.INITIAL_ATTEMPT_ID;
+        startAttempt(task, PipelineStepContracts.INITIAL_ATTEMPT_ID, null);
+    }
+
+    private void startAttempt(TaskState task, String attemptId, SoftwareFactoryWorkflow.AttemptLineage lineage) {
         String workflowId = TemporalIds.workflow(task.id, attemptId);
         SoftwareFactoryWorkflow.SourceLocation source = new SoftwareFactoryWorkflow.SourceLocation(
                 task.request.repositoryUrl(), task.request.effectiveBranch(),
@@ -43,7 +47,8 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
         SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
                 task.id, attemptId, ScmDeliveryGateway.repositoryId(task.request.repositoryUrl()),
                 PipelineStepContracts.UNRESOLVED_SOURCE_COMMIT, task.request.requirement(), List.of(), null,
-                List.of(), null, null, null, source, SoftwareFactoryWorkflow.WorkflowExecutionMode.PIPELINE);
+                List.of(), null, null, null, source, SoftwareFactoryWorkflow.WorkflowExecutionMode.PIPELINE,
+                lineage);
         TemporalWorkflowCommands.ExecutionIdentity execution = commands.start(WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(properties.taskQueues().get("workflow"))
@@ -62,7 +67,7 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
                 || task.pendingEffect.manifestDigest() == null) {
             throw new IllegalStateException("A manifest-bound human approval is required");
         }
-        String attemptId = PipelineStepContracts.INITIAL_ATTEMPT_ID;
+        String attemptId = task.workflowAttemptId;
         commands.approve(TemporalIds.workflow(task.id, attemptId), new SoftwareFactoryWorkflow.ApprovalSignal(
                 task.id, attemptId, task.pendingEffect.manifestId(), task.pendingEffect.manifestDigest(),
                 "APPROVE", scm.approver(), Instant.now().toString()));
@@ -74,7 +79,7 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
         if (response == null) throw new IllegalArgumentException("Human decision response is required");
         task.requireHumanActionAnswer(requestId, response.decision(), response.objectDigest(),
                 response.actor(), response.actorRole());
-        String attemptId = PipelineStepContracts.INITIAL_ATTEMPT_ID;
+        String attemptId = task.workflowAttemptId;
         commands.decide(TemporalIds.workflow(task.id, attemptId), new SoftwareFactoryWorkflow.HumanDecisionSignal(
                 task.id, attemptId, requestId, response.decision(), response.objectDigest(), response.actor(),
                 response.actorRole(), Instant.now().toString()));
@@ -85,9 +90,25 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
         requireTask(task);
         if (request == null) throw new IllegalArgumentException("Cancellation request is required");
         if (!task.requireCancellation(request.reason(), request.actor())) return;
-        String attemptId = PipelineStepContracts.INITIAL_ATTEMPT_ID;
+        String attemptId = task.workflowAttemptId;
         commands.cancel(TemporalIds.workflow(task.id, attemptId), new SoftwareFactoryWorkflow.CancellationSignal(
                 task.id, attemptId, request.reason(), request.actor(), Instant.now().toString()));
+    }
+
+    @Override
+    public void retry(TaskState task, String delegationId, OperatorActionRequest request) {
+        requireTask(task);
+        if (request == null) throw new IllegalArgumentException("Operator action request is required");
+        TaskState.RetryAttempt retry = task.prepareTemporalRetry(
+                delegationId, request.reason(), request.actor());
+        SoftwareFactoryWorkflow.AttemptLineage lineage = new SoftwareFactoryWorkflow.AttemptLineage(
+                retry.previousAttemptId(), TemporalIds.sha256(request.reason()), request.actor());
+        try {
+            startAttempt(task, retry.attemptId(), lineage);
+        } catch (RuntimeException failure) {
+            task.fail(failure);
+            throw failure;
+        }
     }
 
     private static void requireTask(TaskState task) {

@@ -61,9 +61,4 @@ public class TaskController {
         return tasks.retryDelegation(id, delegationId, request);
     }
 
-    @PostMapping("/{id}/fallback")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public TaskView fallback(@PathVariable String id, @RequestBody OperatorActionRequest request) {
-        return tasks.fallback(id, request);
-    }
 }

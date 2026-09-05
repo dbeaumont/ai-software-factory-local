@@ -6,6 +6,7 @@ import com.example.aifactory.model.LlmMode;
 import com.example.aifactory.model.HumanDecisionResponse;
 import com.example.aifactory.model.TaskCancellationRequest;
 import com.example.aifactory.model.TaskStatus;
+import com.example.aifactory.model.OperatorActionRequest;
 import com.example.aifactory.model.PendingEffect;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
@@ -138,6 +139,29 @@ class TemporalWorkflowCoordinatorTest {
         coordinator.cancel(task, new TaskCancellationRequest("request withdrawn", "product-owner"));
 
         org.mockito.Mockito.verify(commands, org.mockito.Mockito.never()).cancel(any(), any());
+    }
+
+    @Test
+    void startsARetryAsANewWorkflowAttemptLinkedToThePreviousOne() {
+        TaskState task = task();
+        task.recordDelegation("code-1", "supervisor", "code-agent", java.util.List.of(),
+                "FAILED", "TIMEOUT");
+        String workflowId = TemporalIds.workflow(task.id, "pipeline-2");
+        when(commands.start(any(), any())).thenReturn(
+                new TemporalWorkflowCommands.ExecutionIdentity(workflowId, "run-retry"));
+        ArgumentCaptor<SoftwareFactoryWorkflow.Request> request =
+                ArgumentCaptor.forClass(SoftwareFactoryWorkflow.Request.class);
+
+        coordinator.retry(task, "code-1", new OperatorActionRequest("worker restarted", "operator"));
+
+        verify(commands).start(any(), request.capture());
+        assertThat(request.getValue().attemptId()).isEqualTo("pipeline-2");
+        assertThat(request.getValue().attemptLineage().previousAttemptId()).isEqualTo("pipeline-1");
+        assertThat(request.getValue().attemptLineage().reasonDigest()).isEqualTo(
+                TemporalIds.sha256("worker restarted"));
+        assertThat(task.workflowAttemptId).isEqualTo("pipeline-2");
+        assertThat(task.workflowRunId).isEqualTo("run-retry");
+        assertThat(task.delegations.get("code-1").status()).isEqualTo("RETRY_REQUESTED");
     }
 
     private static TaskState task() {

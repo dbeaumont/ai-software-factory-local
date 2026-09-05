@@ -146,16 +146,7 @@ public class TaskService {
     public TaskView retryDelegation(String id, String delegationId, OperatorActionRequest request) {
         if (request == null) throw new IllegalArgumentException("Operator action request is required");
         TaskState state = requireTask(id);
-        state.requestDelegationRetry(delegationId, request.reason(), request.actor());
-        return state.view();
-    }
-
-    public TaskView fallback(String id, OperatorActionRequest request) {
-        if (request == null) throw new IllegalArgumentException("Operator action request is required");
-        TaskState state = requireTask(id);
-        state.switchToPipelineFallback(request.reason(), request.actor());
-        if (audit != null) audit.append(SecurityAuditJournal.EventType.MODE_CHANGE, state.id,
-                request.actor(), "execution-mode", "PIPELINE");
+        coordinator.retry(state, delegationId, request);
         return state.view();
     }
 

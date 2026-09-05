@@ -56,7 +56,7 @@ class ScmDeliveryGatewayTest {
                 new ScmDeliveryClientProperties(true, "scm-delivery-mcp", "David Beaumont", key));
 
         String url = gateway.createDraftPullRequest(workspace, "http://gitea:3000/aiadmin/customer-api.git",
-                "main", "task-1", "a".repeat(40), "Test delivery");
+                "main", "task-1", "pipeline-1", "a".repeat(40), "Test delivery");
 
         assertEquals("http://localhost:3000/aiadmin/customer-api/pulls/7", url);
         assertEquals("customer-api", captured.get().get("repository_id"));

@@ -282,10 +282,12 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     }
 
     private TaskState requireTask(String taskId, String attemptId) {
-        if (!PipelineStepContracts.INITIAL_ATTEMPT_ID.equals(attemptId)) {
+        TaskState state = memory.find(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown task " + taskId));
+        if (!state.workflowAttemptId.equals(attemptId)) {
             throw new IllegalArgumentException("Unknown pipeline attempt");
         }
-        return memory.find(taskId).orElseThrow(() -> new IllegalArgumentException("Unknown task " + taskId));
+        return state;
     }
 
     private void requireStepRequest(StepRequest request, String step, String workerKind) {

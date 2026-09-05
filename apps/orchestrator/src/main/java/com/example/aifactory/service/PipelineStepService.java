@@ -290,7 +290,8 @@ public class PipelineStepService {
         command.requireStep("delivery");
         Path workspace = Path.of(state.workspace);
         String pullRequestUrl = scmDelivery.createDraftPullRequest(workspace, state.request.repositoryUrl(),
-                state.request.effectiveBranch(), state.id, state.sourceCommit, state.request.requirement());
+                state.request.effectiveBranch(), state.id, command.attemptId(), state.sourceCommit,
+                state.request.requirement());
         var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of());
         return PipelineProjectionEvent.StepExecution.of(result,
                 new PipelineProjectionEvent.PullRequestCreated(pullRequestUrl));
