@@ -402,7 +402,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### 12.1 Tests unitaires et d'architecture
 
-- [ ] Tester validation des options client, namespace, queues, TLS et secrets par fichier.
+- [x] Tester validation des options client, namespace, queues, TLS et secrets par fichier. _(Les tests de propriétés,
+  sécurité client, Compose et version SDK valident les bornes, les sept queues, TLS conditionnel et les fichiers de
+  secrets owner-only sans exposer leur contenu.)_
 - [ ] Tester l'absence de routage `LOCAL`/`TEMPORAL` et le refus de démarrer ou d'admettre sans Temporal.
 - [ ] Tester identifiants, clés d'idempotence, classification des erreurs et politiques de retry.
 - [ ] Interdire par test d'architecture réseau, filesystem, horloge système, thread, random et client MCP dans les
