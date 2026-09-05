@@ -11,6 +11,7 @@ import io.temporal.common.interceptors.WorkflowInboundCallsInterceptor;
 import io.temporal.common.interceptors.WorkflowInboundCallsInterceptorBase;
 import io.temporal.workflow.Workflow;
 import io.temporal.workflow.WorkflowInfo;
+import io.temporal.workflow.unsafe.WorkflowUnsafe;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +36,10 @@ public final class TemporalWorkerTracingInterceptor extends WorkerInterceptorBas
         return new WorkflowInboundCallsInterceptorBase(next) {
             @Override
             public WorkflowOutput execute(WorkflowInput input) {
+                // A replay rebuilds workflow state and must not emit duplicate telemetry.
+                if (WorkflowUnsafe.isReplaying()) {
+                    return super.execute(input);
+                }
                 WorkflowInfo info = Workflow.getInfo();
                 ExecutionTracer.SpanKind kind = info.getParentWorkflowId().isPresent()
                         ? ExecutionTracer.SpanKind.CHILD_WORKFLOW : ExecutionTracer.SpanKind.WORKFLOW;

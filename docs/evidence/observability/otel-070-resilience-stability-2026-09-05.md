@@ -32,7 +32,10 @@ une alerte exécutée dans le même ClickHouse ne pourrait pas signaler de faço
 - `MultiAgentAlertRulesTest` verrouille les neuf règles de parité et les six règles techniques ;
 - `OpenTelemetryParityTest` verrouille les 15 noms, seuils, durées et runbooks attendus ;
 - `test-signoz-alert-fixtures.sh` conserve la campagne déterministe des neuf signaux métier historiques ;
-- `test-otel-resilience.sh` automatise les pannes et la récupération sans modifier les volumes.
+- `test-otel-resilience.sh` automatise les pannes et la récupération sans modifier les volumes ;
+- `WorkflowDeterminismArchitectureTest` construit puis rejoue un historique Temporal complet avec l'intercepteur
+  de tracing actif. Le replay réussit sans erreur de déterminisme et n'émet aucun span ; l'intercepteur ignore
+  explicitement toute exécution pour laquelle `WorkflowUnsafe.isReplaying()` est vrai.
 
 ## Décision
 

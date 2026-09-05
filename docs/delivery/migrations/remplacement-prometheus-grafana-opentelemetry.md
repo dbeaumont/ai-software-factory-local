@@ -445,7 +445,7 @@ différée afin de rester récupérable.
 - [x] Saturer une file isolée et mesurer précisément les pertes et le délai injecté.
 - [x] Tester sauvegarde/restauration isolée puis arrêt propre du backend local.
 - [ ] Exécuter la même campagne sur un cluster GKE de validation.
-- [ ] Exécuter un replay Temporal et vérifier l'absence de spans incohérents ou dupliqués.
+- [x] Exécuter un replay Temporal et vérifier l'absence de spans incohérents ou dupliqués.
 
 ## 15. Rollback
 
