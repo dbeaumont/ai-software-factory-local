@@ -212,7 +212,7 @@ qualification GKE nécessitent un cluster, un PVC, Workload Identity et les secr
 - [x] Ajouter un test interdisant `group_add` au service sandbox, sauf justification indépendante documentée.
 - [x] Ajouter un contrôle CI qui refuse `/var/run/docker.sock`, `DOCKER_SOCKET_GID` et les appels de CLI Docker dans le code applicatif.
 - [x] Ajouter un test qui interdit `AI_FACTORY_SANDBOX_RUNTIME=docker` dans les configurations actives.
-- [ ] Ajouter un test de démarrage garantissant qu'un runtime inconnu ou incomplet provoque un échec explicite.
+- [x] Ajouter un test de démarrage garantissant qu'un runtime inconnu ou incomplet provoque un échec explicite.
 
 ### Critères de sortie du lot 5
 
