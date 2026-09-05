@@ -101,6 +101,21 @@ minimum `taskId`, `attemptId`, `repositoryId` et `sourceCommit` dès que ce dern
 du modèle ne peut fournir ou remplacer aucun de ces identifiants. PostgreSQL conserve séparément `workflowId` et
 `temporalRunId` afin de retrouver un historique sans en faire des autorités métier.
 
+## Politique fail-closed
+
+Après la bascule, Temporal est une dépendance obligatoire et aucune dégradation vers une exécution locale n'est
+autorisée.
+
+1. La liveness reste positive tant que le processus peut diagnostiquer son état.
+2. La readiness devient négative lorsque le namespace n'est pas joignable, que le client est fermé ou qu'un worker
+   obligatoire n'a pas démarré.
+3. L'admission vérifie la disponibilité Temporal avant de persister puis démarrer une commande ; une indisponibilité
+   retourne une erreur normalisée et ne crée pas de tâche faussement exécutable.
+4. Une perte de connexion après démarrage laisse l'historique et les retries Temporal gérer la reprise.
+5. Les workflows en attente restent visibles dans la projection avec une cause d'attente ; ils ne sont ni marqués
+   réussis ni réexécutés par un autre moteur.
+6. L'opérateur peut fermer globalement les admissions, mais ne peut pas sélectionner un moteur alternatif.
+
 ## Vérification
 
 - aucun contrat public ne permet de choisir le moteur ;
