@@ -76,8 +76,31 @@ else
   curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v1/channels" "${auth[@]}" \
     -H 'Content-Type: application/json' --data "$channel_payload" >/dev/null
 fi
-curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v1/channels/test" "${auth[@]}" \
-  -H 'Content-Type: application/json' --data "$channel_payload" >/dev/null
+# On a fresh organization, the channel API is writable a few seconds before
+# its tenant-specific Alertmanager exists. SigNoz reports that startup state as
+# 404 alertmanager_not_found, so retry the local test notification explicitly.
+channel_test_response=/tmp/signoz-channel-test.json
+for attempt in {1..90}; do
+  if channel_test_status=$(curl -sS -o "$channel_test_response" -w '%{http_code}' \
+    -X POST "$SIGNOZ_BASE_URL/api/v1/channels/test" "${auth[@]}" \
+    -H 'Content-Type: application/json' --data "$channel_payload"); then
+    case "$channel_test_status" in
+      2*) break ;;
+      404) ;;
+      *)
+        echo "SigNoz channel test failed with HTTP $channel_test_status" >&2
+        cat "$channel_test_response" >&2
+        exit 1
+        ;;
+    esac
+  fi
+  if [ "$attempt" -eq 90 ]; then
+    echo "SigNoz Alertmanager did not become ready for the root organization" >&2
+    cat "$channel_test_response" >&2
+    exit 1
+  fi
+  sleep 1
+done
 echo "SigNoz channel ready: ai-factory-local"
 
 dashboards=$(curl -fsS "$SIGNOZ_BASE_URL/api/v2/dashboards?limit=100" "${auth[@]}")
