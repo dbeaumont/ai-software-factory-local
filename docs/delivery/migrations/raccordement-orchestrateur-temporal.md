@@ -105,8 +105,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   du code, de Compose et des fichiers d'environnement.)_
 - [ ] **TEMP-011 — Refuser une fausse activation.** Faire échouer la readiness et suspendre les admissions tant que
   le client et tous les workers requis ne sont pas enregistrés.
-- [ ] **TEMP-012 — Aligner `.env.example`.** Fournir directement la configuration Temporal obligatoire et ne pas
-  documenter de désactivation ou d'opt-in du moteur local.
+- [x] **TEMP-012 — Aligner `.env.example`.** Fournir directement la configuration Temporal obligatoire et ne pas
+  documenter de désactivation ou d'opt-in du moteur local. _(Configuration obligatoire et absence de fallback
+  explicitées dans `.env.example` et `.env`.)_
 - [ ] **TEMP-013 — Valider la configuration de connexion.** Vérifier cible, namespace, rétention, task queues,
   TLS, certificat client, nom de serveur et fichier de clé API sans journaliser les secrets.
 - [ ] **TEMP-014 — Vérifier la compatibilité.** Tester et documenter la matrice entre le serveur Temporal 1.31.2,
