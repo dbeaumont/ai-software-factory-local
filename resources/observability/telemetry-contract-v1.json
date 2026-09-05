@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.0",
+  "resource": {
+    "required_attributes": [
+      "service.name",
+      "service.namespace",
+      "service.version",
+      "deployment.environment.name"
+    ],
+    "service_namespace": "ai-software-factory",
+    "services": [
+      "ai-factory-orchestrator",
+      "repository-context-mcp",
+      "sandbox-execution-mcp",
+      "scm-delivery-mcp",
+      "assurance-mcp",
+      "evidence-mcp"
+    ]
+  },
+  "propagation": {
+    "formats": ["tracecontext", "baggage"],
+    "authoritative_context": "W3C HTTP headers",
+    "payload_traceparent_compatibility": "temporary"
+  },
+  "content_capture": {
+    "prompts": false,
+    "results": false,
+    "evidence": false,
+    "gen_ai_message_content": false
+  },
+  "limits": {
+    "attribute_count": 64,
+    "attribute_value_length": 1024,
+    "event_count": 64,
+    "link_count": 32
+  },
+  "spans": [
+    {"name": "ai.task.execute", "low_cardinality_attributes": ["ai.execution.mode", "ai.outcome"]},
+    {"name": "ai.workflow.execute", "low_cardinality_attributes": ["ai.execution.mode", "ai.outcome"]},
+    {"name": "ai.agent.execute", "low_cardinality_attributes": ["ai.agent.role", "ai.outcome", "ai.stop_condition"]},
+    {"name": "gen_ai.chat", "low_cardinality_attributes": ["gen_ai.system", "gen_ai.request.model", "ai.agent.role", "ai.outcome"]},
+    {"name": "mcp.call", "low_cardinality_attributes": ["mcp.server.name", "mcp.tool.name", "ai.outcome", "error.type"]},
+    {"name": "sandbox.job", "low_cardinality_attributes": ["ai.operation", "ai.sandbox.profile", "ai.outcome", "error.type"]},
+    {"name": "assurance.evaluate", "low_cardinality_attributes": ["ai.operation", "ai.outcome"]},
+    {"name": "scm.create_draft_pull_request", "low_cardinality_attributes": ["ai.outcome"]}
+  ],
+  "metrics": [
+    {"name": "ai.factory.tasks.submitted", "type": "counter", "unit": "{task}", "attributes": []},
+    {"name": "ai.factory.tasks.completed", "type": "counter", "unit": "{task}", "attributes": []},
+    {"name": "ai.factory.tasks.failed", "type": "counter", "unit": "{task}", "attributes": []},
+    {"name": "ai.factory.planner.contract.retries", "type": "counter", "unit": "{retry}", "attributes": []},
+    {"name": "ai.evidence.altered", "type": "counter", "unit": "{event}", "attributes": []},
+    {"name": "ai.workflow.events", "type": "counter", "unit": "{event}", "attributes": ["event", "source"]},
+    {"name": "ai.agent.tokens", "type": "counter", "unit": "{token}", "attributes": ["ai.agent.role", "direction"]},
+    {"name": "ai.agent.cost", "type": "counter", "unit": "usdc", "attributes": ["ai.agent.role", "cost.status"]},
+    {"name": "ai.agent.turns", "type": "counter", "unit": "{turn}", "attributes": ["ai.agent.role"]},
+    {"name": "ai.agent.duration", "type": "histogram", "unit": "s", "attributes": ["ai.agent.role", "ai.outcome"]},
+    {"name": "ai.agent.failures", "type": "counter", "unit": "{failure}", "attributes": ["ai.agent.role", "ai.stop_condition", "error.type"]},
+    {"name": "ai.delegation.depth", "type": "histogram", "unit": "{level}", "attributes": ["ai.agent.role"]},
+    {"name": "ai.delegation.fan_out", "type": "histogram", "unit": "{delegation}", "attributes": ["ai.agent.role"]},
+    {"name": "ai.task_queue.active", "type": "gauge", "unit": "{task}", "attributes": ["ai.queue.perimeter"]},
+    {"name": "ai.task_queue.saturation", "type": "gauge", "unit": "1", "attributes": ["ai.queue.perimeter"]},
+    {"name": "ai.task_queue.wait", "type": "histogram", "unit": "s", "attributes": ["ai.queue.perimeter"]},
+    {"name": "ai.mcp.client.calls", "type": "counter", "unit": "{call}", "attributes": ["mcp.server.name", "mcp.tool.name", "ai.outcome"]},
+    {"name": "ai.mcp.client.duration", "type": "histogram", "unit": "s", "attributes": ["mcp.server.name", "mcp.tool.name", "ai.outcome"]},
+    {"name": "ai.mcp.client.errors", "type": "counter", "unit": "{error}", "attributes": ["mcp.server.name", "mcp.tool.name", "error.type"]},
+    {"name": "ai.mcp.client.retries", "type": "counter", "unit": "{retry}", "attributes": ["mcp.server.name", "mcp.tool.name"]},
+    {"name": "ai.mcp.client.inflight", "type": "gauge", "unit": "{call}", "attributes": ["mcp.server.name"]},
+    {"name": "ai.sandbox.jobs.submitted", "type": "counter", "unit": "{job}", "attributes": []},
+    {"name": "ai.sandbox.jobs.completed", "type": "counter", "unit": "{job}", "attributes": []},
+    {"name": "ai.sandbox.jobs.failed", "type": "counter", "unit": "{job}", "attributes": []},
+    {"name": "ai.sandbox.jobs.rejected", "type": "counter", "unit": "{job}", "attributes": ["error.type"]},
+    {"name": "ai.sandbox.jobs.running", "type": "gauge", "unit": "{job}", "attributes": []},
+    {"name": "ai.sandbox.jobs.queued", "type": "gauge", "unit": "{job}", "attributes": []},
+    {"name": "ai.sandbox.job.queue.duration", "type": "histogram", "unit": "s", "attributes": []},
+    {"name": "ai.sandbox.maintenance.failures", "type": "counter", "unit": "{failure}", "attributes": []},
+    {"name": "ai.sandbox.heartbeat.invalid", "type": "counter", "unit": "{event}", "attributes": []},
+    {"name": "ai.sandbox.gke.events", "type": "counter", "unit": "{event}", "attributes": ["event"]}
+  ],
+  "attribute_policy": {
+    "allowed_low_cardinality": [
+      "ai.execution.mode", "ai.agent.role", "ai.operation", "ai.outcome", "ai.stop_condition",
+      "ai.sandbox.profile", "ai.queue.perimeter", "cost.status", "direction", "error.type", "event", "source",
+      "gen_ai.system", "gen_ai.request.model", "gen_ai.response.model", "mcp.server.name", "mcp.tool.name",
+      "temporal.namespace", "temporal.task_queue", "temporal.workflow.type", "temporal.activity.type"
+    ],
+    "correlation_only": [
+      "ai.task.id", "ai.attempt.id", "ai.run.id", "ai.delegation.id", "ai.agent.run.id",
+      "ai.sandbox.execution.id", "temporal.workflow.id", "temporal.run.id", "scm.pull_request.id"
+    ],
+    "bounded_values": {
+      "ai.execution.mode": ["PIPELINE", "TEMPORAL", "HIERARCHICAL", "unknown"],
+      "ai.agent.role": [
+        "workflow", "supervisor", "architecture-agent", "impact-analysis", "dependencies-contracts",
+        "code-agent", "developer", "patch-repair", "test-agent", "test-design", "test-evidence",
+        "security-agent", "threat-model", "security-findings", "independent-reviewer", "planner",
+        "reviewer", "unknown"
+      ],
+      "ai.operation": ["validate_patch", "apply_patch", "run_tests", "run_quality", "run_security", "unknown"],
+      "ai.outcome": ["success", "failure", "rejected", "timeout", "cancelled", "unavailable", "unknown"],
+      "ai.stop_condition": [
+        "SUCCESS_CRITERIA_MET", "BUDGET_EXHAUSTED", "DEADLINE_REACHED", "NO_PROGRESS", "BLOCKED",
+        "CANCELLED", "CONTRACT_ERROR", "TOOL_ERROR", "POLICY_DENIED", "unknown"
+      ],
+      "mcp.server.name": [
+        "repository-context-mcp", "sandbox-execution-mcp", "scm-delivery-mcp", "assurance-mcp",
+        "evidence-mcp", "unknown"
+      ],
+      "cost.status": ["measured", "estimated", "unavailable", "unknown"]
+    },
+    "forbidden_name_fragments": [
+      "authorization", "cookie", "password", "secret", "token.value", "api_key", "prompt.content",
+      "response.content", "result.content", "source.code", "patch.content", "evidence.content"
+    ]
+  }
+}

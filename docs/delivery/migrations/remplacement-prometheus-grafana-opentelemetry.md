@@ -121,32 +121,32 @@ Au début de la migration, le dépôt possède notamment :
 
 ### 6.1 Ressources et conventions
 
-- [ ] Définir `service.name`, `service.namespace`, `service.version` et `deployment.environment.name` pour chaque service.
-- [ ] Définir les noms stables des spans racines et enfants : tâche, workflow, agent, LLM, MCP, sandbox, assurance et SCM.
-- [ ] Définir les métriques RED par service : débit, erreurs et durée.
-- [ ] Définir les métriques métier conservées : tâches, budgets, tokens, coûts, tours, fan-out, files et verdicts.
-- [ ] Définir unités, temporality, histogram buckets et règles de renommage des métriques existantes.
-- [ ] Définir une liste fermée de valeurs pour rôle, opération, résultat, erreur, serveur MCP et outil.
-- [ ] Réserver `task_id`, `run_id`, `execution_id`, `trace_id` et `span_id` aux traces/logs ou exemplars.
-- [ ] Ajouter une version de schéma de télémétrie permettant de suivre les changements incompatibles.
-- [ ] Définir la compatibilité entre conventions OTel génériques, conventions GenAI et attributs `ai.*` internes.
+- [x] Définir `service.name`, `service.namespace`, `service.version` et `deployment.environment.name` pour chaque service.
+- [x] Définir les noms stables des spans racines et enfants : tâche, workflow, agent, LLM, MCP, sandbox, assurance et SCM.
+- [x] Définir les métriques RED par service : débit, erreurs et durée.
+- [x] Définir les métriques métier conservées : tâches, budgets, tokens, coûts, tours, fan-out, files et verdicts.
+- [x] Définir unités, temporality, histogram buckets et règles de renommage des métriques existantes.
+- [x] Définir une liste fermée de valeurs pour rôle, opération, résultat, erreur, serveur MCP et outil.
+- [x] Réserver `task_id`, `run_id`, `execution_id`, `trace_id` et `span_id` aux traces/logs ou exemplars.
+- [x] Ajouter une version de schéma de télémétrie permettant de suivre les changements incompatibles.
+- [x] Définir la compatibilité entre conventions OTel génériques, conventions GenAI et attributs `ai.*` internes.
 
 ### 6.2 Confidentialité et sécurité
 
-- [ ] Maintenir les quatre options de capture de contenu à `false` par défaut.
+- [x] Maintenir les quatre options de capture de contenu à `false` par défaut.
 - [ ] Écrire les règles de redaction du Collector pour URL, headers, paramètres, exceptions et attributs.
 - [ ] Refuser les clés d'attribut inconnues ou dangereuses aux frontières d'instrumentation internes.
-- [ ] Borner le nombre d'attributs, leur longueur, le nombre d'événements et de liens par span.
+- [x] Borner le nombre d'attributs, leur longueur, le nombre d'événements et de liens par span.
 - [ ] Scanner automatiquement des exports OTLP de test pour secrets, prompts, code, patchs et preuves.
-- [ ] Définir les droits d'accès distincts entre télémétrie opérationnelle, sécurité et coûts.
-- [ ] Définir rétention, purge, chiffrement, localisation et journalisation des accès.
+- [x] Définir les droits d'accès distincts entre télémétrie opérationnelle, sécurité et coûts.
+- [x] Définir rétention, purge, chiffrement, localisation et journalisation des accès.
 - [ ] Réaliser une analyse de menace des endpoints OTLP et du Collector.
 
 ### Critères de sortie du lot 1
 
-- [ ] Le contrat de télémétrie est versionné et testé.
-- [ ] Un test de cardinalité refuse les dimensions non bornées.
-- [ ] Un test négatif prouve qu'aucun contenu sensible n'est exporté par défaut.
+- [x] Le contrat de télémétrie est versionné et testé.
+- [x] Un test de cardinalité refuse les dimensions non bornées.
+- [x] Un test négatif prouve qu'aucun contenu sensible n'est exporté par défaut.
 - [ ] La revue sécurité et protection des données approuve les signaux et leur rétention.
 
 ## 7. Lot 2 — instrumentation OpenTelemetry des applications
@@ -477,7 +477,7 @@ différée afin de rester récupérable.
 ## 17. Découpage recommandé en tickets et commits
 
 - [x] `OTEL-000` — ADR, inventaire, baseline et matrice de parité.
-- [ ] `OTEL-010` — contrat de télémétrie, conventions et tests de confidentialité.
+- [x] `OTEL-010` — contrat de télémétrie, conventions et tests de confidentialité.
 - [ ] `OTEL-100` — **bascule runtime atomique** regroupant instrumentation des six applications, propagation W3C, Collector, SigNoz, dashboards, alertes et retrait de Prometheus/Grafana.
 - [ ] `OTEL-101` — qualification macOS complète de la nouvelle pile sans aucun conteneur legacy.
 - [ ] `OTEL-050` — Collectors GKE, Workload Identity et export Google Cloud.
