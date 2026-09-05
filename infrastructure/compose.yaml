@@ -1,5 +1,7 @@
 name: ai-software-factory
 
+# Container names are derived from this project name and short service keys.
+# Do not add container_name: scripts must address services through Docker Compose.
 include:
   - path: ./observability/signoz/generated/compose.yaml
 
@@ -786,7 +788,7 @@ services:
     tmpfs:
       - /tmp:size=64m,mode=1777
     depends_on:
-      ingester:
+      signoz-ingester:
         condition: service_started
     healthcheck:
       test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otelcol-contrib/config.yaml"]
@@ -829,11 +831,11 @@ services:
       context: ..
       dockerfile: infrastructure/observability/signoz-bootstrap.Dockerfile
     environment:
-      SIGNOZ_BASE_URL: http://ai-factory-signoz-signoz-0:8080
+      SIGNOZ_BASE_URL: http://signoz:8080
       SIGNOZ_ROOT_EMAIL: ${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}
       SIGNOZ_ROOT_PASSWORD: ${SIGNOZ_ROOT_PASSWORD:?SIGNOZ_ROOT_PASSWORD must be initialized by make init}
     depends_on:
-      ai-factory-signoz-signoz-0:
+      signoz:
         condition: service_healthy
       alert-sink:
         condition: service_healthy

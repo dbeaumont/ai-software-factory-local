@@ -107,7 +107,7 @@ processors:
 
 exporters:
   otlp_http/signoz:
-    endpoint: http://ingester:4318
+    endpoint: http://signoz-ingester:4318
     sending_queue:
       enabled: true
       num_consumers: 4
@@ -131,7 +131,7 @@ service:
             exporter:
               otlp:
                 protocol: http/protobuf
-                endpoint: http://ingester:4318
+                endpoint: http://signoz-ingester:4318
                 timeout: 5000
                 insecure: true
   pipelines:

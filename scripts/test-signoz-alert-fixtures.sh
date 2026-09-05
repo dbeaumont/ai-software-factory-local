@@ -2,6 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
 [ -f .env ] && set -a && source .env && set +a
 
 now=$(date +%s)
@@ -34,7 +35,7 @@ payload=$(jq -nc --arg old "$old" --arg current "$current" '
     ]}]
   }]}' )
 
-docker exec ai-software-factory-orchestrator-1 curl -fsS \
+"${compose[@]}" exec -T orchestrator curl -fsS \
   -X POST http://otel-collector:4318/v1/metrics \
   -H 'Content-Type: application/json' --data-binary "$payload" >/dev/null
 

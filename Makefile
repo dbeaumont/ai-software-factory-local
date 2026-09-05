@@ -66,13 +66,13 @@ build:
 		--build-arg TRIVY_PRELOAD_DB="$(TRIVY_PRELOAD_DB)" \
 		-t ai-factory-sandbox:local ./infrastructure/sandbox
 	./scripts/pin-sandbox-image.sh .env ai-factory-sandbox:local
-	$(COMPOSE) build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp scm-delivery-mcp assurance-mcp evidence-mcp orchestrator factory-web ai-factory-signoz-telemetrystore-clickhouse-user-scripts signoz-bootstrap
+	$(COMPOSE) build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp scm-delivery-mcp assurance-mcp evidence-mcp orchestrator factory-web signoz-clickhouse-init signoz-bootstrap
 	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build
 	$(log-target)
 	@echo -e "$(BLUE)Starting local factory stack...$(NC)"
-	$(COMPOSE) up -d
+	$(COMPOSE) up -d --remove-orphans
 	@./scripts/wait-compose-job.sh signoz-bootstrap 120
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls

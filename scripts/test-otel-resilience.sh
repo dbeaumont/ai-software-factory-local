@@ -6,7 +6,7 @@ compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
 apps=(orchestrator repository-context-mcp sandbox-execution-mcp scm-delivery-mcp assurance-mcp evidence-mcp)
 
 restore() {
-  "${compose[@]}" start ingester otel-collector >/dev/null 2>&1 || true
+  "${compose[@]}" start signoz-ingester otel-collector >/dev/null 2>&1 || true
 }
 trap restore EXIT
 
@@ -31,11 +31,11 @@ wait_service_healthy() {
 
 wait_service_healthy otel-collector
 assert_apps_healthy
-"${compose[@]}" stop ingester >/dev/null
+"${compose[@]}" stop signoz-ingester >/dev/null
 assert_apps_healthy
 collector_health=$("${compose[@]}" ps --format json otel-collector | jq -er '.Health')
 [ "$collector_health" = "healthy" ] || { echo "Collector failed during backend outage" >&2; exit 1; }
-"${compose[@]}" start ingester >/dev/null
+"${compose[@]}" start signoz-ingester >/dev/null
 ./scripts/check-signoz-telemetry.sh >/dev/null
 
 "${compose[@]}" stop otel-collector >/dev/null
@@ -45,7 +45,7 @@ curl -fsS "http://127.0.0.1:${ORCHESTRATOR_PORT:-8088}/actuator/health/readiness
 wait_service_healthy otel-collector
 ./scripts/check-signoz-telemetry.sh >/dev/null
 
-status=$(docker exec ai-software-factory-alert-sink-1 python -c \
+status=$("${compose[@]}" exec -T alert-sink python -c \
   "import urllib.request,urllib.error; r=urllib.request.Request('http://otel-collector:4318/v1/traces',data=b'not-otlp',headers={'Content-Type':'application/json'},method='POST');
 try: urllib.request.urlopen(r,timeout=3)
 except urllib.error.HTTPError as e: print(e.code)")

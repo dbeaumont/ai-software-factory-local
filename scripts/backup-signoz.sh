@@ -22,7 +22,7 @@ mkdir -p "$destination"
 destination=$(cd "$destination" && pwd -P)
 
 compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
-writers=(ingester ai-factory-signoz-signoz-0 ai-factory-signoz-telemetrystore-clickhouse-0-0 ai-factory-signoz-metastore-postgres-0 ai-factory-signoz-telemetrykeeper-clickhousekeeper-0)
+writers=(signoz-ingester signoz signoz-clickhouse signoz-db signoz-keeper)
 volumes=(
   ai-factory-signoz-metastore-postgres-0-data
   ai-factory-signoz-telemetrykeeper-0-data
@@ -31,8 +31,8 @@ volumes=(
 )
 
 restart_backend() {
-  "${compose[@]}" start ai-factory-signoz-metastore-postgres-0 ai-factory-signoz-telemetrykeeper-clickhousekeeper-0 >/dev/null 2>&1 || true
-  "${compose[@]}" start ai-factory-signoz-telemetrystore-clickhouse-0-0 ai-factory-signoz-signoz-0 ingester >/dev/null 2>&1 || true
+  "${compose[@]}" start signoz-db signoz-keeper >/dev/null 2>&1 || true
+  "${compose[@]}" start signoz-clickhouse signoz signoz-ingester >/dev/null 2>&1 || true
 }
 trap restart_backend EXIT
 

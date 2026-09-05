@@ -2,8 +2,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-collector=ai-factory-otel-saturation-test
-sink=ai-factory-otel-slow-sink-test
+collector=ai-software-factory-test-otel-collector
+sink=ai-software-factory-test-otel-sink
 python_image=python:3.13.7-alpine3.22@sha256:9ba6d8cbebf0fb6546ae71f2a1c14f6ffd2fdab83af7fa5669734ef30ad48844
 collector_image=otel/opentelemetry-collector-contrib:0.160.0@sha256:799dc6cf12c96192af37b5bdba804da8c10b3bc563b43cb90c3f3c58d9572ad6
 

@@ -4,12 +4,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
 generator_image=python:3.13.7-alpine3.22@sha256:9ba6d8cbebf0fb6546ae71f2a1c14f6ffd2fdab83af7fa5669734ef30ad48844
-clickhouse=ai-factory-signoz-telemetrystore-clickhouse-0-0
 expected_records=10400
 started_ms=$(($(date +%s) * 1000))
 
 restore() {
-  "${compose[@]}" start ingester otel-collector >/dev/null 2>&1 || true
+  "${compose[@]}" start signoz-ingester otel-collector >/dev/null 2>&1 || true
 }
 trap restore EXIT
 
@@ -31,11 +30,11 @@ for attempt in {1..30}; do
   sleep 1
 done
 sleep 10
-metric_count=$(docker exec ai-factory-signoz-telemetrystore-clickhouse-0-0 clickhouse-client --query \
+metric_count=$("${compose[@]}" exec -T signoz-clickhouse clickhouse-client --query \
   "SELECT count() FROM signoz_metrics.distributed_metadata WHERE metric_name = 'ai_factory_otel_load_probe'")
 [ "$metric_count" -gt 0 ] || { echo "Load probe metric was not ingested" >&2; exit 1; }
 
-"${compose[@]}" stop ingester >/dev/null
+"${compose[@]}" stop signoz-ingester >/dev/null
 run_load --batches 40 --points 10 --workers 8
 queue_files=$(docker run --rm --network none -v ai-software-factory_otel-collector-queue:/queue:ro \
   busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 \
@@ -43,13 +42,13 @@ queue_files=$(docker run --rm --network none -v ai-software-factory_otel-collect
 [ "$queue_files" -ge 3 ] || { echo "Persistent queues were not populated during outage" >&2; exit 1; }
 
 "${compose[@]}" restart otel-collector >/dev/null
-"${compose[@]}" start ingester >/dev/null
+"${compose[@]}" start signoz-ingester >/dev/null
 for attempt in {1..60}; do
-  trace_count=$(docker exec "$clickhouse" clickhouse-client --query \
+  trace_count=$("${compose[@]}" exec -T signoz-clickhouse clickhouse-client --query \
     "SELECT count() FROM signoz_traces.distributed_signoz_index_v3 WHERE serviceName = 'otel-load-generator' AND timestamp >= fromUnixTimestamp64Milli($started_ms)")
-  log_count=$(docker exec "$clickhouse" clickhouse-client --query \
+  log_count=$("${compose[@]}" exec -T signoz-clickhouse clickhouse-client --query \
     "SELECT count() FROM signoz_logs.distributed_logs_v2 WHERE resources_string['service.name'] = 'otel-load-generator' AND timestamp >= $((started_ms * 1000000))")
-  metric_count=$(docker exec "$clickhouse" clickhouse-client --query \
+  metric_count=$("${compose[@]}" exec -T signoz-clickhouse clickhouse-client --query \
     "SELECT count() FROM signoz_metrics.distributed_samples_v4 WHERE metric_name = 'ai_factory_otel_load_probe' AND unix_milli >= $started_ms")
   if [ "$trace_count" -ge "$expected_records" ] && [ "$log_count" -ge "$expected_records" ] && [ "$metric_count" -ge "$expected_records" ]; then
     break
@@ -64,15 +63,16 @@ done
 [ "$log_count" -eq "$expected_records" ] || { echo "Log loss or duplication: expected=$expected_records actual=$log_count" >&2; exit 1; }
 [ "$metric_count" -eq "$expected_records" ] || { echo "Metric loss or duplication: expected=$expected_records actual=$metric_count" >&2; exit 1; }
 
-metric_series=$(docker exec "$clickhouse" clickhouse-client --query \
+metric_series=$("${compose[@]}" exec -T signoz-clickhouse clickhouse-client --query \
   "SELECT uniqExact(fingerprint) FROM signoz_metrics.distributed_samples_v4 WHERE metric_name = 'ai_factory_otel_load_probe' AND unix_milli >= $started_ms")
-trace_ids=$(docker exec "$clickhouse" clickhouse-client --query \
+trace_ids=$("${compose[@]}" exec -T signoz-clickhouse clickhouse-client --query \
   "SELECT uniqExact(trace_id) FROM signoz_traces.distributed_signoz_index_v3 WHERE serviceName = 'otel-load-generator' AND timestamp >= fromUnixTimestamp64Milli($started_ms)")
 ingestion_delay_ms=$(($(date +%s) * 1000 - started_ms))
 ./scripts/check-signoz-telemetry.sh >/dev/null
 
-collector_memory=$(docker stats --no-stream --format '{{.MemUsage}}' ai-software-factory-otel-collector-1)
-collector_cpu=$(docker stats --no-stream --format '{{.CPUPerc}}' ai-software-factory-otel-collector-1)
+collector_id=$("${compose[@]}" ps -q otel-collector)
+collector_memory=$(docker stats --no-stream --format '{{.MemUsage}}' "$collector_id")
+collector_cpu=$(docker stats --no-stream --format '{{.CPUPerc}}' "$collector_id")
 queue_disk=$(docker run --rm --network none -v ai-software-factory_otel-collector-queue:/queue:ro \
   busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 \
   du -sk /queue | awk '{print $1}')
