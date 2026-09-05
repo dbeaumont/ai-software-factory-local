@@ -84,7 +84,9 @@ public class PipelineStepService {
         return workspace;
     }
 
-    public void cloneSource(TaskState state, Path workspace) throws Exception {
+    public PipelineStepContracts.Result cloneSource(TaskState state, Path workspace,
+                                                    PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("clone");
         runner.run(List.of("git", "clone", "--depth", "1", "--branch", state.request.effectiveBranch(),
                 state.request.repositoryUrl(), workspace.toString()), null, Duration.ofMinutes(2));
         state.sourceCommit = runner.run(List.of("git", "rev-parse", "HEAD"), workspace,
@@ -93,9 +95,13 @@ public class PipelineStepService {
         writeRunMetadata(workspace, state);
         log.info("Task {} ({}) cloned source commit {} using model {}", state.id, state.ticketNumber,
                 state.sourceCommit, state.model);
+        return PipelineStepContracts.Result.from(command, state.sourceCommit,
+                Map.of("sourceCommit", state.sourceCommit));
     }
 
-    public void plan(TaskState state, Path workspace) throws Exception {
+    public PipelineStepContracts.Result plan(TaskState state, Path workspace,
+                                             PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("plan");
         String plannerContext = agentTooling.enabledFor("planner")
                 ? "Use the authorized context tools to retrieve only the repository evidence needed for this plan."
                 : contextService.collectForRole(workspace, state.id, state.sourceCommit, "planner");
@@ -104,22 +110,32 @@ public class PipelineStepService {
         agentResponses.requireImplementablePlan(state.plan);
         Files.writeString(workspace.resolve(".ai-plan.md"), state.plan);
         writeRunMetadata(workspace, state);
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("plan", state.plan));
     }
 
-    public void generateAndRepairPatch(TaskState state, Path workspace) throws Exception {
+    public PipelineStepContracts.Result generateAndRepairPatch(TaskState state, Path workspace,
+                                                               PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("generate-patch");
         String developerContext = contextService.collectForRole(workspace, state.id, state.sourceCommit, "developer");
         String rawPatch = chat(state, "developer", untrusted("REQUIREMENT", state.request.requirement())
                 + untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", developerContext));
         writeRunMetadata(workspace, state);
         state.patch = validateAndRepairPatch(state, workspace, rawPatch);
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch", state.patch));
     }
 
-    public void applyPatch(TaskState state, Path workspace) throws Exception {
+    public PipelineStepContracts.Result applyPatch(TaskState state, Path workspace,
+                                                   PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("apply-patch");
         patchIntegrator.apply(workspace, state.id, state.sourceCommit,
                 new PatchIntegrator.IntegratedPatch(state.patch, PatchIntegrator.digestFor(state.patch)));
+        return PipelineStepContracts.Result.from(command, state.sourceCommit,
+                Map.of("appliedPatch", state.patch));
     }
 
-    public void test(TaskState state, Path workspace) throws Exception {
+    public PipelineStepContracts.Result test(TaskState state, Path workspace,
+                                             PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("test");
         String deterministicTests = tail(sandbox.test(workspace, state.id, state.sourceCommit), 12_000);
         String testerReview = chat(state, "tester", untrusted("REQUIREMENT", state.request.requirement())
                 + untrusted("PATCH", state.patch)
@@ -131,15 +147,23 @@ public class PipelineStepService {
         Files.createDirectories(workspace.resolve(".ai-factory"));
         Files.writeString(workspace.resolve(".ai-factory/test.txt"), state.testSummary);
         state.assuranceResults.put("tests", evidenceResult(state, "tests", "PASSED", deterministicTests));
+        return PipelineStepContracts.Result.from(command, state.sourceCommit,
+                Map.of("testSummary", state.testSummary));
     }
 
-    public void quality(TaskState state, Path workspace) throws Exception {
+    public PipelineStepContracts.Result quality(TaskState state, Path workspace,
+                                                PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("quality");
         state.qualitySummary = tail(sandbox.quality(workspace, state.id, state.sourceCommit), 12_000);
         JsonNode result = assurance.requireQualityGate(state.id, state.sourceCommit, state.qualitySummary);
         state.assuranceResults.put("quality", objectMapper.convertValue(result, Map.class));
+        return PipelineStepContracts.Result.from(command, state.sourceCommit,
+                Map.of("qualitySummary", state.qualitySummary));
     }
 
-    public void security(TaskState state, Path workspace) throws Exception {
+    public PipelineStepContracts.Result security(TaskState state, Path workspace,
+                                                 PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("security");
         state.securitySummary = tail(sandbox.security(workspace, state.id, state.sourceCommit), 12_000);
         state.assuranceResults.put("security", evidenceResult(state, "security", "PASSED", state.securitySummary));
         Path sbom = workspace.resolve(".ai-factory/sbom.cdx.json");
@@ -147,9 +171,13 @@ public class PipelineStepService {
                 "attempt_id", "pipeline-1", "source_commit", state.sourceCommit, "format", "CYCLONEDX_JSON",
                 "uri", "evidence://" + state.id + "/pipeline-1/sbom", "digest", sha256(Files.readAllBytes(sbom)),
                 "status", "COMPLETE"));
+        return PipelineStepContracts.Result.from(command, state.sourceCommit,
+                Map.of("securitySummary", state.securitySummary));
     }
 
-    public void review(TaskState state, Path workspace) throws Exception {
+    public PipelineStepContracts.Result review(TaskState state, Path workspace,
+                                               PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("review");
         state.review = chat(state, "reviewer", untrusted("REQUIREMENT", state.request.requirement())
                 + untrusted("PLAN", state.plan) + untrusted("PATCH", state.patch)
                 + untrusted("ASSURANCE_RESULTS", objectMapper.writeValueAsString(state.assuranceResults)));
@@ -159,6 +187,7 @@ public class PipelineStepService {
         state.reviewAccepted = true;
         Files.writeString(workspace.resolve(".ai-review.md"), state.review);
         writeRunMetadata(workspace, state);
+        return PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("review", state.review));
     }
 
     public void prepareDelivery(TaskState state) {
@@ -170,10 +199,14 @@ public class PipelineStepService {
                 "ALLOW", true);
     }
 
-    public void deliver(TaskState state) throws Exception {
+    public PipelineStepContracts.Result deliver(TaskState state,
+                                                PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("delivery");
         Path workspace = Path.of(state.workspace);
         state.pullRequestUrl = scmDelivery.createDraftPullRequest(workspace, state.request.repositoryUrl(),
                 state.request.effectiveBranch(), state.id, state.sourceCommit, state.request.requirement());
+        return PipelineStepContracts.Result.from(command, state.sourceCommit,
+                Map.of("pullRequestUrl", state.pullRequestUrl));
     }
 
     private String validateAndRepairPatch(TaskState state, Path workspace, String rawPatch) throws Exception {
