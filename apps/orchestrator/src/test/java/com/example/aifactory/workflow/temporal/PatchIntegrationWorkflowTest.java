@@ -72,7 +72,8 @@ class PatchIntegrationWorkflowTest {
             assertThat(captured.get().validationProfile()).isEqualTo("patch-check-v1");
             assertThat(captured.get().applicationProfile()).isEqualTo("patch-apply-v1");
             assertThat(captured.get().metadata().idempotencyKey())
-                    .isEqualTo("effect-activity-task-1-attempt-1-integration-apply-patches-1");
+                    .isEqualTo(TemporalIds.effectKey("task-1", "attempt-1", "integration", "apply-patches", 1,
+                            "a".repeat(40), planDigest));
             assertThat(cleanup.get().outcome()).isEqualTo(PatchIntegrationActivities.TerminalOutcome.SUCCESS);
         }
     }

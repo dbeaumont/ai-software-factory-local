@@ -150,8 +150,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-025 — Classer les erreurs.** Distinguer erreurs métier non retryables, erreurs de contrat, saturation,
   timeout, dépendance indisponible et issue d'effet inconnue. _(`TemporalFailureClassifier` produit des types
   stables, politiques de retry explicites et un marqueur de réconciliation pour les effets incertains.)_
-- [ ] **TEMP-026 — Définir les politiques temporelles.** Fixer pour chaque activité start-to-close,
-  schedule-to-close, heartbeat timeout, nombre de tentatives et backoff.
+- [x] **TEMP-026 — Définir les politiques temporelles.** Fixer pour chaque activité start-to-close,
+  schedule-to-close, heartbeat timeout, nombre de tentatives et backoff. _(Matrice V1 documentée et verrouillée
+  par tests, avec schedule-to-start et absence explicite de heartbeat pour les appels courts.)_
 - [ ] **TEMP-027 — Utiliser l'exécuteur local comme oracle avant coupure.** Recomposer temporairement le pipeline
   historique avec les nouveaux services pour qualifier la parité, sans prévoir son maintien après bascule.
 - [ ] **TEMP-028 — Supprimer l'ordonnancement local à la coupure.** Retirer le pool interne et
