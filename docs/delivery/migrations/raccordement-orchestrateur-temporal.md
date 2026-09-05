@@ -153,8 +153,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-026 — Définir les politiques temporelles.** Fixer pour chaque activité start-to-close,
   schedule-to-close, heartbeat timeout, nombre de tentatives et backoff. _(Matrice V1 documentée et verrouillée
   par tests, avec schedule-to-start et absence explicite de heartbeat pour les appels courts.)_
-- [ ] **TEMP-027 — Utiliser l'exécuteur local comme oracle avant coupure.** Recomposer temporairement le pipeline
+- [x] **TEMP-027 — Utiliser l'exécuteur local comme oracle avant coupure.** Recomposer temporairement le pipeline
   historique avec les nouveaux services pour qualifier la parité, sans prévoir son maintien après bascule.
+  _(`DeterministicWorkflowCoordinator` recompose les étapes extraites et `PipelineCompatibilityTest` valide le
+  contrat de sortie gelé avant sa suppression au ticket TEMP-028.)_
 - [ ] **TEMP-028 — Supprimer l'ordonnancement local à la coupure.** Retirer le pool interne et
   `DeterministicWorkflowCoordinator` dans le même lot de livraison que l'activation du coordinateur Temporal.
 

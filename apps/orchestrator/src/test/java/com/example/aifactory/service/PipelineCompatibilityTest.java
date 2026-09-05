@@ -42,7 +42,7 @@ class PipelineCompatibilityTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void currentExtractedPipelineMatchesTheFrozenVersion02OutputContract() throws Exception {
+    void localOracleRecomposesExtractedStepsAndMatchesTheFrozenVersion02OutputContract() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         ProcessRunner runner = mock(ProcessRunner.class);
         when(runner.run(anyList(), nullable(Path.class), any(Duration.class))).thenReturn("cloned", SOURCE_COMMIT);
