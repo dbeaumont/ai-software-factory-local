@@ -13,24 +13,24 @@ class WorkflowEffectOwnershipTest {
     private static final Path SOURCES = Path.of("src/main/java/com/example/aifactory");
 
     @Test
-    void onlyTheCoordinatorDecidesToRunTestsScansAssuranceAndScmDelivery() throws Exception {
+    void onlyPipelineStepsAndTemporalActivitiesOwnExternalEffects() throws Exception {
         assertOwners(Map.of(
-                "sandbox.test(", List.of("service/DeterministicWorkflowCoordinator.java",
+                "sandbox.test(", List.of("service/PipelineStepService.java",
                         "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
-                "sandbox.quality(", List.of("service/DeterministicWorkflowCoordinator.java",
+                "sandbox.quality(", List.of("service/PipelineStepService.java",
                         "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
-                "sandbox.security(", List.of("service/DeterministicWorkflowCoordinator.java",
+                "sandbox.security(", List.of("service/PipelineStepService.java",
                         "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
-                "assurance.requireQualityGate(", List.of("service/DeterministicWorkflowCoordinator.java"),
-                "scmDelivery.createDraftPullRequest(", List.of("service/DeterministicWorkflowCoordinator.java")));
+                "assurance.requireQualityGate(", List.of("service/PipelineStepService.java"),
+                "scmDelivery.createDraftPullRequest(", List.of("service/PipelineStepService.java")));
     }
 
     @Test
     void patchValidationAndApplicationRemainBehindTheCoordinatorOwnedIntegrator() throws Exception {
         assertOwners(Map.of(
-                "patchIntegrator.validate(", List.of("service/DeterministicWorkflowCoordinator.java",
+                "patchIntegrator.validate(", List.of("service/PipelineStepService.java",
                         "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
-                "patchIntegrator.apply(", List.of("service/DeterministicWorkflowCoordinator.java",
+                "patchIntegrator.apply(", List.of("service/PipelineStepService.java",
                         "workflow/temporal/PatchIntegrationActivitiesImpl.java"),
                 "sandbox.checkPatch(", List.of("service/PatchIntegrator.java"),
                 "sandbox.applyPatch(", List.of("service/PatchIntegrator.java")));

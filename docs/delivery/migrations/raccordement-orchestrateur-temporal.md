@@ -129,9 +129,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 6. Lot 1 — extraire le pipeline en étapes reprenables
 
-- [ ] **TEMP-020 — Isoler les étapes métier.** Extraire de `DeterministicWorkflowCoordinator` des services sans
+- [x] **TEMP-020 — Isoler les étapes métier.** Extraire de `DeterministicWorkflowCoordinator` des services sans
   ordonnanceur interne pour clonage, contexte, planification, génération/réparation, patch, tests, qualité,
-  sécurité, revue et livraison.
+  sécurité, revue et livraison. _(`PipelineStepService` porte les effets réutilisables ; le coordinateur local ne
+  conserve que l'ordre et son pool temporaire d'oracle.)_
 - [ ] **TEMP-021 — Définir des commandes/résultats immuables.** Chaque étape reçoit un payload versionné borné à
   `taskId`, `attemptId`, `sourceCommit`, digests d'entrées et identité d'exécution.
 - [ ] **TEMP-022 — Rendre les sorties persistables.** Éviter de transporter de gros logs ou documents dans
