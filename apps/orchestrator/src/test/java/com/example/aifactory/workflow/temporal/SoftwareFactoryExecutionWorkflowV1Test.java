@@ -9,6 +9,8 @@ import io.temporal.client.WorkflowStub;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -48,6 +50,28 @@ class SoftwareFactoryExecutionWorkflowV1Test {
             assertThat(deliveries).hasValue(1);
             assertThat(workflow.evidence()).hasSizeGreaterThanOrEqualTo(7)
                     .allMatch(uri -> uri.startsWith("evidence://task-1/pipeline-1/"));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"test", "quality", "security", "review"})
+    void rejectsEveryBusinessGateAndPreservesPreviouslyProducedEvidence(String rejectedGate) {
+        AtomicInteger deliveries = new AtomicInteger();
+        TestActivities activities = new TestActivities(deliveries, rejectedGate);
+        try (TestWorkflowEnvironment environment = environment(activities)) {
+            SoftwareFactoryExecutionWorkflowV1 workflow = environment.getWorkflowClient().newWorkflowStub(
+                    SoftwareFactoryExecutionWorkflowV1.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId("ai-factory/task-1/pipeline-1-" + rejectedGate)
+                            .setTaskQueue("test-workflow").build());
+
+            SoftwareFactoryWorkflow.Result result = workflow.run(request());
+
+            assertThat(result.status()).isEqualTo("GATE_REJECTED:" + rejectedGate);
+            assertThat(result.chronology()).contains("GATE_REJECTED:" + rejectedGate)
+                    .anyMatch(event -> event.startsWith("EVIDENCE_PRESERVED:"));
+            assertThat(activities.rejectedGates).containsExactly(rejectedGate);
+            assertThat(workflow.evidence()).isNotEmpty();
+            assertThat(deliveries).hasValue(0);
         }
     }
 
@@ -92,9 +116,16 @@ class SoftwareFactoryExecutionWorkflowV1Test {
 
     private static final class TestActivities implements SourceResolutionActivities, PipelineExecutionActivities {
         private final AtomicInteger deliveries;
+        private final String rejectedGate;
+        private final java.util.List<String> rejectedGates = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         private TestActivities(AtomicInteger deliveries) {
+            this(deliveries, null);
+        }
+
+        private TestActivities(AtomicInteger deliveries, String rejectedGate) {
             this.deliveries = deliveries;
+            this.rejectedGate = rejectedGate;
         }
 
         @Override public SourceResolutionActivities.Result resolve(SourceResolutionActivities.Request request) {
@@ -108,6 +139,10 @@ class SoftwareFactoryExecutionWorkflowV1Test {
 
         @Override public PipelineStepContracts.Result execute(StepRequest request) {
             String step = request.command().step();
+            if (step.equals(rejectedGate)) {
+                throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                        "gate rejected by fixture", "BUSINESS_REJECTION");
+            }
             String name = switch (step) {
                 case "plan" -> "plan";
                 case "apply-patch" -> "integration";
@@ -143,7 +178,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
             return "http://localhost:3000/aiadmin/customer-api/pulls/1";
         }
 
-        @Override public void recordGateRejection(GateRejection rejection) {}
+        @Override public void recordGateRejection(GateRejection rejection) { rejectedGates.add(rejection.gate()); }
         @Override public void recordCancellation(Cancellation cancellation) {}
         @Override public void recordApproval(Approval approval) {}
         @Override public void recordHumanDecision(HumanDecision decision) {}

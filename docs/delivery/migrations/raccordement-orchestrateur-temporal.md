@@ -426,7 +426,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester le parcours nominal jusqu'à l'approbation et la livraison. _(Le workflow V1 de production traverse les
   sept task queues avec des Activities embarquées, attend le manifeste exact, reçoit le signal d'approbation et
   termine `PR_CREATED` avec une seule livraison et uniquement des URI Evidence.)_
-- [ ] Tester rejet de chaque gate et préservation des preuves partielles.
+- [x] Tester rejet de chaque gate et préservation des preuves partielles. _(Les gates test, qualité, sécurité et revue
+  sont rejetés tour à tour ; chacun termine sans livraison, enregistre le gate exact et conserve dans le résultat et
+  la query Evidence tous les artefacts complets produits auparavant.)_
 - [ ] Tester retries déterministes, heartbeat, timeout et activité non retryable.
 - [ ] Tester signaux reçus avant et pendant `Workflow.await`.
 - [ ] Tester annulation en clonage, LLM, sandbox, attente humaine et livraison.
