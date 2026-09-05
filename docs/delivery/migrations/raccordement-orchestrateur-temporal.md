@@ -114,8 +114,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-014 — Vérifier la compatibilité.** Tester et documenter la matrice entre le serveur Temporal 1.31.2,
   le SDK Java 1.38.0 et les fonctionnalités utilisées, notamment Worker Versioning. _(Matrice reproductible,
   versions Compose épinglées, handshake serveur et API Worker Versioning qualifiés.)_
-- [ ] **TEMP-015 — Corriger l'accès à Temporal UI.** Vérifier que `127.0.0.1:8233` est réellement publié sur
-  macOS malgré le réseau Compose interne, sans exposer le frontend gRPC Temporal sur l'hôte.
+- [x] **TEMP-015 — Corriger l'accès à Temporal UI.** Vérifier que `127.0.0.1:8233` est réellement publié sur
+  macOS malgré le réseau Compose interne, sans exposer le frontend gRPC Temporal sur l'hôte. _(Bridge hôte dédié
+  à la seule UI ; accès HTTP validé sur Docker Desktop, frontend gRPC toujours privé.)_
 - [ ] **TEMP-016 — Ajouter des cibles opérateur.** Fournir `make temporal-status`, `make temporal-logs` et
   `make temporal-ui` sans commande d'activation/désactivation du moteur et sans afficher de secret.
 

@@ -59,7 +59,19 @@ class TemporalComposeTest {
         assertThat(ui.get("image").toString()).startsWith("temporalio/ui:").doesNotEndWith("latest");
         assertThat((List<String>) ui.get("ports")).singleElement().asString().startsWith(
                 "${TEMPORAL_UI_BIND_ADDRESS:-127.0.0.1}:");
-        assertThat(ui.get("networks")).isEqualTo(List.of("workflow-internal"));
+        assertThat((List<String>) ui.get("networks"))
+                .containsExactly("workflow-internal", "temporal-ui-host");
+        assertThat((Map<String, Object>) ((Map<String, Object>) root.get("networks")).get("temporal-ui-host"))
+                .doesNotContainKey("internal");
+        assertThat(services.entrySet())
+                .filteredOn(entry -> !entry.getKey().equals("temporal-ui"))
+                .allSatisfy(entry -> {
+                    Object networks = entry.getValue().get("networks");
+                    if (networks instanceof List<?> networkNames) {
+                        assertThat(networkNames.stream().map(Object::toString).toList())
+                                .as(entry.getKey()).doesNotContain("temporal-ui-host");
+                    }
+                });
         assertThat(Files.readString(composeFile())).doesNotContain("proxy_pass http://temporal-ui");
     }
 

@@ -125,7 +125,9 @@ services:
       resources:
         limits: { cpus: "0.5", memory: 256m }
         reservations: { cpus: "0.05", memory: 64m }
-    networks: [workflow-internal]
+    # A second bridge is required for Docker Desktop to publish the loopback-only port;
+    # the Temporal frontend itself remains reachable only on workflow-internal.
+    networks: [workflow-internal, temporal-ui-host]
 
   # Source-control service and its dedicated persistent PostgreSQL database.
   gitea-db:
@@ -852,6 +854,9 @@ networks:
   workflow-internal:
     name: ai-factory-workflow-internal
     internal: true
+  # Carries only the Temporal UI host port. No database, frontend gRPC or worker joins it.
+  temporal-ui-host:
+    name: ai-factory-temporal-ui-host
   # Explicit name lets sandbox containers join the same network at runtime.
   factory:
     name: ai-factory-network
