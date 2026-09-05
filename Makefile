@@ -73,7 +73,7 @@ up: init build
 	$(log-target)
 	@echo -e "$(BLUE)Starting local factory stack...$(NC)"
 	$(COMPOSE) up -d
-	$(COMPOSE) wait signoz-bootstrap
+	@./scripts/wait-compose-job.sh signoz-bootstrap 120
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls
 

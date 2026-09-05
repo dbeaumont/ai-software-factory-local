@@ -20,15 +20,28 @@ for attempt in {1..90}; do
   sleep 1
 done
 
-session_context=$(curl -fsS --get "$SIGNOZ_BASE_URL/api/v2/sessions/context" \
-  --data-urlencode "email=$SIGNOZ_ROOT_EMAIL" \
-  --data-urlencode "ref=$SIGNOZ_BASE_URL")
-org_id=$(printf '%s' "$session_context" | jq -er '.data.orgs[0].id')
-login_payload=$(jq -nc --arg email "$SIGNOZ_ROOT_EMAIL" --arg password "$SIGNOZ_ROOT_PASSWORD" --arg orgId "$org_id" \
-  '{email:$email,password:$password,orgId:$orgId}')
-session=$(curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/sessions/email_password" \
-  -H 'Content-Type: application/json' --data "$login_payload")
-token=$(printf '%s' "$session" | jq -er '.data.accessToken')
+# The health endpoint becomes ready before the root user/session routes on a fresh database.
+# Retry the complete session handshake instead of making the one-shot bootstrap fail on a transient 404.
+token=
+for attempt in {1..90}; do
+  session_context=$(curl -fsS --get "$SIGNOZ_BASE_URL/api/v2/sessions/context" \
+    --data-urlencode "email=$SIGNOZ_ROOT_EMAIL" \
+    --data-urlencode "ref=$SIGNOZ_BASE_URL" 2>/dev/null || true)
+  org_id=$(printf '%s' "$session_context" | jq -er '.data.orgs[0].id' 2>/dev/null || true)
+  if [ -n "$org_id" ]; then
+    login_payload=$(jq -nc --arg email "$SIGNOZ_ROOT_EMAIL" --arg password "$SIGNOZ_ROOT_PASSWORD" \
+      --arg orgId "$org_id" '{email:$email,password:$password,orgId:$orgId}')
+    session=$(curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/sessions/email_password" \
+      -H 'Content-Type: application/json' --data "$login_payload" 2>/dev/null || true)
+    token=$(printf '%s' "$session" | jq -er '.data.accessToken' 2>/dev/null || true)
+  fi
+  [ -n "$token" ] && break
+  if [ "$attempt" -eq 90 ]; then
+    echo "SigNoz root session did not become ready at $SIGNOZ_BASE_URL" >&2
+    exit 1
+  fi
+  sleep 1
+done
 
 cleanup() {
   curl -fsS -X DELETE "$SIGNOZ_BASE_URL/api/v2/sessions" -H "Authorization: Bearer $token" >/dev/null || true

@@ -72,7 +72,11 @@ ensure_complex_env_secret() {
     value="A!a1$(generate_hex 20)"
     write_value "$ENV_FILE" "$key" "$value"
     echo "Generated local complex secret: $key"
-  elif [ "${#value}" -lt 12 ] || [[ ! "$value" =~ [A-Z] ]] || [[ ! "$value" =~ [a-z] ]] || [[ ! "$value" =~ [0-9] ]] || [[ ! "$value" =~ [\~\!@#\$%\^\&\*\(\)_+\`=\{\}\|\[\]\\:\"\<\>\?,\.\/\-] ]]; then
+  elif [ "${#value}" -lt 12 ] \
+    || ! printf '%s' "$value" | LC_ALL=C grep -q '[[:upper:]]' \
+    || ! printf '%s' "$value" | LC_ALL=C grep -q '[[:lower:]]' \
+    || ! printf '%s' "$value" | LC_ALL=C grep -q '[[:digit:]]' \
+    || ! printf '%s' "$value" | LC_ALL=C grep -q '[^[:alnum:]]'; then
     echo "$key must contain at least 12 characters, including uppercase, lowercase, number and symbol." >&2
     exit 1
   fi
