@@ -1,6 +1,7 @@
 package com.example.aifactory.config;
 
 import com.example.aifactory.workflow.temporal.TemporalWorkerRegistry;
+import com.example.aifactory.workflow.temporal.TemporalActivityAdapters;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -29,8 +30,13 @@ public class TemporalRuntimeConfiguration {
     }
 
     @Bean
-    TemporalWorkerRegistry temporalWorkerRegistry(WorkerFactory factory, TemporalProperties properties) {
-        return new TemporalWorkerRegistry(factory, properties.taskQueues(),
+    TemporalWorkerRegistry temporalWorkerRegistry(WorkerFactory factory, TemporalProperties properties,
+                                                  TemporalActivityAdapters activities) {
+        TemporalWorkerRegistry registry = new TemporalWorkerRegistry(factory, properties.taskQueues(),
                 properties.deploymentName(), properties.buildId());
+        for (String kind : java.util.List.of("context", "llm", "sandbox", "assurance", "evidence", "scm")) {
+            registry.worker(kind).registerActivitiesImplementations(activities.forWorker(kind));
+        }
+        return registry;
     }
 }

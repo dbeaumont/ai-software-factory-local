@@ -58,6 +58,29 @@ class TemporalWorkerRegistryTest {
     }
 
     @Test
+    void exposesOnlyTheActivitiesAssignedToEachSpecializedWorker() {
+        DurableExecutionActivities durable = mock(DurableExecutionActivities.class);
+        PatchIntegrationActivities patch = mock(PatchIntegrationActivities.class);
+        TemporalActivityAdapters adapters = new TemporalActivityAdapters(durable, patch);
+
+        assertThat(adapters.forWorker("context")).hasSize(1)
+                .allMatch(TemporalActivityAdapters.ContextActivities.class::isInstance);
+        assertThat(adapters.forWorker("llm")).hasSize(1)
+                .allMatch(TemporalActivityAdapters.LlmActivities.class::isInstance);
+        assertThat(adapters.forWorker("sandbox")).hasSize(2)
+                .anyMatch(TemporalActivityAdapters.SandboxActivities.class::isInstance)
+                .anyMatch(PatchIntegrationActivities.class::isInstance);
+        assertThat(adapters.forWorker("assurance")).hasSize(1)
+                .allMatch(TemporalActivityAdapters.AssuranceActivities.class::isInstance);
+        assertThat(adapters.forWorker("evidence")).hasSize(1)
+                .allMatch(TemporalActivityAdapters.EvidenceActivities.class::isInstance);
+        assertThat(adapters.forWorker("scm")).hasSize(1)
+                .allMatch(TemporalActivityAdapters.ScmActivities.class::isInstance);
+        assertThatThrownBy(() -> adapters.forWorker("workflow"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void rejectsMissingOrAliasedTaskQueues() {
         Map<String, String> missing = queues();
         missing.remove("scm");

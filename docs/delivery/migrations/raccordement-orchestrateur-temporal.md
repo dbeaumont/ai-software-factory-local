@@ -181,8 +181,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-033 — Enregistrer les child workflows.** Enregistrer délégations, intégration de patch et revue
   indépendante sur les task queues décidées par l'architecture. _(Les quatre workflows de coordination sont
   enregistrés ensemble sur la file `workflow` ; les effets seront routés vers les six files spécialisées.)_
-- [ ] **TEMP-034 — Enregistrer les activités.** Câbler les adaptateurs contexte, LLM, sandbox, assurance,
-  evidence et SCM sur leurs files respectives.
+- [x] **TEMP-034 — Enregistrer les activités.** Câbler les adaptateurs contexte, LLM, sandbox, assurance,
+  evidence et SCM sur leurs files respectives. _(Chaque worker spécialisé reçoit une façade à capacité minimale ;
+  le worker sandbox enregistre également l'intégration de patch, sans exposer ces effets au worker workflow.)_
 - [ ] **TEMP-035 — Configurer la capacité.** Fixer concurrence des pollers et activités, débit, cache workflows,
   graceful shutdown et durée maximale de drainage.
 - [ ] **TEMP-036 — Ajouter les interceptors.** Propager `traceparent`/baggage validés, identité d'exécution et

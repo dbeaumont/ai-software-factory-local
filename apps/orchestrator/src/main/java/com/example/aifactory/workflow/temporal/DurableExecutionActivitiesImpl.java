@@ -4,11 +4,14 @@ import com.example.aifactory.service.AgentRuntime;
 import com.example.aifactory.service.McpToolInvoker;
 import com.example.aifactory.service.ExecutionTracer;
 import com.example.aifactory.workflow.EvidenceRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /** Activity adapter registered by a worker once the corresponding execution mode is enabled. */
+@Component
 public final class DurableExecutionActivitiesImpl implements DurableExecutionActivities {
     private final AgentRuntime agents;
     private final McpToolInvoker mcp;
@@ -19,6 +22,7 @@ public final class DurableExecutionActivitiesImpl implements DurableExecutionAct
         this(agents, mcp, evidence, ExecutionTracer.noop());
     }
 
+    @Autowired
     public DurableExecutionActivitiesImpl(AgentRuntime agents, McpToolInvoker mcp, EvidenceRepository evidence,
                                           ExecutionTracer tracer) {
         this.agents = agents;
