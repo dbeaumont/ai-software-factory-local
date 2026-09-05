@@ -71,8 +71,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] **TEMP-002 — Définir l'autorité des données.** Temporal porte la chronologie et l'état de coordination ;
   PostgreSQL porte une projection reconstruisible ; Evidence MCP porte les artefacts et leurs digests ; Gitea
   reste l'autorité des effets SCM. _(Matrice normative ajoutée à `ADR-TEMP-001`.)_
-- [ ] **TEMP-003 — Interdire l'accès applicatif à la base Temporal.** Les lectures passent par le SDK/API Temporal
-  et jamais par les tables PostgreSQL internes de Temporal.
+- [x] **TEMP-003 — Interdire l'accès applicatif à la base Temporal.** Les lectures passent par le SDK/API Temporal
+  et jamais par les tables PostgreSQL internes de Temporal. _(Frontière documentée et protégée par
+  `TemporalDatabaseBoundaryTest`.)_
 - [ ] **TEMP-004 — Choisir un workflow racine de production versionné.** Introduire
   `SoftwareFactoryExecutionWorkflowV1` ou faire évoluer le contrat existant avec une stratégie explicite
   `Workflow.getVersion`; documenter le choix dans une ADR.

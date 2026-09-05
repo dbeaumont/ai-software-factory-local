@@ -50,6 +50,14 @@ utilisées seules pour décider d'une reprise ou d'un effet.
 La base PostgreSQL interne de Temporal ne fait pas partie du modèle de données applicatif. Evidence MCP ne
 reconstruit pas une chronologie et PostgreSQL applicatif ne commande jamais directement un effet.
 
+### Frontière d'accès Temporal
+
+- le client et les workers utilisent exclusivement le SDK/API Temporal ;
+- les projections lisent les historiques avec `WorkflowClient` ;
+- aucun compte, URL JDBC, table ou migration du stockage interne Temporal n'est fourni à l'application ;
+- les sauvegardes Temporal sont opérées comme une unité d'infrastructure, hors du code applicatif ;
+- un test d'architecture bloque les références aux hôtes et schémas internes connus.
+
 ## Vérification
 
 - aucun contrat public ne permet de choisir le moteur ;
