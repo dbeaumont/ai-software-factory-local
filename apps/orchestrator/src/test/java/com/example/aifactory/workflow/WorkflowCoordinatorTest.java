@@ -15,7 +15,7 @@ class WorkflowCoordinatorTest {
     void remainsAFrameworkIndependentApplicationPort() {
         assertThat(WorkflowCoordinator.class.isInterface()).isTrue();
         assertThat(Arrays.stream(WorkflowCoordinator.class.getDeclaredMethods()).map(method -> method.getName()))
-                .containsExactlyInAnyOrder("start", "resumeAfterApproval", "answerHumanDecision");
+                .containsExactlyInAnyOrder("start", "resumeAfterApproval", "answerHumanDecision", "cancel");
         assertThat(WorkflowCoordinator.class.getDeclaredMethods())
                 .allMatch(method -> method.getParameterTypes()[0] == TaskState.class);
         assertThat(WorkflowCoordinator.class.getDeclaredMethods())

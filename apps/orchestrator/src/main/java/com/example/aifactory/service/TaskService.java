@@ -132,7 +132,7 @@ public class TaskService {
     public TaskView cancel(String id, TaskCancellationRequest request) {
         if (request == null) throw new IllegalArgumentException("Cancellation request is required");
         TaskState state = requireTask(id);
-        state.cancel(request.reason(), request.actor());
+        coordinator.cancel(state, request);
         return state.view();
     }
 

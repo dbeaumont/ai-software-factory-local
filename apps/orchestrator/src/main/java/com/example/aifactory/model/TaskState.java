@@ -287,7 +287,15 @@ public class TaskState {
     }
 
     public synchronized void cancel(String reason, String actor) {
-        if (status == TaskStatus.CANCELLED) return;
+        if (!requireCancellation(reason, actor)) return;
+        humanActions.replaceAll((id, action) -> "PENDING".equals(action.status())
+                ? new TaskView.HumanActionView(action.requestId(), action.contradictionId(), action.domain(),
+                action.question(), action.objectDigest(), "CANCELLED", action.alternatives()) : action);
+        transition(TaskStatus.CANCELLED, "Cancelled by " + actor + ": " + reason);
+    }
+
+    public synchronized boolean requireCancellation(String reason, String actor) {
+        if (status == TaskStatus.CANCELLED) return false;
         if (List.of(TaskStatus.APPROVED, TaskStatus.PR_CREATED, TaskStatus.FAILED).contains(status)) {
             throw new IllegalStateException("Task can no longer be cancelled");
         }
@@ -295,10 +303,7 @@ public class TaskState {
                 || actor == null || actor.isBlank() || actor.length() > 256) {
             throw new IllegalArgumentException("Task cancellation request is invalid");
         }
-        humanActions.replaceAll((id, action) -> "PENDING".equals(action.status())
-                ? new TaskView.HumanActionView(action.requestId(), action.contradictionId(), action.domain(),
-                action.question(), action.objectDigest(), "CANCELLED", action.alternatives()) : action);
-        transition(TaskStatus.CANCELLED, "Cancelled by " + actor + ": " + reason);
+        return true;
     }
 
     public synchronized void requestDelegationRetry(String delegationId, String reason, String actor) {

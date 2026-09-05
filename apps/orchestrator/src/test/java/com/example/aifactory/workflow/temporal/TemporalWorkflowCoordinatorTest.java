@@ -4,6 +4,8 @@ import com.example.aifactory.config.ScmDeliveryClientProperties;
 import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.model.LlmMode;
 import com.example.aifactory.model.HumanDecisionResponse;
+import com.example.aifactory.model.TaskCancellationRequest;
+import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.model.PendingEffect;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
@@ -111,6 +113,31 @@ class TemporalWorkflowCoordinatorTest {
                 new HumanDecisionResponse("REST", digest, "reviewer", "SECURITY")))
                 .isInstanceOf(SecurityException.class);
         org.mockito.Mockito.verify(commands, org.mockito.Mockito.never()).decide(any(), any());
+    }
+
+    @Test
+    void signalsCancellationWithoutAssumingThatProjectionAlreadyAppliedIt() {
+        TaskState task = task();
+        ArgumentCaptor<SoftwareFactoryWorkflow.CancellationSignal> signal =
+                ArgumentCaptor.forClass(SoftwareFactoryWorkflow.CancellationSignal.class);
+
+        coordinator.cancel(task, new TaskCancellationRequest("request withdrawn", "product-owner"));
+
+        verify(commands).cancel(org.mockito.ArgumentMatchers.eq(
+                TemporalIds.workflow(task.id, PipelineStepContracts.INITIAL_ATTEMPT_ID)), signal.capture());
+        assertThat(signal.getValue().reason()).isEqualTo("request withdrawn");
+        assertThat(signal.getValue().actor()).isEqualTo("product-owner");
+        assertThat(task.status).isEqualTo(TaskStatus.QUEUED);
+    }
+
+    @Test
+    void doesNotSignalAgainOnceCancellationIsProjected() {
+        TaskState task = task();
+        task.cancel("request withdrawn", "product-owner");
+
+        coordinator.cancel(task, new TaskCancellationRequest("request withdrawn", "product-owner"));
+
+        org.mockito.Mockito.verify(commands, org.mockito.Mockito.never()).cancel(any(), any());
     }
 
     private static TaskState task() {

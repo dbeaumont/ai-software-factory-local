@@ -275,8 +275,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   émission du signal. _(Le coordinateur valide la demande projetée, le rôle, le digest et l'option autorisée sans
   modifier l'état ; le workflow reçoit un signal horodaté puis une activité Evidence applique la décision à la
   projection, liée au commit source.)_
-- [ ] **TEMP-064 — Signaler l'annulation.** Rendre l'opération idempotente et retourner l'état projeté sans
-  supposer que le workflow est déjà terminé.
+- [x] **TEMP-064 — Signaler l'annulation.** Rendre l'opération idempotente et retourner l'état projeté sans
+  supposer que le workflow est déjà terminé. _(L'API valide puis signale sans mutation optimiste ; le workflow
+  arrête le parcours entre activités et fait appliquer `CANCELLED` par Evidence. Une projection déjà annulée rend
+  la même commande sans second signal.)_
 - [ ] **TEMP-065 — Implémenter retry opérateur.** Créer une nouvelle tentative Temporal liée à l'ancienne et
   supprimer le fallback vers le pipeline local ; ne jamais répéter un effet au milieu du même historique.
 - [ ] **TEMP-066 — Gérer les conflits de commande.** Définir les réponses pour workflow absent, terminé,

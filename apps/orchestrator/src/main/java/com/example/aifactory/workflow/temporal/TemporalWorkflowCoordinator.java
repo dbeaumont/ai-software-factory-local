@@ -4,6 +4,7 @@ import com.example.aifactory.config.ScmDeliveryClientProperties;
 import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.HumanDecisionResponse;
+import com.example.aifactory.model.TaskCancellationRequest;
 import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.service.ScmDeliveryGateway;
 import com.example.aifactory.workflow.WorkflowCoordinator;
@@ -77,6 +78,16 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
         commands.decide(TemporalIds.workflow(task.id, attemptId), new SoftwareFactoryWorkflow.HumanDecisionSignal(
                 task.id, attemptId, requestId, response.decision(), response.objectDigest(), response.actor(),
                 response.actorRole(), Instant.now().toString()));
+    }
+
+    @Override
+    public void cancel(TaskState task, TaskCancellationRequest request) {
+        requireTask(task);
+        if (request == null) throw new IllegalArgumentException("Cancellation request is required");
+        if (!task.requireCancellation(request.reason(), request.actor())) return;
+        String attemptId = PipelineStepContracts.INITIAL_ATTEMPT_ID;
+        commands.cancel(TemporalIds.workflow(task.id, attemptId), new SoftwareFactoryWorkflow.CancellationSignal(
+                task.id, attemptId, request.reason(), request.actor(), Instant.now().toString()));
     }
 
     private static void requireTask(TaskState task) {

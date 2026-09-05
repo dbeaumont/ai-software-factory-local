@@ -2,6 +2,7 @@ package com.example.aifactory.workflow;
 
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.HumanDecisionResponse;
+import com.example.aifactory.model.TaskCancellationRequest;
 
 /**
  * Application port for starting and resuming a software-factory workflow.
@@ -16,5 +17,9 @@ public interface WorkflowCoordinator {
 
     default void answerHumanDecision(TaskState task, String requestId, HumanDecisionResponse response) {
         throw new UnsupportedOperationException("Human decisions require a durable workflow coordinator");
+    }
+
+    default void cancel(TaskState task, TaskCancellationRequest request) {
+        throw new UnsupportedOperationException("Cancellation requires a durable workflow coordinator");
     }
 }

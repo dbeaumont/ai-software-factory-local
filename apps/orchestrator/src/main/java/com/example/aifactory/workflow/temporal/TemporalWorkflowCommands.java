@@ -29,6 +29,10 @@ final class TemporalWorkflowCommands {
         client.newWorkflowStub(SoftwareFactoryExecutionWorkflowV1.class, workflowId).decide(signal);
     }
 
+    void cancel(String workflowId, SoftwareFactoryWorkflow.CancellationSignal signal) {
+        client.newWorkflowStub(SoftwareFactoryExecutionWorkflowV1.class, workflowId).cancel(signal);
+    }
+
     record ExecutionIdentity(String workflowId, String runId) {
         ExecutionIdentity {
             if (workflowId == null || workflowId.isBlank() || runId == null || runId.isBlank()) {
