@@ -88,6 +88,41 @@ class TemporalWorkerRegistryTest {
     }
 
     @Test
+    void keepsOldAndNewCompatibleBuildIdsRegisteredOnEveryQueueAtTheSameTime() {
+        WorkerFactory oldFactory = mock(WorkerFactory.class);
+        WorkerFactory newFactory = mock(WorkerFactory.class);
+        when(oldFactory.newWorker(anyString(), any(WorkerOptions.class)))
+                .thenAnswer(ignored -> mock(Worker.class));
+        when(newFactory.newWorker(anyString(), any(WorkerOptions.class)))
+                .thenAnswer(ignored -> mock(Worker.class));
+
+        TemporalWorkerRegistry oldWorkers = new TemporalWorkerRegistry(
+                oldFactory, queues(), "ai-factory-orchestrator", "build-old");
+        TemporalWorkerRegistry newWorkers = new TemporalWorkerRegistry(
+                newFactory, queues(), "ai-factory-orchestrator", "build-new");
+
+        assertThat(oldWorkers.taskQueues()).isEqualTo(newWorkers.taskQueues());
+        ArgumentCaptor<WorkerOptions> oldOptions = ArgumentCaptor.forClass(WorkerOptions.class);
+        ArgumentCaptor<WorkerOptions> newOptions = ArgumentCaptor.forClass(WorkerOptions.class);
+        verify(oldFactory, times(7)).newWorker(anyString(), oldOptions.capture());
+        verify(newFactory, times(7)).newWorker(anyString(), newOptions.capture());
+        assertThat(oldOptions.getAllValues()).allSatisfy(options -> {
+            assertThat(options.getDeploymentOptions().getVersion().getDeploymentName())
+                    .isEqualTo("ai-factory-orchestrator");
+            assertThat(options.getDeploymentOptions().getVersion().getBuildId()).isEqualTo("build-old");
+            assertThat(options.getDeploymentOptions().getDefaultVersioningBehavior())
+                    .isEqualTo(io.temporal.common.VersioningBehavior.PINNED);
+        });
+        assertThat(newOptions.getAllValues()).allSatisfy(options -> {
+            assertThat(options.getDeploymentOptions().getVersion().getDeploymentName())
+                    .isEqualTo("ai-factory-orchestrator");
+            assertThat(options.getDeploymentOptions().getVersion().getBuildId()).isEqualTo("build-new");
+            assertThat(options.getDeploymentOptions().getDefaultVersioningBehavior())
+                    .isEqualTo(io.temporal.common.VersioningBehavior.PINNED);
+        });
+    }
+
+    @Test
     void rejectsMissingOrAliasedTaskQueues() {
         Map<String, String> missing = queues();
         missing.remove("scm");

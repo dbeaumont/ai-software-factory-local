@@ -456,7 +456,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Exécuter automatiquement le replay contre chaque nouvelle version du worker. _(Un test paramétré découvre le
   corpus V1 dans les ressources de test et rejoue ses cinq historiques avec `WorkflowReplayer` contre
   l'implémentation courante à chaque exécution Maven.)_
-- [ ] Tester un ancien worker et un nouveau worker simultanément avec Build IDs compatibles.
+- [x] Tester un ancien worker et un nouveau worker simultanément avec Build IDs compatibles. _(Deux registres
+  coexistants exposent les sept mêmes task queues sous le même Worker Deployment, avec Build IDs immuables distincts
+  et comportement `PINNED`, ce qui permet le drainage de l'ancien pendant l'activation du nouveau.)_
 - [ ] Refuser la livraison d'une image worker lorsque le replay échoue.
 
 ### 12.4 Tests d'intégration Docker Compose sur macOS
