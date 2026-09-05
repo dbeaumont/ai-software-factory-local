@@ -6,7 +6,12 @@ import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.observation.ObservationView;
+import io.micrometer.tracing.Link;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.TraceContext;
+import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -17,8 +22,52 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class AsyncTaskTracerTest {
+    @Test
+    void linksAnApprovalResumeToThePreviousExecutionContext() throws Exception {
+        ObservationRegistry registry = ObservationRegistry.create();
+        Tracer tracer = mock(Tracer.class);
+        Span active = mock(Span.class);
+        Span continuation = mock(Span.class);
+        Span.Builder builder = mock(Span.Builder.class);
+        TraceContext previousContext = mock(TraceContext.class);
+        Tracer.SpanInScope continuationScope = mock(Tracer.SpanInScope.class);
+        when(tracer.currentSpan()).thenReturn(active);
+        when(active.context()).thenReturn(previousContext);
+        when(previousContext.traceId()).thenReturn("0123456789abcdef0123456789abcdef");
+        when(tracer.spanBuilder()).thenReturn(builder);
+        when(builder.name(any())).thenReturn(builder);
+        when(builder.tag(any(), any(String.class))).thenReturn(builder);
+        when(builder.addLink(any())).thenReturn(builder);
+        when(builder.setParent(any())).thenReturn(builder);
+        when(builder.start()).thenReturn(continuation);
+        when(tracer.withSpan(continuation)).thenReturn(continuationScope);
+        AsyncTaskTracer taskTracer = new AsyncTaskTracer(registry, tracer);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch initialCompleted = new CountDownLatch(1);
+        CountDownLatch resumeCompleted = new CountDownLatch(1);
+
+        try {
+            taskTracer.submit(executor, task("task-linked"), "execute", initialCompleted::countDown);
+            assertThat(initialCompleted.await(5, TimeUnit.SECONDS)).isTrue();
+            taskTracer.submit(executor, task("task-linked"), "resume-after-approval", resumeCompleted::countDown);
+            assertThat(resumeCompleted.await(5, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            executor.shutdownNow();
+        }
+
+        ArgumentCaptor<Link> link = ArgumentCaptor.forClass(Link.class);
+        verify(builder).addLink(link.capture());
+        assertThat(link.getValue().getTraceContext()).isSameAs(previousContext);
+        assertThat(link.getValue().getTags()).containsEntry("ai.link.type", "continuation");
+        verify(continuation).end();
+    }
+
     @Test
     void preservesTheAdmissionParentAcrossTheExecutorBoundary() throws Exception {
         ObservationRegistry registry = ObservationRegistry.create();

@@ -50,6 +50,12 @@ barrière commune et vérifie que les deux spans sont démarrés avant que l'un 
 même parent HTTP tout en restant deux enfants distincts : le fan-out parallèle est donc représenté par des spans
 frères réellement superposés, et non par une chaîne séquentielle artificielle.
 
+La reprise après approbation conserve le nouvel appel HTTP comme parent effectif, mais ajoute un span
+`ai.factory.task.continuation` lié au contexte de l'exécution initiale avec `ai.link.type=continuation`. Cette
+relation est un `Span Link` parce que l'attente humaine sépare deux exécutions qui ne forment pas une parenté
+temporelle stricte. Le contexte mémorisé est supprimé dès la reprise afin de borner la mémoire. Le test
+`AsyncTaskTracerTest.linksAnApprovalResumeToThePreviousExecutionContext` vérifie le lien et sa fermeture.
+
 La suite `SandboxJobServiceTest` vérifie en outre les cinq issues de span contractuelles : `succeeded` sans erreur,
 `rejected` métier sans erreur technique, `failed` avec exception, `timed_out` avec exception de délai et `cancelled`
 sans transformer la demande opérateur en panne. Chaque observation couvre la soumission, l'attente en file et le
