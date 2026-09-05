@@ -366,7 +366,7 @@ spécification visuelle et fonctionnelle pendant le portage.
 - [x] Regrouper instrumentation, Collector, SigNoz, dashboards, alertes et suppression Prometheus/Grafana dans une branche de bascule unique.
 - [x] Valider cette branche sur une installation Compose isolée qui ne démarre jamais Prometheus/Grafana.
 - [x] Vérifier hors ligne la présence de toutes les métriques contractuelles avant le changement de pile principale.
-- [ ] Définir une courte fenêtre de bascule et geler les modifications d'observabilité concurrentes.
+- [x] Définir une courte fenêtre de bascule et geler les modifications d'observabilité concurrentes.
 - [x] Exporter les artefacts Grafana et arrêter proprement la pile historique.
 - [x] Ne pas supprimer immédiatement le volume Grafana : le détacher et noter sa date d'expiration.
 - [x] Déployer directement Collector/SigNoz et les applications configurées en OTLP.

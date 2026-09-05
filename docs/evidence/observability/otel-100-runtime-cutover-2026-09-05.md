@@ -4,6 +4,19 @@
 - Environnement : Docker Desktop macOS Apple Silicon
 - Décision : Collector OpenTelemetry et SigNoz remplacent immédiatement Prometheus et Grafana.
 
+## Fenêtre de bascule et gel
+
+La fenêtre OTEL-100 est bornée à **30 minutes** à partir de l'arrêt de la pile historique. Les modifications
+concurrentes d'instrumentation, de dashboards, d'alertes, de rétention et de routage sont gelées à `T-30 min` et
+jusqu'à la décision enregistrée à `T+30 min`. Seuls les commits OTEL-100, la configuration locale préparée et le
+rollback atomique documenté sont autorisés pendant cette période.
+
+Jalons obligatoires : sauvegarde et contrôles préalables à `T-15`, arrêt legacy à `T0`, nouvelle pile saine avant
+`T+10`, ingestion des trois signaux avant `T+15`, dashboards et alertes validés avant `T+20`, décision au plus tard
+à `T+30`. Une pile non saine à `T+10`, un signal absent à `T+15`, une règle critique manquante à `T+20` ou toute
+coexistence legacy/OTel déclenche immédiatement le rollback complet. Le gel n'est levé qu'après le smoke test final
+et l'enregistrement du commit, des résultats et de la décision.
+
 ## Contrôles exécutés
 
 | Contrôle | Résultat |
