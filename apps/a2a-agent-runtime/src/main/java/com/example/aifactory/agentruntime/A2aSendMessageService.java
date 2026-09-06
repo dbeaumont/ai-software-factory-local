@@ -164,9 +164,7 @@ public final class A2aSendMessageService {
     }
 
     public TaskView getTask(JsonNode params, Caller caller) {
-        if (caller == null || caller.subject() == null || caller.subject().isBlank()) {
-            throw new TaskLookupRejected("Task not found");
-        }
+        requireLookupAuthorization(caller, "a2a.read");
         String taskId = requiredText(params, "id");
         int historyLength = params.path("historyLength").asInt(0);
         if (historyLength < 0 || historyLength > MAX_HISTORY_LENGTH) {
@@ -174,11 +172,6 @@ public final class A2aSendMessageService {
         }
         A2aTaskStore.StoredTask task = store.find(taskId).orElseThrow(() -> new TaskLookupRejected("Task not found"));
         Submission submission = submission(task);
-        try {
-            requireScopes(caller.scopes(), Set.of("a2a.read", "a2a.role." + submission.role()));
-        } catch (SubmissionRejected forbidden) {
-            throw new TaskLookupRejected("Task not found");
-        }
         if (!submission.caller().equals(caller.subject()) || !submission.tenantId().equals(caller.tenantId())) {
             throw new TaskLookupRejected("Task not found");
         }
@@ -189,15 +182,10 @@ public final class A2aSendMessageService {
     }
 
     public TaskView cancelTask(JsonNode params, Caller caller) {
+        requireLookupAuthorization(caller, "a2a.cancel");
         String taskId = requiredText(params, "id");
         A2aTaskStore.StoredTask task = store.find(taskId).orElseThrow(() -> new TaskLookupRejected("Task not found"));
-        if (caller == null) throw new TaskLookupRejected("Task not found");
         Submission submission = submission(task);
-        try {
-            requireScopes(caller.scopes(), Set.of("a2a.cancel", "a2a.role." + submission.role()));
-        } catch (SubmissionRejected forbidden) {
-            throw new TaskLookupRejected("Task not found");
-        }
         if (!submission.caller().equals(caller.subject()) || !submission.tenantId().equals(caller.tenantId())) {
             throw new TaskLookupRejected("Task not found");
         }
@@ -229,10 +217,7 @@ public final class A2aSendMessageService {
     }
 
     public TaskPage listTasks(JsonNode params, Caller caller) {
-        if (caller == null || caller.subject() == null || caller.subject().isBlank()) {
-            throw new TaskLookupRejected("Tasks not found");
-        }
-        requireScopes(caller.scopes(), Set.of("a2a.read", "a2a.role." + activeRole));
+        requireLookupAuthorization(caller, "a2a.read");
         int pageSize = params.path("pageSize").asInt(50);
         if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
             throw new SubmissionRejected("pageSize must be between 1 and " + MAX_PAGE_SIZE);
@@ -305,6 +290,18 @@ public final class A2aSendMessageService {
     private static void requireScopes(Set<String> actual, Set<String> required) {
         if (actual == null || !actual.containsAll(required)) {
             throw new SubmissionRejected("Caller lacks required role or skill scope");
+        }
+    }
+
+    private void requireLookupAuthorization(Caller caller, String operationScope) {
+        if (caller == null || caller.subject() == null || caller.subject().isBlank()
+                || caller.tenantId() == null || caller.tenantId().isBlank()) {
+            throw new TaskLookupRejected("Task not found");
+        }
+        try {
+            requireScopes(caller.scopes(), Set.of(operationScope, "a2a.role." + activeRole));
+        } catch (SubmissionRejected forbidden) {
+            throw new TaskLookupRejected("Task not found");
         }
     }
 

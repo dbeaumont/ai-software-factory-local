@@ -134,9 +134,16 @@ final class A2aJsonRpcController {
         Set<String> scopes = authentication.getAuthorities().stream().map(authority -> authority.getAuthority())
                 .map(value -> value.startsWith("SCOPE_") ? value.substring("SCOPE_".length()) : value)
                 .collect(Collectors.toUnmodifiableSet());
-        String tenantId = authentication instanceof JwtAuthenticationToken jwt
-                ? jwt.getToken().getClaimAsString("tenant_id") : authentication.getName();
-        return new A2aSendMessageService.Caller(authentication.getName(), tenantId, scopes);
+        if (authentication instanceof JwtAuthenticationToken jwt) {
+            String clientId = jwt.getToken().getClaimAsString("client_id");
+            String tenantId = jwt.getToken().getClaimAsString("tenant_id");
+            if (clientId == null || clientId.isBlank() || tenantId == null || tenantId.isBlank()) {
+                throw new A2aSendMessageService.SubmissionRejected(
+                        "Authenticated A2A caller lacks client or tenant binding");
+            }
+            return new A2aSendMessageService.Caller(clientId, tenantId, scopes);
+        }
+        return new A2aSendMessageService.Caller(authentication.getName(), authentication.getName(), scopes);
     }
 
     private static Map<String, Object> response(Object id, Map<String, Object> task) {

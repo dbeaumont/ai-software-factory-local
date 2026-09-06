@@ -495,8 +495,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `A2aClientCredentialsTokenProvider` lit le secret monté uniquement côté worker et borne le TTL,
     `A2aScopedOAuth2Client` demande les scopes minimaux puis efface le bearer token, et
     `A2aSecurityDeclarationTest` vérifie audience, durée et déclaration de scopes rôle/skill.
-- [ ] **A2A-103 — Appliquer l'autorisation avant lookup.** Vérifier tenant, client, rôle et skill avant toute
+- [x] **A2A-103 — Appliquer l'autorisation avant lookup.** Vérifier tenant, client, rôle et skill avant toute
   requête susceptible de révéler l'existence d'une tâche.
+  - Preuve : `A2aSendMessageService.requireLookupAuthorization` précède chaque lecture de tâche et
+    `A2aAuthorizationOrderingTest` vérifie qu'un client au mauvais rôle provoque zéro interaction avec le store ;
+    l'identifiant client et le tenant sont désormais obligatoirement extraits des claims JWT.
 - [ ] **A2A-104 — Isoler les permissions MCP.** Émettre des identités et tokens MCP par rôle, appliquer
   `mayDelegateTo` et `tools` côté serveur, et tester les refus.
 - [ ] **A2A-105 — Protéger les URLs.** Allow-lister Agent Cards, endpoints, callbacks et références Evidence ;
