@@ -1,0 +1,369 @@
+{
+  "catalog_version": "1",
+  "protocol_version": "1.0",
+  "inputs": [
+    {
+      "skill_id": "architecture-agent.specialist-task-v1",
+      "role": "architecture-agent",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "architecture-agent.specialist-result-v1",
+      "role": "architecture-agent",
+      "input_contract": "specialist-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "code-agent.specialist-task-v1",
+      "role": "code-agent",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "code-agent.architecture-assessment-v1",
+      "role": "code-agent",
+      "input_contract": "architecture-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/architecture-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "code-agent.patch-proposal-v1",
+      "role": "code-agent",
+      "input_contract": "patch-proposal-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/patch-proposal-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "dependencies-contracts.specialist-task-v1",
+      "role": "dependencies-contracts",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "developer.code-task-v1",
+      "role": "developer",
+      "input_contract": "code-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/code-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "impact-analysis.specialist-task-v1",
+      "role": "impact-analysis",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "independent-reviewer.architecture-assessment-v1",
+      "role": "independent-reviewer",
+      "input_contract": "architecture-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/architecture-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "independent-reviewer.integration-result-v1",
+      "role": "independent-reviewer",
+      "input_contract": "integration-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/integration-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "independent-reviewer.test-assessment-v1",
+      "role": "independent-reviewer",
+      "input_contract": "test-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/test-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "independent-reviewer.security-assessment-v1",
+      "role": "independent-reviewer",
+      "input_contract": "security-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/security-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "independent-reviewer.contradiction-v1",
+      "role": "independent-reviewer",
+      "input_contract": "contradiction-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/contradiction-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "patch-repair.patch-repair-task-v1",
+      "role": "patch-repair",
+      "input_contract": "patch-repair-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/patch-repair-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "security-agent.specialist-task-v1",
+      "role": "security-agent",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "security-agent.specialist-result-v1",
+      "role": "security-agent",
+      "input_contract": "specialist-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "security-agent.integration-result-v1",
+      "role": "security-agent",
+      "input_contract": "integration-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/integration-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "security-findings.specialist-task-v1",
+      "role": "security-findings",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "security-findings.vulnerability-result-v1",
+      "role": "security-findings",
+      "input_contract": "vulnerability-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/mcp/schemas/vulnerability-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "supervisor.specialist-result-v1",
+      "role": "supervisor",
+      "input_contract": "specialist-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "supervisor.architecture-assessment-v1",
+      "role": "supervisor",
+      "input_contract": "architecture-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/architecture-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "supervisor.integration-result-v1",
+      "role": "supervisor",
+      "input_contract": "integration-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/integration-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "supervisor.test-assessment-v1",
+      "role": "supervisor",
+      "input_contract": "test-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/test-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "supervisor.security-assessment-v1",
+      "role": "supervisor",
+      "input_contract": "security-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/security-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "test-agent.specialist-task-v1",
+      "role": "test-agent",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "test-agent.test-strategy-v1",
+      "role": "test-agent",
+      "input_contract": "test-strategy-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/test-strategy-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "test-agent.integration-result-v1",
+      "role": "test-agent",
+      "input_contract": "integration-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/integration-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "test-design.specialist-task-v1",
+      "role": "test-design",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "test-design.architecture-assessment-v1",
+      "role": "test-design",
+      "input_contract": "architecture-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/architecture-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "test-evidence.test-strategy-v1",
+      "role": "test-evidence",
+      "input_contract": "test-strategy-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/test-strategy-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "test-evidence.integration-result-v1",
+      "role": "test-evidence",
+      "input_contract": "integration-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/integration-result-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "threat-model.specialist-task-v1",
+      "role": "threat-model",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
+      "skill_id": "threat-model.architecture-assessment-v1",
+      "role": "threat-model",
+      "input_contract": "architecture-assessment-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/architecture-assessment-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    }
+  ]
+}

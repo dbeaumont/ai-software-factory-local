@@ -255,8 +255,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-041 — Créer `a2a-artifact-reference-v1`.** Définir URI Evidence, SHA-256, taille, media type,
   classification, contrat métier et version. _(Schéma fermé avec URI `evidence://`, SHA-256, limite 10 MiB,
   media types, classification et versions explicites ; les références de l'enveloppe utilisent la même forme.)_
-- [ ] **A2A-042 — Mapper chaque contrat d'entrée.** Associer les contrats actuels à un `AgentSkill.id`, une version
-  de schéma et une liste de types de média acceptés.
+- [x] **A2A-042 — Mapper chaque contrat d'entrée.** Associer les contrats actuels à un `AgentSkill.id`, une version
+  de schéma et une liste de types de média acceptés. _(Les 33 couples rôle/contrat d'entrée sont exhaustivement
+  mappés dans `resources/a2a/skill-contract-map-v1.json` ; unicité, schémas existants et media types supportés sont
+  vérifiés automatiquement.)_
 - [ ] **A2A-043 — Mapper chaque contrat de sortie.** Publier exactement un artefact final principal conforme au
   contrat du rôle, plus des références de preuves optionnelles et bornées.
 - [ ] **A2A-044 — Conserver la validation actuelle.** Valider le JSON métier avant l'envoi A2A et après réception,
