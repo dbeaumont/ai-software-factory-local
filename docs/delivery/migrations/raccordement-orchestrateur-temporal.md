@@ -485,7 +485,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   `SIGKILL` au worker, puis contrôle la tentative 2 après `TIMEOUT_TYPE_HEARTBEAT`, le même Run ID et une unique
   soumission sandbox. Validation Docker Desktop : workflow `ai-factory/8aa2e0fb/pipeline-1`, run
   `01a07461-2959-774d-aa0e-48c42e3e9da0`.)_
-- [ ] Redémarrer Temporal puis PostgreSQL en préservant les volumes.
+- [x] Redémarrer Temporal puis PostgreSQL en préservant les volumes. _(La cible
+  `make test-temporal-storage-restarts` empreinte une projection et un historique clos, redémarre d'abord le service
+  Temporal puis `temporal-db`, et compare après chaque reprise le digest des 63 événements. Le nom et la date de
+  création du volume `ai-software-factory_temporal-db-data`, le Run ID et la projection sont restés identiques.)_
 - [ ] Simuler indisponibilité MCP, LiteLLM, Gitea, SonarQube, Artifactory et Collector.
 - [ ] Vérifier le pipeline complet : patch, tests, Sonar, Trivy, revue, approbation et une seule PR.
 - [ ] Vérifier que `docker compose down` puis `up` conserve tâches et historiques.
