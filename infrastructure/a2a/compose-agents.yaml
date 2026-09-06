@@ -1,0 +1,131 @@
+x-a2a-agent-runtime: &a2a-agent-runtime
+  image: ai-factory-a2a-agent-runtime:${AI_FACTORY_A2A_RUNTIME_VERSION:-0.1.0}
+  build:
+    context: ../..
+    dockerfile: apps/a2a-agent-runtime/Dockerfile
+    args:
+      MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL:-}
+      VCS_REF: ${AI_FACTORY_A2A_RUNTIME_REVISION:-local}
+      BUILD_CREATED: ${AI_FACTORY_A2A_RUNTIME_CREATED:-local}
+      SOURCE_REPOSITORY: "${AI_FACTORY_A2A_RUNTIME_SOURCE:-https://github.com/dbeaumont/ai-software-factory-local}"
+    secrets:
+      - artifactory_token
+  restart: unless-stopped
+  read_only: true
+  user: "10001:10001"
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  environment: &a2a-agent-environment
+    OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
+    AI_FACTORY_AGENT_PORT: "8090"
+    AI_FACTORY_AGENT_SHUTDOWN_GRACE: ${AI_FACTORY_AGENT_SHUTDOWN_GRACE:-30s}
+    AI_FACTORY_LLM_BASE_URL: "${AI_FACTORY_LLM_BASE_URL:-http://litellm:4000/v1}"
+    AI_FACTORY_LLM_API_KEY: ${LITELLM_MASTER_KEY:-}
+    AI_FACTORY_LLM_MODEL: ${AI_FACTORY_CLOUD_MODEL:-factory-code-cloud}
+    AI_FACTORY_TEMPORAL_TARGET: "${AI_FACTORY_TEMPORAL_TARGET:-temporal:7233}"
+    AI_FACTORY_TEMPORAL_NAMESPACE: ${AI_FACTORY_TEMPORAL_NAMESPACE:-ai-factory-local}
+    AI_FACTORY_A2A_TEMPORAL_ENABLED: "false"
+    AI_FACTORY_A2A_TASK_STORE_ENABLED: "false"
+    AI_FACTORY_MCP_ENABLED: "false"
+  networks: [workflow-internal]
+
+services:
+  a2a-supervisor:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: supervisor
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-supervisor:8090/a2a
+
+  a2a-architecture-agent:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: architecture-agent
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-architecture-agent:8090/a2a
+
+  a2a-impact-analysis:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: impact-analysis
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-impact-analysis:8090/a2a
+
+  a2a-dependencies-contracts:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: dependencies-contracts
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-dependencies-contracts:8090/a2a
+
+  a2a-code-agent:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: code-agent
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-code-agent:8090/a2a
+
+  a2a-developer:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: developer
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-developer:8090/a2a
+
+  a2a-patch-repair:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: patch-repair
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-patch-repair:8090/a2a
+
+  a2a-test-agent:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: test-agent
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-test-agent:8090/a2a
+
+  a2a-test-design:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: test-design
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-test-design:8090/a2a
+
+  a2a-test-evidence:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: test-evidence
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-test-evidence:8090/a2a
+
+  a2a-security-agent:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: security-agent
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-security-agent:8090/a2a
+
+  a2a-threat-model:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: threat-model
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-threat-model:8090/a2a
+
+  a2a-security-findings:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: security-findings
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-security-findings:8090/a2a
+
+  a2a-independent-reviewer:
+    <<: *a2a-agent-runtime
+    environment:
+      <<: *a2a-agent-environment
+      AI_FACTORY_AGENT_ROLE: independent-reviewer
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-independent-reviewer:8090/a2a

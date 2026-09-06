@@ -4,6 +4,7 @@ name: ai-software-factory
 # Do not add container_name: scripts must address services through Docker Compose.
 include:
   - path: ./observability/signoz/generated/compose.yaml
+  - path: ./a2a/compose-agents.yaml
 
 # All application services share this private Docker network; only explicitly mapped ports are exposed to the host.
 services:

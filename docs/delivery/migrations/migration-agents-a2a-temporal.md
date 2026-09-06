@@ -556,8 +556,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 14. Lot 7 — Docker Compose macOS et déploiement GKE
 
-- [ ] **A2A-120 — Ajouter le runtime générique à Compose.** Construire une seule image et instancier un service
+- [x] **A2A-120 — Ajouter le runtime générique à Compose.** Construire une seule image et instancier un service
   explicitement nommé par rôle, sans `container_name`.
+  - Preuve : `infrastructure/a2a/compose-agents.yaml` instancie les quatorze rôles explicites à partir de l'unique
+    image `ai-factory-a2a-agent-runtime`, avec identité et endpoint propres mais sans `container_name` ;
+    `verify-a2a-compose-runtime.rb` contrôle exhaustivité, unicité d'image, UID et cohérence rôle/service.
 - [ ] **A2A-121 — Isoler le réseau A2A.** Créer un réseau interne dédié reliant orchestrateur et agents ; ne publier
   aucun endpoint A2A sur l'hôte par défaut.
 - [ ] **A2A-122 — Conserver les réseaux MCP minimaux.** Chaque agent rejoint seulement les réseaux des MCP qu'il
