@@ -6,6 +6,7 @@ import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.a2a.A2aMediaTypes;
 import com.example.aifactory.a2a.A2aTaskAssociationStore;
 import com.example.aifactory.a2a.AgentCardResolver;
+import com.example.aifactory.a2a.A2aEvidenceUriPolicy;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -104,7 +105,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     @Override
     public A2aActivities.ValidatedArtifacts validateArtifacts(A2aActivities.ValidationRequest request) {
         if (request == null || request.task() == null || request.agentRole() == null
-                || request.outputContract() == null) {
+                || request.outputContract() == null || request.attemptId() == null) {
             throw new IllegalArgumentException("A2A artifact validation request is incomplete");
         }
         contracts.requirePrimaryOutput(request.agentRole(), request.outputContract());
@@ -121,9 +122,10 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
                 String contract = text(data, "contract");
                 if (!"1".equals(text(data, "schema_version")) || !request.outputContract().equals(contract)
                         || !digest.matches("[0-9a-f]{64}") || part.uri() == null
-                        || !uri.equals(part.uri().toString()) || !uri.startsWith("evidence://")) {
+                        || !uri.equals(part.uri().toString())) {
                     throw new SecurityException("A2A artifact reference is not bound to its business contract");
                 }
+                A2aEvidenceUriPolicy.requireBound(uri, request.task().taskId(), request.attemptId(), digest);
                 references.add(new A2aActivities.EvidenceReference(artifact.artifactId(), uri, digest, contract));
             }
         }

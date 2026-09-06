@@ -1,5 +1,6 @@
 package com.example.aifactory.agentruntime;
 
+import com.example.aifactory.agentcore.SecureUriPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -32,19 +34,26 @@ public final class A2aPushNotificationSender {
     private final ObjectMapper mapper;
     private final NotificationTransport transport;
     private final byte[] secret;
+    private final SecureUriPolicy urlPolicy;
 
     @Autowired
     public A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                                      WebClient.Builder webClient) {
-        this(properties, mapper, httpTransport(webClient), loadSecret(properties));
+        this(properties, mapper, httpTransport(webClient), loadSecret(properties), systemPolicy(properties));
     }
 
     A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                               NotificationTransport transport, byte[] secret) {
+        this(properties, mapper, transport, secret, testPolicy(properties));
+    }
+
+    A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
+                              NotificationTransport transport, byte[] secret, SecureUriPolicy urlPolicy) {
         this.properties = properties;
         this.mapper = mapper;
         this.transport = transport;
         this.secret = secret.clone();
+        this.urlPolicy = urlPolicy;
         validate(properties, this.secret);
     }
 
@@ -71,6 +80,12 @@ public final class A2aPushNotificationSender {
     }
 
     private CompletionStage<Acknowledgement> attempt(String taskId, byte[] body, String signature, int attempt) {
+        try {
+            urlPolicy.requireAllowed(properties.callback());
+        } catch (SecurityException blocked) {
+            return CompletableFuture.failedFuture(new NotificationDeliveryException(
+                    "Push callback network target is forbidden", blocked));
+        }
         return transport.post(properties.callback(), body, signature).handle((status, failure) -> {
             if (failure == null && status >= 200 && status < 300) {
                 LOGGER.info("A2A push acknowledged taskId={} attempt={} status={}", taskId, attempt, status);
@@ -124,12 +139,31 @@ public final class A2aPushNotificationSender {
         }
     }
 
+    private static SecureUriPolicy systemPolicy(A2aPushNotificationProperties properties) {
+        if (!properties.enabled()) return null;
+        try {
+            return SecureUriPolicy.system(Set.of(properties.callback()));
+        } catch (RuntimeException failure) {
+            throw new NotificationDeliveryException("Push callback must be one fixed HTTPS URL", failure);
+        }
+    }
+
+    private static SecureUriPolicy testPolicy(A2aPushNotificationProperties properties) {
+        if (!properties.enabled()) return null;
+        try {
+            return new SecureUriPolicy(Set.of(properties.callback()), host ->
+                    List.of(java.net.InetAddress.getByName("192.0.2.10")));
+        } catch (RuntimeException failure) {
+            throw new NotificationDeliveryException("Push callback must be one fixed HTTPS URL", failure);
+        }
+    }
+
     private static void validate(A2aPushNotificationProperties properties, byte[] secret) {
         Objects.requireNonNull(properties, "properties");
         if (!properties.enabled()) return;
         if (properties.callback() == null || !"https".equalsIgnoreCase(properties.callback().getScheme())
                 || properties.callback().getHost() == null || properties.callback().getUserInfo() != null
-                || properties.callback().getFragment() != null) {
+                || properties.callback().getQuery() != null || properties.callback().getFragment() != null) {
             throw new NotificationDeliveryException("Push callback must be one fixed HTTPS URL");
         }
         if (properties.maxAttempts() < 1 || properties.maxAttempts() > 8

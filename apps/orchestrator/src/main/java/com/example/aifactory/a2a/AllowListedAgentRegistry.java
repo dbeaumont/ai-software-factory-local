@@ -16,9 +16,19 @@ public final class AllowListedAgentRegistry {
     private static final String RESOURCE = "a2a/agent-registry-v1.json";
 
     private final Map<String, Entry> entries;
+    private final SecureUriPolicy urlPolicy;
 
     public AllowListedAgentRegistry(ObjectMapper mapper, AgentCatalog catalog, String profile) {
+        this(mapper, catalog, profile,
+                host -> java.util.Arrays.asList(java.net.InetAddress.getAllByName(host)));
+    }
+
+    AllowListedAgentRegistry(ObjectMapper mapper, AgentCatalog catalog, String profile,
+                             SecureUriPolicy.Resolver resolver) {
         this.entries = load(mapper, catalog, profile);
+        Set<URI> allowed = entries.values().stream().flatMap(entry ->
+                java.util.stream.Stream.of(entry.cardUri(), entry.endpoint())).collect(Collectors.toSet());
+        this.urlPolicy = new SecureUriPolicy(allowed, resolver);
     }
 
     public Entry require(String role) {
@@ -26,6 +36,8 @@ public final class AllowListedAgentRegistry {
         if (entry == null) {
             throw new RegistryViolation("Role is not allow-listed: " + role);
         }
+        urlPolicy.requireAllowed(entry.cardUri());
+        urlPolicy.requireAllowed(entry.endpoint());
         return entry;
     }
 
@@ -80,6 +92,7 @@ public final class AllowListedAgentRegistry {
                 || (origin.getPath() != null && !origin.getPath().isEmpty())) {
             throw new RegistryViolation("Registry entry must be an HTTPS origin");
         }
+        SecureUriPolicy.validateNetworkTargetSyntax(origin);
     }
 
     public record Entry(URI cardUri, URI endpoint) {}

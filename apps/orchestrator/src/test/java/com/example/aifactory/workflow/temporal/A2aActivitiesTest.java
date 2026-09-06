@@ -88,11 +88,12 @@ class A2aActivitiesTest {
         assertThat(activities.getTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
         assertThat(activities.cancelTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
         assertThat(activities.validateArtifacts(new A2aActivities.ValidationRequest(
-                "developer", "patch-proposal-v1", snapshot)).references()).singleElement()
+                "developer", "patch-proposal-v1", "attempt-1", snapshot)).references()).singleElement()
                 .satisfies(reference -> assertThat(reference.uri()).startsWith("evidence://task-1/"));
 
         assertThatThrownBy(() -> activities.validateArtifacts(new A2aActivities.ValidationRequest(
-                "developer", "security-assessment-v1", snapshot))).isInstanceOf(IllegalArgumentException.class);
+                "developer", "security-assessment-v1", "attempt-1", snapshot)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

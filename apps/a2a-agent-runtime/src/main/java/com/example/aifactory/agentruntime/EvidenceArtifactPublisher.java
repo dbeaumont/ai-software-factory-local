@@ -2,6 +2,7 @@ package com.example.aifactory.agentruntime;
 
 import com.example.aifactory.agentcore.AgentContractValidator;
 import com.example.aifactory.agentcore.RoleScopedAgentContext;
+import com.example.aifactory.agentcore.EvidenceUriPolicy;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -68,6 +69,7 @@ public final class EvidenceArtifactPublisher {
                 + "/agent-result/" + command.digest())) {
             throw new SecurityException("Evidence MCP returned an unbound artifact reference");
         }
+        EvidenceUriPolicy.requireBound(uri, command.taskId(), command.attemptId(), returnedDigest);
         String artifactId = command.taskId() + ":result:" + command.digest();
         Map<String, Object> reference = new LinkedHashMap<>();
         reference.put("schema_version", "1");

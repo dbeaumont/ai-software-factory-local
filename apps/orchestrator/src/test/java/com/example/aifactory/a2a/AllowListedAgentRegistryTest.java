@@ -14,8 +14,8 @@ class AllowListedAgentRegistryTest {
     @Test
     void containsExactlyEveryAgentRoleForComposeAndGke() {
         AgentCatalog catalog = new AgentCatalog();
-        AllowListedAgentRegistry compose = new AllowListedAgentRegistry(new ObjectMapper(), catalog, "compose");
-        AllowListedAgentRegistry gke = new AllowListedAgentRegistry(new ObjectMapper(), catalog, "gke");
+        AllowListedAgentRegistry compose = registry(catalog, "compose");
+        AllowListedAgentRegistry gke = registry(catalog, "gke");
 
         assertThat(compose.entries()).hasSize(14);
         assertThat(gke.entries()).hasSize(14);
@@ -28,7 +28,7 @@ class AllowListedAgentRegistryTest {
     @Test
     void rejectsUnknownRolesRedirectsAndUnexpectedOrigins() {
         AllowListedAgentRegistry registry = new AllowListedAgentRegistry(
-                new ObjectMapper(), new AgentCatalog(), "compose");
+                new ObjectMapper(), new AgentCatalog(), "compose", safeResolver());
         URI expected = registry.require("developer").cardUri();
 
         assertThat(registry.validateCardResponse("developer", expected, 0)).isEqualTo(expected);
@@ -41,5 +41,13 @@ class AllowListedAgentRegistryTest {
                 "developer", URI.create("https://attacker.invalid/card.json"), 0))
                 .isInstanceOf(AllowListedAgentRegistry.RegistryViolation.class)
                 .hasMessageContaining("unexpected origin");
+    }
+
+    private static AllowListedAgentRegistry registry(AgentCatalog catalog, String profile) {
+        return new AllowListedAgentRegistry(new ObjectMapper(), catalog, profile, safeResolver());
+    }
+
+    private static SecureUriPolicy.Resolver safeResolver() {
+        return host -> java.util.List.of(java.net.InetAddress.getByName("192.0.2.10"));
     }
 }

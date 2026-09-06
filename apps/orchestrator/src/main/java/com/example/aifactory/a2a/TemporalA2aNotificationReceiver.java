@@ -62,6 +62,13 @@ public final class TemporalA2aNotificationReceiver implements A2aNotificationRec
                 if (digest != null && (!(digest instanceof String value) || !value.matches("[0-9a-f]{64}"))) {
                     throw new SecurityException("A2A notification artifact digest is invalid");
                 }
+                Object uri = part.data().get("uri");
+                if (!(digest instanceof String digestValue) || !(uri instanceof String uriValue)
+                        || part.uri() == null || !uriValue.equals(part.uri().toString())) {
+                    throw new SecurityException("A2A notification artifact reference is incomplete");
+                }
+                A2aEvidenceUriPolicy.requireBound(uriValue, association.a2aTaskId(),
+                        association.attemptId(), digestValue);
             }
         }
     }

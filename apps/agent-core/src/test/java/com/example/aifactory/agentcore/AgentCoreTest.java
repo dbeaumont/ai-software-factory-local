@@ -5,6 +5,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -102,6 +104,32 @@ class AgentCoreTest {
                 }
             });
         }
+    }
+
+    @Test
+    void pinsAllowListedDnsAndRejectsLocalMetadataAndUnboundEvidenceUris() throws Exception {
+        URI allowed = URI.create("https://agent.internal/a2a");
+        java.util.concurrent.atomic.AtomicReference<String> address =
+                new java.util.concurrent.atomic.AtomicReference<>("192.0.2.10");
+        SecureUriPolicy policy = new SecureUriPolicy(Set.of(allowed), host ->
+                List.of(InetAddress.getByName(address.get())));
+        assertEquals(allowed, policy.requireAllowed(allowed));
+        address.set("192.0.2.11");
+        assertThrows(SecurityException.class, () -> policy.requireAllowed(allowed));
+        assertThrows(SecurityException.class, () -> SecureUriPolicy.system(
+                Set.of(URI.create("https://169.254.169.254/latest/meta-data"))));
+        assertThrows(SecurityException.class, () -> SecureUriPolicy.system(
+                Set.of(URI.create("https://localhost/a2a"))));
+
+        String digest = "a".repeat(64);
+        assertEquals("evidence://task-1/attempt-1/agent-result/" + digest,
+                EvidenceUriPolicy.requireBound("evidence://task-1/attempt-1/agent-result/" + digest,
+                        "task-1", "attempt-1", digest).toString());
+        assertThrows(SecurityException.class, () -> EvidenceUriPolicy.requireBound(
+                "evidence://other/attempt-1/agent-result/" + digest, "task-1", "attempt-1", digest));
+        assertThrows(SecurityException.class, () -> EvidenceUriPolicy.requireBound(
+                "evidence://task-1/attempt-1/agent-result/" + digest + "?redirect=https://attacker.invalid",
+                "task-1", "attempt-1", digest));
     }
 
     private static Set<String> collectTextualIds(JsonNode document) {

@@ -24,7 +24,8 @@ class CachingAgentCardResolverTest {
     @Test
     void honorsFreshnessEtagRotationAndShortOutageGraceWithoutCachingInvalidCards() {
         AllowListedAgentRegistry registry = new AllowListedAgentRegistry(
-                new ObjectMapper(), new AgentCatalog(), "compose");
+                new ObjectMapper(), new AgentCatalog(), "compose",
+                host -> List.of(java.net.InetAddress.getByName("192.0.2.10")));
         URI cardUri = registry.require("developer").cardUri();
         RecordingFetcher fetcher = new RecordingFetcher();
         fetcher.responses.add(ok(cardUri, "v1"));
@@ -60,7 +61,8 @@ class CachingAgentCardResolverTest {
     @Test
     void neverFallsBackWhenAReachableCardFailsVerification() {
         AllowListedAgentRegistry registry = new AllowListedAgentRegistry(
-                new ObjectMapper(), new AgentCatalog(), "compose");
+                new ObjectMapper(), new AgentCatalog(), "compose",
+                host -> List.of(java.net.InetAddress.getByName("192.0.2.10")));
         URI cardUri = registry.require("developer").cardUri();
         RecordingFetcher fetcher = new RecordingFetcher();
         fetcher.responses.add(ok(cardUri, "v1"));
