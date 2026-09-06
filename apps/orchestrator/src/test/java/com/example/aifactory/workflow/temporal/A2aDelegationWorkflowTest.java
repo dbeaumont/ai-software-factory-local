@@ -49,6 +49,12 @@ class A2aDelegationWorkflowTest {
             assertThat(result).isEqualTo(new DelegationWorkflow.Result(
                     "developer-1", "developer", "READY_FOR_ACTIVITIES"));
             assertThat(dispatch.get().command().skillId()).isEqualTo("developer.code-task-v1");
+            Map<String, Object> envelope = dispatch.get().command().parts().getFirst().data();
+            assertThat(envelope).containsEntry("target_role", "developer")
+                    .containsEntry("skill_id", "developer.code-task-v1");
+            assertThat(envelope.get("input_references").toString()).contains(
+                    "evidence://task-1/attempt-1/delegation-input/developer-1.json");
+            assertThat(envelope.get("constraints").toString()).contains("patch-proposal-v1");
             assertThat(dispatch.get().execution().workflowId()).contains("delegation/task-1");
             assertThat(dispatch.get().command().metadata().toString()).doesNotContain("prompt", "result");
         }

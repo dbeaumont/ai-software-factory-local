@@ -49,14 +49,14 @@ class A2aIndependentReviewWorkflowTest {
 
             assertThat(result).isEqualTo(new IndependentReviewWorkflow.Result(
                     "final-review", "independent-reviewer", "READY_FOR_ACTIVITIES"));
-            assertThat(sent.get().parts()).allSatisfy(part -> {
-                assertThat(part.mediaType()).isEqualTo(A2aMediaTypes.EVIDENCE_REFERENCE);
-                assertThat(part.text()).isNull();
-                assertThat(part.data()).containsKeys("uri", "digest", "contract")
-                        .doesNotContainKeys("prompt", "reasoning", "raw_output", "private_output");
-            });
-            assertThat(sent.get().parts()).extracting(part -> part.data().get("digest"))
-                    .containsExactlyInAnyOrder("b".repeat(64), "c".repeat(64), "d".repeat(64), "f".repeat(64));
+            assertThat(sent.get().parts()).hasSize(1);
+            assertThat(sent.get().parts().getFirst().mediaType()).isEqualTo(A2aMediaTypes.JSON);
+            Map<String, Object> envelope = sent.get().parts().getFirst().data();
+            assertThat(envelope).containsEntry("target_role", "independent-reviewer")
+                    .containsEntry("skill_id", "independent-reviewer.integration-result-v1")
+                    .doesNotContainKeys("prompt", "reasoning", "raw_output", "private_output");
+            assertThat(envelope.get("input_references").toString())
+                    .contains("b".repeat(64), "c".repeat(64), "d".repeat(64), "f".repeat(64));
         }
     }
 

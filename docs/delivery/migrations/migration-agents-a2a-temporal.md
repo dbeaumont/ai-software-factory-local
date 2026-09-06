@@ -456,11 +456,13 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-089 — Remplacer les child workflows d'agents.** Conserver les child workflows de contrôle nécessaires
   au DAG, mais remplacer leur exécution Java directe par les activités A2A. _(Le registre de production utilise
   désormais `A2aDelegationWorkflowImpl` : le child vérifie la carte et le skill, construit une corrélation compacte,
-  appelle `dispatchTask`, attend signal/réconciliation, puis valide l'artefact final ; l'ancienne implémentation
+  construit l'enveloppe `a2a-envelope-v1` complète autour d'une référence Evidence, appelle `dispatchTask`,
+  attend signal/réconciliation, puis valide l'artefact final ; l'ancienne implémentation
   reste uniquement comme type de compatibilité pour les historiques et tests antérieurs.)_
 - [x] **A2A-090 — Maintenir la revue indépendante.** Adresser `independent-reviewer` par A2A avec les mêmes digests
   et sans accès aux raisonnements privés ou sorties non validées des autres agents. _(Le child de revue de
-  production est désormais dédié à `independent-reviewer` et ne transmet que les références Evidence du patch
+  production est désormais dédié à `independent-reviewer` et ne transmet, dans une enveloppe validable unique,
+  que les références Evidence du patch
   consolidé, du manifeste, des résultats validés et des contradictions ; un test Temporal vérifie les digests et
   l'absence de prompt, raisonnement ou sortie brute.)_
 - [x] **A2A-091 — Versionner le déterminisme.** Introduire un nouveau type de workflow ou Worker Versioning pour

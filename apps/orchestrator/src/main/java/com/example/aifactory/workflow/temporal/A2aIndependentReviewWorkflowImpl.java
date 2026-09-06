@@ -3,6 +3,7 @@ package com.example.aifactory.workflow.temporal;
 import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.a2a.A2aExecutionContext;
 import com.example.aifactory.a2a.A2aEvidencePartFactory;
+import com.example.aifactory.a2a.A2aEnvelopeFactory;
 import com.example.aifactory.a2a.A2aExtensions;
 import com.example.aifactory.a2a.A2aMediaTypes;
 import com.example.aifactory.service.IndependentReviewBundle;
@@ -45,7 +46,8 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
         Map<String, Object> metadata = Map.of(A2aExtensions.EXECUTION_CONTEXT_V1, executionMetadata(execution),
                 "reviewBundleDigest", TemporalIds.sha256(String.join("\n", digests)));
         A2aContracts.SendCommand command = new A2aContracts.SendCommand(ROLE, SKILL, messageId, null, null,
-                references, metadata, true);
+                List.of(A2aEnvelopeFactory.create(ROLE, SKILL, "independent-review-v1", references,
+                        request.budget())), metadata, true);
         A2aContracts.TaskSnapshot submitted = activities.reconcileDispatch().reconcileDispatch(
                 new A2aActivities.DispatchRequest(execution, card.cardDigest(), command));
         A2aContracts.Notification terminal = tasks.awaitUntilTerminal(ROLE, submitted, Duration.ofSeconds(30),

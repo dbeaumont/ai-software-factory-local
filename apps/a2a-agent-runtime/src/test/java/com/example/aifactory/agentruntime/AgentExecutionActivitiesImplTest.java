@@ -7,6 +7,7 @@ import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.io.InputStream;
 import java.util.List;
@@ -61,6 +62,37 @@ class AgentExecutionActivitiesImplTest {
         assertThatThrownBy(() -> activities.execute(new AgentExecutionActivities.Command(
                 "other-task", "developer", "developer.code-task-v1", envelope(), null, null)))
                 .isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void materializesOnlyThePrimaryInputAndAdmitsAdditionalEvidenceReferences() throws Exception {
+        JsonNode documents = fixtures();
+        LlmCompletionPort llm = (messages, tools, tokens) -> new AgentLoop.Turn(
+                AgentLoop.Stop.FINAL, documents.path("patch-proposal-v1").toString(), List.of(), 10, 5, 42);
+        McpToolPort noTools = new McpToolPort() {
+            @Override public List<LlmCompletionPort.ToolDefinition> definitions() { return List.of(); }
+            @Override public String call(String tool, Map<String, Object> arguments) { throw new AssertionError(); }
+        };
+        AgentExecutionActivitiesImpl activities = new AgentExecutionActivitiesImpl(new AgentExecutionWorker(
+                RoleScopedAgentContext.load("developer", mapper), llm, noTools),
+                (task, attempt, reference, maximum) -> {
+                    assertThat(reference.referenceId()).isEqualTo("code-task-1");
+                    return documents.path("code-task-v1");
+                }, mapper);
+        JsonNode envelope = mapper.readTree(envelope());
+        JsonNode secondary = envelope.path("input_references").get(0).deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) secondary)
+                .put("reference_id", "supporting-evidence-1")
+                .put("uri", "evidence://task-1/attempt-1/supporting/evidence.json");
+        ((ArrayNode) envelope.path("input_references")).add(secondary);
+        ((ArrayNode) envelope.path("constraints").path("allowed_reference_ids"))
+                .add("supporting-evidence-1");
+
+        AgentExecutionActivities.Result result = activities.execute(new AgentExecutionActivities.Command(
+                "task-1", "developer", "developer.code-task-v1", envelope.toString(), null, null));
+
+        assertThat(result.allowedReferenceIds()).containsExactlyInAnyOrder(
+                "code-task-1", "supporting-evidence-1");
     }
 
     private String envelope() throws Exception {

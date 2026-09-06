@@ -62,15 +62,19 @@ final class AgentExecutionActivitiesImpl implements AgentExecutionActivities {
         constraints.path("allowed_reference_ids").forEach(value -> allowedReferences.add(value.asText()));
 
         JsonNode references = envelope.path("input_references");
-        if (references.size() != 1) {
-            throw new IllegalArgumentException("A2A agent execution requires exactly one primary input reference");
+        if (references.isEmpty()) {
+            throw new IllegalArgumentException("A2A agent execution requires a primary input reference");
+        }
+        for (JsonNode admitted : references) {
+            if (!allowedReferences.contains(required(admitted, "reference_id"))) {
+                throw new SecurityException("A2A input reference is outside the admitted reference set");
+            }
         }
         JsonNode reference = references.get(0);
         AgentInputEvidenceReader.Reference inputReference = new AgentInputEvidenceReader.Reference(
                 required(reference, "reference_id"), required(reference, "uri"), required(reference, "digest"),
                 reference.path("size_bytes").asLong(-1), required(reference, "contract"));
-        if (!allowedReferences.contains(inputReference.referenceId())
-                || !skill.equals(role + "." + inputReference.contract())) {
+        if (!skill.equals(role + "." + inputReference.contract())) {
             throw new SecurityException("A2A primary input is outside the admitted skill or reference set");
         }
         String attemptId = attemptId(command.taskId(), inputReference.uri());

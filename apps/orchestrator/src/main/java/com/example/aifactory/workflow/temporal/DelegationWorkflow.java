@@ -4,6 +4,9 @@ import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import io.temporal.workflow.SignalMethod;
 
+import com.example.aifactory.a2a.A2aContracts;
+import com.example.aifactory.a2a.A2aEvidencePartFactory;
+
 import java.util.Set;
 
 @WorkflowInterface
@@ -16,7 +19,7 @@ public interface DelegationWorkflow {
 
     record Request(String taskId, String attemptId, String nodeId, String parentNodeId,
                    String role, String sourceCommit, String objectiveDigest, int priority,
-                   Set<String> dependsOn, Budget budget) {
+                   Set<String> dependsOn, Budget budget, A2aContracts.Part inputReference) {
         private static final int DEFAULT_PRIORITY = 100;
 
         public Request {
@@ -27,25 +30,44 @@ public interface DelegationWorkflow {
             objectiveDigest = objectiveDigest.matches("[0-9a-f]{64}")
                     ? objectiveDigest : TemporalIds.sha256(objectiveDigest);
             dependsOn = dependsOn == null ? Set.of() : Set.copyOf(dependsOn);
+            inputReference = inputReference == null ? A2aEvidencePartFactory.reference(
+                    nodeId + "-input", "evidence://" + taskId + "/" + attemptId
+                            + "/delegation-input/" + nodeId + ".json",
+                    objectiveDigest, defaultInputContract(role)) : inputReference;
+        }
+
+        public Request(String taskId, String attemptId, String nodeId, String parentNodeId,
+                       String role, String sourceCommit, String objective, int priority,
+                       Set<String> dependsOn, Budget budget) {
+            this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective, priority,
+                    dependsOn, budget, null);
         }
 
         public Request(String taskId, String attemptId, String nodeId, String parentNodeId,
                        String role, String sourceCommit, String objective, Set<String> dependsOn, Budget budget) {
             this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective,
-                    DEFAULT_PRIORITY, dependsOn, budget);
+                    DEFAULT_PRIORITY, dependsOn, budget, null);
         }
 
         public Request(String taskId, String attemptId, String nodeId, String parentNodeId,
                        String role, String sourceCommit, String objective, Budget budget) {
             this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective,
-                    DEFAULT_PRIORITY, Set.of(), budget);
+                    DEFAULT_PRIORITY, Set.of(), budget, null);
         }
 
         public Request(String taskId, String attemptId, String nodeId, String parentNodeId,
                        String role, String sourceCommit, String objective) {
             this(taskId, attemptId, nodeId, parentNodeId, role, sourceCommit, objective,
                     DEFAULT_PRIORITY, Set.of(),
-                    new Budget(1_000, 1_000_000, 6));
+                    new Budget(1_000, 1_000_000, 6), null);
+        }
+
+        private static String defaultInputContract(String role) {
+            return switch (role) {
+                case "developer" -> "code-task-v1";
+                case "patch-repair" -> "patch-repair-task-v1";
+                default -> "specialist-task-v1";
+            };
         }
     }
 

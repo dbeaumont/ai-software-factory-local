@@ -2,6 +2,7 @@ package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.a2a.A2aExecutionContext;
+import com.example.aifactory.a2a.A2aEnvelopeFactory;
 import com.example.aifactory.a2a.A2aExtensions;
 import com.example.aifactory.a2a.A2aMediaTypes;
 import io.temporal.common.VersioningBehavior;
@@ -34,15 +35,13 @@ public final class A2aDelegationWorkflowImpl implements DelegationWorkflow {
                 List.of(request.objectiveDigest()));
         String messageId = TemporalIds.sha256(String.join("\n", request.nodeId(), request.role(),
                 request.objectiveDigest(), card.cardDigest()));
-        Map<String, Object> instruction = Map.of(
-                "schema_version", "1", "contract", inputContract(request.role()),
-                "objective_digest", request.objectiveDigest(), "node_id", request.nodeId());
         Map<String, Object> metadata = Map.of(A2aExtensions.EXECUTION_CONTEXT_V1, executionMetadata(execution),
                 "budget", Map.of("maxTokens", request.budget().maxTokens(),
                         "maxCostMicros", request.budget().maxCostMicros(), "maxTurns", request.budget().maxTurns(),
                         "timeoutSeconds", request.budget().timeoutSeconds()));
         A2aContracts.SendCommand command = new A2aContracts.SendCommand(request.role(), skill, messageId,
-                null, null, List.of(new A2aContracts.Part(A2aMediaTypes.JSON, null, instruction, null)),
+                null, null, List.of(A2aEnvelopeFactory.create(request.role(), skill,
+                        outputContract(request.role()), List.of(request.inputReference()), request.budget())),
                 metadata, true);
         A2aContracts.TaskSnapshot submitted = activities.reconcileDispatch().reconcileDispatch(
                 new A2aActivities.DispatchRequest(execution, card.cardDigest(), command));
