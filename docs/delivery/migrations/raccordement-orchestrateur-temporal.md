@@ -494,7 +494,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   réseau de l'orchestrateur, vérifie que le control plane reste vivant, puis attend et sonde la récupération. Pour
   LiteLLM, l'API expose aussi `cloudAvailable=false` ; le scénario Collector contrôle en plus la file persistante,
   l'indisponibilité du backend SigNoz et le rejet d'un payload OTLP invalide.)_
-- [ ] Vérifier le pipeline complet : patch, tests, Sonar, Trivy, revue, approbation et une seule PR.
+- [x] Vérifier le pipeline complet : patch, tests, Sonar, Trivy, revue, approbation et une seule PR. _(La cible
+  `make test-temporal-pipeline-delivery` contrôle les sept preuves complètes et leurs verdicts, approuve le digest
+  exact du manifeste, attend `PR_CREATED`, compare le Run ID et compte les PR via l'API Gitea. Une seconde
+  approbation ne crée aucun doublon. Validation réelle : tâche `2500dfb2`, run
+  `01a0746e-e3a8-7319-a558-975cf0bbd8a2`, PR `aiadmin/customer-api#2`.)_
 - [ ] Vérifier que `docker compose down` puis `up` conserve tâches et historiques.
 
 ### 12.5 Tests de charge et de durée
