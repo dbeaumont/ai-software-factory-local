@@ -112,20 +112,23 @@ de délégations incontrôlées.
 Chaque rôle `kind: agent` ou `kind: sub-agent` du catalogue doit disposer d'une adresse A2A et d'une Agent Card.
 Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
-- [ ] `supervisor`
-- [ ] `architecture-agent`
-- [ ] `impact-analysis`
-- [ ] `dependencies-contracts`
-- [ ] `code-agent`
-- [ ] `developer`
-- [ ] `patch-repair`
-- [ ] `test-agent`
-- [ ] `test-design`
-- [ ] `test-evidence`
-- [ ] `security-agent`
-- [ ] `threat-model`
-- [ ] `security-findings`
-- [ ] `independent-reviewer`
+- [x] `supervisor`
+- [x] `architecture-agent`
+- [x] `impact-analysis`
+- [x] `dependencies-contracts`
+- [x] `code-agent`
+- [x] `developer`
+- [x] `patch-repair`
+- [x] `test-agent`
+- [x] `test-design`
+- [x] `test-evidence`
+- [x] `security-agent`
+- [x] `threat-model`
+- [x] `security-findings`
+- [x] `independent-reviewer`
+
+_Preuve commune : `docs/evidence/a2a/A2A-ROLE-COVERAGE.md` vérifie l'égalité stricte des 14 rôles entre catalogue,
+registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ## 6. Choix protocolaires cibles
 
