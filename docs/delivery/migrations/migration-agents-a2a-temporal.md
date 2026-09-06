@@ -802,8 +802,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   ou migration explicite des workflows épinglés. _(La gate exécutable refuse le build courant, ramping, absent ou
   non drainé et ne permet le retrait qu'après le statut Temporal `drained`, archivage et approbation ;
   `make a2a-worker-drainage BUILD_ID=...`.)_
-- [ ] **A2A-202 — Geler plutôt que contourner.** Si la flotte A2A est indisponible, suspendre les admissions et
-  laisser Temporal attendre/réconcilier au lieu d'exécuter localement.
+- [x] **A2A-202 — Geler plutôt que contourner.** Si la flotte A2A est indisponible, suspendre les admissions et
+  laisser Temporal attendre/réconcilier au lieu d'exécuter localement. _(Quand `AI_FACTORY_A2A_ENABLED=true`,
+  la gate primaire contrôle `a2aFleet` avant Temporal et refuse toute nouvelle admission si une carte, une queue
+  ou une dépendance est indisponible ; le message public reste sanitizé et aucun chemin local n'est sélectionné.)_
 - [ ] **A2A-203 — Réconcilier avant retry.** Examiner la tâche A2A, son workflow d'agent et ses artefacts avant
   toute relance après incident.
 - [ ] **A2A-204 — Tester le rollback sous charge.** Couvrir tâches `SUBMITTED`, `WORKING`, `INPUT_REQUIRED`,
