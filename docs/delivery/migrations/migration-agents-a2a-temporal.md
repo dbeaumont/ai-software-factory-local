@@ -283,8 +283,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   profondeur JSON et durée de conservation ; rejeter avant désérialisation complète les requêtes hors limite.
   _(`payload-limits-v1.json` et `A2aPayloadLimits` fixent 1 MiB, 16 parts, 50 historiques, 16 artefacts,
   32 références, profondeur 32 et rétention 30 jours ; la taille brute est refusée avant parsing.)_
-- [ ] **A2A-049 — Mapper les états.** Documenter et tester la correspondance entre états A2A et événements
-  Temporal sans confondre panne technique et refus métier.
+- [x] **A2A-049 — Mapper les états.** Documenter et tester la correspondance entre états A2A et événements
+  Temporal sans confondre panne technique et refus métier. _(`A2aTemporalStateMapper` et le mapping versionné
+  couvrent les huit états supportés ; un rejet métier est non retryable tandis qu'un échec reste à classifier.)_
 
 ### Table de correspondance d'états à figer
 
@@ -301,9 +302,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ### Critères de sortie du lot 2
 
-- [ ] Tous les schémas métier existants ont un mapping A2A bidirectionnel testé.
-- [ ] Les identifiants serveur A2A sont corrélés sans devenir des clés métier.
-- [ ] Un retry Temporal de `SendMessage` ne crée jamais une seconde exécution logique.
+- [x] Tous les schémas métier existants ont un mapping A2A bidirectionnel testé.
+- [x] Les identifiants serveur A2A sont corrélés sans devenir des clés métier.
+- [x] Un retry Temporal de `SendMessage` ne crée jamais une seconde exécution logique.
 
 ## 10. Lot 3 — Agent Cards, découverte et catalogue
 

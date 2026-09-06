@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0.0",
+  "mappings": [
+    {"a2aState": "TASK_STATE_SUBMITTED", "eventType": "A2A_TASK_ASSOCIATED", "workflowAction": "WAIT_NON_BLOCKING", "terminal": false, "failureKind": "NONE"},
+    {"a2aState": "TASK_STATE_WORKING", "eventType": "A2A_HEARTBEAT", "workflowAction": "RECORD_PROGRESS", "terminal": false, "failureKind": "NONE"},
+    {"a2aState": "TASK_STATE_INPUT_REQUIRED", "eventType": "A2A_INPUT_REQUIRED", "workflowAction": "SIGNAL_CONTROLLED_INPUT", "terminal": false, "failureKind": "NONE"},
+    {"a2aState": "TASK_STATE_AUTH_REQUIRED", "eventType": "A2A_AUTH_REQUIRED", "workflowAction": "SUSPEND_AND_ESCALATE", "terminal": false, "failureKind": "AUTHORIZATION"},
+    {"a2aState": "TASK_STATE_COMPLETED", "eventType": "A2A_TASK_COMPLETED", "workflowAction": "VALIDATE_ARTIFACTS_AND_RESUME", "terminal": true, "failureKind": "NONE"},
+    {"a2aState": "TASK_STATE_REJECTED", "eventType": "A2A_TASK_REJECTED", "workflowAction": "BUSINESS_REJECTION_NO_RETRY", "terminal": true, "failureKind": "BUSINESS"},
+    {"a2aState": "TASK_STATE_FAILED", "eventType": "A2A_TASK_FAILED", "workflowAction": "CLASSIFY_BEFORE_RETRY", "terminal": true, "failureKind": "UNCLASSIFIED"},
+    {"a2aState": "TASK_STATE_CANCELED", "eventType": "A2A_TASK_CANCELED", "workflowAction": "CONFIRM_IDEMPOTENT_CANCELLATION", "terminal": true, "failureKind": "CANCELLATION"}
+  ]
+}
