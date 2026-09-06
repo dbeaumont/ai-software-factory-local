@@ -563,13 +563,17 @@ est immédiatement l'unique moteur de toutes les admissions.
   Evidence, idempotence SCM, Gitea, workspaces et configuration. Tous les SHA-256 et les nombres d'objets ont été
   vérifiés après restauration isolée ; le verrou restauré reste fermé et aucun volume actif n'a été modifié.
   Preuve : `docs/evidence/temporal/TEMP-105-authorities-backup-restore-2026-09-06.md`.)_
-- [ ] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,
-  coordinateur, projection PostgreSQL, migrations, API, interface, dashboards et alertes.
 - [x] **TEMP-107 — Retirer le chemin local.** Supprimer `DeterministicWorkflowCoordinator`, son pool de threads,
   les flags de sélection et toute route de fallback dans la release de bascule. _(Le coordinateur local et son
   traceur asynchrone ont été supprimés ; `TemporalWorkflowCoordinator` est l'unique implémentation de production,
   sans flag de sélection ni route de repli. Les 557 tests Java sont verts et le gel du périmètre Temporal reste
   valide. Preuve : `docs/evidence/temporal/TEMP-107-local-path-removed-2026-09-06.md`.)_
+- [ ] **TEMP-103R — Réautoriser l'artefact final.** Approuver explicitement le commit et les images qui incluent le
+  verrou d'admission et le retrait du chemin local avant tout déploiement. _(Candidat préparé au commit
+  `a589f5c4c93088650bc7f46a13655cf10b92bf94` ; dossier de delta :
+  `docs/evidence/temporal/TEMP-103R-final-candidate-2026-09-06.md`.)_
+- [ ] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,
+  coordinateur, projection PostgreSQL, migrations, API, interface, dashboards et alertes.
 - [ ] **TEMP-108 — Vérifier avant réouverture.** Contrôler schémas, namespace, Build IDs, pollers, task queues,
   readiness, projection, Evidence MCP, SigNoz et Temporal UI.
 - [ ] **TEMP-109 — Exécuter un smoke test de coupure.** Soumettre un ticket synthétique pendant la maintenance,

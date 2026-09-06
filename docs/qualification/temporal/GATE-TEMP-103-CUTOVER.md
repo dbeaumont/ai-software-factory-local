@@ -1,12 +1,18 @@
 # Gate TEMP-103 — Autorisation de coupure Temporal
 
-> Statut : `APPROVED`
+> Statut : `REAPPROVAL_REQUIRED`
 >
 > Release examinée : `9698fa30aa16a43af5b2d4f56b82f1953eb95080`
 >
 > Image orchestrateur : `sha256:ef7b416ef628b3629e21d597b62be85aedf480594f530d814635baf4442d604e`
 >
 > Périmètre : environnement local macOS avec Docker Compose, bascule franche sans canary ni fallback local
+
+> Candidat final : `a589f5c4c93088650bc7f46a13655cf10b92bf94`
+>
+> Image orchestrateur finale : `sha256:59717e13f82355352f73a8eca8e9c17219f9c8079b94c3ec693f398f08b7d374`
+>
+> Image interface finale : `sha256:59beb07a9c24abb3882465d4bc5f5977b398418714ab29ad74fd67c8f2a8521c`
 
 ## Décision demandée
 
@@ -59,6 +65,26 @@ n'est pas transposable telle quelle à un environnement partagé ou de productio
 
 ## Effet du gate
 
-Le gate est ouvert uniquement si les quatre lignes sont approuvées sur
-`9698fa30aa16a43af5b2d4f56b82f1953eb95080`. L'ouverture autorise TEMP-104 ; elle ne dispense d'aucun contrôle de
-la fenêtre de coupure et ne permet pas de fusionner une Pull Request.
+Le gate initial a été ouvert uniquement pour les quatre décisions sur
+`9698fa30aa16a43af5b2d4f56b82f1953eb95080`. Cette ouverture a autorisé TEMP-104 ; elle ne dispense d'aucun contrôle
+de la fenêtre de coupure, ne vaut pas autorisation pour une image différente et ne permet pas de fusionner une Pull
+Request.
+
+## Réautorisation du candidat final
+
+TEMP-104 et TEMP-107 ont produit les contrôles d'exploitation et la suppression du moteur local prévus par le plan.
+Ces changements ne modifient aucun objet du périmètre Temporal gelé, mais ils changent l'image orchestrateur. Le
+déploiement TEMP-106 reste donc interdit tant que le candidat final exact n'est pas réapprouvé.
+
+Preuve du delta :
+[`TEMP-103R-final-candidate-2026-09-06.md`](../../evidence/temporal/TEMP-103R-final-candidate-2026-09-06.md).
+
+| Rôle | Identité | Décision | Date UTC | Commit examiné | Conditions / commentaire |
+|---|---|---|---|---|---|
+| Produit |  | `PENDING` |  | `a589f5c4c93088650bc7f46a13655cf10b92bf94` |  |
+| Architecture |  | `PENDING` |  | `a589f5c4c93088650bc7f46a13655cf10b92bf94` |  |
+| Sécurité |  | `PENDING` |  | `a589f5c4c93088650bc7f46a13655cf10b92bf94` |  |
+| Exploitation |  | `PENDING` |  | `a589f5c4c93088650bc7f46a13655cf10b92bf94` |  |
+
+Les quatre décisions de réautorisation doivent être `APPROVED` sur le commit et les deux images finales ci-dessus
+avant de cocher TEMP-103R et d'exécuter TEMP-106.
