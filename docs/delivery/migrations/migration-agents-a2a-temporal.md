@@ -40,9 +40,9 @@ La migration doit préserver :
 - [ ] **A2A-004 — Supprimer les invocations d'agents en mémoire.** Après la coupure, aucun workflow, activité ou
   service de coordination ne doit appeler directement `SupervisorAgent`, `ArchitectureAgents`, `CodeAgent`,
   `TestAgents`, `SecurityAgents`, `IndependentReviewerAgent` ou leurs sous-agents.
-- [ ] **A2A-005 — Maintenir la distinction A2A/MCP.** A2A transporte messages, états et références d'artefacts
+- [x] **A2A-005 — Maintenir la distinction A2A/MCP.** A2A transporte messages, états et références d'artefacts
   entre agents ; MCP reste le protocole d'accès aux capacités `context`, `sandbox`, `assurance`, `evidence` et
-  `scm`.
+  `scm`. _(Responsabilités et alternative MCP rejetée formalisées dans `ADR-A2A-001`.)_
 - [ ] **A2A-006 — Utiliser des artefacts, pas des messages, pour les résultats.** Les sorties métier validées sont
   publiées comme artefacts A2A structurés ; les messages servent aux instructions, statuts et demandes de
   complément.
