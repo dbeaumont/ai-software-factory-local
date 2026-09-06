@@ -532,8 +532,11 @@ La bascule est réalisée en une seule fenêtre de changement. Aucun ticket n'es
 deux moteurs simultanément. La qualification complète est terminée avant la coupure ; après réouverture, Temporal
 est immédiatement l'unique moteur de toutes les admissions.
 
-- [ ] **TEMP-100 — Capturer la baseline avant coupure.** Versionner résultats, coûts, durées, digests et états du
-  pipeline local sur un corpus fixe, uniquement comme preuve de comparaison hors production.
+- [x] **TEMP-100 — Capturer la baseline avant coupure.** Versionner résultats, coûts, durées, digests et états du
+  pipeline local sur un corpus fixe, uniquement comme preuve de comparaison hors production. _(La cible
+  `make temporal-cutover-baseline` vérifie le corpus figé de 20 cas, ses états, 543 041 ms de durée cumulée,
+  134 365 tokens, le statut de coût `UNAVAILABLE_NOT_ZERO`, les objets Git et les SHA-256 des deux artefacts. Les
+  chemins des preuves archivées ont été remis en cohérence sans modifier leurs digests.)_
 - [ ] **TEMP-101 — Geler le périmètre.** Interdire tout changement de workflow, activité, contrat, prompt, modèle
   ou infrastructure entre la qualification finale et la fin de la fenêtre de bascule.
 - [ ] **TEMP-102 — Qualifier la release complète hors trafic.** Exécuter tests fonctionnels, replay, charge,

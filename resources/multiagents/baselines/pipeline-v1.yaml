@@ -78,12 +78,12 @@ containerImages:
     litellm: "sha256:b47487c529e3d2e142a8040b8ce80462943a57a57c4e3cd11e4da3fc03cf3083"
 
 referenceCampaign:
-  report: docs/mcp/MCP-180-rapport-campagne-20260902.md
+  report: docs/qualification/mcp/reports/MCP-180-rapport-campagne-20260902.md
   baselineArtifact:
-    path: docs/mcp/baselines/MCP-agent-ab-20260902-01-baseline.jsonl
+    path: docs/evidence/mcp/baselines/MCP-agent-ab-20260902-01-baseline.jsonl
     sha256: 47ea3ebd6220f18fc5570f936da89631765b0b27457ea847bfde600e743d3237
   candidateArtifact:
-    path: docs/mcp/baselines/MCP-agent-ab-20260902-01-candidate.jsonl
+    path: docs/evidence/mcp/baselines/MCP-agent-ab-20260902-01-candidate.jsonl
     sha256: 51f78092f66b7526a1cc0a54d3633dd88c80b8fe846725ba31e8e0da8bb6576d
 
 replay:

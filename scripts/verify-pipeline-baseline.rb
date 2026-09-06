@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require "digest"
+require "json"
 require "open3"
 require "yaml"
 
@@ -36,6 +37,22 @@ manifest.fetch("referenceCampaign").each_value do |entry|
   actual = Digest::SHA256.file(path).hexdigest
   failures << "#{entry.fetch('path')}: #{actual}" unless actual == entry.fetch("sha256")
 end
+report_path = File.join(ROOT, manifest.dig("referenceCampaign", "report"))
+failures << "missing campaign report" unless File.file?(report_path)
+
+metrics_path = File.join(ROOT, "resources/multiagents/baselines/pipeline-v1-metrics.json")
+metrics = JSON.parse(File.read(metrics_path))
+failures << "metrics baseline ID" unless metrics.fetch("baseline_id") == manifest.fetch("baselineId")
+failures << "empty baseline corpus" unless metrics.dig("sample", "cases").to_i.positive?
+failures << "missing pipeline states" unless metrics.dig("sample", "status_counts").is_a?(Hash) &&
+  !metrics.dig("sample", "status_counts").empty?
+failures << "missing duration" unless metrics.dig("metrics", "duration_millis_total").to_i.positive?
+failures << "missing token usage" unless metrics.dig("metrics", "tokens_total").to_i.positive?
+failures << "unknown cost interpreted as zero" unless metrics.dig("cost", "interpretation") ==
+  "UNAVAILABLE_NOT_ZERO"
+failures << "invalid source digest" unless metrics.dig("source_artifact", "sha256")&.match?(/\A[0-9a-f]{64}\z/)
+failures << "metrics source path diverges" unless metrics.dig("source_artifact", "path") ==
+  manifest.dig("referenceCampaign", "baselineArtifact", "path")
 
 unless failures.empty?
   warn "Pipeline baseline verification failed:"

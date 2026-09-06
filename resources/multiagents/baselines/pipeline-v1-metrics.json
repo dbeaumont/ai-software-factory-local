@@ -6,7 +6,7 @@
   "variant": "BASELINE",
   "paired_case_manifest": "resources/mcp/baselines/context-shadow-campaign-v1.json",
   "source_artifact": {
-    "path": "docs/mcp/baselines/MCP-agent-ab-20260902-01-baseline.jsonl",
+    "path": "docs/evidence/mcp/baselines/MCP-agent-ab-20260902-01-baseline.jsonl",
     "sha256": "47ea3ebd6220f18fc5570f936da89631765b0b27457ea847bfde600e743d3237"
   },
   "sample": {
@@ -38,5 +38,5 @@
     "PROMPT_TOOL_ACCESS_CONTRADICTION",
     "SECURITY_CLASSIFIER_FALSE_POSITIVE"
   ],
-  "report": "docs/mcp/MCP-180-rapport-campagne-20260902.md"
+  "report": "docs/qualification/mcp/reports/MCP-180-rapport-campagne-20260902.md"
 }
