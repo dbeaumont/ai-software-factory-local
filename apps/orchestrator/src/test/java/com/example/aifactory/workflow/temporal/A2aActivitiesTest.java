@@ -30,13 +30,21 @@ class A2aActivitiesTest {
                 role, URI.create("https://developer.internal/.well-known/agent-card.json"),
                 URI.create("https://developer.internal/a2a"), "JSONRPC", "1.0", "b".repeat(64),
                 List.of("developer.code-task-v1"), false, true));
+        java.util.concurrent.atomic.AtomicInteger sends = new java.util.concurrent.atomic.AtomicInteger();
         A2aClient client = new A2aClient() {
             @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> send(
-                    A2aContracts.SendCommand command) { return CompletableFuture.completedFuture(snapshot); }
+                    A2aContracts.SendCommand command) {
+                sends.incrementAndGet();
+                return CompletableFuture.completedFuture(snapshot);
+            }
             @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> getTask(
                     A2aContracts.TaskQuery query) { return CompletableFuture.completedFuture(snapshot); }
             @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> cancelTask(
                     A2aContracts.TaskQuery query) { return CompletableFuture.completedFuture(snapshot); }
+            @Override public java.util.concurrent.CompletionStage<java.util.Optional<A2aContracts.TaskSnapshot>>
+            findTaskByMessageId(String role, String messageId) {
+                return CompletableFuture.completedFuture(java.util.Optional.of(snapshot));
+            }
         };
         AtomicReference<A2aTaskAssociationStore.Association> persisted = new AtomicReference<>();
         A2aTaskAssociationStore associations = new A2aTaskAssociationStore() {
@@ -47,6 +55,9 @@ class A2aActivitiesTest {
                         execution.agentRole(), cardDigest, taskId, contextId));
             }
             @Override public java.util.Optional<Association> findByDelegation(String delegationId) {
+                return java.util.Optional.ofNullable(persisted.get());
+            }
+            @Override public java.util.Optional<Association> findByMessageId(String role, String messageId) {
                 return java.util.Optional.ofNullable(persisted.get());
             }
         };
@@ -62,6 +73,9 @@ class A2aActivitiesTest {
             assertThat(correlation.messageId()).isEqualTo("message-1");
             assertThat(correlation.agentCardDigest()).isEqualTo("b".repeat(64));
         });
+        assertThat(activities.reconcileDispatch(new A2aActivities.DispatchRequest(
+                execution(), "b".repeat(64), command()))).isEqualTo(snapshot);
+        assertThat(sends).hasValue(1);
         assertThat(activities.getTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
         assertThat(activities.cancelTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
         assertThat(activities.validateArtifacts(new A2aActivities.ValidationRequest(
@@ -79,12 +93,14 @@ class A2aActivitiesTest {
         ActivityOptions get = policy(TemporalActivityPolicies.Kind.A2A_GET);
         ActivityOptions cancel = policy(TemporalActivityPolicies.Kind.A2A_CANCEL);
         ActivityOptions validate = policy(TemporalActivityPolicies.Kind.A2A_VALIDATE);
+        ActivityOptions reconcile = policy(TemporalActivityPolicies.Kind.A2A_RECONCILE);
 
         assertThat(resolve.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
         assertThat(dispatch.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
         assertThat(get.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
         assertThat(cancel.getRetryOptions().getMaximumAttempts()).isEqualTo(2);
         assertThat(validate.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
+        assertThat(reconcile.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
         assertThat(List.of(resolve.getStartToCloseTimeout(), dispatch.getStartToCloseTimeout(),
                 get.getStartToCloseTimeout(), cancel.getStartToCloseTimeout(), validate.getStartToCloseTimeout()))
                 .doesNotContainNull();

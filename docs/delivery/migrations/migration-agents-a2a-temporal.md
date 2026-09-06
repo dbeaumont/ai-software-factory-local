@@ -421,8 +421,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   `messageId`, rôle, Agent Card digest, A2A task ID et context ID dans une table dédiée. _(La migration V017
   complète `a2a_task_associations`; `dispatchTask` persiste tous les identifiants et digests de façon idempotente
   avant de rendre la tâche au workflow appelant.)_
-- [ ] **A2A-082 — Réconcilier un résultat ambigu.** Après timeout de `SendMessage`, rechercher par `messageId` ou
+- [x] **A2A-082 — Réconcilier un résultat ambigu.** Après timeout de `SendMessage`, rechercher par `messageId` ou
   corrélation serveur avant tout nouvel envoi ; ne jamais supposer que la requête n'a pas été traitée.
+  _(`reconcileDispatch` consulte d'abord l'association durable, puis le serveur par `messageId`; il ne réémet que
+  la commande originale avec la même identité lorsque ces deux recherches prouvent l'absence.)_
 - [ ] **A2A-083 — Recevoir les notifications.** Exposer un endpoint interne authentifié, valider tâche, contexte,
   transition, séquence et digest, puis émettre un signal Temporal idempotent.
 - [ ] **A2A-084 — Attendre sans bloquer.** Utiliser `Workflow.await` et un timer de réconciliation ; aucun

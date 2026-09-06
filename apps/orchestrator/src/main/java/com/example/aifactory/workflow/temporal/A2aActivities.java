@@ -41,6 +41,12 @@ public final class A2aActivities {
         ValidatedArtifacts validateArtifacts(ValidationRequest request);
     }
 
+    @ActivityInterface
+    public interface ReconcileDispatch {
+        @ActivityMethod(name = "A2aReconcileDispatch")
+        A2aContracts.TaskSnapshot reconcileDispatch(DispatchRequest request);
+    }
+
     public static Stubs newStubs() {
         return new Stubs(
                 Workflow.newActivityStub(ResolveAgent.class,
@@ -52,7 +58,9 @@ public final class A2aActivities {
                 Workflow.newActivityStub(CancelTask.class,
                         TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_CANCEL)),
                 Workflow.newActivityStub(ValidateArtifacts.class,
-                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_VALIDATE)));
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_VALIDATE)),
+                Workflow.newActivityStub(ReconcileDispatch.class,
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_RECONCILE)));
     }
 
     public record ValidationRequest(String agentRole, String outputContract, A2aContracts.TaskSnapshot task) {}
@@ -67,5 +75,6 @@ public final class A2aActivities {
     }
 
     public record Stubs(ResolveAgent resolveAgent, DispatchTask dispatchTask, GetTask getTask,
-                        CancelTask cancelTask, ValidateArtifacts validateArtifacts) {}
+                        CancelTask cancelTask, ValidateArtifacts validateArtifacts,
+                        ReconcileDispatch reconcileDispatch) {}
 }

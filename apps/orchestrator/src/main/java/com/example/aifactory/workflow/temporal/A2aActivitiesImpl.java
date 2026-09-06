@@ -15,7 +15,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
 public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aActivities.DispatchTask,
-        A2aActivities.GetTask, A2aActivities.CancelTask, A2aActivities.ValidateArtifacts {
+        A2aActivities.GetTask, A2aActivities.CancelTask, A2aActivities.ValidateArtifacts,
+        A2aActivities.ReconcileDispatch {
     private final AgentCardResolver cards;
     private final A2aClient client;
     private final A2aContractMapping contracts;
@@ -36,11 +37,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
 
     @Override
     public A2aContracts.TaskSnapshot dispatchTask(A2aActivities.DispatchRequest request) {
-        if (request == null || request.execution() == null || request.command() == null
-                || request.agentCardDigest() == null || !request.agentCardDigest().matches("[0-9a-f]{64}")
-                || !request.execution().agentRole().equals(request.command().agentRole())) {
-            throw new IllegalArgumentException("A2A dispatch correlation is incomplete");
-        }
+        requireDispatch(request);
         A2aContracts.TaskSnapshot task = await(client.send(request.command()), Duration.ofSeconds(45));
         associations.record(request.execution(), request.command().messageId(), request.agentCardDigest(),
                 task.taskId(), task.contextId());
@@ -55,6 +52,31 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     @Override
     public A2aContracts.TaskSnapshot cancelTask(A2aContracts.TaskQuery query) {
         return await(client.cancelTask(query), Duration.ofSeconds(30));
+    }
+
+    @Override
+    public A2aContracts.TaskSnapshot reconcileDispatch(A2aActivities.DispatchRequest request) {
+        requireDispatch(request);
+        java.util.Optional<A2aTaskAssociationStore.Association> persisted = associations
+                .findByDelegation(request.execution().delegationId());
+        if (persisted.isPresent()) {
+            A2aTaskAssociationStore.Association value = persisted.get();
+            if (!value.messageId().equals(request.command().messageId())
+                    || !value.agentCardDigest().equals(request.agentCardDigest())
+                    || !value.agentRole().equals(request.command().agentRole())) {
+                throw new SecurityException("Divergent durable A2A dispatch correlation");
+            }
+            return getTask(new A2aContracts.TaskQuery(value.agentRole(), value.a2aTaskId(), 0));
+        }
+        java.util.Optional<A2aContracts.TaskSnapshot> discovered = await(client.findTaskByMessageId(
+                request.command().agentRole(), request.command().messageId()), Duration.ofSeconds(30));
+        if (discovered.isPresent()) {
+            A2aContracts.TaskSnapshot task = discovered.get();
+            associations.record(request.execution(), request.command().messageId(), request.agentCardDigest(),
+                    task.taskId(), task.contextId());
+            return task;
+        }
+        return dispatchTask(request);
     }
 
     @Override
@@ -99,6 +121,14 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
             Throwable cause = failure.getCause();
             if (cause instanceof RuntimeException runtime) throw runtime;
             throw new IllegalStateException("A2A activity failed", cause);
+        }
+    }
+
+    private static void requireDispatch(A2aActivities.DispatchRequest request) {
+        if (request == null || request.execution() == null || request.command() == null
+                || request.agentCardDigest() == null || !request.agentCardDigest().matches("[0-9a-f]{64}")
+                || !request.execution().agentRole().equals(request.command().agentRole())) {
+            throw new IllegalArgumentException("A2A dispatch correlation is incomplete");
         }
     }
 

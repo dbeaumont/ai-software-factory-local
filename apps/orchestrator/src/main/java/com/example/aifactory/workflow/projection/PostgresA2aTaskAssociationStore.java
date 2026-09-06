@@ -44,12 +44,24 @@ public final class PostgresA2aTaskAssociationStore implements A2aTaskAssociation
 
     @Override
     public Optional<Association> findByDelegation(String delegationId) {
-        return jdbc.query("SELECT delegation_id, task_id, attempt_id, workflow_id, workflow_run_id, source_commit, "
+        return find("delegation_id", delegationId, null);
+    }
+
+    @Override
+    public Optional<Association> findByMessageId(String agentRole, String messageId) {
+        return find("message_id", messageId, agentRole);
+    }
+
+    private Optional<Association> find(String column, String value, String agentRole) {
+        String sql = "SELECT delegation_id, task_id, attempt_id, workflow_id, workflow_run_id, source_commit, "
                         + "message_id, agent_role, agent_card_digest, a2a_task_id, a2a_context_id "
-                        + "FROM a2a_task_associations WHERE delegation_id = ?",
+                        + "FROM a2a_task_associations WHERE " + column + " = ?"
+                        + (agentRole == null ? "" : " AND agent_role = ?");
+        Object[] arguments = agentRole == null ? new Object[]{value} : new Object[]{value, agentRole};
+        return jdbc.query(sql,
                 (row, index) -> new Association(row.getString(1), row.getString(2), row.getString(3),
                         row.getString(4), row.getString(5), row.getString(6), row.getString(7), row.getString(8),
-                        row.getString(9), row.getString(10), row.getString(11)), delegationId)
+                        row.getString(9), row.getString(10), row.getString(11)), arguments)
                 .stream().findFirst();
     }
 
