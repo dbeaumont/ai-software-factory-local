@@ -2,6 +2,7 @@ package com.example.aifactory.agentruntime;
 
 import com.example.aifactory.agentcore.AgentManifest;
 import com.example.aifactory.agentcore.LlmCompletionPort;
+import com.example.aifactory.agentcore.McpToolPort;
 import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,5 +25,10 @@ class AgentCoreConfiguration {
     @Bean LlmCompletionPort llmCompletionPort(WebClient.Builder builder, ObjectMapper mapper,
                                              LlmAdapterProperties properties) {
         return new OpenAiCompatibleLlmAdapter(builder, mapper, properties);
+    }
+
+    @Bean McpToolPort mcpToolPort(WebClient.Builder builder, ObjectMapper mapper,
+                                 RoleScopedAgentContext role, AgentMcpProperties properties) {
+        return new RoleScopedMcpClient(role, properties, new McpSdkSessionFactory(builder, mapper));
     }
 }

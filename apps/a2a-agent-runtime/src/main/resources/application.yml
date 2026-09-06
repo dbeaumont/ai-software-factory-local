@@ -29,3 +29,8 @@ ai-factory:
       model: ${AI_FACTORY_LLM_MODEL:factory-code-cloud}
       max-output-tokens: ${AI_FACTORY_LLM_MAX_OUTPUT_TOKENS:8192}
       timeout: ${AI_FACTORY_LLM_TIMEOUT:10m}
+    mcp:
+      enabled: ${AI_FACTORY_MCP_ENABLED:false}
+      request-timeout: ${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}
+      repository-context-url: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_URL:http://repository-context-mcp:8091}
+      evidence-url: ${AI_FACTORY_MCP_EVIDENCE_URL:http://evidence-mcp:8095}

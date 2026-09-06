@@ -223,8 +223,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   existants derrière un port sans couplage à l'orchestrateur. _(`LlmCompletionPort` et ses erreurs stables résident
   dans `agent-core` ; l'adaptateur OpenAI-compatible du runtime préserve messages, JSON final, outils, usages,
   coûts, classifications d'erreur, timeout et plafond historique de 8 192 tokens.)_
-- [ ] **A2A-035 — Extraire les clients MCP.** Construire pour chaque instance uniquement les connexions MCP
-  nécessaires au rôle et appliquer la matrice `tools` du catalogue à chaque appel.
+- [x] **A2A-035 — Extraire les clients MCP.** Construire pour chaque instance uniquement les connexions MCP
+  nécessaires au rôle et appliquer la matrice `tools` du catalogue à chaque appel. _(`McpToolPort` et
+  `RoleScopedMcpClient` filtrent définitions et serveurs par rôle, ouvrent les sessions SDK à la demande, négocient
+  les outils et revérifient le droit avant chaque appel ; seuls Context et Evidence sont accessibles aux agents.)_
 - [ ] **A2A-036 — Retirer les effets interdits des agents.** Aucun runtime d'agent ne reçoit d'accès direct à SCM,
   au Docker daemon, à la base Temporal ou à la projection applicative.
 - [ ] **A2A-037 — Ajouter des règles d'architecture.** Interdire par test les imports du contrôle-plane vers les
