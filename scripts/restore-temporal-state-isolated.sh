@@ -98,6 +98,9 @@ for container in "${containers[@]}"; do
 done
 
 docker exec "$temporal_container" createdb -U temporal temporal_visibility
+# PostgreSQL roles are cluster-wide objects and are not part of a per-database pg_dump.
+# Recreate the schema-owned read-only principal before restoring ACL statements.
+docker exec "$orchestrator_container" createuser -U ai_factory --no-login ai_factory_ui_reader
 docker exec "$temporal_container" pg_restore --exit-on-error --no-owner -U temporal -d temporal \
   /backup/temporal.dump
 docker exec "$temporal_container" pg_restore --exit-on-error --no-owner -U temporal -d temporal_visibility \
