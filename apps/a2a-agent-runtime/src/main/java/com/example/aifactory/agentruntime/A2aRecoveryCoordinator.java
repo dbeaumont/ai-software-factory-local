@@ -18,17 +18,33 @@ public final class A2aRecoveryCoordinator {
     private final String role;
     private final A2aTaskStore store;
     private final AgentTaskWorkflowStarter workflowStarter;
+    private final AgentTaskWorkflowControl workflowControl;
     private final A2aPushNotificationSender notificationSender;
 
     public A2aRecoveryCoordinator(String role, A2aTaskStore store, AgentTaskWorkflowStarter workflowStarter,
+                                  AgentTaskWorkflowControl workflowControl,
                                   A2aPushNotificationSender notificationSender) {
         this.role = role;
         this.store = store;
         this.workflowStarter = workflowStarter;
+        this.workflowControl = workflowControl;
         this.notificationSender = notificationSender;
     }
 
     public CompletionStage<Report> reconcile() {
+        int cancellationsAcknowledged = 0;
+        int cancellationsPending = 0;
+        for (A2aTaskStore.PendingCancellation pending : store.pendingCancellations(role, BATCH_SIZE)) {
+            try {
+                workflowControl.requestCancellation(
+                        pending.taskId(), pending.contextId(), pending.reason());
+                store.acknowledgeCancellation(pending.cancellationId(), Instant.now());
+                cancellationsAcknowledged++;
+            } catch (RuntimeException failure) {
+                cancellationsPending++;
+                LOGGER.warn("A2A recovery retained cancellation taskId={}", pending.taskId());
+            }
+        }
         int workflows = 0;
         for (A2aTaskStore.StoredTask task : store.nonTerminal(role, BATCH_SIZE)) {
             AgentTaskWorkflowStarter.Execution execution = workflowStarter.start(submission(task), task.envelopeJson());
@@ -36,7 +52,8 @@ public final class A2aRecoveryCoordinator {
             workflows++;
         }
         if (!notificationSender.enabled()) {
-            return CompletableFuture.completedFuture(new Report(workflows, 0, 0));
+            return CompletableFuture.completedFuture(new Report(
+                    workflows, 0, 0, cancellationsAcknowledged, cancellationsPending));
         }
         AtomicInteger acknowledged = new AtomicInteger();
         AtomicInteger failed = new AtomicInteger();
@@ -61,8 +78,11 @@ public final class A2aRecoveryCoordinator {
             deliveries.add(delivery);
         }
         int recovered = workflows;
+        int recoveredCancellations = cancellationsAcknowledged;
+        int retainedCancellations = cancellationsPending;
         return CompletableFuture.allOf(deliveries.toArray(CompletableFuture[]::new))
-                .thenApply(ignored -> new Report(recovered, acknowledged.get(), failed.get()));
+                .thenApply(ignored -> new Report(recovered, acknowledged.get(), failed.get(),
+                        recoveredCancellations, retainedCancellations));
     }
 
     private static A2aSendMessageService.Submission submission(A2aTaskStore.StoredTask task) {
@@ -70,5 +90,6 @@ public final class A2aRecoveryCoordinator {
                 task.skill(), task.callerSubject(), task.tenantId(), task.delegationId(), task.submittedAt());
     }
 
-    public record Report(int workflowsReattached, int notificationsAcknowledged, int notificationsPending) {}
+    public record Report(int workflowsReattached, int notificationsAcknowledged, int notificationsPending,
+                         int cancellationsAcknowledged, int cancellationsPending) {}
 }

@@ -812,8 +812,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   workflow Temporal `a2a-agent-task-v1/<rôle>/<task>` ; états actifs, inconnus, rejetés, déjà complétés, timeout et
   dépendances indisponibles échouent fermés avec `RECONCILIATION_REQUIRED`. L'endpoint exécute cette lecture
   bornée sur `boundedElastic` ; validé le 2026-09-06 par 7 tests dédiés et les 646 tests de l'orchestrateur.)_
-- [ ] **A2A-204 — Tester le rollback sous charge.** Couvrir tâches `SUBMITTED`, `WORKING`, `INPUT_REQUIRED`,
-  `COMPLETED` non notifiées et annulation en cours.
+- [x] **A2A-204 — Tester le rollback sous charge.** Couvrir tâches `SUBMITTED`, `WORKING`, `INPUT_REQUIRED`,
+  `COMPLETED` non notifiées et annulation en cours. _(La campagne `make test-a2a-rollback-load` injecte en parallèle
+  200 tâches PostgreSQL, 40 par état, recrée l'adaptateur comme une image A2A restaurée et prouve le rattachement
+  des workflows, le rejeu des notifications et la conservation des identités, historiques et Evidence. Une outbox
+  transactionnelle V005 ferme la fenêtre de perte entre `CANCELED` et le signal Temporal ; validé le 2026-09-06
+  par les 9 tests de campagne et les 74 tests complets du runtime A2A, sans erreur ni échec.)_
 - [ ] **A2A-205 — Documenter les limites irréversibles.** Identifier migrations de données expand/contract,
   versions de cartes et contrats qui empêchent un retour binaire sans transformation.
 - [ ] **A2A-206 — Exiger une gate de rollback.** Lier décision, incident, versions, état des tâches, sauvegardes et

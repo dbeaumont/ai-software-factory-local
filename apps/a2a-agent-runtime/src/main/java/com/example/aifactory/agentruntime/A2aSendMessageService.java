@@ -2,6 +2,8 @@ package com.example.aifactory.agentruntime;
 
 import com.example.aifactory.agentcore.A2aDecisionJournal;
 import org.erdtman.jcs.JsonCanonicalizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
@@ -18,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Validates and deduplicates asynchronous message/send submissions before durable execution starts. */
 @Service
 public final class A2aSendMessageService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(A2aSendMessageService.class);
     static final String EXECUTION_CONTEXT_EXTENSION =
             "https://ai-factory.local/extensions/execution-context/v1";
     private static final int MAX_PARTS = 16;
@@ -277,14 +280,23 @@ public final class A2aSendMessageService {
             if (task.state().terminal()) {
                 throw new TaskNotCancelable("Task is already terminal: " + task.state());
             }
-            java.util.Optional<A2aTaskStore.StoredTask> updated = store.transition(taskId, task.version(),
-                    TaskState.CANCELED, new A2aTaskStore.HistoryRecord(
-                            submission.messageId(), "TASK_CANCELED", Instant.now()));
+            Instant requestedAt = Instant.now();
+            String cancellationId = taskId + ":cancel";
+            java.util.Optional<A2aTaskStore.StoredTask> updated = store.requestCancellation(
+                    taskId, task.version(),
+                    new A2aTaskStore.HistoryRecord(submission.messageId(), "TASK_CANCELED", requestedAt),
+                    new A2aTaskStore.PendingCancellation(cancellationId, taskId, submission.contextId(),
+                            activeRole, "A2A tasks/cancel", requestedAt));
             if (updated.isPresent()) {
                 metrics.transition(updated.get(), TaskState.CANCELED, Instant.now());
-                workflowControl.requestCancellation(taskId, submission.contextId(), "A2A tasks/cancel");
+                try {
+                    workflowControl.requestCancellation(taskId, submission.contextId(), "A2A tasks/cancel");
+                    store.acknowledgeCancellation(cancellationId, Instant.now());
+                } catch (RuntimeException deferred) {
+                    LOGGER.warn("A2A cancellation retained for recovery taskId={}", taskId);
+                }
                 audit.record(A2aDecisionJournal.EventType.CANCELLATION, A2aDecisionJournal.Outcome.ACCEPTED,
-                        caller.subject(), taskId, "temporal-signal");
+                        caller.subject(), taskId, "durable-temporal-signal");
                 return view(updated.get(), MAX_HISTORY_LENGTH, caller);
             }
             task = store.find(taskId).orElseThrow(() -> new TaskLookupRejected("Task not found"));

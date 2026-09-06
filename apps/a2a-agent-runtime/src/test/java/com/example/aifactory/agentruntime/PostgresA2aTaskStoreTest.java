@@ -32,7 +32,8 @@ class PostgresA2aTaskStoreTest {
                 "db/a2a-task-migration/V001__create_a2a_task_projection.sql"), new ClassPathResource(
                 "db/a2a-task-migration/V002__add_a2a_recovery_state.sql"), new ClassPathResource(
                 "db/a2a-task-migration/V003__sequence_a2a_task_history.sql"), new ClassPathResource(
-                "db/a2a-task-migration/V004__add_a2a_task_messages.sql")).execute(dataSource);
+                "db/a2a-task-migration/V004__add_a2a_task_messages.sql"), new ClassPathResource(
+                "db/a2a-task-migration/V005__add_a2a_cancellation_outbox.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         store = new PostgresA2aTaskStore(jdbc,
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)), new ObjectMapper());
@@ -101,6 +102,17 @@ class PostgresA2aTaskStoreTest {
         assertThat(store.artifacts("task-1", "tenant-a", "orchestrator"))
                 .containsExactly(Map.of("artifactId", "artifact-1"));
         assertThat(store.artifacts("task-1", "tenant-b", "orchestrator")).isEmpty();
+
+        A2aTaskStore.PendingCancellation cancellation = new A2aTaskStore.PendingCancellation(
+                "task-1:cancel", "task-1", "context-1", "developer", "A2A tasks/cancel",
+                now.plusSeconds(4));
+        assertThat(store.requestCancellation("task-1", 3,
+                new A2aTaskStore.HistoryRecord("message-1", "TASK_CANCELED", now.plusSeconds(4)), cancellation))
+                .get().extracting(A2aTaskStore.StoredTask::state)
+                .isEqualTo(A2aSendMessageService.TaskState.CANCELED);
+        assertThat(store.pendingCancellations("developer", 10)).containsExactly(cancellation);
+        store.acknowledgeCancellation(cancellation.cancellationId(), now.plusSeconds(5));
+        assertThat(store.pendingCancellations("developer", 10)).isEmpty();
     }
 
     @Test

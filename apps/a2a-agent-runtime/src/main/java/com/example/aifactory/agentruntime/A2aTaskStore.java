@@ -19,11 +19,15 @@ public interface A2aTaskStore {
     List<Map<String, Object>> artifacts(String taskId, String tenantId, String callerSubject);
     Optional<StoredTask> transition(String taskId, long expectedVersion,
                                     A2aSendMessageService.TaskState next, HistoryRecord event);
+    Optional<StoredTask> requestCancellation(String taskId, long expectedVersion,
+                                             HistoryRecord event, PendingCancellation cancellation);
     void recordWorkflowExecution(String taskId, String workflowId, String runId);
     List<StoredTask> nonTerminal(String role, int limit);
     void enqueueNotification(PendingNotification notification);
     List<PendingNotification> pendingNotifications(String role, int limit);
     void acknowledgeNotification(String notificationId, Instant acknowledgedAt);
+    List<PendingCancellation> pendingCancellations(String role, int limit);
+    void acknowledgeCancellation(String cancellationId, Instant acknowledgedAt);
     void putArtifact(ArtifactRecord artifact);
     void checkHealth();
     int activeCount(String role, String tenantId);
@@ -48,6 +52,10 @@ public interface A2aTaskStore {
     record PendingNotification(
             String notificationId, String taskId, String contextId, String role, long sequence,
             A2aSendMessageService.TaskState state, Instant occurredAt) {}
+
+    record PendingCancellation(
+            String cancellationId, String taskId, String contextId, String role,
+            String reason, Instant occurredAt) {}
 
     record ArtifactRecord(
             String artifactId, String taskId, String tenantId, String aclSubject,

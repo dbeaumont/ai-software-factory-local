@@ -189,6 +189,28 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
     }
 
     @Override
+    public Optional<StoredTask> requestCancellation(String taskId, long expectedVersion,
+                                                    HistoryRecord event, PendingCancellation cancellation) {
+        return transactions.execute(status -> {
+            int updated = jdbc.update("""
+                    UPDATE a2a_agent_task SET task_state = 'CANCELED', version = version + 1
+                    WHERE task_id = ? AND version = ?
+                      AND task_state NOT IN ('COMPLETED', 'REJECTED', 'FAILED', 'CANCELED')
+                    """, taskId, expectedVersion);
+            if (updated == 0) return Optional.empty();
+            insertHistory(taskId, new HistoryRecord(
+                    event.messageId(), event.event(), event.occurredAt(), expectedVersion + 1));
+            jdbc.update("""
+                    INSERT INTO a2a_agent_cancellation_outbox
+                      (cancellation_id, task_id, context_id, agent_role, reason, occurred_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """, cancellation.cancellationId(), cancellation.taskId(), cancellation.contextId(),
+                    cancellation.role(), cancellation.reason(), Timestamp.from(cancellation.occurredAt()));
+            return find(taskId);
+        });
+    }
+
+    @Override
     public void recordWorkflowExecution(String taskId, String workflowId, String runId) {
         int updated = jdbc.update("""
                 UPDATE a2a_agent_task SET workflow_id = ?, workflow_run_id = ?
@@ -240,6 +262,26 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                 UPDATE a2a_agent_notification_outbox SET acknowledged_at = ?
                 WHERE notification_id = ? AND acknowledged_at IS NULL
                 """, Timestamp.from(acknowledgedAt), notificationId);
+    }
+
+    @Override
+    public List<PendingCancellation> pendingCancellations(String role, int limit) {
+        return jdbc.query("""
+                SELECT cancellation_id, task_id, context_id, agent_role, reason, occurred_at
+                FROM a2a_agent_cancellation_outbox
+                WHERE agent_role = ? AND acknowledged_at IS NULL
+                ORDER BY occurred_at, cancellation_id FETCH FIRST ? ROWS ONLY
+                """, (rs, row) -> new PendingCancellation(rs.getString("cancellation_id"),
+                rs.getString("task_id"), rs.getString("context_id"), rs.getString("agent_role"),
+                rs.getString("reason"), rs.getTimestamp("occurred_at").toInstant()), role, limit);
+    }
+
+    @Override
+    public void acknowledgeCancellation(String cancellationId, java.time.Instant acknowledgedAt) {
+        jdbc.update("""
+                UPDATE a2a_agent_cancellation_outbox SET acknowledged_at = ?
+                WHERE cancellation_id = ? AND acknowledged_at IS NULL
+                """, Timestamp.from(acknowledgedAt), cancellationId);
     }
 
     @Override

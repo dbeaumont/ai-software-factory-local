@@ -14,6 +14,7 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
     private final Map<String, String> digestByMessage = new ConcurrentHashMap<>();
     private final Map<String, List<HistoryRecord>> histories = new ConcurrentHashMap<>();
     private final Map<String, PendingNotification> notifications = new ConcurrentHashMap<>();
+    private final Map<String, PendingCancellation> cancellations = new ConcurrentHashMap<>();
     private final Map<String, ArtifactRecord> artifactRecords = new ConcurrentHashMap<>();
 
     @Override
@@ -113,6 +114,15 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
     }
 
     @Override
+    public synchronized Optional<StoredTask> requestCancellation(
+            String taskId, long expectedVersion, HistoryRecord event, PendingCancellation cancellation) {
+        Optional<StoredTask> updated = transition(
+                taskId, expectedVersion, A2aSendMessageService.TaskState.CANCELED, event);
+        updated.ifPresent(ignored -> cancellations.putIfAbsent(cancellation.cancellationId(), cancellation));
+        return updated;
+    }
+
+    @Override
     public synchronized void recordWorkflowExecution(String taskId, String workflowId, String runId) {
         StoredTask current = byTask.get(taskId);
         if (current == null) throw new IllegalStateException("A2A task is absent");
@@ -148,6 +158,19 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
     @Override
     public void acknowledgeNotification(String notificationId, java.time.Instant acknowledgedAt) {
         notifications.remove(notificationId);
+    }
+
+    @Override
+    public List<PendingCancellation> pendingCancellations(String role, int limit) {
+        return cancellations.values().stream().filter(cancellation -> cancellation.role().equals(role))
+                .sorted(Comparator.comparing(PendingCancellation::occurredAt)
+                        .thenComparing(PendingCancellation::cancellationId))
+                .limit(limit).toList();
+    }
+
+    @Override
+    public void acknowledgeCancellation(String cancellationId, java.time.Instant acknowledgedAt) {
+        cancellations.remove(cancellationId);
     }
 
     @Override

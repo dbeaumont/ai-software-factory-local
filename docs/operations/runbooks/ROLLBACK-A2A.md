@@ -61,6 +61,18 @@ sous un tag historique. Une image manquante provoque un arrêt et une escalade.
 
 ## Vérification et clôture
 
+Avant toute exécution sur l'environnement cible, rejouer la campagne déterministe de compatibilité du stockage :
+
+```bash
+make test-a2a-rollback-load
+```
+
+Elle injecte concurremment 200 tâches dans PostgreSQL (`SUBMITTED`, `WORKING`, `INPUT_REQUIRED`, `COMPLETED`
+avec notification non acquittée et `CANCELED` avec signal Temporal non acquitté), recrée l'adaptateur comme le
+ferait l'image A2A restaurée, puis exige la conservation des identités, historiques et Evidence ainsi que le
+rejeu des notifications et annulations. Son succès ne remplace pas la gate opérateur ni l'exercice sur
+l'environnement cible avec les digests de release approuvés.
+
 Exiger tous les pollers/readiness, backlog décroissant, replay déterministe, corrélations bijectives, zéro doublon,
 SLO sous budget et alertes saines pendant vingt minutes. Comparer les digests réellement déployés à la gate de
 rollback, archiver la réconciliation de chaque tâche active et conserver les anciens workers jusqu'au drainage.

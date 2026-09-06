@@ -105,8 +105,9 @@ class AgentTemporalConfiguration {
     @ConditionalOnProperty(name = "ai-factory.agent-runtime.temporal.enabled", havingValue = "true")
     A2aRecoveryCoordinator a2aRecoveryCoordinator(AgentRuntimeProperties runtime, A2aTaskStore store,
                                                    AgentTaskWorkflowStarter starter,
+                                                   AgentTaskWorkflowControl control,
                                                    A2aPushNotificationSender notificationSender) {
-        return new A2aRecoveryCoordinator(runtime.role(), store, starter, notificationSender);
+        return new A2aRecoveryCoordinator(runtime.role(), store, starter, control, notificationSender);
     }
 
     @Bean

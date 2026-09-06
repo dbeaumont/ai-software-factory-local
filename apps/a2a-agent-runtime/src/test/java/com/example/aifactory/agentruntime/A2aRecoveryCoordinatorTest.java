@@ -41,12 +41,13 @@ class A2aRecoveryCoordinatorTest {
                 "0123456789abcdef0123456789abcdef".getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
         A2aRecoveryCoordinator.Report report = new A2aRecoveryCoordinator(
-                "developer", store, starter, sender).reconcile().toCompletableFuture().join();
+                "developer", store, starter, (taskId, contextId, reason) -> { }, sender)
+                .reconcile().toCompletableFuture().join();
 
         assertThat(starts).containsExactly("task-1{\"target_role\":\"developer\"}");
         assertThat(store.find("task-1").orElseThrow().workflowRunId()).isEqualTo("recovered-run");
         assertThat(store.pendingNotifications("developer", 10)).isEmpty();
-        assertThat(report).isEqualTo(new A2aRecoveryCoordinator.Report(1, 1, 0));
+        assertThat(report).isEqualTo(new A2aRecoveryCoordinator.Report(1, 1, 0, 0, 0));
     }
 
     @Test
@@ -68,7 +69,7 @@ class A2aRecoveryCoordinatorTest {
                     "a2a-agent-task-v1/developer/" + submission.taskId(), "recovered-run");
         };
         A2aRecoveryCoordinator coordinator = new A2aRecoveryCoordinator(
-                "developer", store, recoveringStarter, disabledSender());
+                "developer", store, recoveringStarter, (taskId, contextId, reason) -> { }, disabledSender());
 
         assertThatThrownBy(coordinator::reconcile).isInstanceOf(A2aOperationalException.class);
         A2aRecoveryCoordinator.Report recovered = coordinator.reconcile().toCompletableFuture().join();
@@ -77,6 +78,32 @@ class A2aRecoveryCoordinatorTest {
         assertThat(attempts).hasValue(2);
         assertThat(store.nonTerminal("developer", 10)).hasSize(1);
         assertThat(store.find("task-temporal").orElseThrow().workflowRunId()).isEqualTo("recovered-run");
+    }
+
+    @Test
+    void replaysADurableCancellationBeforeReattachingActiveWorkflows() {
+        InMemoryA2aTaskStore store = new InMemoryA2aTaskStore();
+        Instant now = Instant.parse("2026-09-06T12:00:00Z");
+        store.createOrGet(new A2aTaskStore.StoredTask(
+                "task-cancel", "context-1", "message-1", "a".repeat(64), "developer",
+                "developer.code-task-v1", "orchestrator", "tenant-a", "delegation-1", now,
+                A2aSendMessageService.TaskState.WORKING, 0, "{}", "workflow-1", "run-1"),
+                new A2aTaskStore.HistoryRecord("message-1", "MESSAGE_ACCEPTED", now));
+        A2aTaskStore.PendingCancellation cancellation = new A2aTaskStore.PendingCancellation(
+                "task-cancel:cancel", "task-cancel", "context-1", "developer", "A2A tasks/cancel",
+                now.plusSeconds(1));
+        store.requestCancellation("task-cancel", 0,
+                new A2aTaskStore.HistoryRecord("message-1", "TASK_CANCELED", now.plusSeconds(1)), cancellation);
+        List<String> signals = new ArrayList<>();
+
+        A2aRecoveryCoordinator.Report report = new A2aRecoveryCoordinator("developer", store,
+                (submission, envelope) -> { throw new AssertionError("Canceled task must not be restarted"); },
+                (taskId, contextId, reason) -> signals.add(taskId + ':' + reason), disabledSender())
+                .reconcile().toCompletableFuture().join();
+
+        assertThat(signals).containsExactly("task-cancel:A2A tasks/cancel");
+        assertThat(store.pendingCancellations("developer", 10)).isEmpty();
+        assertThat(report).isEqualTo(new A2aRecoveryCoordinator.Report(0, 0, 0, 1, 0));
     }
 
     private static A2aPushNotificationSender disabledSender() {

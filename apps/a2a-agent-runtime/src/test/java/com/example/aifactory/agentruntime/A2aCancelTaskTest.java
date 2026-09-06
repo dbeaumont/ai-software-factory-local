@@ -5,6 +5,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,12 +43,46 @@ class A2aCancelTaskTest {
                 .hasMessage("Task not found");
     }
 
+    @Test
+    void retainsCancellationForRecoveryWhenTheTemporalSignalIsInterrupted() throws Exception {
+        InMemoryA2aTaskStore store = new InMemoryA2aTaskStore();
+        A2aSendMessageService service = service((taskId, contextId, reason) -> {
+            throw new IllegalStateException("simulated rollback interruption");
+        }, store);
+        A2aSendMessageService.Caller caller = caller();
+        A2aSendMessageService.Submission submission = service.send(send("message-cancel-recovery"), caller);
+        tools.jackson.databind.JsonNode query = mapper.readTree("{\"id\":\"" + submission.taskId() + "\"}");
+
+        assertThat(service.cancelTask(query, caller).state()).isEqualTo(A2aSendMessageService.TaskState.CANCELED);
+        assertThat(store.pendingCancellations("developer", 10)).hasSize(1);
+
+        AtomicBoolean replayed = new AtomicBoolean();
+        new A2aRecoveryCoordinator("developer", store,
+                (accepted, envelope) -> { throw new AssertionError("Canceled workflow must not be restarted"); },
+                (taskId, contextId, reason) -> replayed.set(true), disabledSender())
+                .reconcile().toCompletableFuture().join();
+        assertThat(replayed).isTrue();
+        assertThat(store.pendingCancellations("developer", 10)).isEmpty();
+    }
+
     private A2aSendMessageService service(AgentTaskWorkflowControl control) {
+        return service(control, new InMemoryA2aTaskStore());
+    }
+
+    private A2aSendMessageService service(AgentTaskWorkflowControl control, A2aTaskStore store) {
         AgentRuntimeProperties runtime = new AgentRuntimeProperties(
                 "developer", URI.create("http://localhost:8090/a2a"));
         return new A2aSendMessageService(runtime,
                 new AgentCardCatalogGenerator(new com.example.aifactory.agentcore.AgentCatalog(), mapper),
-                mapper, control);
+                mapper, control,
+                (submission, envelope) -> new AgentTaskWorkflowStarter.Execution("test", "test"), store);
+    }
+
+    private static A2aPushNotificationSender disabledSender() {
+        return new A2aPushNotificationSender(new A2aPushNotificationProperties(
+                false, null, null, 1, java.time.Duration.ZERO), new ObjectMapper(),
+                (callback, body, signature) -> java.util.concurrent.CompletableFuture.completedFuture(202),
+                "0123456789abcdef0123456789abcdef".getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     private static A2aSendMessageService.Caller caller() {
