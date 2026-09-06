@@ -19,15 +19,18 @@ final class AgentCardController {
     private final A2aCardIdentityProperties identity;
     private final AgentCardCatalogGenerator generator;
     private final A2aAgentCardSigner signer;
+    private final A2aPushNotificationProperties pushNotifications;
 
     AgentCardController(AgentRuntimeProperties properties, A2aSecurityProperties security,
                         A2aCardIdentityProperties identity,
-                        AgentCardCatalogGenerator generator, A2aAgentCardSigner signer) {
+                        AgentCardCatalogGenerator generator, A2aAgentCardSigner signer,
+                        A2aPushNotificationProperties pushNotifications) {
         this.properties = properties;
         this.security = security;
         this.identity = identity;
         this.generator = generator;
         this.signer = signer;
+        this.pushNotifications = pushNotifications;
     }
 
     @GetMapping(path = WELL_KNOWN_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -49,7 +52,9 @@ final class AgentCardController {
                 "url", properties.endpoint().toString(),
                 "transport", "JSONRPC")));
         card.put("version", source.catalogId());
-        card.put("capabilities", Map.of("streaming", false, "pushNotifications", false));
+        card.put("capabilities", Map.of(
+                "streaming", false,
+                "pushNotifications", pushNotifications.enabled()));
         if (security.enabled()) {
             card.put("securitySchemes", Map.of(
                     "mutualTLS", Map.of("type", "mutualTLS", "description", "Workload mTLS certificate"),

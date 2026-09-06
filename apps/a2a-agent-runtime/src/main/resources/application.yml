@@ -38,6 +38,12 @@ ai-factory:
       provider-name: ${AI_FACTORY_A2A_CARD_PROVIDER_NAME:AI Software Factory}
       provider-url: ${AI_FACTORY_A2A_CARD_PROVIDER_URL:https://ai-factory.local}
       validity: ${AI_FACTORY_A2A_CARD_VALIDITY:15m}
+    push-notification:
+      enabled: ${AI_FACTORY_A2A_PUSH_ENABLED:false}
+      callback: ${AI_FACTORY_A2A_PUSH_CALLBACK:}
+      hmac-secret-file: ${AI_FACTORY_A2A_PUSH_HMAC_SECRET_FILE:}
+      max-attempts: ${AI_FACTORY_A2A_PUSH_MAX_ATTEMPTS:4}
+      initial-backoff: ${AI_FACTORY_A2A_PUSH_INITIAL_BACKOFF:1s}
     llm:
       base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
       api-key: ${AI_FACTORY_LLM_API_KEY:}

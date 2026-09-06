@@ -47,7 +47,8 @@ class A2aSecurityDeclarationTest {
                 "ai-factory", "AI Software Factory", URI.create("https://ai-factory.local"),
                 java.time.Duration.ofMinutes(15));
         AgentCardController controller = new AgentCardController(runtime, security, identity,
-                new AgentCardCatalogGenerator(new tools.jackson.databind.ObjectMapper()), testSigner());
+                new AgentCardCatalogGenerator(new tools.jackson.databind.ObjectMapper()), testSigner(),
+                new A2aPushNotificationProperties(false, null, null, 4, java.time.Duration.ofSeconds(1)));
 
         Map<String, Object> card = controller.publicCard();
         assertThatCode(() -> ((Map<String, Object>) card.get("securitySchemes")).get("mutualTLS"))

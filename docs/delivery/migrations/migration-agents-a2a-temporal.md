@@ -367,8 +367,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   idempotente et refuser proprement un état terminal non annulable. _(`tasks/cancel` contrôle propriétaire et
   scopes avant lookup observable, signale `AgentTaskWorkflowControl` une seule fois, projette `CANCELED` de façon
   atomique et renvoie `TaskNotCancelableError` pour tout autre état terminal.)_
-- [ ] **A2A-064 — Implémenter les notifications push.** Autoriser seulement le callback fixe de
+- [x] **A2A-064 — Implémenter les notifications push.** Autoriser seulement le callback fixe de
   l'orchestrateur, authentifier chaque notification, borner retries/backoff et journaliser les accusés sans secret.
+  _(`A2aPushNotificationSender` signe en HMAC-SHA256 vers l'unique callback HTTPS configuré, borne tentatives et
+  backoff, et ne journalise que tâche/tentative/statut ; la capacité de carte suit exactement son activation.)_
 - [ ] **A2A-065 — Créer un stockage durable des tâches.** Persister tâche, messages retenus, transitions,
   artefacts, ACL, digests, message idempotent et version avec verrouillage optimiste.
 - [ ] **A2A-066 — Créer `AgentTaskWorkflowV1`.** Une tâche A2A démarre un workflow Temporal déterministe dédié,
