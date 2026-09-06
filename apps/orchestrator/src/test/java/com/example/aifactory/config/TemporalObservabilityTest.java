@@ -31,6 +31,18 @@ class TemporalObservabilityTest {
         assertThat((List<String>) services.get("otel-collector").get("networks"))
                 .contains("workflow-internal");
 
+        Map<String, Object> application;
+        try (var input = Files.newInputStream(root.resolve("apps/orchestrator/src/main/resources/application.yml"))) {
+            application = new Yaml().load(input);
+        }
+        Map<String, Object> management = (Map<String, Object>) application.get("management");
+        Map<String, Object> endpoint = (Map<String, Object>) management.get("endpoint");
+        Map<String, Object> health = (Map<String, Object>) endpoint.get("health");
+        Map<String, Object> groups = (Map<String, Object>) health.get("group");
+        Map<String, Object> readiness = (Map<String, Object>) groups.get("readiness");
+        assertThat((List<String>) readiness.get("include"))
+                .containsExactlyInAnyOrder("readinessState", "temporalEngine");
+
         String collector = Files.readString(root.resolve("infrastructure/observability/otel-collector.yaml"));
         assertThat(collector).contains("prometheus/temporal:", "targets: [temporal:8000]");
         String dashboard = Files.readString(

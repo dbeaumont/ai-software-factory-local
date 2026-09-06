@@ -69,6 +69,11 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include:
+            - readinessState
+            - temporalEngine
   tracing:
     sampling:
       probability: ${AI_FACTORY_OTEL_TRACES_SAMPLING_PROBABILITY:1.0}
