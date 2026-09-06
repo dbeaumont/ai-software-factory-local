@@ -1,0 +1,68 @@
+package com.example.aifactory.workflow.temporal;
+
+import com.example.aifactory.a2a.A2aContracts;
+import io.temporal.activity.ActivityInterface;
+import io.temporal.activity.ActivityMethod;
+import io.temporal.workflow.Workflow;
+
+import java.util.List;
+
+/** Five independently configured Temporal activity boundaries for A2A client operations. */
+public final class A2aActivities {
+    private A2aActivities() {}
+
+    @ActivityInterface
+    public interface ResolveAgent {
+        @ActivityMethod(name = "A2aResolveAgent")
+        A2aContracts.AgentCardDescriptor resolveAgent(String agentRole);
+    }
+
+    @ActivityInterface
+    public interface DispatchTask {
+        @ActivityMethod(name = "A2aDispatchTask")
+        A2aContracts.TaskSnapshot dispatchTask(A2aContracts.SendCommand command);
+    }
+
+    @ActivityInterface
+    public interface GetTask {
+        @ActivityMethod(name = "A2aGetTask")
+        A2aContracts.TaskSnapshot getTask(A2aContracts.TaskQuery query);
+    }
+
+    @ActivityInterface
+    public interface CancelTask {
+        @ActivityMethod(name = "A2aCancelTask")
+        A2aContracts.TaskSnapshot cancelTask(A2aContracts.TaskQuery query);
+    }
+
+    @ActivityInterface
+    public interface ValidateArtifacts {
+        @ActivityMethod(name = "A2aValidateArtifacts")
+        ValidatedArtifacts validateArtifacts(ValidationRequest request);
+    }
+
+    public static Stubs newStubs() {
+        return new Stubs(
+                Workflow.newActivityStub(ResolveAgent.class,
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_RESOLVE)),
+                Workflow.newActivityStub(DispatchTask.class,
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_DISPATCH)),
+                Workflow.newActivityStub(GetTask.class,
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_GET)),
+                Workflow.newActivityStub(CancelTask.class,
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_CANCEL)),
+                Workflow.newActivityStub(ValidateArtifacts.class,
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_VALIDATE)));
+    }
+
+    public record ValidationRequest(String agentRole, String outputContract, A2aContracts.TaskSnapshot task) {}
+
+    public record EvidenceReference(String artifactId, String uri, String digest, String contract) {}
+
+    public record ValidatedArtifacts(String taskId, List<EvidenceReference> references) {
+        public ValidatedArtifacts { references = List.copyOf(references); }
+    }
+
+    public record Stubs(ResolveAgent resolveAgent, DispatchTask dispatchTask, GetTask getTask,
+                        CancelTask cancelTask, ValidateArtifacts validateArtifacts) {}
+}

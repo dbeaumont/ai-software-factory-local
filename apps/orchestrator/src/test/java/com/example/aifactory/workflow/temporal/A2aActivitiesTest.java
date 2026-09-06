@@ -1,0 +1,94 @@
+package com.example.aifactory.workflow.temporal;
+
+import com.example.aifactory.a2a.A2aClient;
+import com.example.aifactory.a2a.A2aContractMapping;
+import com.example.aifactory.a2a.A2aContracts;
+import com.example.aifactory.a2a.A2aMediaTypes;
+import com.example.aifactory.a2a.AgentCardResolver;
+import io.temporal.activity.ActivityOptions;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
+
+import java.net.URI;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class A2aActivitiesTest {
+
+    @Test
+    void delegatesEachRemoteOperationAndValidatesBoundEvidenceReferences() {
+        A2aContracts.TaskSnapshot snapshot = completedTask("patch-proposal-v1", "a".repeat(64));
+        AgentCardResolver cards = role -> CompletableFuture.completedFuture(new A2aContracts.AgentCardDescriptor(
+                role, URI.create("https://developer.internal/.well-known/agent-card.json"),
+                URI.create("https://developer.internal/a2a"), "JSONRPC", "1.0", "b".repeat(64),
+                List.of("developer.code-task-v1"), false, true));
+        A2aClient client = new A2aClient() {
+            @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> send(
+                    A2aContracts.SendCommand command) { return CompletableFuture.completedFuture(snapshot); }
+            @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> getTask(
+                    A2aContracts.TaskQuery query) { return CompletableFuture.completedFuture(snapshot); }
+            @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> cancelTask(
+                    A2aContracts.TaskQuery query) { return CompletableFuture.completedFuture(snapshot); }
+        };
+        A2aActivitiesImpl activities = new A2aActivitiesImpl(
+                cards, client, new A2aContractMapping(new ObjectMapper()));
+
+        assertThat(activities.resolveAgent("developer").agentRole()).isEqualTo("developer");
+        assertThat(activities.dispatchTask(command()).taskId()).isEqualTo("task-1");
+        assertThat(activities.getTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
+        assertThat(activities.cancelTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
+        assertThat(activities.validateArtifacts(new A2aActivities.ValidationRequest(
+                "developer", "patch-proposal-v1", snapshot)).references()).singleElement()
+                .satisfies(reference -> assertThat(reference.uri()).startsWith("evidence://task-1/"));
+
+        assertThatThrownBy(() -> activities.validateArtifacts(new A2aActivities.ValidationRequest(
+                "developer", "security-assessment-v1", snapshot))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void eachA2aOperationHasAnExplicitRetryAndTimeoutPolicy() {
+        ActivityOptions resolve = policy(TemporalActivityPolicies.Kind.A2A_RESOLVE);
+        ActivityOptions dispatch = policy(TemporalActivityPolicies.Kind.A2A_DISPATCH);
+        ActivityOptions get = policy(TemporalActivityPolicies.Kind.A2A_GET);
+        ActivityOptions cancel = policy(TemporalActivityPolicies.Kind.A2A_CANCEL);
+        ActivityOptions validate = policy(TemporalActivityPolicies.Kind.A2A_VALIDATE);
+
+        assertThat(resolve.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
+        assertThat(dispatch.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
+        assertThat(get.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
+        assertThat(cancel.getRetryOptions().getMaximumAttempts()).isEqualTo(2);
+        assertThat(validate.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
+        assertThat(List.of(resolve.getStartToCloseTimeout(), dispatch.getStartToCloseTimeout(),
+                get.getStartToCloseTimeout(), cancel.getStartToCloseTimeout(), validate.getStartToCloseTimeout()))
+                .doesNotContainNull();
+    }
+
+    private static ActivityOptions policy(TemporalActivityPolicies.Kind kind) {
+        return TemporalActivityPolicies.forKind(kind);
+    }
+
+    private static A2aContracts.SendCommand command() {
+        return new A2aContracts.SendCommand("developer", "developer.code-task-v1", "message-1", null, null,
+                List.of(new A2aContracts.Part(A2aMediaTypes.JSON, null, Map.of("instruction", "change"), null)),
+                Map.of(), true);
+    }
+
+    private static A2aContracts.TaskSnapshot completedTask(String contract, String digest) {
+        String uri = "evidence://task-1/attempt-1/agent-result/" + digest;
+        Map<String, Object> data = Map.of(
+                "schema_version", "1", "reference_id", "artifact-1", "uri", uri, "digest", digest,
+                "size_bytes", 123, "media_type", "application/json", "classification", "INTERNAL",
+                "contract", contract, "contract_version", "1");
+        A2aContracts.Part part = new A2aContracts.Part(
+                A2aMediaTypes.EVIDENCE_REFERENCE, null, data, URI.create(uri));
+        return new A2aContracts.TaskSnapshot("task-1", "context-1", A2aContracts.TaskState.COMPLETED,
+                Instant.parse("2026-09-06T12:00:00Z"),
+                List.of(new A2aContracts.Artifact("artifact-1", "developer-result", List.of(part), Map.of())),
+                Map.of());
+    }
+}

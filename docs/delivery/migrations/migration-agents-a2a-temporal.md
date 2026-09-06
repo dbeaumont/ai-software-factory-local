@@ -413,8 +413,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 12. Lot 5 — raccorder Temporal au client A2A
 
-- [ ] **A2A-080 — Créer les activités A2A.** Séparer `resolveAgent`, `dispatchTask`, `getTask`, `cancelTask` et
-  `validateArtifacts` avec timeouts et retries spécifiques.
+- [x] **A2A-080 — Créer les activités A2A.** Séparer `resolveAgent`, `dispatchTask`, `getTask`, `cancelTask` et
+  `validateArtifacts` avec timeouts et retries spécifiques. _(`A2aActivities` expose cinq interfaces Temporal
+  distinctes ; chaque stub utilise sa politique dédiée, et l'envoi n'est jamais rejoué automatiquement afin de
+  laisser les résultats ambigus au mécanisme de réconciliation.)_
 - [ ] **A2A-081 — Persister la corrélation avant attente.** Enregistrer workflow, tentative, délégation,
   `messageId`, rôle, Agent Card digest, A2A task ID et context ID dans une table dédiée.
 - [ ] **A2A-082 — Réconcilier un résultat ambigu.** Après timeout de `SendMessage`, rechercher par `messageId` ou

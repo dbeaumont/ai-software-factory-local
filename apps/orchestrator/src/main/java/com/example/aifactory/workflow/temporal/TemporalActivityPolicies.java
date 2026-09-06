@@ -45,6 +45,16 @@ public final class TemporalActivityPolicies {
                 retry(3, Duration.ofMillis(500), Duration.ofSeconds(5))));
         options.put(Kind.SCM, activity(Duration.ofMinutes(10), Duration.ofMinutes(4), Duration.ofMinutes(2), null,
                 retry(2, Duration.ofSeconds(1), Duration.ofSeconds(10))));
+        options.put(Kind.A2A_RESOLVE, activity(Duration.ofMinutes(1), Duration.ofSeconds(20),
+                Duration.ofSeconds(20), null, retry(3, Duration.ofMillis(250), Duration.ofSeconds(2))));
+        options.put(Kind.A2A_DISPATCH, activity(Duration.ofMinutes(2), Duration.ofSeconds(45),
+                Duration.ofSeconds(30), null, retry(1, Duration.ofMillis(250), Duration.ofMillis(250))));
+        options.put(Kind.A2A_GET, activity(Duration.ofMinutes(1), Duration.ofSeconds(20),
+                Duration.ofSeconds(20), null, retry(3, Duration.ofMillis(500), Duration.ofSeconds(3))));
+        options.put(Kind.A2A_CANCEL, activity(Duration.ofMinutes(2), Duration.ofSeconds(30),
+                Duration.ofSeconds(30), null, retry(2, Duration.ofMillis(500), Duration.ofSeconds(2))));
+        options.put(Kind.A2A_VALIDATE, activity(Duration.ofSeconds(30), Duration.ofSeconds(10),
+                Duration.ofSeconds(10), null, retry(1, Duration.ofMillis(100), Duration.ofMillis(100))));
         return Map.copyOf(options);
     }
 
@@ -65,5 +75,8 @@ public final class TemporalActivityPolicies {
                 .setDoNotRetry(NON_RETRYABLE).build();
     }
 
-    public enum Kind { READ, LLM, SANDBOX, ASSURANCE, EVIDENCE, SCM }
+    public enum Kind {
+        READ, LLM, SANDBOX, ASSURANCE, EVIDENCE, SCM,
+        A2A_RESOLVE, A2A_DISPATCH, A2A_GET, A2A_CANCEL, A2A_VALIDATE
+    }
 }
