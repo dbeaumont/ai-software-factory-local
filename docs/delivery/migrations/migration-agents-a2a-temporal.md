@@ -136,8 +136,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   `1.1.0.Final` comme version candidate, après vérification JDK 25, Spring Boot 4.1, Netty/Reactor, licences, SBOM
   et vulnérabilités. _(Version épinglée dans le POM ; résolution et arbre Maven, suite complète et scan Trivy
   validés. Matrice : `docs/qualification/a2a/A2A-JAVA-SDK-1.1.0.md`.)_
-- [ ] **A2A-012 — Choisir un binding unique pour la coupure.** Utiliser JSON-RPC 2.0 sur HTTPS comme interface
-  A2A préférée initiale ; ne déclarer REST ou gRPC dans les Agent Cards qu'après tests d'équivalence.
+- [x] **A2A-012 — Choisir un binding unique pour la coupure.** Utiliser JSON-RPC 2.0 sur HTTPS comme interface
+  A2A préférée initiale ; ne déclarer REST ou gRPC dans les Agent Cards qu'après tests d'équivalence. _(Binding
+  initial fixé par `ADR-A2A-001`; le SDK qualifié fournit le transport JSON-RPC sans activer les autres.)_
 - [ ] **A2A-013 — Encapsuler le SDK.** Créer des ports applicatifs `A2aClient`, `A2aTaskServer`,
   `AgentCardResolver` et `A2aNotificationReceiver` pour isoler le domaine des classes du SDK.
 - [ ] **A2A-014 — Fixer le profil asynchrone.** Envoyer `SendMessage` avec `returnImmediately: true`, recevoir les
