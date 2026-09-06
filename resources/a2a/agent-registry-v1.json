@@ -1,0 +1,37 @@
+{
+  "version": "1",
+  "profiles": {
+    "compose": {
+      "supervisor": "https://a2a-supervisor:8090",
+      "architecture-agent": "https://a2a-architecture-agent:8090",
+      "impact-analysis": "https://a2a-impact-analysis:8090",
+      "dependencies-contracts": "https://a2a-dependencies-contracts:8090",
+      "code-agent": "https://a2a-code-agent:8090",
+      "developer": "https://a2a-developer:8090",
+      "patch-repair": "https://a2a-patch-repair:8090",
+      "test-agent": "https://a2a-test-agent:8090",
+      "test-design": "https://a2a-test-design:8090",
+      "test-evidence": "https://a2a-test-evidence:8090",
+      "security-agent": "https://a2a-security-agent:8090",
+      "threat-model": "https://a2a-threat-model:8090",
+      "security-findings": "https://a2a-security-findings:8090",
+      "independent-reviewer": "https://a2a-independent-reviewer:8090"
+    },
+    "gke": {
+      "supervisor": "https://a2a-supervisor.agents.svc.cluster.local:8090",
+      "architecture-agent": "https://a2a-architecture-agent.agents.svc.cluster.local:8090",
+      "impact-analysis": "https://a2a-impact-analysis.agents.svc.cluster.local:8090",
+      "dependencies-contracts": "https://a2a-dependencies-contracts.agents.svc.cluster.local:8090",
+      "code-agent": "https://a2a-code-agent.agents.svc.cluster.local:8090",
+      "developer": "https://a2a-developer.agents.svc.cluster.local:8090",
+      "patch-repair": "https://a2a-patch-repair.agents.svc.cluster.local:8090",
+      "test-agent": "https://a2a-test-agent.agents.svc.cluster.local:8090",
+      "test-design": "https://a2a-test-design.agents.svc.cluster.local:8090",
+      "test-evidence": "https://a2a-test-evidence.agents.svc.cluster.local:8090",
+      "security-agent": "https://a2a-security-agent.agents.svc.cluster.local:8090",
+      "threat-model": "https://a2a-threat-model.agents.svc.cluster.local:8090",
+      "security-findings": "https://a2a-security-findings.agents.svc.cluster.local:8090",
+      "independent-reviewer": "https://a2a-independent-reviewer.agents.svc.cluster.local:8090"
+    }
+  }
+}

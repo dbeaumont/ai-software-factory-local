@@ -330,8 +330,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   version, binding, skills, expiration et empreinte avant la première invocation. _(`A2aAgentCardVerifier`
   canonicalise la carte, exige une signature issue d'un `kid`/fingerprint allow-listé et contrôle tous les champs
   d'identité, d'interface, de capacité et de catalogue avant de produire le descripteur applicatif.)_
-- [ ] **A2A-056 — Créer un registre interne allow-listé.** Associer rôle à URL de carte attendue ; interdire la
-  découverte Internet dynamique et les redirections vers une origine non autorisée.
+- [x] **A2A-056 — Créer un registre interne allow-listé.** Associer rôle à URL de carte attendue ; interdire la
+  découverte Internet dynamique et les redirections vers une origine non autorisée. _(Le registre v1 ferme les
+  14 rôles sur leurs origines HTTPS Compose/GKE ; `AllowListedAgentRegistry` refuse rôle inconnu, profil divergent,
+  redirection et URI finale différente avant toute lecture de carte.)_
 - [ ] **A2A-057 — Gérer le cache.** Respecter ETag/cache headers, borner la durée, revalider après rotation et
   conserver la dernière carte valide uniquement pendant une indisponibilité courte explicitement configurée.
 - [ ] **A2A-058 — Ajouter une gate de cohérence.** Faire échouer le démarrage si le catalogue, les cartes, les
