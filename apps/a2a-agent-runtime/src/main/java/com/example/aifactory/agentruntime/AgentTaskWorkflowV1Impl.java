@@ -29,7 +29,7 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
         requireInput(input);
         currentState = "WORKING";
         projections.project(new AgentTaskProjectionActivities.Projection(
-                input.taskId(), currentState, input.taskId() + ":working"));
+                input.taskId(), currentState, input.taskId() + ":working", input.traceparent()));
         Workflow.await(() -> outcome != null || canceled);
         Outcome terminal = canceled ? new Outcome("CANCELED", null, cancellationReason) : outcome;
         if ("COMPLETED".equals(terminal.state())) {
@@ -42,7 +42,7 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
         }
         currentState = terminal.state();
         projections.project(new AgentTaskProjectionActivities.Projection(
-                input.taskId(), currentState, input.taskId() + ":terminal:" + currentState));
+                input.taskId(), currentState, input.taskId() + ":terminal:" + currentState, input.traceparent()));
         return terminal;
     }
 

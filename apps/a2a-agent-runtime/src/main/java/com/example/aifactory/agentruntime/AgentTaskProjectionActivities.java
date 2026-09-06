@@ -8,5 +8,9 @@ public interface AgentTaskProjectionActivities {
     @ActivityMethod
     void project(Projection projection);
 
-    record Projection(String taskId, String state, String transitionId) {}
+    record Projection(String taskId, String state, String transitionId, String traceparent) {
+        Projection(String taskId, String state, String transitionId) {
+            this(taskId, state, transitionId, null);
+        }
+    }
 }

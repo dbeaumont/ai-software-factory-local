@@ -37,6 +37,15 @@ record A2aW3cTraceContext(String traceparent, String baggage) {
 
     static A2aW3cTraceContext current() { return CURRENT.get(); }
 
+    static A2aW3cTraceContext propagatedFromCurrent(A2aW3cTraceContext fallback) {
+        io.opentelemetry.api.trace.SpanContext active =
+                io.opentelemetry.api.trace.Span.current().getSpanContext();
+        if (!active.isValid()) return fallback;
+        String flags = active.getTraceFlags().asHex();
+        return new A2aW3cTraceContext(
+                "00-" + active.getTraceId() + "-" + active.getSpanId() + "-" + flags, fallback.baggage());
+    }
+
     <T> T call(Callable<T> action) {
         A2aW3cTraceContext previous = CURRENT.get();
         CURRENT.set(this);

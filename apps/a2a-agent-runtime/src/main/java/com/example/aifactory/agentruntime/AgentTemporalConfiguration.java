@@ -46,7 +46,8 @@ class AgentTemporalConfiguration {
     @ConditionalOnProperty(name = "ai-factory.agent-runtime.temporal.enabled", havingValue = "true")
     Worker agentTaskWorker(WorkerFactory factory, AgentTemporalProperties properties, AgentRuntimeProperties runtime,
                            A2aTaskStore taskStore, EvidenceArtifactPublisher artifactPublisher,
-                           AgentConcurrencyProperties concurrency) {
+                           AgentConcurrencyProperties concurrency, A2aSpanLinks spanLinks,
+                           A2aServerMetrics metrics) {
         WorkerDeploymentOptions deployment = WorkerDeploymentOptions.newBuilder()
                 .setUseVersioning(true)
                 .setVersion(new WorkerDeploymentVersion(properties.deploymentName(), properties.buildId()))
@@ -59,7 +60,7 @@ class AgentTemporalConfiguration {
                 .setMaxConcurrentWorkflowTaskExecutionSize(concurrency.maxWorkflowExecutions())
                 .setMaxConcurrentActivityExecutionSize(concurrency.maxActivityExecutions()).build());
         worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
-        worker.registerActivitiesImplementations(new AgentTaskProjectionActivitiesImpl(taskStore));
+        worker.registerActivitiesImplementations(new AgentTaskProjectionActivitiesImpl(taskStore, spanLinks, metrics));
         worker.registerActivitiesImplementations(new AgentArtifactActivitiesImpl(artifactPublisher));
         return worker;
     }

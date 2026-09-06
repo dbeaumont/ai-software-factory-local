@@ -14,14 +14,27 @@ public final class AgentExecutionWorker {
     private final RoleScopedAgentContext role;
     private final LlmCompletionPort llm;
     private final McpToolPort mcp;
+    private final A2aSpanLinks spanLinks;
 
     AgentExecutionWorker(RoleScopedAgentContext role, LlmCompletionPort llm, McpToolPort mcp) {
+        this(role, llm, mcp, A2aSpanLinks.disabled());
+    }
+
+    AgentExecutionWorker(RoleScopedAgentContext role, LlmCompletionPort llm, McpToolPort mcp,
+                         A2aSpanLinks spanLinks) {
         this.role = role;
         this.llm = llm;
         this.mcp = mcp;
+        this.spanLinks = spanLinks;
     }
 
     public Result execute(Request request) {
+        return spanLinks.call("ai.factory.a2a.agent.execute", "task-to-agent-execution", request.traceparent(),
+                java.util.Map.of("ai_factory.task.id", request.taskId(), "ai_factory.attempt.id", request.attemptId(),
+                        "a2a.agent.role", request.role()), () -> executeLinked(request));
+    }
+
+    private Result executeLinked(Request request) {
         role.requireActiveRole(request.role());
         AgentContractValidator.Context contractContext = new AgentContractValidator.Context(
                 request.taskId(), request.attemptId(), request.allowedReferenceIds());

@@ -34,6 +34,7 @@ public final class A2aSendMessageService {
     private final A2aIdentityRateLimiter rateLimiter;
     private final A2aDecisionJournal audit;
     private final A2aServerMetrics metrics;
+    private final A2aSpanLinks spanLinks;
     private final com.example.aifactory.agentcore.AgentCatalog catalog =
             new com.example.aifactory.agentcore.AgentCatalog();
     private final Map<String, Cursor> cursors = new ConcurrentHashMap<>();
@@ -43,7 +44,7 @@ public final class A2aSendMessageService {
                                  ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
                                  AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
                                  A2aAdmissionController admission, A2aIdentityRateLimiter rateLimiter,
-                                 A2aDecisionJournal audit, A2aServerMetrics metrics) {
+                                 A2aDecisionJournal audit, A2aServerMetrics metrics, A2aSpanLinks spanLinks) {
         this.activeRole = runtime.role();
         AgentCardCatalogGenerator.GeneratedAgentCard card = cards.generate().get(activeRole);
         if (card == null) throw new IllegalStateException("No Agent Card source for active role");
@@ -57,6 +58,7 @@ public final class A2aSendMessageService {
         this.rateLimiter = rateLimiter;
         this.audit = audit;
         this.metrics = metrics;
+        this.spanLinks = spanLinks;
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
@@ -64,7 +66,7 @@ public final class A2aSendMessageService {
                           AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
                           A2aAdmissionController admission, A2aIdentityRateLimiter rateLimiter) {
         this(runtime, cards, mapper, workflowControl, workflowStarter, store, admission, rateLimiter,
-                new A2aDecisionJournal(), A2aServerMetrics.disabled());
+                new A2aDecisionJournal(), A2aServerMetrics.disabled(), A2aSpanLinks.disabled());
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
@@ -126,6 +128,12 @@ public final class A2aSendMessageService {
         } catch (IllegalArgumentException invalidTrace) {
             throw new SubmissionRejected(invalidTrace.getMessage(), invalidTrace);
         }
+        return spanLinks.call("ai.factory.a2a.server.task", "dispatch-to-task", traceContext.traceparent(), Map.of(
+                "ai_factory.task.id", requiredText(execution, "taskId"),
+                "temporal.workflow.id", requiredText(execution, "workflowId"),
+                "a2a.message.id", messageId,
+                "a2a.agent.role", role,
+                "a2a.skill.id", skill), () -> {
         try (A2aTelemetryCorrelation ignored = A2aTelemetryCorrelation.open(
                 requiredText(execution, "taskId"), requiredText(execution, "workflowId"), messageId)) {
             if (params.path("configuration").path("blocking").asBoolean(false)) {
@@ -164,13 +172,14 @@ public final class A2aSendMessageService {
             }
             metrics.admission(skill, true);
             if (!result.created()) metrics.deduplication(skill, "send");
-            Submission submission = submission(result.task(), traceContext);
+            Submission submission = submission(result.task(), A2aW3cTraceContext.propagatedFromCurrent(traceContext));
             if (result.created()) {
                 AgentTaskWorkflowStarter.Execution executionReference = workflowStarter.start(submission, envelope.toString());
                 store.recordWorkflowExecution(submission.taskId(), executionReference.workflowId(), executionReference.runId());
             }
             return submission;
         }
+        });
     }
 
     private Submission continueTask(String taskId, String contextId, String messageId, String digest,

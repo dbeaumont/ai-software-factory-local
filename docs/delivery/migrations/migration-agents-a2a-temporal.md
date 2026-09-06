@@ -651,8 +651,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   transitions, tâches actives, backlog, polling et notifications. _(Neuf familles d'instruments Micrometer/OTLP
   sont raccordées aux décisions durables du serveur, avec jauges actives/backlog issues du task store et tests
   anti-cardinalité ; preuve : `docs/evidence/a2a/A2A-143-SERVER-METRICS.md`.)_
-- [ ] **A2A-144 — Tracer les liens Temporal/A2A.** Ajouter des span links entre workflow racine, activité d'envoi,
-  tâche A2A et workflow d'agent sans produire de doublons pendant un replay.
+- [x] **A2A-144 — Tracer les liens Temporal/A2A.** Ajouter des span links entre workflow racine, activité d'envoi,
+  tâche A2A et workflow d'agent sans produire de doublons pendant un replay. _(Chaque frontière crée une trace
+  autonome liée par `SpanLink` au contexte source ; seules les activités Temporal, le handler A2A et le worker
+  d'exécution émettent ces spans, jamais le code rejoué du workflow. Preuve :
+  `docs/evidence/a2a/A2A-144-SPAN-LINKS.md`.)_
 - [ ] **A2A-145 — Créer les dashboards SigNoz.** Vue flotte d'agents, latence par rôle/skill, états des tâches,
   erreurs protocolaires, divergence Temporal/A2A, retries, files et saturation.
 - [ ] **A2A-146 — Créer les alertes.** Détecter absence de poller, agent non prêt, carte invalide, taux d'échec,

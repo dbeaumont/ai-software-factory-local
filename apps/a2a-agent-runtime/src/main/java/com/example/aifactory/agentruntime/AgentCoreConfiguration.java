@@ -33,8 +33,8 @@ class AgentCoreConfiguration {
     }
 
     @Bean AgentExecutionWorker agentExecutionWorker(RoleScopedAgentContext role, LlmCompletionPort llm,
-                                                     McpToolPort mcp) {
-        return new AgentExecutionWorker(role, llm, mcp);
+                                                     McpToolPort mcp, A2aSpanLinks spanLinks) {
+        return new AgentExecutionWorker(role, llm, mcp, spanLinks);
     }
 
     @Bean EvidenceArtifactPublisher evidenceArtifactPublisher(
