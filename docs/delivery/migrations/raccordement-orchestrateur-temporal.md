@@ -520,7 +520,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   enregistre et rend courante une nouvelle version sur les sept files sans retirer l'ancienne version épinglée,
   puis approuve et restaure la version nominale. Validation réelle : tâche `4d111f8d`, run
   `01a07481-a706-7031-845b-f14d3623c8f7`, attente 35 s, livraison `PR_CREATED` sur le même Run ID.)_
-- [ ] Tester rétention, purge et reconstruction sur un jeu représentatif.
+- [x] Tester rétention, purge et reconstruction sur un jeu représentatif. _(La cible
+  `make test-temporal-retention-rebuild` contrôle la rétention réelle de 7 jours, la purge Evidence avec legal
+  hold et comportement fail-closed, puis la reconstruction atomique et réentrante pour les statuts `APPROVED`,
+  `REJECTED`, `CANCELLED`, `FAILED` et `TIMED_OUT`, y compris l'arrêt sur divergence de digest. Le contrôle live
+  et les 19 tests ciblés passent.)_
 
 ## 13. Lot 8 — bascule franche et complète
 

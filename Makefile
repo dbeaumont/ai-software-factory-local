@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -44,6 +44,7 @@ help:
 	@echo -e "  $(CYAN)make test-temporal-backpressure$(NC) - overload a constrained worker and measure its backlog"
 	@echo -e "  $(CYAN)make test-temporal-capacity-limits$(NC) - verify global and per-task-queue capacity guards"
 	@echo -e "  $(CYAN)make test-temporal-human-wait-rotation$(NC) - keep an approval wait across restart and worker rotation"
+	@echo -e "  $(CYAN)make test-temporal-retention-rebuild$(NC) - verify retention, evidence purge and projection rebuild"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify the static Compose sandbox runner"
 	@echo -e "  $(CYAN)make test-sandbox-network$(NC) - verify Compose runner network isolation"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
@@ -189,6 +190,12 @@ test-temporal-capacity-limits:
 test-temporal-human-wait-rotation:
 	$(log-target)
 	@./scripts/test-temporal-human-wait-rotation.sh
+
+test-temporal-retention-rebuild:
+	$(log-target)
+	@./scripts/test-temporal-retention.sh 7
+	@if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=ProjectionRebuilderTest,ProjectionRebuildCommandTest,ArtifactLifecyclePolicyTest; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=ProjectionRebuilderTest,ProjectionRebuildCommandTest,ArtifactLifecyclePolicyTest; fi
+	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/evidence-server/pom.xml test -Dtest=EvidenceStoreTest
 
 test-sandbox-runtime:
 	$(log-target)
