@@ -206,13 +206,6 @@ ai-factory:
       private-key-path: ${AI_FACTORY_TEMPORAL_PRIVATE_KEY_PATH:}
       server-name: ${AI_FACTORY_TEMPORAL_SERVER_NAME:}
       api-key-file: ${AI_FACTORY_TEMPORAL_API_KEY_FILE:}
-  agent-tools:
-    enabled-roles: ${AI_FACTORY_AGENT_TOOL_ROLES:}
-    qualification-verdict: ${AI_FACTORY_AGENT_TOOL_QUALIFICATION:INCOMPLETE}
-    paired-cases: ${AI_FACTORY_AGENT_TOOL_PAIRED_CASES:0}
-    security-passed: ${AI_FACTORY_AGENT_TOOL_SECURITY_PASSED:false}
-    evaluation-enabled: ${AI_FACTORY_AGENT_TOOL_EVALUATION_ENABLED:false}
-    evaluation-roles: ${AI_FACTORY_AGENT_TOOL_EVALUATION_ROLES:}
   mcp:
     enabled: ${AI_FACTORY_MCP_ENABLED:true}
     repository-context-mode: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE:MCP_ACTIVE}
@@ -309,4 +302,3 @@ ai-factory:
   artifactory-token: ${ARTIFACTORY_TOKEN:}
   sonarqube-url: ${AI_FACTORY_SONARQUBE_URL:http://sonarqube:9000}
   sonar-token: ${AI_FACTORY_SONAR_TOKEN:}
-  prompt-root: ${AI_FACTORY_PROMPT_ROOT}

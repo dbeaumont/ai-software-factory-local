@@ -50,17 +50,6 @@ public final class HierarchicalBudgetPolicy {
     public UsageQuota finalizationReserve() { return finalizationReserve; }
     public UsageQuota standardUsage() { return actualUsage.minus(finalizationReserve); }
 
-    public void validateInvocation(String role, AgentToolLoop.Budget requested) {
-        Budget ceiling = agents.get(role);
-        if (ceiling == null) throw invalid("agent role has no budget: " + role);
-        if (requested.maxTurns() > ceiling.maxTurns()
-                || requested.maxTokens() > ceiling.maxTokens()
-                || requested.maxCostMicros() > ceiling.maxCostMicros()
-                || requested.deadline().compareTo(Duration.ofSeconds(ceiling.timeoutSeconds())) > 0) {
-            throw invalid("agent budget exceeded for " + role);
-        }
-    }
-
     public Usage validateDelegation(String role, JsonNode value) {
         Budget requested = requested(value);
         Budget roleCeiling = agents.get(role);

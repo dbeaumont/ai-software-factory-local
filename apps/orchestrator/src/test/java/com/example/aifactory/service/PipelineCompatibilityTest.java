@@ -72,7 +72,7 @@ class PipelineCompatibilityTest {
                 storedContent.get(invocation.<EvidenceRepository.ReadRequest>getArgument(0).uri()));
         PipelineStepService steps = new PipelineStepService(
                 new AiFactoryProperties(null, null, "baseline-model", true, workspaces.toString(), null,
-                        null, null, null, null, null, null, null), runner, context, responses,
+                        null, null, null, null, null, null), runner, context, responses,
                 sandbox, new PatchIntegrator(sandbox), assurance, mock(ScmDeliveryGateway.class),
                 mapper, evidence);
         TaskState state = new TaskState("task-1", "AF-0001", new TaskRequest(

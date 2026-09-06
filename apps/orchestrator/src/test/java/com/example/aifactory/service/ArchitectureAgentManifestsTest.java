@@ -42,7 +42,11 @@ class ArchitectureAgentManifestsTest {
                     .containsExactlyElementsOf(role.mayDelegateTo());
             assertThat((List<String>) manifest.get("allowed_tools"))
                     .containsExactlyElementsOf(role.tools());
-            assertThat((List<String>) manifest.get("output_contracts")).containsExactly(expected.getValue());
+            assertThat((List<String>) manifest.get("output_contracts")).contains(expected.getValue());
+            if ("architecture-agent".equals(roleName)) {
+                assertThat((List<String>) manifest.get("output_contracts"))
+                        .contains("pipeline-agent-result-v1");
+            }
             String prompt = Files.readString(RESOURCES.resolve(manifest.get("prompt").toString()));
             assertThat(prompt).contains("# ").contains(expected.getValue()).contains("uniquement un objet JSON");
         }

@@ -32,18 +32,4 @@ class HashChainedSecurityAuditJournalTest {
         assertThat(journal.verify(List.of(journal.list().get(0), journal.list().get(1), altered,
                 journal.list().get(3)))).isFalse();
     }
-
-    @Test
-    void permissionDecisionsAreWrittenAsAuthorizationOrRefusal() {
-        HashChainedSecurityAuditJournal journal = new HashChainedSecurityAuditJournal(new byte[32]);
-        ToolPermissionMatrix permissions = ToolPermissionMatrix.readOnlyAgents(null, journal);
-        AgentToolLoop.Actor actor = new AgentToolLoop.Actor("task-1", "developer", "HIERARCHICAL_ACTIVE");
-
-        assertThat(permissions.isAllowed(actor, "context.read_file")).isTrue();
-        assertThat(permissions.isAllowed(actor, "scm.create_draft_pull_request")).isFalse();
-
-        assertThat(journal.list()).extracting(SecurityAuditJournal.Entry::type).containsExactly(
-                SecurityAuditJournal.EventType.AUTHORIZATION, SecurityAuditJournal.EventType.REFUSAL);
-        assertThat(journal.verifyIntegrity()).isTrue();
-    }
 }

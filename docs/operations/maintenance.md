@@ -210,7 +210,7 @@ les valeurs partagées entre `.env` et `.vault`. Elle refuse d’écraser deux v
 | Qualité | `SONAR_TOKEN` | Régénéré/validé par `make tokens` |
 | Preuves | `APPROVAL_ATTESTATION_KEY` | Stable tant que les preuves associées doivent être lues |
 | Artifactory | `JF_SHARED_SECURITY_MASTERKEY`, `JF_SHARED_SECURITY_JOINKEY`, mot de passe DB | Ne jamais changer tant que les volumes existants sont réutilisés sans procédure de rotation |
-| Modes | Temporal obligatoire, rôles, qualification | Conserver les rôles en fail-closed par défaut |
+| Agents | A2A obligatoire, cartes et identités | Une indisponibilité ferme les admissions sans fallback local |
 
 Le code LiteLLM accepte `OPENAI_API_KEY` et, par compatibilité, `VAULT_OPENAI_API_KEY`. Le modèle `.vault.example`
 utilise `OPENAI_API_KEY`; cette forme est donc la référence à privilégier.
@@ -218,11 +218,7 @@ utilise `OPENAI_API_KEY`; cette forme est donc la référence à privilégier.
 ### 5.3 Baseline sûre
 
 ```dotenv
-AI_FACTORY_AGENT_TOOL_ROLES=
-AI_FACTORY_AGENT_TOOL_QUALIFICATION=INCOMPLETE
-AI_FACTORY_AGENT_TOOL_SECURITY_PASSED=false
-AI_FACTORY_AGENT_TOOL_EVALUATION_ENABLED=false
-AI_FACTORY_AGENT_TOOL_EVALUATION_ROLES=
+AI_FACTORY_A2A_ENABLED=true
 AI_FACTORY_MCP_ENABLED=true
 AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE=MCP_ACTIVE
 AI_FACTORY_MCP_SANDBOX_MODE=MCP_ACTIVE

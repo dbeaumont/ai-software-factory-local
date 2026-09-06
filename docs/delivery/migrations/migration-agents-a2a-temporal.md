@@ -853,8 +853,11 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ## 19. Lot 12 — nettoyage et documentation finale
 
-- [ ] **A2A-220 — Supprimer le code direct obsolète.** Retirer adaptateurs, beans, propriétés, tests et imports
-  devenus inutiles, après preuve qu'ils ne servent plus de chemin de production.
+- [x] **A2A-220 — Supprimer le code direct obsolète.** Retirer adaptateurs, beans, propriétés, tests et imports
+  devenus inutiles, après preuve qu'ils ne servent plus de chemin de production. _(Terminé le 2026-09-07 :
+  runtime, wrappers de rôles, boucle d'outils, prompts, propriétés et API de complétion de l'orchestrateur retirés ;
+  548 tests passent et deux gardes source empêchent leur retour ; preuve :
+  `docs/evidence/a2a/A2A-220-DIRECT-RUNTIME-REMOVAL.md`.)_
 - [ ] **A2A-221 — Supprimer les flags temporaires de qualification.** Aucun sélecteur `DIRECT/A2A`, shadow ou
   fallback ne subsiste dans la configuration de release.
 - [x] **A2A-222 — Mettre à jour les schémas d'architecture.** Montrer services d'agents, réseau A2A, Temporal,

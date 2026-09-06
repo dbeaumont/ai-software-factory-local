@@ -18,8 +18,6 @@ import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -320,49 +318,6 @@ public class PipelineStepService {
 
     static String stripFence(String value) {
         return PatchIntegrator.stripFence(value);
-    }
-
-    static <T> T withSingleContractRetry(Supplier<T> invocation, Supplier<T> retryInvocation,
-                                         Predicate<T> contract,
-                                         java.util.function.Consumer<String> retryObserver) {
-        T response;
-        try {
-            response = invocation.get();
-        } catch (LlmCompletionException exception) {
-            if (!exception.retryable()) throw exception;
-            retryObserver.accept(exception.reason());
-            return retryInvocation.get();
-        }
-        if (contract.test(response)) return response;
-        retryObserver.accept("invalid_contract");
-        return retryInvocation.get();
-    }
-
-    static String withSingleRetryableCompletion(Supplier<String> invocation, Supplier<String> retryInvocation,
-                                                java.util.function.Consumer<String> retryObserver) {
-        try {
-            return invocation.get();
-        } catch (LlmCompletionException exception) {
-            if (!exception.retryable()) throw exception;
-            retryObserver.accept(exception.reason());
-            return retryInvocation.get();
-        }
-    }
-
-    static int retryMaxTokensFor(String promptName) {
-        return switch (promptName) {
-            case "planner" -> 2_400;
-            case "patch-repair" -> 3_200;
-            default -> 2_400;
-        };
-    }
-
-    static int maxTokensFor(String promptName) {
-        return switch (promptName) {
-            case "planner", "developer", "tester", "reviewer", "reviewer-prod" -> 1_200;
-            case "patch-repair" -> 1_600;
-            default -> 1_200;
-        };
     }
 
     static String untrusted(String label, String content) {

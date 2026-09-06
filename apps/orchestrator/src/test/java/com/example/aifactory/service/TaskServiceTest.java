@@ -9,7 +9,6 @@ import com.example.aifactory.model.ManifestApprovalRequest;
 import com.example.aifactory.model.OperatorActionRequest;
 import com.example.aifactory.workflow.WorkflowCoordinator;
 import org.junit.jupiter.api.Test;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -51,114 +50,6 @@ class TaskServiceTest {
         assertTrue(first.matches("AF-\\d{4}"));
         assertEquals("AF-0001", first);
         assertEquals("AF-0002", second);
-    }
-
-    @Test
-    void boundsLlmOutputByAgentRole() {
-        assertEquals(1_200, PipelineStepService.maxTokensFor("planner"));
-        assertEquals(1_200, PipelineStepService.maxTokensFor("developer"));
-        assertEquals(1_600, PipelineStepService.maxTokensFor("patch-repair"));
-        assertEquals(1_200, PipelineStepService.maxTokensFor("reviewer"));
-        assertEquals(1_200, PipelineStepService.maxTokensFor("unknown"));
-    }
-
-    @Test
-    void retriesAnInvalidPlannerContractOnlyOnce() {
-        AtomicInteger calls = new AtomicInteger();
-        AtomicInteger retries = new AtomicInteger();
-
-        String response = PipelineStepService.withSingleContractRetry(
-                () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
-                () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
-                value -> value.contains("IMPLEMENTABLE"), reason -> retries.incrementAndGet());
-
-        assertEquals("{\"status\":\"IMPLEMENTABLE\"}", response);
-        assertEquals(2, calls.get());
-        assertEquals(1, retries.get());
-    }
-
-    @Test
-    void doesNotRetryAValidPlannerDecision() {
-        AtomicInteger calls = new AtomicInteger();
-
-        String response = PipelineStepService.withSingleContractRetry(
-                () -> {
-                    calls.incrementAndGet();
-                    return "{\"status\":\"NEEDS_CLARIFICATION\"}";
-                }, () -> {
-                    calls.incrementAndGet();
-                    return "unexpected";
-                }, value -> value.contains("NEEDS_CLARIFICATION"),
-                reason -> {
-                    throw new AssertionError("A valid contract must not be retried");
-                });
-
-        assertEquals("{\"status\":\"NEEDS_CLARIFICATION\"}", response);
-        assertEquals(1, calls.get());
-    }
-
-    @Test
-    void retriesATruncatedPlannerCompletionWithTheLargerBudget() {
-        AtomicInteger retries = new AtomicInteger();
-
-        String response = PipelineStepService.withSingleContractRetry(
-                () -> {
-                    throw new LlmCompletionException("length", true, "truncated");
-                }, () -> "valid", value -> true,
-                reason -> {
-                    assertEquals("length", reason);
-                    retries.incrementAndGet();
-                });
-
-        assertEquals("valid", response);
-        assertEquals(1, retries.get());
-        assertEquals(2_400, PipelineStepService.retryMaxTokensFor("planner"));
-    }
-
-    @Test
-    void retriesATruncatedPatchRepairCompletionWithTheLargerBudget() {
-        AtomicInteger retries = new AtomicInteger();
-
-        String response = PipelineStepService.withSingleRetryableCompletion(
-                () -> {
-                    throw new LlmCompletionException("length", true, "truncated");
-                }, () -> "valid", reason -> {
-                    assertEquals("length", reason);
-                    retries.incrementAndGet();
-                });
-
-        assertEquals("valid", response);
-        assertEquals(1, retries.get());
-        assertEquals(3_200, PipelineStepService.retryMaxTokensFor("patch-repair"));
-    }
-
-    @Test
-    void givesStandardAgentsTheLargerRetryBudget() {
-        assertEquals(2_400, PipelineStepService.retryMaxTokensFor("developer"));
-        assertEquals(2_400, PipelineStepService.retryMaxTokensFor("tester"));
-        assertEquals(2_400, PipelineStepService.retryMaxTokensFor("reviewer"));
-    }
-
-    @Test
-    void doesNotRetryANonRetryablePatchRepairCompletion() {
-        assertThrows(LlmCompletionException.class,
-                () -> PipelineStepService.withSingleRetryableCompletion(
-                        () -> {
-                            throw new LlmCompletionException("refusal", false, "refused");
-                        }, () -> "unexpected", reason -> {
-                            throw new AssertionError("A refusal must not be retried");
-                        }));
-    }
-
-    @Test
-    void doesNotRetryARefusal() {
-        assertThrows(LlmCompletionException.class, () -> PipelineStepService.withSingleContractRetry(
-                () -> {
-                    throw new LlmCompletionException("refusal", false, "refused");
-                }, () -> "unexpected", value -> true,
-                reason -> {
-                    throw new AssertionError("A refusal must not be retried");
-                }));
     }
 
     @Test

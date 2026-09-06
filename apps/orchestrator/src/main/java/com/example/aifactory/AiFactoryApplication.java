@@ -5,7 +5,6 @@ import com.example.aifactory.config.McpClientProperties;
 import com.example.aifactory.config.McpFactoryProperties;
 import com.example.aifactory.config.ScmDeliveryClientProperties;
 import com.example.aifactory.config.AssuranceClientProperties;
-import com.example.aifactory.config.AgentToolingProperties;
 import com.example.aifactory.config.KillSwitchProperties;
 import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.config.DelegationPolicyProperties;
@@ -24,7 +23,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 @EnableConfigurationProperties({AiFactoryProperties.class, McpFactoryProperties.class, McpClientProperties.class,
-        ScmDeliveryClientProperties.class, AssuranceClientProperties.class, AgentToolingProperties.class,
+        ScmDeliveryClientProperties.class, AssuranceClientProperties.class,
         KillSwitchProperties.class, TemporalProperties.class, DelegationPolicyProperties.class,
         ObservabilityContentProperties.class, TaskQueueObservabilityProperties.class,
         A2aNotificationProperties.class, A2aOAuth2ClientProperties.class, A2aCardCacheProperties.class,

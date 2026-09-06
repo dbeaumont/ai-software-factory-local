@@ -27,6 +27,6 @@ class TaskServiceBoundaryTest {
                 .anyMatch(field -> field.getType() == TaskMemory.class)).isTrue();
         assertThat(Arrays.stream(TaskService.class.getDeclaredFields()).map(field -> field.getType())
                 .noneMatch(type -> type == SandboxExecutor.class || type == AssuranceGateway.class
-                        || type == ScmDeliveryGateway.class || type == AgentContextToolHost.class)).isTrue();
+                        || type == ScmDeliveryGateway.class)).isTrue();
     }
 }

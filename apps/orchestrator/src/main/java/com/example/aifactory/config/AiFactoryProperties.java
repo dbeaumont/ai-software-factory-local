@@ -15,6 +15,5 @@ public record AiFactoryProperties(
         String mavenMirrorUrl,
         String artifactoryToken,
         String sonarqubeUrl,
-        String sonarToken,
-        String promptRoot) {
+        String sonarToken) {
 }

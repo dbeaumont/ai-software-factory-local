@@ -3,7 +3,6 @@ package com.example.aifactory.service;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,13 +28,6 @@ class HierarchicalBudgetPolicyTest {
                 new HierarchicalBudgetPolicy.UsageQuota(10_000, 5_000, 10_000_000, 6, 32));
         assertThat(policy.standardUsage()).isEqualTo(
                 new HierarchicalBudgetPolicy.UsageQuota(110_000, 35_000, 70_000_000, 54, 176));
-    }
-
-    @Test
-    void rejectsAnInvocationAboveItsAgentCeiling() {
-        assertThatThrownBy(() -> policy.validateInvocation("test-evidence",
-                new AgentToolLoop.Budget(4, Duration.ofMinutes(5), 4_000, 4_000_000)))
-                .hasMessageContaining("agent budget exceeded").hasMessageContaining("test-evidence");
     }
 
     @Test
