@@ -1,0 +1,3487 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-factory-agents
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    telemetry.ai-factory.example/enabled: 'true'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-agents-default-deny
+  namespace: ai-factory-agents
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-agents-required-connectivity
+  namespace: ai-factory-agents
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-control
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: orchestrator
+    ports:
+    - protocol: TCP
+      port: 8090
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-control
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: temporal
+    ports:
+    - protocol: TCP
+      port: 7233
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: a2a-task-db-proxy
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-observability
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: otel-gateway
+    ports:
+    - protocol: TCP
+      port: 4317
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-supervisor
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: supervisor
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-supervisor
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-supervisor-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-supervisor-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-supervisor-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-supervisor-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-supervisor
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: supervisor
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: supervisor
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: supervisor
+    spec:
+      serviceAccountName: a2a-supervisor
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: supervisor
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-supervisor.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-supervisor-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-supervisor
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-supervisor
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: supervisor
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: supervisor
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-supervisor
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: supervisor
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: supervisor
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-supervisor
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: supervisor
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-supervisor
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: supervisor
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-supervisor-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: supervisor
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: supervisor
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: evidence-mcp
+    ports:
+    - protocol: TCP
+      port: 8095
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-architecture-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: architecture-agent
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-architecture-agent
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-architecture-agent-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-architecture-agent-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-architecture-agent-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-architecture-agent-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-architecture-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: architecture-agent
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: architecture-agent
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: architecture-agent
+    spec:
+      serviceAccountName: a2a-architecture-agent
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: architecture-agent
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-architecture-agent.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-architecture-agent-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-architecture-agent
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-architecture-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: architecture-agent
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: architecture-agent
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-architecture-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: architecture-agent
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: architecture-agent
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-architecture-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: architecture-agent
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-architecture-agent
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: architecture-agent
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-architecture-agent-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: architecture-agent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: architecture-agent
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-impact-analysis
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: impact-analysis
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-impact-analysis
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-impact-analysis-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-impact-analysis-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-impact-analysis-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-impact-analysis-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-impact-analysis
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: impact-analysis
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: impact-analysis
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: impact-analysis
+    spec:
+      serviceAccountName: a2a-impact-analysis
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: impact-analysis
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-impact-analysis.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-impact-analysis-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-impact-analysis
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-impact-analysis
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: impact-analysis
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: impact-analysis
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-impact-analysis
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: impact-analysis
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: impact-analysis
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-impact-analysis
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: impact-analysis
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-impact-analysis
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: impact-analysis
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-impact-analysis-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: impact-analysis
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: impact-analysis
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-dependencies-contracts
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: dependencies-contracts
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-dependencies-contracts
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-dependencies-contracts-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-dependencies-contracts-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-dependencies-contracts-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-dependencies-contracts-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-dependencies-contracts
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: dependencies-contracts
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: dependencies-contracts
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: dependencies-contracts
+    spec:
+      serviceAccountName: a2a-dependencies-contracts
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: dependencies-contracts
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-dependencies-contracts.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-dependencies-contracts-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-dependencies-contracts
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-dependencies-contracts
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: dependencies-contracts
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: dependencies-contracts
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-dependencies-contracts
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: dependencies-contracts
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: dependencies-contracts
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-dependencies-contracts
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: dependencies-contracts
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-dependencies-contracts
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: dependencies-contracts
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-dependencies-contracts-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: dependencies-contracts
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: dependencies-contracts
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-code-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: code-agent
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-code-agent
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-code-agent-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-code-agent-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-code-agent-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-code-agent-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-code-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: code-agent
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: code-agent
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: code-agent
+    spec:
+      serviceAccountName: a2a-code-agent
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: code-agent
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-code-agent.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-code-agent-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-code-agent
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-code-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: code-agent
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: code-agent
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-code-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: code-agent
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: code-agent
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-code-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: code-agent
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-code-agent
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: code-agent
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-code-agent-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: code-agent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: code-agent
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-developer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: developer
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-developer
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-developer-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-developer-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-developer-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-developer-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-developer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: developer
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: developer
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: developer
+    spec:
+      serviceAccountName: a2a-developer
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: developer
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-developer.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-developer-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-developer
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-developer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: developer
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: developer
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-developer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: developer
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: developer
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-developer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: developer
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-developer
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: developer
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-developer-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: developer
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: developer
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-patch-repair
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: patch-repair
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-patch-repair
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-patch-repair-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-patch-repair-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-patch-repair-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-patch-repair-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-patch-repair
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: patch-repair
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: patch-repair
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: patch-repair
+    spec:
+      serviceAccountName: a2a-patch-repair
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: patch-repair
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-patch-repair.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-patch-repair-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-patch-repair
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-patch-repair
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: patch-repair
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: patch-repair
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-patch-repair
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: patch-repair
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: patch-repair
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-patch-repair
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: patch-repair
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-patch-repair
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: patch-repair
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-patch-repair-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: patch-repair
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: patch-repair
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-test-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-agent
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-test-agent
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-agent-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-agent-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-agent-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-agent-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-test-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-agent
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-agent
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: test-agent
+    spec:
+      serviceAccountName: a2a-test-agent
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: test-agent
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-test-agent.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-test-agent-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-test-agent
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-test-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-agent
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-agent
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-test-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-agent
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-agent
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-test-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-agent
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-test-agent
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: test-agent
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-test-agent-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-agent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-agent
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: evidence-mcp
+    ports:
+    - protocol: TCP
+      port: 8095
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-test-design
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-design
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-test-design
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-design-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-design-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-design-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-design-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-test-design
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-design
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-design
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: test-design
+    spec:
+      serviceAccountName: a2a-test-design
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: test-design
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-test-design.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-test-design-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-test-design
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-test-design
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-design
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-design
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-test-design
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-design
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-design
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-test-design
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-design
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-test-design
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: test-design
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-test-design-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-design
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-design
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-test-evidence
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-evidence
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-test-evidence
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-evidence-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-evidence-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-evidence-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-test-evidence-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-test-evidence
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-evidence
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-evidence
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: test-evidence
+    spec:
+      serviceAccountName: a2a-test-evidence
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: test-evidence
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-test-evidence.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-test-evidence-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-test-evidence
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-test-evidence
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-evidence
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-evidence
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-test-evidence
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-evidence
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-evidence
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-test-evidence
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-evidence
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-test-evidence
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: test-evidence
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-test-evidence-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: test-evidence
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: test-evidence
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: evidence-mcp
+    ports:
+    - protocol: TCP
+      port: 8095
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-security-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-agent
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-security-agent
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-security-agent-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-security-agent-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-security-agent-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-security-agent-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-security-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-agent
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: security-agent
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: security-agent
+    spec:
+      serviceAccountName: a2a-security-agent
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: security-agent
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-security-agent.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-security-agent-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-security-agent
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-security-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-agent
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-agent
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-security-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-agent
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: security-agent
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-security-agent
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-agent
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-security-agent
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: security-agent
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-security-agent-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-agent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: security-agent
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: evidence-mcp
+    ports:
+    - protocol: TCP
+      port: 8095
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-threat-model
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: threat-model
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-threat-model
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-threat-model-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-threat-model-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-threat-model-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-threat-model-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-threat-model
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: threat-model
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: threat-model
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: threat-model
+    spec:
+      serviceAccountName: a2a-threat-model
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: threat-model
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-threat-model.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-threat-model-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-threat-model
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-threat-model
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: threat-model
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: threat-model
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-threat-model
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: threat-model
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: threat-model
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-threat-model
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: threat-model
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-threat-model
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: threat-model
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-threat-model-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: threat-model
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: threat-model
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-security-findings
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-findings
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-security-findings
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-security-findings-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-security-findings-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-security-findings-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-security-findings-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-security-findings
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-findings
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: security-findings
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: security-findings
+    spec:
+      serviceAccountName: a2a-security-findings
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: security-findings
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-security-findings.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-security-findings-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-security-findings
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-security-findings
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-findings
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-findings
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-security-findings
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-findings
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: security-findings
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-security-findings
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-findings
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-security-findings
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: security-findings
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-security-findings-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: security-findings
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: security-findings
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: evidence-mcp
+    ports:
+    - protocol: TCP
+      port: 8095
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: a2a-independent-reviewer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: independent-reviewer
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: a2a-independent-reviewer
+  namespace: ai-factory-agents
+spec:
+  provider: gcp
+  parameters:
+    secrets: |-
+      resourceName: projects/PROJECT_ID/secrets/a2a-independent-reviewer-tls-crt/versions/latest
+      fileName: tls.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-independent-reviewer-tls-key/versions/latest
+      fileName: tls.key
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crt/versions/latest
+      fileName: ca.crt
+      resourceName: projects/PROJECT_ID/secrets/a2a-ca-crl/versions/latest
+      fileName: ca.crl
+      resourceName: projects/PROJECT_ID/secrets/a2a-independent-reviewer-card-jwks/versions/latest
+      fileName: card-jwks.json
+      resourceName: projects/PROJECT_ID/secrets/a2a-independent-reviewer-mcp-token/versions/latest
+      fileName: mcp-access-token
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-independent-reviewer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: independent-reviewer
+spec:
+  replicas: 2
+  selector: &1
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: independent-reviewer
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: a2a-agent-runtime
+        ai-factory.io/agent-role: independent-reviewer
+    spec:
+      serviceAccountName: a2a-independent-reviewer
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector: *1
+      containers:
+      - name: agent-runtime
+        image: REGISTRY/ai-factory-a2a-agent-runtime@sha256:REPLACE_WITH_64_HEX_DIGEST
+        ports:
+        - name: a2a
+          containerPort: 8090
+        env:
+        - name: AI_FACTORY_AGENT_ROLE
+          value: independent-reviewer
+        - name: AI_FACTORY_AGENT_ENDPOINT
+          value: https://a2a-independent-reviewer.ai-factory-agents.svc.cluster.local:8090/a2a
+        - name: AI_FACTORY_A2A_TEMPORAL_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TASK_STORE_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_TLS_ENABLED
+          value: 'true'
+        - name: AI_FACTORY_A2A_MTLS_REQUIRED
+          value: 'true'
+        - name: AI_FACTORY_A2A_CARD_ACTIVE_KID
+          value: a2a-independent-reviewer-gke-v1
+        - name: AI_FACTORY_A2A_TASK_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a2a-runtime-database
+              key: password
+        envFrom:
+        - configMapRef:
+            name: a2a-runtime-config
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/readiness >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - curl -fsSk --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key
+              https://127.0.0.1:8090/actuator/health/liveness >/dev/null
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 384Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: secrets
+          mountPath: "/var/run/ai-factory/a2a"
+          readOnly: true
+        - name: tmp
+          mountPath: "/tmp"
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: a2a-independent-reviewer
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-independent-reviewer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: independent-reviewer
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: independent-reviewer
+  ports:
+  - name: a2a
+    port: 8090
+    targetPort: a2a
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-independent-reviewer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: independent-reviewer
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: independent-reviewer
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a2a-independent-reviewer
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: independent-reviewer
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a2a-independent-reviewer
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: temporal_task_queue_backlog
+        selector:
+          matchLabels:
+            agent_role: independent-reviewer
+      target:
+        type: AverageValue
+        averageValue: '5'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2a-independent-reviewer-mcp
+  namespace: ai-factory-agents
+  labels:
+    app.kubernetes.io/name: a2a-agent-runtime
+    ai-factory.io/agent-role: independent-reviewer
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: a2a-agent-runtime
+      ai-factory.io/agent-role: independent-reviewer
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: repository-context-mcp
+    ports:
+    - protocol: TCP
+      port: 8091
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ai-factory-services
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: evidence-mcp
+    ports:
+    - protocol: TCP
+      port: 8095

@@ -216,6 +216,8 @@ test:
 	ruby ./scripts/verify-a2a-mcp-networks.rb
 	./scripts/verify-env-structure.sh
 	./scripts/test-a2a-compose-profiles.sh
+	./scripts/generate-a2a-gke-manifests.rb infrastructure/gke/a2a/agents.generated.yaml --check
+	ruby ./scripts/verify-a2a-gke-manifests.rb
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; fi
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/repository-context-server/pom.xml clean test
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/sandbox-execution-server/pom.xml clean test

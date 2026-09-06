@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - agents.generated.yaml
+configMapGenerator:
+  - name: a2a-runtime-config
+    namespace: ai-factory-agents
+    literals:
+      - AI_FACTORY_TEMPORAL_TARGET=temporal.ai-factory-control.svc.cluster.local:7233
+      - AI_FACTORY_TEMPORAL_NAMESPACE=ai-factory
+      - AI_FACTORY_A2A_TASK_JDBC_URL=jdbc:postgresql://a2a-task-db-proxy:5432/ai_factory_a2a
+      - AI_FACTORY_A2A_TASK_DB_USERNAME=ai_factory_a2a
+      - AI_FACTORY_A2A_TLS_CLIENT_AUTH=need
+      - AI_FACTORY_A2A_TLS_CERTIFICATE=/var/run/ai-factory/a2a/tls.crt
+      - AI_FACTORY_A2A_TLS_PRIVATE_KEY=/var/run/ai-factory/a2a/tls.key
+      - AI_FACTORY_A2A_TLS_TRUST_CERTIFICATE=/var/run/ai-factory/a2a/ca.crt
+      - AI_FACTORY_A2A_TLS_CRL=/var/run/ai-factory/a2a/ca.crl
+      - AI_FACTORY_A2A_CARD_JWK_SET_PATH=/var/run/ai-factory/a2a/card-jwks.json
+      - AI_FACTORY_MCP_ROLE_ACCESS_TOKEN_FILE=/var/run/ai-factory/a2a/mcp-access-token
+generatorOptions:
+  disableNameSuffixHash: true

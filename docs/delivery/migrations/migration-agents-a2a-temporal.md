@@ -602,8 +602,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `docs/development/a2a-macos.md` consigne mesures Apple Silicon, budgets minimum/recommandé, disque,
     démarrage et réglages Docker Desktop. Chaque JVM reste isolée, bornée à 0,75 CPU/768 Mio et attendue healthy
     avant smoke ; aucune mutualisation de processus ne compromet les identités ou permissions par rôle.
-- [ ] **A2A-129 — Préparer les manifests GKE.** Déployer un workload/service par rôle, NetworkPolicies,
+- [x] **A2A-129 — Préparer les manifests GKE.** Déployer un workload/service par rôle, NetworkPolicies,
   PodDisruptionBudgets, probes, autoscaling par files et secrets via le mécanisme de plateforme.
+  - Preuve : `infrastructure/gke/a2a` rend quatorze Deployments et Services privés, ServiceAccounts sans token,
+    PDB, HPA pilotés par backlog Temporal et SecretProviderClass GCP. Les probes sont mTLS, les images sont
+    remplaçables uniquement par digest et les NetworkPolicies default-deny n'autorisent que contrôle, données,
+    télémétrie et MCP permis ; génération déterministe et invariants sont testés avant livraison.
 - [ ] **A2A-130 — Ajouter la découverte GKE.** Utiliser des DNS de service stables dans le registre allow-listé ;
   ne pas dépendre des IP de pods ni d'un registre public.
 - [ ] **A2A-131 — Protéger l'entrée.** Garder les endpoints A2A privés au cluster ; si une exposition externe est
