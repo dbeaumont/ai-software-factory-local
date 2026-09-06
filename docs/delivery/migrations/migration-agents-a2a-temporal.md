@@ -275,9 +275,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   leur association avec les identifiants métier et ne jamais utiliser l'ID A2A comme clé métier principale.
   _(V016 et `PostgresA2aTaskAssociationStore` indexent l'association par `delegation_id`, enregistrent les deux IDs
   retournés par le serveur et refusent tout replay divergent ; aucun ID A2A n'est clé métier.)_
-- [ ] **A2A-047 — Rendre `messageId` idempotent.** Dériver un UUID stable de l'identité d'exécution, du rôle, du
+- [x] **A2A-047 — Rendre `messageId` idempotent.** Dériver un UUID stable de l'identité d'exécution, du rôle, du
   skill, de la séquence et du digest d'entrée ; retourner la même tâche pour un message identique et rejeter une
-  collision avec un payload différent.
+  collision avec un payload différent. _(`A2aMessageIdentity` produit un UUID v8 déterministe par SHA-256 ; le
+  registre atomique déduplique les replays et refuse une collision de digest sans créer une seconde tâche.)_
 - [ ] **A2A-048 — Borner les données.** Fixer limites de taille, nombre de parts, historique, artefacts, références,
   profondeur JSON et durée de conservation ; rejeter avant désérialisation complète les requêtes hors limite.
 - [ ] **A2A-049 — Mapper les états.** Documenter et tester la correspondance entre états A2A et événements
