@@ -67,6 +67,11 @@ public final class RoleScopedAgentContext {
         return contracts.validate(contract, document, context);
     }
 
+    public JsonNode validateOutput(String contract, String document, AgentContractValidator.Context context) {
+        requireContract(outputContracts, contract, "output");
+        return contracts.validate(contract, document, context);
+    }
+
     private void requireContract(Set<String> granted, String contract, String direction) {
         if (!granted.contains(contract)) {
             throw new SecurityException(direction + " contract is not granted to role " + identity.role());

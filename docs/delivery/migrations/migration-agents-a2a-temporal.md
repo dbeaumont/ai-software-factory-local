@@ -236,13 +236,15 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   sont déplacés dans le port `AgentExecutor`, Temporal n'importe plus `AgentRuntime`, et
   `AgentArchitectureRulesTest` contrôle les deux sens de dépendance. Preuve :
   `docs/qualification/a2a/A2A-037-ARCHITECTURE-RULES.md`.)_
-- [ ] **A2A-038 — Produire deux exécutables distincts.** L'orchestrateur embarque le client A2A et les workers de
-  contrôle ; le runtime d'agent embarque le serveur A2A et les workers d'exécution d'un rôle.
+- [x] **A2A-038 — Produire deux exécutables distincts.** L'orchestrateur embarque le client A2A et les workers de
+  contrôle ; le runtime d'agent embarque le serveur A2A et les workers d'exécution d'un rôle. _(Le POM orchestrateur
+  conserve uniquement le SDK client et Temporal ; le runtime embarque `server-common`, le transport JSON-RPC et
+  `AgentExecutionWorker`, sans Temporal ni contrôle-plane. `ExecutableSeparationTest` verrouille les graphes.)_
 
 ### Critères de sortie du lot 1
 
-- [ ] Le cœur d'agent est testable sans réseau, Temporal ou Spring.
-- [ ] Démarrer un runtime avec un rôle ne charge aucun autre rôle.
+- [x] Le cœur d'agent est testable sans réseau, Temporal ou Spring.
+- [x] Démarrer un runtime avec un rôle ne charge aucun autre rôle.
 - [ ] L'orchestrateur compile sans implémentation concrète d'agent dans son graphe Spring.
 
 ## 9. Lot 2 — définir la correspondance entre contrats métier et A2A

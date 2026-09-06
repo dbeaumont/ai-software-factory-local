@@ -31,4 +31,9 @@ class AgentCoreConfiguration {
                                  RoleScopedAgentContext role, AgentMcpProperties properties) {
         return new RoleScopedMcpClient(role, properties, new McpSdkSessionFactory(builder, mapper));
     }
+
+    @Bean AgentExecutionWorker agentExecutionWorker(RoleScopedAgentContext role, LlmCompletionPort llm,
+                                                     McpToolPort mcp) {
+        return new AgentExecutionWorker(role, llm, mcp);
+    }
 }

@@ -38,6 +38,7 @@ class A2aAgentRuntimeApplicationTest {
         assertNotNull(scope.systemPrompt());
         assertNotNull(context.getBean(LlmCompletionPort.class));
         assertNotNull(context.getBean(McpToolPort.class));
+        assertNotNull(context.getBean(AgentExecutionWorker.class));
         assertEquals("developer", context.getBean(AgentManifest.class).role());
         assertThrows(org.springframework.beans.factory.NoSuchBeanDefinitionException.class,
                 () -> context.getBean(AgentCatalog.class));
