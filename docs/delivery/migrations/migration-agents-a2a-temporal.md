@@ -705,8 +705,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   et le serveur du projet depuis un client officiel indépendant. _(SDK Python officiel `v1.0.0` épinglé : client
   Java → serveur officiel et client officiel → serveur Java terminent tous deux en `COMPLETED` ; preuve :
   `docs/evidence/a2a/A2A-163-INTEROPERABILITY.md`.)_
-- [ ] **A2A-164 — Tests Temporal embarqués.** Vérifier attentes, signaux, timers, retries, annulation, timeouts
-  ambigus, `continue-as-new` et replay.
+- [x] **A2A-164 — Tests Temporal embarqués.** Vérifier attentes, signaux, timers, retries, annulation, timeouts
+  ambigus, `continue-as-new` et replay. _(Barrière d'image : 103 tests réussis ; le scénario de perte d'acquittement
+  prouve une seule émission A2A suivie d'une réconciliation durable sur retry ; preuve :
+  `docs/evidence/a2a/A2A-164-TEMPORAL-EMBEDDED.md`.)_
 - [ ] **A2A-165 — Tests d'intégration Compose.** Couvrir cartes, envoi, résultat, complément, annulation,
   redémarrage, perte de callback et réconciliation.
 - [ ] **A2A-166 — Tests de panne.** Couper réseau, agent, base, Temporal, LLM, MCP et Evidence aux différents
