@@ -359,8 +359,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   borné et artefacts autorisés. _(`tasks/get` exige les scopes de lecture/rôle avant lookup observable, masque
   absence et refus sous `TaskNotFound`, impose le même propriétaire, borne l'historique à 50 et ne retourne que
   la projection d'artefacts déjà autorisée.)_
-- [ ] **A2A-062 — Implémenter `ListTasks`.** Ajouter filtres, pagination par curseur, isolation par tenant et limite
-  maximale ; ne jamais permettre l'énumération inter-tenant.
+- [x] **A2A-062 — Implémenter `ListTasks`.** Ajouter filtres, pagination par curseur, isolation par tenant et limite
+  maximale ; ne jamais permettre l'énumération inter-tenant. _(`tasks/list` filtre état/contexte dans le périmètre
+  tenant+appelant, limite les pages à 100 et lie chaque curseur opaque, à usage unique, à l'identité et aux filtres
+  d'origine ; un token étranger est refusé.)_
 - [ ] **A2A-063 — Implémenter `CancelTask`.** Signaler l'annulation au workflow d'agent, rendre l'opération
   idempotente et refuser proprement un état terminal non annulable.
 - [ ] **A2A-064 — Implémenter les notifications push.** Autoriser seulement le callback fixe de

@@ -3,6 +3,7 @@ package com.example.aifactory.agentruntime;
 import org.a2aproject.sdk.spec.A2AErrorCodes;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -58,6 +59,15 @@ final class A2aJsonRpcController {
                             request.path("params"), caller(authentication));
                     yield response(requestId, task(view.submission(), view.history(), view.artifacts()));
                 }
+                case "tasks/list" -> {
+                    A2aSendMessageService.TaskPage page = service.listTasks(
+                            request.path("params"), caller(authentication));
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("tasks", page.tasks().stream()
+                            .map(view -> task(view.submission(), view.history(), view.artifacts())).toList());
+                    if (page.nextPageToken() != null) result.put("nextPageToken", page.nextPageToken());
+                    yield response(requestId, Map.copyOf(result));
+                }
                 default -> throw new RpcFailure(A2AErrorCodes.METHOD_NOT_FOUND, "A2A method is not available");
             };
         } catch (RpcFailure failure) {
@@ -78,7 +88,9 @@ final class A2aJsonRpcController {
         Set<String> scopes = authentication.getAuthorities().stream().map(authority -> authority.getAuthority())
                 .map(value -> value.startsWith("SCOPE_") ? value.substring("SCOPE_".length()) : value)
                 .collect(Collectors.toUnmodifiableSet());
-        return new A2aSendMessageService.Caller(authentication.getName(), scopes);
+        String tenantId = authentication instanceof JwtAuthenticationToken jwt
+                ? jwt.getToken().getClaimAsString("tenant_id") : authentication.getName();
+        return new A2aSendMessageService.Caller(authentication.getName(), tenantId, scopes);
     }
 
     private static Map<String, Object> response(Object id, Map<String, Object> task) {
