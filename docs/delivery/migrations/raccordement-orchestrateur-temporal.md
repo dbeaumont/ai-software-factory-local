@@ -573,8 +573,11 @@ est immédiatement l'unique moteur de toutes les admissions.
   `a589f5c4c93088650bc7f46a13655cf10b92bf94`, puis approuvé explicitement par David Beaumont pour les quatre
   responsabilités du POC local le 2026-09-06. Dossier de décision :
   `docs/evidence/temporal/TEMP-103R-final-candidate-2026-09-06.md`.)_
-- [ ] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,
-  coordinateur, projection PostgreSQL, migrations, API, interface, dashboards et alertes.
+- [x] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,
+  coordinateur, projection PostgreSQL, migrations, API, interface, dashboards et alertes. _(Docker Compose a
+  convergé sans reconstruction vers les deux images approuvées ; l'orchestrateur est sain, Flyway V015 est appliquée,
+  l'activation worker et le bootstrap SigNoz sont sortis à `0`, et le verrou est resté fermé. Preuve :
+  `docs/evidence/temporal/TEMP-106-atomic-deployment-2026-09-06.md`.)_
 - [ ] **TEMP-108 — Vérifier avant réouverture.** Contrôler schémas, namespace, Build IDs, pollers, task queues,
   readiness, projection, Evidence MCP, SigNoz et Temporal UI.
 - [ ] **TEMP-109 — Exécuter un smoke test de coupure.** Soumettre un ticket synthétique pendant la maintenance,
