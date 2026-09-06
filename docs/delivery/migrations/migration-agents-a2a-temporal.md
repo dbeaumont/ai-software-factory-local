@@ -461,8 +461,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   production est désormais dédié à `independent-reviewer` et ne transmet que les références Evidence du patch
   consolidé, du manifeste, des résultats validés et des contradictions ; un test Temporal vérifie les digests et
   l'absence de prompt, raisonnement ou sortie brute.)_
-- [ ] **A2A-091 — Versionner le déterminisme.** Introduire un nouveau type de workflow ou Worker Versioning pour
-  la frontière A2A ; ne pas modifier de manière incompatible les historiques Temporal en cours.
+- [x] **A2A-091 — Versionner le déterminisme.** Introduire un nouveau type de workflow ou Worker Versioning pour
+  la frontière A2A ; ne pas modifier de manière incompatible les historiques Temporal en cours. _(Les workflows
+  A2A sont `PINNED` sur un build immuable ; le nouveau build enregistre exclusivement les implémentations A2A,
+  tandis que les anciens pollers drainent leurs historiques sans les rejouer avec le nouveau code. Procédure et
+  preuves : `docs/qualification/a2a/A2A-091-WORKER-VERSIONING.md`.)_
 - [ ] **A2A-092 — Borner les historiques.** Ne stocker dans Temporal que IDs, états, digests et références ;
   déclencher `continue-as-new` selon les seuils existants.
 
