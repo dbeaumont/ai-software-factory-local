@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "audience": "ai-factory-mcp",
+  "maximumLifetimeSeconds": 300,
+  "requiredClaims": ["iss", "sub", "client_id", "role", "aud", "iat", "exp", "scope"],
+  "clientIdentity": {
+    "workflow": "ai-factory-orchestrator",
+    "agentPattern": "ai-factory-agent-<role>"
+  },
+  "scopeDerivation": {
+    "role": "mcp.role.<role>",
+    "connection": "mcp.connect.<server-name>",
+    "tool": "mcp.tool.<catalog-tool>",
+    "delegation": "mcp.delegate.<mayDelegateTo-role>"
+  },
+  "rules": [
+    "A token is issued for exactly one role and one client identity.",
+    "Tool scopes are the intersection of the target server catalogue and the role catalog tools list.",
+    "Delegation scopes are derived exclusively from mayDelegateTo and are not accepted as tool scopes.",
+    "The MCP server rejects actor, client_id, role or tool-scope divergence before SDK dispatch."
+  ]
+}

@@ -29,7 +29,7 @@ class AgentCoreConfiguration {
 
     @Bean McpToolPort mcpToolPort(WebClient.Builder builder, ObjectMapper mapper,
                                  RoleScopedAgentContext role, AgentMcpProperties properties) {
-        return new RoleScopedMcpClient(role, properties, new McpSdkSessionFactory(builder, mapper));
+        return new RoleScopedMcpClient(role, properties, new McpSdkSessionFactory(builder, mapper, role, properties));
     }
 
     @Bean AgentExecutionWorker agentExecutionWorker(RoleScopedAgentContext role, LlmCompletionPort llm,
@@ -41,6 +41,6 @@ class AgentCoreConfiguration {
             RoleScopedAgentContext role, A2aTaskStore store, AgentMcpProperties properties,
             WebClient.Builder builder, ObjectMapper mapper) {
         return new EvidenceArtifactPublisher(role, store, properties,
-                new McpSdkSessionFactory(builder, mapper), mapper);
+                new McpSdkSessionFactory(builder, mapper, role, properties), mapper);
     }
 }

@@ -1,5 +1,6 @@
 package com.example.aifactory.agentruntime;
 
+import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -12,24 +13,45 @@ import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Arrays;
 
 /** Programmatic MCP SDK factory; no Spring-wide MCP registry or unrelated server connection is created. */
 final class McpSdkSessionFactory implements RoleScopedMcpClient.SessionFactory {
     private final WebClient.Builder webClient;
     private final ObjectMapper mapper;
+    private final RoleScopedAgentContext role;
+    private final AgentMcpProperties properties;
+    private final McpRoleTokenProvider tokens;
 
-    McpSdkSessionFactory(WebClient.Builder webClient, ObjectMapper mapper) {
+    McpSdkSessionFactory(WebClient.Builder webClient, ObjectMapper mapper,
+                         RoleScopedAgentContext role, AgentMcpProperties properties) {
         this.webClient = webClient;
         this.mapper = mapper;
+        this.role = role;
+        this.properties = properties;
+        this.tokens = new McpRoleTokenProvider(role, properties);
     }
 
     @Override
     public RoleScopedMcpClient.Session connect(String serverName, URI uri, Duration timeout) {
+        WebClient.Builder scoped = webClient.clone().baseUrl(uri.toString());
+        char[] token = tokens.acquire();
+        if (properties.securityEnabled()) {
+            try {
+                scoped.defaultHeaders(headers -> {
+                    headers.setBearerAuth(new String(token));
+                    headers.set("X-AI-Factory-MCP-Role", role.identity().role());
+                });
+            } finally {
+                Arrays.fill(token, '\0');
+            }
+        }
         var transport = WebClientStreamableHttpTransport.builder(
-                        webClient.clone().baseUrl(uri.toString()))
+                        scoped)
                 .endpoint("/mcp").resumableStreams(false).openConnectionOnStartup(false).build();
         McpSyncClient client = McpClient.sync(transport)
-                .clientInfo(new McpSchema.Implementation("ai-factory-a2a-agent-runtime", "0.1.0"))
+                .clientInfo(new McpSchema.Implementation(
+                        "ai-factory-a2a-agent-" + role.identity().role(), "0.1.0"))
                 .initializationTimeout(timeout).requestTimeout(timeout).build();
         client.initialize();
         if (client.getServerInfo() == null || !serverName.equals(client.getServerInfo().name())) {

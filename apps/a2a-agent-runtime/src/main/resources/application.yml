@@ -89,3 +89,6 @@ ai-factory:
       request-timeout: ${AI_FACTORY_MCP_REQUEST_TIMEOUT:20s}
       repository-context-url: ${AI_FACTORY_MCP_REPOSITORY_CONTEXT_URL:http://repository-context-mcp:8091}
       evidence-url: ${AI_FACTORY_MCP_EVIDENCE_URL:http://evidence-mcp:8095}
+      security-enabled: ${AI_FACTORY_MCP_ROLE_SECURITY_ENABLED:false}
+      client-id: ${AI_FACTORY_MCP_ROLE_CLIENT_ID:}
+      access-token-file: ${AI_FACTORY_MCP_ROLE_ACCESS_TOKEN_FILE:}

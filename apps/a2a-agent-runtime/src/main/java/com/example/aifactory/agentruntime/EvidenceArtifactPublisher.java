@@ -47,7 +47,7 @@ public final class EvidenceArtifactPublisher {
         Map<String, Object> request = Map.of(
                 "schema_version", "1", "task_id", command.taskId(), "attempt_id", command.attemptId(),
                 "type", "agent-result", "media_type", "application/json",
-                "content_base64", command.contentBase64(), "digest", command.digest(), "actor", "workflow");
+                "content_base64", command.contentBase64(), "digest", command.digest(), "actor", command.role());
         JsonNode stored;
         try (RoleScopedMcpClient.Session session = sessions.connect(
                 "evidence-mcp", properties.evidenceUrl(), properties.requestTimeout())) {

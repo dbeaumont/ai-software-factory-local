@@ -51,7 +51,7 @@ class EvidenceArtifactPublisherTest {
         AgentArtifactActivities.ArtifactReference replay = publisher.publish(command);
 
         assertThat(first).isEqualTo(replay);
-        assertThat(request.get()).containsEntry("actor", "workflow").containsEntry("digest", digest);
+        assertThat(request.get()).containsEntry("actor", "developer").containsEntry("digest", digest);
         assertThat(store.artifacts("task-1", "tenant-a", "orchestrator")).singleElement()
                 .satisfies(artifact -> assertThat(artifact.toString()).contains(first.uri(), digest));
     }

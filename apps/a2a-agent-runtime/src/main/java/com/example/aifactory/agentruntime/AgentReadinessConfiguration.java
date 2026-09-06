@@ -28,7 +28,7 @@ class AgentReadinessConfiguration {
             ObjectProvider<Worker> temporalWorker, LlmAdapterProperties llm, AgentMcpProperties mcp,
             RoleScopedAgentContext role, org.springframework.web.reactive.function.client.WebClient.Builder webClient,
             tools.jackson.databind.ObjectMapper mapper) {
-        McpSdkSessionFactory sessions = new McpSdkSessionFactory(webClient, mapper);
+        McpSdkSessionFactory sessions = new McpSdkSessionFactory(webClient, mapper, role, mcp);
         List<AgentRuntimeReadinessHealthIndicator.ReadinessCheck> checks = new ArrayList<>();
         checks.add(check("agentCard", () -> {
             Map<String, Object> card = cards.publicCard();

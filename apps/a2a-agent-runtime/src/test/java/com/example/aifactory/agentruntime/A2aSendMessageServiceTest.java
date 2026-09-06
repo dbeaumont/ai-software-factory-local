@@ -55,6 +55,23 @@ class A2aSendMessageServiceTest {
     }
 
     @Test
+    void appliesCatalogDelegationEdgesOnTheReceivingServer() throws Exception {
+        JsonNode params = request("delegated-message", "developer", "a".repeat(64)).path("params");
+        Set<String> scopes = Set.of(
+                "a2a.invoke", "a2a.role.developer", "a2a.skill.developer.code-task-v1");
+
+        assertThat(service.send(params, new A2aSendMessageService.Caller(
+                "ai-factory-agent-code-agent", "tenant-a", "code-agent", scopes)).role())
+                .isEqualTo("developer");
+        assertThatThrownBy(() -> service.send(
+                request("forbidden-delegation", "developer", "b".repeat(64)).path("params"),
+                new A2aSendMessageService.Caller(
+                        "ai-factory-agent-test-agent", "tenant-a", "test-agent", scopes)))
+                .isInstanceOf(A2aSendMessageService.SubmissionRejected.class)
+                .hasMessageContaining("cannot delegate");
+    }
+
+    @Test
     void continuesInputRequiredOnTheSameTaskAndContextExactlyOnce() throws Exception {
         AgentRuntimeProperties runtime = new AgentRuntimeProperties(
                 "developer", URI.create("http://localhost:8090/a2a"));

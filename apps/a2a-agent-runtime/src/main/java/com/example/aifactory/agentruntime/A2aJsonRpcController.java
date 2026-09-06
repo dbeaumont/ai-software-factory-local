@@ -137,13 +137,18 @@ final class A2aJsonRpcController {
         if (authentication instanceof JwtAuthenticationToken jwt) {
             String clientId = jwt.getToken().getClaimAsString("client_id");
             String tenantId = jwt.getToken().getClaimAsString("tenant_id");
-            if (clientId == null || clientId.isBlank() || tenantId == null || tenantId.isBlank()) {
+            String role = jwt.getToken().getClaimAsString("role");
+            String expectedClient = "workflow".equals(role)
+                    ? "ai-factory-orchestrator" : "ai-factory-agent-" + role;
+            if (clientId == null || !clientId.equals(expectedClient)
+                    || tenantId == null || tenantId.isBlank()) {
                 throw new A2aSendMessageService.SubmissionRejected(
                         "Authenticated A2A caller lacks client or tenant binding");
             }
-            return new A2aSendMessageService.Caller(clientId, tenantId, scopes);
+            return new A2aSendMessageService.Caller(clientId, tenantId, role, scopes);
         }
-        return new A2aSendMessageService.Caller(authentication.getName(), authentication.getName(), scopes);
+        return new A2aSendMessageService.Caller(
+                authentication.getName(), authentication.getName(), "workflow", scopes);
     }
 
     private static Map<String, Object> response(Object id, Map<String, Object> task) {

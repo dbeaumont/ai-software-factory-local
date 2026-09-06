@@ -44,6 +44,7 @@ public final class RoleScopedAgentContext {
     public Set<String> acceptedInputContracts() { return inputContracts; }
     public Set<String> producedOutputContracts() { return outputContracts; }
     public Set<String> allowedTools() { return identity.allowedTools(); }
+    public Set<String> allowedDelegations() { return identity.mayDelegateTo(); }
 
     public void requireActiveRole(String role) {
         if (!identity.role().equals(role)) {
@@ -54,6 +55,12 @@ public final class RoleScopedAgentContext {
     public void requireTool(String tool) {
         if (!identity.allowedTools().contains(tool)) {
             throw new SecurityException("Tool is not granted to role " + identity.role());
+        }
+    }
+
+    public void requireDelegation(String targetRole) {
+        if (!identity.mayDelegateTo().contains(targetRole)) {
+            throw new SecurityException("Delegation is not granted from " + identity.role() + " to " + targetRole);
         }
     }
 

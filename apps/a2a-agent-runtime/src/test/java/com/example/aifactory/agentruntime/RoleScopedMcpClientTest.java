@@ -36,10 +36,13 @@ class RoleScopedMcpClientTest {
         assertEquals(Set.of("repository-context-mcp", "evidence-mcp"), supervisor.configuredServers());
         assertEquals("{\"ok\":true}", supervisor.call("context.list_tree", Map.of()));
         assertEquals("{\"ok\":true}", supervisor.call("context.search_code", Map.of("query", "Agent")));
+        assertEquals("supervisor", sessions.lastArguments.get("actor"));
         assertEquals(List.of("repository-context-mcp"), sessions.connected);
         assertEquals(1, supervisor.openConnectionCount());
         assertThrows(SecurityException.class, () -> supervisor.call("evidence.read", Map.of("uri", "evidence://x")));
         assertThrows(SecurityException.class, () -> supervisor.call("scm.create_commit", Map.of()));
+        assertThrows(SecurityException.class, () -> supervisor.call(
+                "context.list_tree", Map.of("actor", "workflow")));
         assertEquals(List.of("repository-context-mcp"), sessions.connected);
     }
 
@@ -58,6 +61,7 @@ class RoleScopedMcpClientTest {
 
     private static final class RecordingSessions implements RoleScopedMcpClient.SessionFactory {
         private final List<String> connected = new ArrayList<>();
+        private Map<String, Object> lastArguments = Map.of();
         @Override public RoleScopedMcpClient.Session connect(String serverName, URI uri, Duration timeout) {
             connected.add(serverName);
             return new RoleScopedMcpClient.Session() {
@@ -66,6 +70,7 @@ class RoleScopedMcpClientTest {
                         "context.get_repository_rules", "context.get_dependencies", "context.get_symbols",
                         "evidence.get_summary", "evidence.read"); }
                 @Override public String call(String toolName, Map<String, Object> arguments) {
+                    lastArguments = arguments;
                     return "{\"ok\":true}";
                 }
                 @Override public void close() { }

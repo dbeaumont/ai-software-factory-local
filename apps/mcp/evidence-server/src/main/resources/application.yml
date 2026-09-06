@@ -42,6 +42,12 @@ management:
     distribution:
       percentiles-histogram: { http.server.requests: true }
 ai-factory:
+  mcp:
+    role-security:
+      enabled: ${AI_FACTORY_MCP_ROLE_SECURITY_ENABLED:false}
+      issuer: ${AI_FACTORY_MCP_ROLE_ISSUER:}
+      audience: ${AI_FACTORY_MCP_ROLE_AUDIENCE:ai-factory-mcp}
+      server-name: evidence-mcp
   evidence:
     state-root: ${AI_FACTORY_EVIDENCE_STATE_ROOT:/var/lib/ai-factory/evidence}
     max-artifact-bytes: ${AI_FACTORY_EVIDENCE_MAX_ARTIFACT_BYTES:1048576}

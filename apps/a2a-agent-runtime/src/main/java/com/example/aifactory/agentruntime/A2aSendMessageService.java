@@ -30,6 +30,8 @@ public final class A2aSendMessageService {
     private final AgentTaskWorkflowStarter workflowStarter;
     private final A2aTaskStore store;
     private final A2aAdmissionController admission;
+    private final com.example.aifactory.agentcore.AgentCatalog catalog =
+            new com.example.aifactory.agentcore.AgentCatalog();
     private final Map<String, Cursor> cursors = new ConcurrentHashMap<>();
 
     @Autowired
@@ -86,6 +88,7 @@ public final class A2aSendMessageService {
         if (!activeRole.equals(role) || !allowedSkills.contains(skill)) {
             throw new SubmissionRejected("Role or skill is not admitted by this runtime");
         }
+        requireDelegation(caller, role);
         requireScopes(caller.scopes(), Set.of("a2a.invoke", "a2a.role." + role, "a2a.skill." + skill));
         JsonNode metadata = requiredObject(message, "metadata");
         JsonNode execution = requiredObject(metadata, EXECUTION_CONTEXT_EXTENSION);
@@ -293,6 +296,18 @@ public final class A2aSendMessageService {
         }
     }
 
+    private void requireDelegation(Caller caller, String targetRole) {
+        if ("workflow".equals(caller.role())) return;
+        try {
+            com.example.aifactory.agentcore.AgentCatalog.Role source = catalog.require(caller.role());
+            if (!source.isAgent() || !source.mayDelegateTo().contains(targetRole)) {
+                throw new SubmissionRejected("Caller role cannot delegate to this agent");
+            }
+        } catch (IllegalArgumentException unknown) {
+            throw new SubmissionRejected("Caller role cannot delegate to this agent");
+        }
+    }
+
     private void requireLookupAuthorization(Caller caller, String operationScope) {
         if (caller == null || caller.subject() == null || caller.subject().isBlank()
                 || caller.tenantId() == null || caller.tenantId().isBlank()) {
@@ -337,12 +352,16 @@ public final class A2aSendMessageService {
         return value.asText();
     }
 
-    public record Caller(String subject, String tenantId, Set<String> scopes) {
+    public record Caller(String subject, String tenantId, String role, Set<String> scopes) {
         public Caller {
             if (tenantId == null || tenantId.isBlank()) throw new IllegalArgumentException("tenantId is required");
+            if (role == null || role.isBlank()) throw new IllegalArgumentException("role is required");
             scopes = scopes == null ? Set.of() : Set.copyOf(scopes);
         }
-        public Caller(String subject, Set<String> scopes) { this(subject, subject, scopes); }
+        public Caller(String subject, String tenantId, Set<String> scopes) {
+            this(subject, tenantId, "workflow", scopes);
+        }
+        public Caller(String subject, Set<String> scopes) { this(subject, subject, "workflow", scopes); }
     }
 
     public record Submission(

@@ -500,8 +500,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `A2aSendMessageService.requireLookupAuthorization` précède chaque lecture de tâche et
     `A2aAuthorizationOrderingTest` vérifie qu'un client au mauvais rôle provoque zéro interaction avec le store ;
     l'identifiant client et le tenant sont désormais obligatoirement extraits des claims JWT.
-- [ ] **A2A-104 — Isoler les permissions MCP.** Émettre des identités et tokens MCP par rôle, appliquer
+- [x] **A2A-104 — Isoler les permissions MCP.** Émettre des identités et tokens MCP par rôle, appliquer
   `mayDelegateTo` et `tools` côté serveur, et tester les refus.
+  - Preuve : `mcp-role-token-policy-v1.json`, `McpRoleTokenProvider` et `RoleScopedMcpClient` lient identité,
+    token, acteur, tools et délégations au rôle actif ; les filtres `McpToolAuthorizationFilter` de Repository
+    Context et Evidence vérifient `client_id`, rôle et scope avant dispatch, avec tests négatifs dédiés.
 - [ ] **A2A-105 — Protéger les URLs.** Allow-lister Agent Cards, endpoints, callbacks et références Evidence ;
   interdire redirections, loopback, link-local, metadata cloud et résolutions DNS changeantes non autorisées.
 - [ ] **A2A-106 — Protéger les entrées non fiables.** Marquer les contenus de dépôt et messages comme données,

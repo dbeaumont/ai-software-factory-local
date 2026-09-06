@@ -57,7 +57,13 @@ final class RoleScopedMcpClient implements McpToolPort, AutoCloseable {
         if (!session.tools().contains(toolName)) {
             throw new SecurityException("MCP server did not negotiate the granted tool " + toolName);
         }
-        return session.call(toolName, arguments == null ? Map.of() : Map.copyOf(arguments));
+        Map<String, Object> bound = new LinkedHashMap<>(arguments == null ? Map.of() : arguments);
+        Object claimedActor = bound.get("actor");
+        if (claimedActor != null && !role.identity().role().equals(claimedActor)) {
+            throw new SecurityException("MCP actor cannot differ from the active agent role");
+        }
+        bound.put("actor", role.identity().role());
+        return session.call(toolName, Map.copyOf(bound));
     }
 
     private String serverFor(String tool) {

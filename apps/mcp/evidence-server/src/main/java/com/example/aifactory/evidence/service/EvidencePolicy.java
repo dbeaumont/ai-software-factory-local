@@ -5,6 +5,10 @@ import java.util.Map;
 
 @Service
 public class EvidencePolicy {
+    private static final java.util.Set<String> AGENT_ROLES = java.util.Set.of(
+            "supervisor", "architecture-agent", "impact-analysis", "dependencies-contracts", "code-agent",
+            "developer", "patch-repair", "test-agent", "test-design", "test-evidence", "security-agent",
+            "threat-model", "security-findings", "independent-reviewer");
     private static final java.util.Set<String> LEGAL_HOLD_ACTORS = java.util.Set.of(
             "security-officer", "legal-officer");
     private static final java.util.Set<String> SUMMARY_ACTORS = java.util.Set.of(
@@ -26,7 +30,9 @@ public class EvidencePolicy {
 
     public Rule requireWrite(String type, String actor) {
         Rule rule = require(type);
-        if (!"workflow".equals(actor)) throw new SecurityException("actor cannot write this evidence type");
+        if (!("workflow".equals(actor) || "agent-result".equals(type) && AGENT_ROLES.contains(actor))) {
+            throw new SecurityException("actor cannot write this evidence type");
+        }
         return rule;
     }
 

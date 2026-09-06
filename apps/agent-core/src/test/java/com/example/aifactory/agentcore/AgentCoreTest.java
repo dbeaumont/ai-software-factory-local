@@ -42,6 +42,10 @@ class AgentCoreTest {
         context.requireTool("context.read_file");
         assertThrows(SecurityException.class, () -> context.requireTool("scm.create_commit"));
         assertThrows(SecurityException.class, () -> context.requireActiveRole("patch-repair"));
+        assertThrows(SecurityException.class, () -> context.requireDelegation("patch-repair"));
+        RoleScopedAgentContext codeAgent = RoleScopedAgentContext.load("code-agent", new ObjectMapper());
+        codeAgent.requireDelegation("developer");
+        assertThrows(SecurityException.class, () -> codeAgent.requireDelegation("test-design"));
     }
 
     @Test

@@ -55,6 +55,12 @@ management:
       percentiles-histogram: { http.server.requests: true }
 
 ai-factory:
+  mcp:
+    role-security:
+      enabled: ${AI_FACTORY_MCP_ROLE_SECURITY_ENABLED:false}
+      issuer: ${AI_FACTORY_MCP_ROLE_ISSUER:}
+      audience: ${AI_FACTORY_MCP_ROLE_AUDIENCE:ai-factory-mcp}
+      server-name: repository-context-mcp
   context:
     workspace-root: ${AI_FACTORY_CONTEXT_WORKSPACE_ROOT:/workspace/tasks}
     registry-root: ${AI_FACTORY_CONTEXT_REGISTRY_ROOT:/var/lib/ai-factory/context-registry}
