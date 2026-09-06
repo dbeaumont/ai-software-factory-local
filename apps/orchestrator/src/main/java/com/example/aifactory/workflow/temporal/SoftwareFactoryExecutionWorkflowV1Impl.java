@@ -17,6 +17,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     private final Map<String, SoftwareFactoryWorkflow.HumanDecisionSignal> humanDecisions = new LinkedHashMap<>();
     private final Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts =
             new LinkedHashMap<>();
+    private final A2aTaskAwaiter a2aTasks = new A2aTaskAwaiter();
 
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
@@ -245,6 +246,9 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     @Override public void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal) {
         if (signal != null && signal.decisionId() != null) humanDecisions.put(signal.decisionId(), signal);
         delegate.decide(signal);
+    }
+    @Override public void a2aTaskUpdate(com.example.aifactory.a2a.A2aContracts.Notification notification) {
+        a2aTasks.accept(notification);
     }
     @Override public String status() { return "CREATED".equals(phase) ? delegate.status() : phase; }
     @Override public List<SoftwareFactoryWorkflow.DelegationView> dag() { return delegate.dag(); }

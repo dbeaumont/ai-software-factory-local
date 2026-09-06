@@ -23,6 +23,9 @@ public interface SoftwareFactoryExecutionWorkflowV1 {
     @SignalMethod(name = "humanDecision")
     void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal);
 
+    @SignalMethod(name = "a2aTaskUpdate")
+    void a2aTaskUpdate(com.example.aifactory.a2a.A2aContracts.Notification notification);
+
     @QueryMethod(name = "status")
     String status();
 

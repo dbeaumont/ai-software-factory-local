@@ -429,8 +429,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   transition, séquence et digest, puis émettre un signal Temporal idempotent. _(`/internal/a2a/notifications`
   vérifie le HMAC du corps brut ; l'association et l'inbox V018 contrôlent corrélation, ordre et digest avant le
   signal `a2aTaskUpdate`, et un rejeu exact déjà signalé devient un no-op.)_
-- [ ] **A2A-084 — Attendre sans bloquer.** Utiliser `Workflow.await` et un timer de réconciliation ; aucun
-  `block()`, `blockFirst()` ou `blockLast()` ne doit être exécuté sur un thread Reactor.
+- [x] **A2A-084 — Attendre sans bloquer.** Utiliser `Workflow.await` et un timer de réconciliation ; aucun
+  `block()`, `blockFirst()` ou `blockLast()` ne doit être exécuté sur un thread Reactor. _(`A2aTaskAwaiter` tamponne
+  les signaux ordonnés et utilise uniquement `Workflow.await(interval, condition)` ; le callback WebFlux compose
+  son `CompletionStage` sans blocage.)_
 - [ ] **A2A-085 — Gérer les notifications perdues.** À expiration du timer, appeler `GetTask`, appliquer les
   transitions manquantes dans l'ordre puis réarmer une attente bornée.
 - [ ] **A2A-086 — Propager l'annulation.** Envoyer `CancelTask`, attendre une confirmation bornée et préserver les
