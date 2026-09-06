@@ -395,8 +395,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   les erreurs A2A et états appropriés, avec `google.rpc.Status/ErrorInfo` dans les détails. _(La frontière JSON-RPC
   classe ces six familles avec code A2A, statut gRPC canonique, `ErrorInfo` stable, retryabilité et état terminal ;
   les causes internes ne sont jamais renvoyées au client.)_
-- [ ] **A2A-071 — Ajouter readiness et liveness.** La readiness exige carte valide, stockage, Temporal, task queue,
-  LLM et MCP obligatoires pour le rôle ; la liveness ne dépend pas des services aval.
+- [x] **A2A-071 — Ajouter readiness et liveness.** La readiness exige carte valide, stockage, Temporal, task queue,
+  LLM et MCP obligatoires pour le rôle ; la liveness ne dépend pas des services aval. _(`agentRuntimeDependencies`
+  agrège six contrôles stricts et sans secret ; le groupe liveness reste limité à `livenessState` et ne sonde aucun
+  service aval.)_
 - [ ] **A2A-072 — Borner la concurrence.** Configurer file, pollers, exécutions par rôle, quotas par tenant,
   backpressure et graceful shutdown.
 

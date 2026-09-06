@@ -190,6 +190,12 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
         }
     }
 
+    @Override
+    public void checkHealth() {
+        Integer value = jdbc.queryForObject("SELECT 1", Integer.class);
+        if (!Integer.valueOf(1).equals(value)) throw new IllegalStateException("A2A task store health check failed");
+    }
+
     private void insertHistory(String taskId, HistoryRecord history) {
         jdbc.update("""
                 INSERT INTO a2a_agent_task_history (task_id, message_id, event_type, occurred_at)

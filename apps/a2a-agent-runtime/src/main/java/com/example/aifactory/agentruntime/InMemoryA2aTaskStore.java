@@ -117,4 +117,6 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
             throw new IllegalStateException("Immutable A2A artifact conflict");
         }
     }
+
+    @Override public void checkHealth() { }
 }

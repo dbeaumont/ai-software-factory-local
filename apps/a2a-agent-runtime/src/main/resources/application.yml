@@ -18,7 +18,9 @@ management:
         enabled: true
       group:
         readiness:
-          include: readinessState,agentRuntimeIdentity
+          include: readinessState,agentRuntimeIdentity,agentRuntimeDependencies
+        liveness:
+          include: livenessState
 
 ai-factory:
   agent-runtime:

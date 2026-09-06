@@ -22,6 +22,7 @@ public interface A2aTaskStore {
     List<PendingNotification> pendingNotifications(String role, int limit);
     void acknowledgeNotification(String notificationId, Instant acknowledgedAt);
     void putArtifact(ArtifactRecord artifact);
+    void checkHealth();
 
     record StoredTask(
             String taskId, String contextId, String messageId, String messageDigest,
