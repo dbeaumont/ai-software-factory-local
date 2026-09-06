@@ -1,0 +1,6 @@
+services:
+  a2a-developer:
+    environment:
+      AI_FACTORY_A2A_MAX_TASKS_PER_TENANT: "32"
+      AI_FACTORY_A2A_MAX_QUEUED_TASKS: "32"
+      AI_FACTORY_A2A_REQUESTS_PER_IDENTITY: "10000"

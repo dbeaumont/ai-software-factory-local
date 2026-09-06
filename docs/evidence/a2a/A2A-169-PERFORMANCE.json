@@ -1,0 +1,28 @@
+{
+  "benchmark": {
+    "concurrency": 16,
+    "latency_ms": {
+      "p50": 204.863,
+      "p95": 398.784,
+      "p99": 493.049
+    },
+    "payload_bytes": 936,
+    "requests": 300,
+    "throughput_requests_per_second": 68.225
+  },
+  "memory": {
+    "limit_mib": 768,
+    "resident_mib_after_load": 299.0
+  },
+  "provider_cost": {
+    "status": "NOT_APPLICABLE_PROTOCOL_ONLY",
+    "value": null
+  },
+  "saturation": {
+    "admitted": 31,
+    "configured_max_active": 32,
+    "quota_rejected": 33,
+    "requests": 64
+  },
+  "schema_version": "1"
+}

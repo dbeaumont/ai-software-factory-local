@@ -730,8 +730,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   campagne adverse reproductible de 36 tests, durcissement des secrets JSON imbriqués, de la classification
   des identités, des destinations privées et des réponses HTTP ; preuve :
   `docs/evidence/a2a/A2A-168-SECURITY-CAMPAIGN.md`.)_
-- [ ] **A2A-169 — Tests de performance.** Comparer à la baseline latence, débit, mémoire et coût ; valider
-  backpressure et comportement à saturation.
+- [x] **A2A-169 — Tests de performance.** Comparer à la baseline latence, débit, mémoire et coût ; valider
+  backpressure et comportement à saturation. _(Terminé le 2026-09-06 : campagne Compose isolée à 300 requêtes,
+  p95 398,784 ms, 68,225 req/s, 299 Mio ; capacité 32 strictement respectée avec 33 refus bornés sur 64 demandes
+  de saturation ; coût fournisseur explicitement non applicable à la mesure protocolaire ; preuve :
+  `docs/evidence/a2a/A2A-169-PERFORMANCE.md`.)_
 - [ ] **A2A-170 — Tests E2E métier.** Rejouer toutes les fixtures multi-agents et comparer verdicts, digests,
   gates, ordre de délégation et usage aux preuves de référence.
 - [ ] **A2A-171 — Tests de non-régression pipeline.** Vérifier que le mode `PIPELINE`, s'il reste supporté comme
