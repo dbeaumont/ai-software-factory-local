@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -28,6 +28,12 @@ help:
 	@echo -e "  $(CYAN)make a2a-pki-rotate$(NC) - rotate local A2A mTLS material with a recoverable backup"
 	@echo -e "  $(CYAN)make a2a-secrets$(NC) - verify owner-only, role-isolated local A2A secrets"
 	@echo -e "  $(CYAN)make a2a-supply-chain A2A_RUNTIME_IMAGE=...@sha256:...$(NC) - qualify the signed runtime image"
+	@echo -e "  $(CYAN)make a2a-config$(NC) - validate A2A Compose topology and capability boundaries"
+	@echo -e "  $(CYAN)make a2a-status$(NC) - show A2A database and role runtime status"
+	@echo -e "  $(CYAN)make a2a-cards$(NC) - fetch and validate all private Agent Cards"
+	@echo -e "  $(CYAN)make a2a-smoke$(NC) - require healthy services and valid Agent Cards"
+	@echo -e "  $(CYAN)make a2a-logs$(NC) - follow A2A database and runtime logs"
+	@echo -e "  $(CYAN)make a2a-reset-state CONFIRM_A2A_RESET=DELETE_A2A_LOCAL_STATE$(NC) - delete local A2A task state"
 	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
 	@echo -e "  $(CYAN)make up$(NC)         - start the complete local factory stack"
 	@echo -e "  $(CYAN)make all$(NC)        - reset data and start a fully bootstrapped local factory"
@@ -100,6 +106,30 @@ a2a-supply-chain:
 	$(log-target)
 	@test -n "$(A2A_RUNTIME_IMAGE)" || (echo "A2A_RUNTIME_IMAGE digest is required" >&2; exit 1)
 	@./scripts/qualify-a2a-runtime-image.sh "$(A2A_RUNTIME_IMAGE)"
+
+a2a-config:
+	$(log-target)
+	@./scripts/a2a-local.sh config
+
+a2a-status:
+	$(log-target)
+	@./scripts/a2a-local.sh status
+
+a2a-cards:
+	$(log-target)
+	@./scripts/a2a-local.sh cards
+
+a2a-smoke:
+	$(log-target)
+	@./scripts/a2a-local.sh smoke
+
+a2a-logs:
+	$(log-target)
+	@./scripts/a2a-local.sh logs
+
+a2a-reset-state:
+	$(log-target)
+	@./scripts/reset-a2a-local-state.sh
 
 build: temporal-replay
 	$(log-target)

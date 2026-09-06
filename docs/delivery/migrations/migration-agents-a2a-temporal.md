@@ -587,8 +587,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : les deux fichiers partagent un bloc A2A complet et strictement ordonné couvrant runtime, découverte,
     cache borné, persistance, Temporal, concurrence, notifications, TLS, OAuth2, signatures et rate limiting.
     `verify-env-structure.sh` compare la séquence exacte des variables sans lire ni comparer leurs valeurs privées.
-- [ ] **A2A-126 — Ajouter les cibles Make.** Fournir `a2a-config`, `a2a-status`, `a2a-cards`, `a2a-smoke`,
+- [x] **A2A-126 — Ajouter les cibles Make.** Fournir `a2a-config`, `a2a-status`, `a2a-cards`, `a2a-smoke`,
   `a2a-logs` et `a2a-reset-state` avec garde explicite sur la suppression locale.
+  - Preuve : les six cibles pilotent le modèle Compose canonique ; cards valide rôle et signature par mTLS, smoke
+    exige conteneurs healthy et cartes valides, et reset refuse toute action sans la confirmation exacte
+    `CONFIRM_A2A_RESET=DELETE_A2A_LOCAL_STATE` avant de résoudre un unique volume étiqueté.
 - [ ] **A2A-127 — Ajouter des profils de test.** Permettre de lancer une topologie minimale pour un rôle et la
   topologie complète pour l'E2E, sans modifier le chemin de production.
 - [ ] **A2A-128 — Dimensionner macOS.** Documenter CPU, mémoire, disque, temps de démarrage et réglages Docker
