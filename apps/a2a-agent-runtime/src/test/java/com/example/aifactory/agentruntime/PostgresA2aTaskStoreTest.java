@@ -1,0 +1,67 @@
+package com.example.aifactory.agentruntime;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.ObjectMapper;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class PostgresA2aTaskStoreTest {
+    private JdbcTemplate jdbc;
+    private PostgresA2aTaskStore store;
+
+    @BeforeEach
+    void setUp() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(
+                "jdbc:h2:mem:a2a-" + java.util.UUID.randomUUID() + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "sa", "");
+        new ResourceDatabasePopulator(new ClassPathResource(
+                "db/a2a-task-migration/V001__create_a2a_task_projection.sql")).execute(dataSource);
+        jdbc = new JdbcTemplate(dataSource);
+        store = new PostgresA2aTaskStore(jdbc,
+                new TransactionTemplate(new DataSourceTransactionManager(dataSource)), new ObjectMapper());
+    }
+
+    @Test
+    void persistsIdempotencyHistoryAclArtifactsAndOptimisticVersion() {
+        Instant now = Instant.parse("2026-09-06T12:00:00Z");
+        A2aTaskStore.StoredTask task = new A2aTaskStore.StoredTask(
+                "task-1", "context-1", "message-1", "a".repeat(64), "developer",
+                "developer.code-task-v1", "orchestrator", "tenant-a", "delegation-1", now,
+                A2aSendMessageService.TaskState.SUBMITTED, 0);
+        A2aTaskStore.HistoryRecord accepted = new A2aTaskStore.HistoryRecord(
+                "message-1", "MESSAGE_ACCEPTED", now);
+
+        assertThat(store.createOrGet(task, accepted).created()).isTrue();
+        assertThat(store.createOrGet(task, accepted).created()).isFalse();
+        assertThat(store.history("task-1", 50)).hasSize(1);
+
+        A2aTaskStore.StoredTask transitioned = store.transition("task-1", 0,
+                A2aSendMessageService.TaskState.WORKING,
+                new A2aTaskStore.HistoryRecord("message-1", "TASK_WORKING", now.plusSeconds(1)))
+                .orElseThrow();
+        assertThat(transitioned.version()).isEqualTo(1);
+        assertThat(store.transition("task-1", 0, A2aSendMessageService.TaskState.FAILED,
+                new A2aTaskStore.HistoryRecord("message-1", "TASK_FAILED", now))).isEmpty();
+        assertThat(store.history("task-1", 50)).hasSize(2);
+
+        jdbc.update("""
+                INSERT INTO a2a_agent_task_artifact
+                  (artifact_id, task_id, tenant_id, acl_subject, artifact_digest, artifact_json, version)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, "artifact-1", "task-1", "tenant-a", "orchestrator", "b".repeat(64),
+                "{\"artifactId\":\"artifact-1\"}", 0);
+        assertThat(store.artifacts("task-1", "tenant-a", "orchestrator"))
+                .containsExactly(Map.of("artifactId", "artifact-1"));
+        assertThat(store.artifacts("task-1", "tenant-b", "orchestrator")).isEmpty();
+    }
+}

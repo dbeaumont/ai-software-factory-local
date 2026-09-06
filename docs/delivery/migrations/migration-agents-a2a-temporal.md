@@ -371,8 +371,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   l'orchestrateur, authentifier chaque notification, borner retries/backoff et journaliser les accusés sans secret.
   _(`A2aPushNotificationSender` signe en HMAC-SHA256 vers l'unique callback HTTPS configuré, borne tentatives et
   backoff, et ne journalise que tâche/tentative/statut ; la capacité de carte suit exactement son activation.)_
-- [ ] **A2A-065 — Créer un stockage durable des tâches.** Persister tâche, messages retenus, transitions,
-  artefacts, ACL, digests, message idempotent et version avec verrouillage optimiste.
+- [x] **A2A-065 — Créer un stockage durable des tâches.** Persister tâche, messages retenus, transitions,
+  artefacts, ACL, digests, message idempotent et version avec verrouillage optimiste. _(Le schéma Flyway dédié et
+  `PostgresA2aTaskStore` persistent projection, identité idempotente unique, historique, artefacts digestés/ACL et
+  version CAS ; le service utilise exclusivement ce port et le fallback mémoire reste limité au profil désactivé.)_
 - [ ] **A2A-066 — Créer `AgentTaskWorkflowV1`.** Une tâche A2A démarre un workflow Temporal déterministe dédié,
   sur une task queue liée au rôle et à une version de worker épinglée.
 - [ ] **A2A-067 — Projeter l'état du workflow.** Mettre à jour la tâche A2A via des activités idempotentes ; ne

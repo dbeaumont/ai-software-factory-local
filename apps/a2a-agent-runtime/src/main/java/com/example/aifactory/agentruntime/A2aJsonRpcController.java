@@ -34,10 +34,15 @@ final class A2aJsonRpcController {
     }
 
     @PostMapping(path = ENDPOINT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    Map<String, Object> handle(
+    reactor.core.publisher.Mono<Map<String, Object>> handleAsync(
             @RequestHeader(name = "A2A-Version", required = false) String version,
             @RequestBody byte[] body,
             Authentication authentication) {
+        return reactor.core.publisher.Mono.fromCallable(() -> handle(version, body, authentication))
+                .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
+    }
+
+    Map<String, Object> handle(String version, byte[] body, Authentication authentication) {
         Object requestId = null;
         try {
             if (!"1.0".equals(version)) {

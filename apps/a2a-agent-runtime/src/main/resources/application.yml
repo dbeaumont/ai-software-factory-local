@@ -44,6 +44,12 @@ ai-factory:
       hmac-secret-file: ${AI_FACTORY_A2A_PUSH_HMAC_SECRET_FILE:}
       max-attempts: ${AI_FACTORY_A2A_PUSH_MAX_ATTEMPTS:4}
       initial-backoff: ${AI_FACTORY_A2A_PUSH_INITIAL_BACKOFF:1s}
+    task-store:
+      enabled: ${AI_FACTORY_A2A_TASK_STORE_ENABLED:false}
+      jdbc-url: ${AI_FACTORY_A2A_TASK_JDBC_URL:}
+      username: ${AI_FACTORY_A2A_TASK_DB_USERNAME:}
+      password: ${AI_FACTORY_A2A_TASK_DB_PASSWORD:}
+      maximum-pool-size: ${AI_FACTORY_A2A_TASK_DB_POOL_SIZE:4}
     llm:
       base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
       api-key: ${AI_FACTORY_LLM_API_KEY:}

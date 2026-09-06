@@ -18,6 +18,8 @@ class ExecutableSeparationTest {
         assertTrue(runtimePom.contains("a2a-java-sdk-transport-jsonrpc"));
         assertFalse(runtimePom.contains("a2a-java-sdk-client</artifactId>"));
         assertTrue(runtimePom.contains("<exclude>io.temporal:*</exclude>"));
+        assertTrue(runtimePom.contains("spring-boot-starter-jdbc"));
+        assertTrue(runtimePom.contains("flyway-database-postgresql"));
         assertTrue(orchestratorPom.contains("a2a-java-sdk-client"));
         assertFalse(orchestratorPom.contains("a2a-java-sdk-server-common"));
         assertTrue(Files.exists(Path.of("src/main/java/com/example/aifactory/agentruntime/AgentExecutionWorker.java")));
