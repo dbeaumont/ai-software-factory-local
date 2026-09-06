@@ -8,6 +8,7 @@
   <packaging>pom</packaging>
   <modules>
     <module>apps/agent-core</module>
+    <module>apps/a2a-agent-runtime</module>
     <module>apps/orchestrator</module>
   </modules>
 </project>

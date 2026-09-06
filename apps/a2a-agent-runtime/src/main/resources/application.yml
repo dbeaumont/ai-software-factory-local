@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: ai-factory-a2a-agent-runtime
+  main:
+    banner-mode: "off"
+
+server:
+  port: ${AI_FACTORY_AGENT_PORT:8090}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,agentRuntimeIdentity
+
+ai-factory:
+  agent-runtime:
+    role: ${AI_FACTORY_AGENT_ROLE:}
