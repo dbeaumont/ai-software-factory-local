@@ -17,17 +17,25 @@ public final class CachingAgentCardResolver implements AgentCardResolver {
     private final CardValidator validator;
     private final CachePolicy cachePolicy;
     private final Clock clock;
+    private final A2aDecisionJournal audit;
     private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
     public CachingAgentCardResolver(AllowListedAgentRegistry registry, AgentCardFetcher fetcher,
                                     VerificationPolicyProvider policies, CardValidator validator,
                                     CachePolicy cachePolicy, Clock clock) {
+        this(registry, fetcher, policies, validator, cachePolicy, clock, new A2aDecisionJournal());
+    }
+
+    public CachingAgentCardResolver(AllowListedAgentRegistry registry, AgentCardFetcher fetcher,
+                                    VerificationPolicyProvider policies, CardValidator validator,
+                                    CachePolicy cachePolicy, Clock clock, A2aDecisionJournal audit) {
         this.registry = registry;
         this.fetcher = fetcher;
         this.policies = policies;
         this.validator = validator;
         this.cachePolicy = cachePolicy;
         this.clock = clock;
+        this.audit = audit;
     }
 
     @Override
@@ -60,11 +68,22 @@ public final class CachingAgentCardResolver implements AgentCardResolver {
             if (response.status() != 200 || response.body() == null) {
                 throw new CardResolutionException("Unexpected Agent Card response: " + response.status());
             }
-            A2aContracts.AgentCardDescriptor verified = validator.verify(
-                    response.body(), policies.forRole(agentRole, expected, resolvedAt));
+            A2aContracts.AgentCardDescriptor verified;
+            try {
+                verified = validator.verify(response.body(), policies.forRole(agentRole, expected, resolvedAt));
+            } catch (RuntimeException rejected) {
+                audit.record(A2aDecisionJournal.EventType.REFUSAL, A2aDecisionJournal.Outcome.REJECTED,
+                        "orchestrator", null, "agent-card:" + agentRole);
+                throw rejected;
+            }
             CacheEntry replacement = new CacheEntry(verified, response.etag(),
                     resolvedAt.plus(freshness), resolvedAt.plus(freshness).plus(cachePolicy.staleOnOutage()));
             cache.put(agentRole, replacement);
+            if (current != null && (!current.card().equals(verified)
+                    || !Objects.equals(current.etag(), response.etag()))) {
+                audit.record(A2aDecisionJournal.EventType.CARD_CHANGE, A2aDecisionJournal.Outcome.CHANGED,
+                        "orchestrator", null, "agent-card:" + agentRole + ":" + response.etag());
+            }
             return verified;
         });
     }
@@ -72,6 +91,8 @@ public final class CachingAgentCardResolver implements AgentCardResolver {
     /** Forces signature and trust revalidation after a signing-key or trust-anchor rotation. */
     public void invalidateAfterKeyRotation() {
         cache.clear();
+        audit.record(A2aDecisionJournal.EventType.CARD_CHANGE, A2aDecisionJournal.Outcome.INVALIDATED,
+                "orchestrator", null, "signing-key-rotation");
     }
 
     private A2aContracts.AgentCardDescriptor staleDuringOutage(

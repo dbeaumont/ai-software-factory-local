@@ -74,6 +74,35 @@ class CachingAgentCardResolverTest {
                 .hasRootCauseInstanceOf(A2aAgentCardVerifier.CardVerificationException.class);
     }
 
+    @Test
+    void journalsCardChangesAndKeyInvalidationWithoutRawIdentifiers() {
+        AllowListedAgentRegistry registry = new AllowListedAgentRegistry(
+                new ObjectMapper(), new AgentCatalog(), "compose",
+                host -> List.of(java.net.InetAddress.getByName("192.0.2.10")));
+        URI cardUri = registry.require("developer").cardUri();
+        RecordingFetcher fetcher = new RecordingFetcher();
+        fetcher.responses.add(ok(cardUri, "sensitive-etag-v1"));
+        fetcher.responses.add(ok(cardUri, "sensitive-etag-v2"));
+        MutableClock clock = new MutableClock(Instant.parse("2026-09-06T12:00:00Z"));
+        java.util.List<String> auditLines = new java.util.ArrayList<>();
+        CachingAgentCardResolver resolver = new CachingAgentCardResolver(registry, fetcher,
+                (role, entry, now) -> new A2aAgentCardVerifier.VerificationPolicy(
+                        role, entry.cardUri(), entry.endpoint(), URI.create("https://ai-factory.local"),
+                        "ai-factory", Set.of("developer.code-task-v1"), Map.of("kid", "fingerprint"), now),
+                (body, policy) -> descriptor(cardUri), new CachingAgentCardResolver.CachePolicy(
+                        Duration.ofMinutes(5), Duration.ofMinutes(2)), clock,
+                new A2aDecisionJournal(clock, auditLines::add));
+
+        resolver.resolve("developer").toCompletableFuture().join();
+        clock.advance(Duration.ofMinutes(6));
+        resolver.resolve("developer").toCompletableFuture().join();
+        resolver.invalidateAfterKeyRotation();
+
+        assertThat(auditLines).anyMatch(line -> line.contains("type=CARD_CHANGE outcome=CHANGED"));
+        assertThat(auditLines).anyMatch(line -> line.contains("type=CARD_CHANGE outcome=INVALIDATED"));
+        assertThat(auditLines).allMatch(line -> !line.contains("developer") && !line.contains("sensitive-etag"));
+    }
+
     private static CachingAgentCardResolver resolver(
             AllowListedAgentRegistry registry, RecordingFetcher fetcher, Clock clock,
             CachingAgentCardResolver.CardValidator validator) {

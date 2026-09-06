@@ -175,7 +175,13 @@ class A2aSendMessageServiceTest {
 
     @Test
     void returnsImmediatelyAndRefusesProtocolDowngrade() throws Exception {
-        A2aJsonRpcController controller = new A2aJsonRpcController(mapper, service, unsecured);
+        java.util.List<String> auditLines = new java.util.concurrent.CopyOnWriteArrayList<>();
+        com.example.aifactory.agentcore.A2aDecisionJournal audit =
+                new com.example.aifactory.agentcore.A2aDecisionJournal(
+                        java.time.Clock.fixed(java.time.Instant.parse("2026-09-06T12:00:00Z"),
+                                java.time.ZoneOffset.UTC),
+                        auditLines::add);
+        A2aJsonRpcController controller = new A2aJsonRpcController(mapper, service, unsecured, audit);
         byte[] body = mapper.writeValueAsBytes(request("message-2", "developer", "a".repeat(64)));
 
         UsernamePasswordAuthenticationToken authenticated = new UsernamePasswordAuthenticationToken(
@@ -203,6 +209,8 @@ class A2aSendMessageServiceTest {
         assertThat(errorInfo(authError)).containsEntry("reason", "CALLER_UNAUTHENTICATED")
                 .extracting("metadata").asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
                 .containsEntry("category", "AUTH").containsEntry("retryable", "false");
+        assertThat(auditLines).anyMatch(line -> line.contains("type=AUTHENTICATION outcome=DENIED"));
+        assertThat(auditLines).allMatch(line -> !line.contains("orchestrator"));
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.example.aifactory.agentruntime;
 
+import com.example.aifactory.agentcore.A2aDecisionJournal;
 import org.a2aproject.sdk.spec.A2AErrorCodes;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -26,11 +28,19 @@ final class A2aJsonRpcController {
     private final ObjectMapper mapper;
     private final A2aSendMessageService service;
     private final A2aSecurityProperties security;
+    private final A2aDecisionJournal audit;
 
-    A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security) {
+    @Autowired
+    A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security,
+                         A2aDecisionJournal audit) {
         this.mapper = mapper;
         this.service = service;
         this.security = security;
+        this.audit = audit;
+    }
+
+    A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security) {
+        this(mapper, service, security, new A2aDecisionJournal());
     }
 
     @PostMapping(path = ENDPOINT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -90,16 +100,23 @@ final class A2aJsonRpcController {
                 default -> throw new RpcFailure(A2AErrorCodes.METHOD_NOT_FOUND, "A2A method is not available");
             };
         } catch (RpcFailure failure) {
+            recordRefusal(authentication, requestId, A2aDecisionJournal.EventType.REFUSAL);
             return error(requestId, failure.code, failure.getMessage(), classify(failure.code, failure.getMessage()));
         } catch (A2aSendMessageService.SubmissionRejected failure) {
+            FailureInfo classification = classifySubmission(failure);
+            recordRefusal(authentication, requestId, "AUTH".equals(classification.category())
+                    ? A2aDecisionJournal.EventType.AUTHENTICATION : A2aDecisionJournal.EventType.REFUSAL);
             return error(requestId, A2AErrorCodes.INVALID_PARAMS, failure.getMessage(), classifySubmission(failure));
         } catch (A2aSendMessageService.TaskLookupRejected failure) {
+            recordRefusal(authentication, requestId, A2aDecisionJournal.EventType.REFUSAL);
             return error(requestId, A2AErrorCodes.TASK_NOT_FOUND, failure.getMessage(),
                     new FailureInfo(5, "TASK_NOT_FOUND", "LOOKUP", false, null));
         } catch (A2aSendMessageService.TaskNotCancelable failure) {
+            recordRefusal(authentication, requestId, A2aDecisionJournal.EventType.REFUSAL);
             return error(requestId, A2AErrorCodes.TASK_NOT_CANCELABLE, failure.getMessage(),
                     new FailureInfo(9, "TASK_NOT_CANCELABLE", "BUSINESS", false, "REJECTED"));
         } catch (A2aOperationalException failure) {
+            recordRefusal(authentication, requestId, A2aDecisionJournal.EventType.REFUSAL);
             FailureInfo info = switch (failure.category()) {
                 case TIMEOUT -> new FailureInfo(4, "DEPENDENCY_TIMEOUT", "TIMEOUT", true, "FAILED");
                 case QUOTA -> new FailureInfo(8, "QUOTA_EXCEEDED", "QUOTA", true, "FAILED");
@@ -116,15 +133,23 @@ final class A2aJsonRpcController {
             return error(requestId, A2AErrorCodes.INTERNAL, "A2A dependency is temporarily unavailable",
                     new FailureInfo(14, "DEPENDENCY_UNAVAILABLE", "DEPENDENCY", true, "FAILED"));
         } catch (SecurityException failure) {
+            recordRefusal(authentication, requestId, A2aDecisionJournal.EventType.AUTHENTICATION);
             return error(requestId, A2AErrorCodes.INVALID_PARAMS, "A2A operation is not authorized",
                     new FailureInfo(7, "POLICY_DENIED", "AUTH", false, "REJECTED"));
         } catch (IllegalArgumentException failure) {
+            recordRefusal(authentication, requestId, A2aDecisionJournal.EventType.REFUSAL);
             return error(requestId, A2AErrorCodes.INVALID_PARAMS, "A2A contract validation failed",
                     new FailureInfo(3, "CONTRACT_INVALID", "CONTRACT", false, "REJECTED"));
         } catch (Exception failure) {
             return error(requestId, A2AErrorCodes.INTERNAL, "Internal A2A processing failure",
                     new FailureInfo(13, "INTERNAL_FAILURE", "INTERNAL", true, "FAILED"));
         }
+    }
+
+    private void recordRefusal(Authentication authentication, Object requestId, A2aDecisionJournal.EventType type) {
+        audit.record(type, A2aDecisionJournal.Outcome.DENIED,
+                authentication == null ? null : authentication.getName(), null,
+                requestId == null ? null : requestId.toString());
     }
 
     private A2aSendMessageService.Caller caller(Authentication authentication) {

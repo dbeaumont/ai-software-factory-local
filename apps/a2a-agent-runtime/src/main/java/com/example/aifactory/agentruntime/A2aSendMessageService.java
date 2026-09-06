@@ -1,5 +1,6 @@
 package com.example.aifactory.agentruntime;
 
+import com.example.aifactory.agentcore.A2aDecisionJournal;
 import org.erdtman.jcs.JsonCanonicalizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public final class A2aSendMessageService {
     private final A2aTaskStore store;
     private final A2aAdmissionController admission;
     private final A2aIdentityRateLimiter rateLimiter;
+    private final A2aDecisionJournal audit;
     private final com.example.aifactory.agentcore.AgentCatalog catalog =
             new com.example.aifactory.agentcore.AgentCatalog();
     private final Map<String, Cursor> cursors = new ConcurrentHashMap<>();
@@ -39,7 +41,8 @@ public final class A2aSendMessageService {
     public A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
                                  ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
                                  AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
-                                 A2aAdmissionController admission, A2aIdentityRateLimiter rateLimiter) {
+                                 A2aAdmissionController admission, A2aIdentityRateLimiter rateLimiter,
+                                 A2aDecisionJournal audit) {
         this.activeRole = runtime.role();
         AgentCardCatalogGenerator.GeneratedAgentCard card = cards.generate().get(activeRole);
         if (card == null) throw new IllegalStateException("No Agent Card source for active role");
@@ -51,6 +54,15 @@ public final class A2aSendMessageService {
         this.store = store;
         this.admission = admission;
         this.rateLimiter = rateLimiter;
+        this.audit = audit;
+    }
+
+    A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
+                          ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
+                          AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
+                          A2aAdmissionController admission, A2aIdentityRateLimiter rateLimiter) {
+        this(runtime, cards, mapper, workflowControl, workflowStarter, store, admission, rateLimiter,
+                new A2aDecisionJournal());
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
@@ -101,6 +113,8 @@ public final class A2aSendMessageService {
         }
         requireDelegation(caller, role);
         requireScopes(caller.scopes(), Set.of("a2a.invoke", "a2a.role." + role, "a2a.skill." + skill));
+        audit.record(A2aDecisionJournal.EventType.DELEGATION, A2aDecisionJournal.Outcome.ALLOWED,
+                caller.subject(), messageId, role + ":" + skill);
         JsonNode metadata = requiredObject(message, "metadata");
         JsonNode execution = requiredObject(metadata, EXECUTION_CONTEXT_EXTENSION);
         validateExecutionContext(execution, role);
@@ -127,6 +141,8 @@ public final class A2aSendMessageService {
                 store.createOrGet(candidate,
                         new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_ACCEPTED", now)));
         if (!result.task().messageDigest().equals(digest)) {
+            audit.record(A2aDecisionJournal.EventType.COLLISION, A2aDecisionJournal.Outcome.REJECTED,
+                    caller.subject(), result.task().taskId(), messageId);
             throw new SubmissionRejected("messageId collision with a different payload");
         }
         Submission submission = submission(result.task());
@@ -158,6 +174,10 @@ public final class A2aSendMessageService {
             result = store.continueTask(taskId, contextId, messageId, digest, envelope.toString(),
                     new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_CONTINUED", now));
         } catch (IllegalStateException rejected) {
+            if (rejected.getMessage() != null && rejected.getMessage().contains("collision")) {
+                audit.record(A2aDecisionJournal.EventType.COLLISION, A2aDecisionJournal.Outcome.REJECTED,
+                        caller.subject(), taskId, messageId);
+            }
             throw new SubmissionRejected(rejected.getMessage(), rejected);
         }
         if (result.accepted()) {
@@ -207,6 +227,8 @@ public final class A2aSendMessageService {
         }
         while (true) {
             if (task.state() == TaskState.CANCELED) {
+                audit.record(A2aDecisionJournal.EventType.CANCELLATION, A2aDecisionJournal.Outcome.ACCEPTED,
+                        caller.subject(), taskId, "idempotent");
                 return view(task, MAX_HISTORY_LENGTH, caller);
             }
             if (task.state().terminal()) {
@@ -217,6 +239,8 @@ public final class A2aSendMessageService {
                             submission.messageId(), "TASK_CANCELED", Instant.now()));
             if (updated.isPresent()) {
                 workflowControl.requestCancellation(taskId, submission.contextId(), "A2A tasks/cancel");
+                audit.record(A2aDecisionJournal.EventType.CANCELLATION, A2aDecisionJournal.Outcome.ACCEPTED,
+                        caller.subject(), taskId, "temporal-signal");
                 return view(updated.get(), MAX_HISTORY_LENGTH, caller);
             }
             task = store.find(taskId).orElseThrow(() -> new TaskLookupRejected("Task not found"));

@@ -1,9 +1,11 @@
 package com.example.aifactory.agentruntime;
 
+import com.example.aifactory.agentcore.A2aDecisionJournal;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -57,12 +59,27 @@ class A2aSecurityConfiguration {
     }
 
     @Bean
-    SecurityWebFilterChain a2aSecurityWebFilterChain(ServerHttpSecurity http) {
+    SecurityWebFilterChain a2aSecurityWebFilterChain(ServerHttpSecurity http, A2aDecisionJournal audit) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers(AgentCardController.WELL_KNOWN_PATH, "/actuator/health/**").permitAll()
                         .anyExchange().authenticated())
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((exchange, failure) -> {
+                            audit.record(A2aDecisionJournal.EventType.AUTHENTICATION,
+                                    A2aDecisionJournal.Outcome.DENIED, null, null,
+                                    exchange.getRequest().getPath().value());
+                            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                            return exchange.getResponse().setComplete();
+                        })
+                        .accessDeniedHandler((exchange, failure) -> {
+                            audit.record(A2aDecisionJournal.EventType.REFUSAL,
+                                    A2aDecisionJournal.Outcome.DENIED, null, null,
+                                    exchange.getRequest().getPath().value());
+                            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                            return exchange.getResponse().setComplete();
+                        }))
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
                 .build();
     }

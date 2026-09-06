@@ -521,8 +521,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
     lectures, listes, annulations et tentatives de notification ; les quotas de tâches par tenant, la limite JSON-RPC
     de 1 Mio et les budgets tours/tokens/coût restent imposés par l'admission et le worker. Les tests du limiter, de
     l'admission, des opérations A2A, des notifications, du contrôleur et du worker couvrent les refus fail-fast.
-- [ ] **A2A-108 — Journaliser les décisions.** Tracer authentifications échouées, refus, changement de carte,
+- [x] **A2A-108 — Journaliser les décisions.** Tracer authentifications échouées, refus, changement de carte,
   délégations, annulations et collisions sans données sensibles.
+  - Preuve : les journaux A2A agent et orchestrateur émettent un schéma fixe `a2a_decision` pour authentification,
+    refus, délégation, annulation, collision, changement et invalidation de carte. Toutes les valeurs fournies sont
+    remplacées par leur SHA-256 avant émission ; les tests vérifient le routage des événements et l'absence des
+    identifiants, jetons, retours à la ligne et ETag d'origine.
 - [ ] **A2A-109 — Gérer les secrets.** Monter les secrets en fichiers, vérifier permissions, rotation et absence
   dans l'environnement sérialisé, les dumps, traces, tâches A2A et historiques Temporal.
 - [ ] **A2A-110 — Produire l'analyse de menaces.** Couvrir spoofing de carte, confused deputy, rejeu, SSRF,
