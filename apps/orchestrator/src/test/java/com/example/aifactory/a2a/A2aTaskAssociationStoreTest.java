@@ -21,16 +21,18 @@ class A2aTaskAssociationStoreTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
         PostgresA2aTaskAssociationStore store = new PostgresA2aTaskAssociationStore(jdbc);
-        store.record(context(), "server-task-a8b4", "server-context-92ef");
+        store.record(context(), "message-1", "b".repeat(64), "server-task-a8b4", "server-context-92ef");
     }
 
     @Test
     void rejectsMissingServerIdsAndDivergentReplay() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         PostgresA2aTaskAssociationStore store = new PostgresA2aTaskAssociationStore(jdbc);
-        assertThatThrownBy(() -> store.record(context(), "", "context")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> store.record(context(), "message-1", "b".repeat(64), "", "context"))
+                .isInstanceOf(IllegalArgumentException.class);
         when(jdbc.update(anyString(), any(Object[].class))).thenReturn(0);
-        assertThatThrownBy(() -> store.record(context(), "other-task", "other-context"))
+        assertThatThrownBy(() -> store.record(context(), "message-1", "b".repeat(64),
+                "other-task", "other-context"))
                 .isInstanceOf(SecurityException.class);
     }
 
@@ -41,6 +43,10 @@ class A2aTaskAssociationStoreTest {
         assertThat(migration).contains("delegation_id      varchar(128) PRIMARY KEY")
                 .contains("a2a_task_id        varchar(255) NOT NULL")
                 .doesNotContain("a2a_task_id        varchar(255) PRIMARY KEY");
+        String extension = Files.readString(Path.of(
+                "../../resources/multiagents/database/V017__complete_a2a_task_correlation.sql"));
+        assertThat(extension).contains("workflow_id varchar(255)", "workflow_run_id varchar(128)",
+                "message_id varchar(200)", "agent_card_digest char(64)");
     }
 
     private static A2aExecutionContext context() {

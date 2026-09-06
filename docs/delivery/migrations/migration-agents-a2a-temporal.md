@@ -417,8 +417,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   `validateArtifacts` avec timeouts et retries spécifiques. _(`A2aActivities` expose cinq interfaces Temporal
   distinctes ; chaque stub utilise sa politique dédiée, et l'envoi n'est jamais rejoué automatiquement afin de
   laisser les résultats ambigus au mécanisme de réconciliation.)_
-- [ ] **A2A-081 — Persister la corrélation avant attente.** Enregistrer workflow, tentative, délégation,
-  `messageId`, rôle, Agent Card digest, A2A task ID et context ID dans une table dédiée.
+- [x] **A2A-081 — Persister la corrélation avant attente.** Enregistrer workflow, tentative, délégation,
+  `messageId`, rôle, Agent Card digest, A2A task ID et context ID dans une table dédiée. _(La migration V017
+  complète `a2a_task_associations`; `dispatchTask` persiste tous les identifiants et digests de façon idempotente
+  avant de rendre la tâche au workflow appelant.)_
 - [ ] **A2A-082 — Réconcilier un résultat ambigu.** Après timeout de `SendMessage`, rechercher par `messageId` ou
   corrélation serveur avant tout nouvel envoi ; ne jamais supposer que la requête n'a pas été traitée.
 - [ ] **A2A-083 — Recevoir les notifications.** Exposer un endpoint interne authentifié, valider tâche, contexte,

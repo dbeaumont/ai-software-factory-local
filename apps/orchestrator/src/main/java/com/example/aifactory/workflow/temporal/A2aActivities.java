@@ -20,7 +20,7 @@ public final class A2aActivities {
     @ActivityInterface
     public interface DispatchTask {
         @ActivityMethod(name = "A2aDispatchTask")
-        A2aContracts.TaskSnapshot dispatchTask(A2aContracts.SendCommand command);
+        A2aContracts.TaskSnapshot dispatchTask(DispatchRequest request);
     }
 
     @ActivityInterface
@@ -56,6 +56,9 @@ public final class A2aActivities {
     }
 
     public record ValidationRequest(String agentRole, String outputContract, A2aContracts.TaskSnapshot task) {}
+
+    public record DispatchRequest(com.example.aifactory.a2a.A2aExecutionContext execution,
+                                  String agentCardDigest, A2aContracts.SendCommand command) {}
 
     public record EvidenceReference(String artifactId, String uri, String digest, String contract) {}
 

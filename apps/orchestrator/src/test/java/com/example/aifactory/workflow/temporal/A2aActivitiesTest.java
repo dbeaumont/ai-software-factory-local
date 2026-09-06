@@ -4,6 +4,8 @@ import com.example.aifactory.a2a.A2aClient;
 import com.example.aifactory.a2a.A2aContractMapping;
 import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.a2a.A2aMediaTypes;
+import com.example.aifactory.a2a.A2aExecutionContext;
+import com.example.aifactory.a2a.A2aTaskAssociationStore;
 import com.example.aifactory.a2a.AgentCardResolver;
 import io.temporal.activity.ActivityOptions;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,11 +38,30 @@ class A2aActivitiesTest {
             @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> cancelTask(
                     A2aContracts.TaskQuery query) { return CompletableFuture.completedFuture(snapshot); }
         };
+        AtomicReference<A2aTaskAssociationStore.Association> persisted = new AtomicReference<>();
+        A2aTaskAssociationStore associations = new A2aTaskAssociationStore() {
+            @Override public void record(A2aExecutionContext execution, String messageId, String cardDigest,
+                                         String taskId, String contextId) {
+                persisted.set(new Association(execution.delegationId(), execution.taskId(), execution.attemptId(),
+                        execution.workflowId(), execution.workflowRunId(), execution.sourceCommit(), messageId,
+                        execution.agentRole(), cardDigest, taskId, contextId));
+            }
+            @Override public java.util.Optional<Association> findByDelegation(String delegationId) {
+                return java.util.Optional.ofNullable(persisted.get());
+            }
+        };
         A2aActivitiesImpl activities = new A2aActivitiesImpl(
-                cards, client, new A2aContractMapping(new ObjectMapper()));
+                cards, client, new A2aContractMapping(new ObjectMapper()), associations);
 
         assertThat(activities.resolveAgent("developer").agentRole()).isEqualTo("developer");
-        assertThat(activities.dispatchTask(command()).taskId()).isEqualTo("task-1");
+        assertThat(activities.dispatchTask(new A2aActivities.DispatchRequest(
+                execution(), "b".repeat(64), command())).taskId()).isEqualTo("task-1");
+        assertThat(persisted.get()).satisfies(correlation -> {
+            assertThat(correlation.workflowId()).isEqualTo("workflow-1");
+            assertThat(correlation.workflowRunId()).isEqualTo("run-1");
+            assertThat(correlation.messageId()).isEqualTo("message-1");
+            assertThat(correlation.agentCardDigest()).isEqualTo("b".repeat(64));
+        });
         assertThat(activities.getTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
         assertThat(activities.cancelTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
         assertThat(activities.validateArtifacts(new A2aActivities.ValidationRequest(
@@ -76,6 +98,11 @@ class A2aActivitiesTest {
         return new A2aContracts.SendCommand("developer", "developer.code-task-v1", "message-1", null, null,
                 List.of(new A2aContracts.Part(A2aMediaTypes.JSON, null, Map.of("instruction", "change"), null)),
                 Map.of(), true);
+    }
+
+    private static A2aExecutionContext execution() {
+        return new A2aExecutionContext("1", "task-1", "attempt-1", "workflow-1", "run-1", "customer-api",
+                "a".repeat(40), "delegation-1", null, "developer", List.of("c".repeat(64)));
     }
 
     private static A2aContracts.TaskSnapshot completedTask(String contract, String digest) {

@@ -4,6 +4,7 @@ import com.example.aifactory.a2a.A2aClient;
 import com.example.aifactory.a2a.A2aContractMapping;
 import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.a2a.A2aMediaTypes;
+import com.example.aifactory.a2a.A2aTaskAssociationStore;
 import com.example.aifactory.a2a.AgentCardResolver;
 
 import java.time.Duration;
@@ -18,11 +19,14 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     private final AgentCardResolver cards;
     private final A2aClient client;
     private final A2aContractMapping contracts;
+    private final A2aTaskAssociationStore associations;
 
-    public A2aActivitiesImpl(AgentCardResolver cards, A2aClient client, A2aContractMapping contracts) {
+    public A2aActivitiesImpl(AgentCardResolver cards, A2aClient client, A2aContractMapping contracts,
+                             A2aTaskAssociationStore associations) {
         this.cards = cards;
         this.client = client;
         this.contracts = contracts;
+        this.associations = associations;
     }
 
     @Override
@@ -31,8 +35,16 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     }
 
     @Override
-    public A2aContracts.TaskSnapshot dispatchTask(A2aContracts.SendCommand command) {
-        return await(client.send(command), Duration.ofSeconds(45));
+    public A2aContracts.TaskSnapshot dispatchTask(A2aActivities.DispatchRequest request) {
+        if (request == null || request.execution() == null || request.command() == null
+                || request.agentCardDigest() == null || !request.agentCardDigest().matches("[0-9a-f]{64}")
+                || !request.execution().agentRole().equals(request.command().agentRole())) {
+            throw new IllegalArgumentException("A2A dispatch correlation is incomplete");
+        }
+        A2aContracts.TaskSnapshot task = await(client.send(request.command()), Duration.ofSeconds(45));
+        associations.record(request.execution(), request.command().messageId(), request.agentCardDigest(),
+                task.taskId(), task.contextId());
+        return task;
     }
 
     @Override
