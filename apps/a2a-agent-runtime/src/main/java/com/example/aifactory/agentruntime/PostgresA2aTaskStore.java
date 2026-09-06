@@ -33,12 +33,12 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                 jdbc.update("""
                         INSERT INTO a2a_agent_task
                           (task_id, context_id, message_id, message_digest, agent_role, skill_id,
-                           caller_subject, tenant_id, delegation_id, submitted_at, task_state, version)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           caller_subject, tenant_id, delegation_id, submitted_at, task_state, version, envelope_json)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, candidate.taskId(), candidate.contextId(), candidate.messageId(),
                         candidate.messageDigest(), candidate.role(), candidate.skill(), candidate.callerSubject(),
                         candidate.tenantId(), candidate.delegationId(), Timestamp.from(candidate.submittedAt()),
-                        candidate.state().name(), candidate.version());
+                        candidate.state().name(), candidate.version(), candidate.envelopeJson());
                 insertHistory(candidate.taskId(), accepted);
                 return new CreateResult(candidate, true);
             });
@@ -119,6 +119,60 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
         });
     }
 
+    @Override
+    public void recordWorkflowExecution(String taskId, String workflowId, String runId) {
+        int updated = jdbc.update("""
+                UPDATE a2a_agent_task SET workflow_id = ?, workflow_run_id = ?
+                WHERE task_id = ? AND (workflow_id IS NULL OR workflow_id = ?)
+                """, workflowId, runId, taskId, workflowId);
+        if (updated != 1) throw new IllegalStateException("A2A task is absent or bound to another workflow");
+    }
+
+    @Override
+    public List<StoredTask> nonTerminal(String role, int limit) {
+        return jdbc.query("""
+                SELECT * FROM a2a_agent_task
+                WHERE agent_role = ? AND task_state NOT IN ('COMPLETED', 'REJECTED', 'FAILED', 'CANCELED')
+                ORDER BY submitted_at, task_id FETCH FIRST ? ROWS ONLY
+                """, TASK_MAPPER, role, limit);
+    }
+
+    @Override
+    public void enqueueNotification(PendingNotification notification) {
+        try {
+            jdbc.update("""
+                    INSERT INTO a2a_agent_notification_outbox
+                      (notification_id, task_id, context_id, agent_role, task_sequence, task_state, occurred_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, notification.notificationId(), notification.taskId(), notification.contextId(),
+                    notification.role(), notification.sequence(), notification.state().name(),
+                    Timestamp.from(notification.occurredAt()));
+        } catch (DuplicateKeyException alreadyQueued) {
+            // The deterministic notification ID makes an activity retry a no-op.
+        }
+    }
+
+    @Override
+    public List<PendingNotification> pendingNotifications(String role, int limit) {
+        return jdbc.query("""
+                SELECT notification_id, task_id, context_id, agent_role, task_sequence, task_state, occurred_at
+                FROM a2a_agent_notification_outbox
+                WHERE agent_role = ? AND acknowledged_at IS NULL
+                ORDER BY occurred_at, notification_id FETCH FIRST ? ROWS ONLY
+                """, (rs, row) -> new PendingNotification(rs.getString("notification_id"), rs.getString("task_id"),
+                rs.getString("context_id"), rs.getString("agent_role"), rs.getLong("task_sequence"),
+                A2aSendMessageService.TaskState.valueOf(rs.getString("task_state")),
+                rs.getTimestamp("occurred_at").toInstant()), role, limit);
+    }
+
+    @Override
+    public void acknowledgeNotification(String notificationId, java.time.Instant acknowledgedAt) {
+        jdbc.update("""
+                UPDATE a2a_agent_notification_outbox SET acknowledged_at = ?
+                WHERE notification_id = ? AND acknowledged_at IS NULL
+                """, Timestamp.from(acknowledgedAt), notificationId);
+    }
+
     private void insertHistory(String taskId, HistoryRecord history) {
         jdbc.update("""
                 INSERT INTO a2a_agent_task_history (task_id, message_id, event_type, occurred_at)
@@ -140,6 +194,7 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                 rs.getString("message_id"), rs.getString("message_digest"), rs.getString("agent_role"),
                 rs.getString("skill_id"), rs.getString("caller_subject"), rs.getString("tenant_id"),
                 rs.getString("delegation_id"), rs.getTimestamp("submitted_at").toInstant(),
-                A2aSendMessageService.TaskState.valueOf(rs.getString("task_state")), rs.getLong("version"));
+                A2aSendMessageService.TaskState.valueOf(rs.getString("task_state")), rs.getLong("version"),
+                rs.getString("envelope_json"), rs.getString("workflow_id"), rs.getString("workflow_run_id"));
     }
 }

@@ -15,7 +15,7 @@ class AgentTaskProjectionActivitiesTest {
         A2aTaskStore.StoredTask task = new A2aTaskStore.StoredTask(
                 "task-1", "context-1", "message-1", "a".repeat(64), "developer",
                 "developer.code-task-v1", "orchestrator", "tenant-a", "delegation-1", now,
-                A2aSendMessageService.TaskState.SUBMITTED, 0);
+                A2aSendMessageService.TaskState.SUBMITTED, 0, "{}", null, null);
         store.createOrGet(task, new A2aTaskStore.HistoryRecord("message-1", "MESSAGE_ACCEPTED", now));
         AgentTaskProjectionActivitiesImpl activities = new AgentTaskProjectionActivitiesImpl(store);
         AgentTaskProjectionActivities.Projection command = new AgentTaskProjectionActivities.Projection(
@@ -28,5 +28,6 @@ class AgentTaskProjectionActivitiesTest {
                 .isEqualTo(A2aSendMessageService.TaskState.WORKING);
         assertThat(store.find("task-1").orElseThrow().version()).isEqualTo(1);
         assertThat(store.history("task-1", 50)).hasSize(2);
+        assertThat(store.pendingNotifications("developer", 10)).hasSize(1);
     }
 }

@@ -12,6 +12,7 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
     private final Map<String, StoredTask> byTask = new ConcurrentHashMap<>();
     private final Map<String, String> taskByMessage = new ConcurrentHashMap<>();
     private final Map<String, List<HistoryRecord>> histories = new ConcurrentHashMap<>();
+    private final Map<String, PendingNotification> notifications = new ConcurrentHashMap<>();
 
     @Override
     public synchronized CreateResult createOrGet(StoredTask candidate, HistoryRecord accepted) {
@@ -59,9 +60,48 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
         if (current == null || current.version() != expectedVersion) return Optional.empty();
         StoredTask updated = new StoredTask(current.taskId(), current.contextId(), current.messageId(),
                 current.messageDigest(), current.role(), current.skill(), current.callerSubject(), current.tenantId(),
-                current.delegationId(), current.submittedAt(), next, expectedVersion + 1);
+                current.delegationId(), current.submittedAt(), next, expectedVersion + 1,
+                current.envelopeJson(), current.workflowId(), current.workflowRunId());
         byTask.put(taskId, updated);
         histories.get(taskId).add(event);
         return Optional.of(updated);
+    }
+
+    @Override
+    public synchronized void recordWorkflowExecution(String taskId, String workflowId, String runId) {
+        StoredTask current = byTask.get(taskId);
+        if (current == null) throw new IllegalStateException("A2A task is absent");
+        if (current.workflowId() != null && !current.workflowId().equals(workflowId)) {
+            throw new IllegalStateException("A2A task is already bound to another workflow");
+        }
+        byTask.put(taskId, new StoredTask(current.taskId(), current.contextId(), current.messageId(),
+                current.messageDigest(), current.role(), current.skill(), current.callerSubject(), current.tenantId(),
+                current.delegationId(), current.submittedAt(), current.state(), current.version(),
+                current.envelopeJson(), workflowId, runId));
+    }
+
+    @Override
+    public List<StoredTask> nonTerminal(String role, int limit) {
+        return byTask.values().stream().filter(task -> task.role().equals(role) && !task.state().terminal())
+                .sorted(Comparator.comparing(StoredTask::submittedAt).thenComparing(StoredTask::taskId))
+                .limit(limit).toList();
+    }
+
+    @Override
+    public void enqueueNotification(PendingNotification notification) {
+        notifications.putIfAbsent(notification.notificationId(), notification);
+    }
+
+    @Override
+    public List<PendingNotification> pendingNotifications(String role, int limit) {
+        return notifications.values().stream().filter(notification -> notification.role().equals(role))
+                .sorted(Comparator.comparing(PendingNotification::occurredAt)
+                        .thenComparing(PendingNotification::notificationId))
+                .limit(limit).toList();
+    }
+
+    @Override
+    public void acknowledgeNotification(String notificationId, java.time.Instant acknowledgedAt) {
+        notifications.remove(notificationId);
     }
 }

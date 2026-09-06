@@ -48,6 +48,8 @@ public final class A2aPushNotificationSender {
         validate(properties, this.secret);
     }
 
+    public boolean enabled() { return properties.enabled(); }
+
     public CompletionStage<Acknowledgement> send(Notification notification) {
         if (!properties.enabled()) {
             return CompletableFuture.failedFuture(new NotificationDeliveryException("Push notifications are disabled"));

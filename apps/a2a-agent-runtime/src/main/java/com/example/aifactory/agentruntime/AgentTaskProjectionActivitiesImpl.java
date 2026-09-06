@@ -18,13 +18,26 @@ public final class AgentTaskProjectionActivitiesImpl implements AgentTaskProject
         while (true) {
             A2aTaskStore.StoredTask current = store.find(projection.taskId())
                     .orElseThrow(() -> new IllegalStateException("A2A task projection is absent"));
-            if (current.state() == desired) return;
+            if (current.state() == desired) {
+                enqueue(projection, current);
+                return;
+            }
             if (current.state().terminal()) {
                 throw new IllegalStateException("Cannot project over terminal A2A state " + current.state());
             }
-            if (store.transition(current.taskId(), current.version(), desired,
+            java.util.Optional<A2aTaskStore.StoredTask> updated = store.transition(current.taskId(), current.version(), desired,
                     new A2aTaskStore.HistoryRecord(current.messageId(),
-                            "WORKFLOW_" + desired.name(), Instant.now())).isPresent()) return;
+                            "WORKFLOW_" + desired.name(), Instant.now()));
+            if (updated.isPresent()) {
+                enqueue(projection, updated.get());
+                return;
+            }
         }
+    }
+
+    private void enqueue(Projection projection, A2aTaskStore.StoredTask task) {
+        store.enqueueNotification(new A2aTaskStore.PendingNotification(
+                projection.transitionId(), task.taskId(), task.contextId(), task.role(), task.version(),
+                task.state(), Instant.now()));
     }
 }

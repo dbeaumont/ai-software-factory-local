@@ -16,13 +16,23 @@ public interface A2aTaskStore {
     List<Map<String, Object>> artifacts(String taskId, String tenantId, String callerSubject);
     Optional<StoredTask> transition(String taskId, long expectedVersion,
                                     A2aSendMessageService.TaskState next, HistoryRecord event);
+    void recordWorkflowExecution(String taskId, String workflowId, String runId);
+    List<StoredTask> nonTerminal(String role, int limit);
+    void enqueueNotification(PendingNotification notification);
+    List<PendingNotification> pendingNotifications(String role, int limit);
+    void acknowledgeNotification(String notificationId, Instant acknowledgedAt);
 
     record StoredTask(
             String taskId, String contextId, String messageId, String messageDigest,
             String role, String skill, String callerSubject, String tenantId,
-            String delegationId, Instant submittedAt, A2aSendMessageService.TaskState state, long version) {}
+            String delegationId, Instant submittedAt, A2aSendMessageService.TaskState state, long version,
+            String envelopeJson, String workflowId, String workflowRunId) {}
 
     record HistoryRecord(String messageId, String event, Instant occurredAt) {}
 
     record CreateResult(StoredTask task, boolean created) {}
+
+    record PendingNotification(
+            String notificationId, String taskId, String contextId, String role, long sequence,
+            A2aSendMessageService.TaskState state, Instant occurredAt) {}
 }

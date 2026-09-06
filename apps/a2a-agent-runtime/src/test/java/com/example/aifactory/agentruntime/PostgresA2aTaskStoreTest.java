@@ -25,7 +25,8 @@ class PostgresA2aTaskStoreTest {
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 "jdbc:h2:mem:a2a-" + java.util.UUID.randomUUID() + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "sa", "");
         new ResourceDatabasePopulator(new ClassPathResource(
-                "db/a2a-task-migration/V001__create_a2a_task_projection.sql")).execute(dataSource);
+                "db/a2a-task-migration/V001__create_a2a_task_projection.sql"), new ClassPathResource(
+                "db/a2a-task-migration/V002__add_a2a_recovery_state.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         store = new PostgresA2aTaskStore(jdbc,
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)), new ObjectMapper());
@@ -37,7 +38,7 @@ class PostgresA2aTaskStoreTest {
         A2aTaskStore.StoredTask task = new A2aTaskStore.StoredTask(
                 "task-1", "context-1", "message-1", "a".repeat(64), "developer",
                 "developer.code-task-v1", "orchestrator", "tenant-a", "delegation-1", now,
-                A2aSendMessageService.TaskState.SUBMITTED, 0);
+                A2aSendMessageService.TaskState.SUBMITTED, 0, "{\"target_role\":\"developer\"}", null, null);
         A2aTaskStore.HistoryRecord accepted = new A2aTaskStore.HistoryRecord(
                 "message-1", "MESSAGE_ACCEPTED", now);
 
@@ -53,6 +54,22 @@ class PostgresA2aTaskStoreTest {
         assertThat(store.transition("task-1", 0, A2aSendMessageService.TaskState.FAILED,
                 new A2aTaskStore.HistoryRecord("message-1", "TASK_FAILED", now))).isEmpty();
         assertThat(store.history("task-1", 50)).hasSize(2);
+
+        store.recordWorkflowExecution("task-1", "a2a-agent-task-v1/developer/task-1", "run-1");
+        assertThat(store.nonTerminal("developer", 10)).singleElement()
+                .satisfies(recovered -> {
+                    assertThat(recovered.envelopeJson()).contains("developer");
+                    assertThat(recovered.workflowId()).isEqualTo("a2a-agent-task-v1/developer/task-1");
+                    assertThat(recovered.workflowRunId()).isEqualTo("run-1");
+                });
+        A2aTaskStore.PendingNotification pending = new A2aTaskStore.PendingNotification(
+                "task-1:working", "task-1", "context-1", "developer", 1,
+                A2aSendMessageService.TaskState.WORKING, now.plusSeconds(1));
+        store.enqueueNotification(pending);
+        store.enqueueNotification(pending);
+        assertThat(store.pendingNotifications("developer", 10)).containsExactly(pending);
+        store.acknowledgeNotification(pending.notificationId(), now.plusSeconds(2));
+        assertThat(store.pendingNotifications("developer", 10)).isEmpty();
 
         jdbc.update("""
                 INSERT INTO a2a_agent_task_artifact

@@ -383,8 +383,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   jamais lire les tables internes de Temporal depuis le serveur A2A. _(`AgentTaskProjectionActivities` projette
   `WORKING` et l'état terminal par CAS sur `A2aTaskStore`; un retry déjà appliqué est un no-op et l'activité ne
   dépend d'aucune table ou API interne de stockage Temporal.)_
-- [ ] **A2A-068 — Reprendre après redémarrage.** Réconcilier tâches non terminales, workflow IDs et notifications
-  non acquittées sans relancer le LLM ni les outils déjà confirmés.
+- [x] **A2A-068 — Reprendre après redémarrage.** Réconcilier tâches non terminales, workflow IDs et notifications
+  non acquittées sans relancer le LLM ni les outils déjà confirmés. _(L'enveloppe et la corrélation Temporal sont
+  durables ; `A2aRecoveryCoordinator` réutilise l'ID déterministe avec `USE_EXISTING` et draine un outbox de
+  notifications idempotent, dont l'acquittement est persisté.)_
 - [ ] **A2A-069 — Publier les artefacts finaux.** Valider le contrat métier, stocker le contenu dans Evidence MCP,
   publier la référence A2A puis passer à `COMPLETED` dans une séquence réconciliable.
 - [ ] **A2A-070 — Classer les erreurs.** Mapper erreurs de contrat, auth, quota, dépendance, timeout et métier vers

@@ -72,6 +72,31 @@ class AgentTemporalConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(name = "ai-factory.agent-runtime.temporal.enabled", havingValue = "true")
+    A2aRecoveryCoordinator a2aRecoveryCoordinator(AgentRuntimeProperties runtime, A2aTaskStore store,
+                                                   AgentTaskWorkflowStarter starter,
+                                                   A2aPushNotificationSender notificationSender) {
+        return new A2aRecoveryCoordinator(runtime.role(), store, starter, notificationSender);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "ai-factory.agent-runtime.temporal.enabled", havingValue = "true")
+    SmartLifecycle a2aRecoveryLifecycle(A2aRecoveryCoordinator coordinator) {
+        return new SmartLifecycle() {
+            private volatile boolean running;
+            @Override public void start() {
+                running = true;
+                Thread.startVirtualThread(() -> coordinator.reconcile().whenComplete((report, failure) -> {
+                    if (failure != null) running = false;
+                }));
+            }
+            @Override public void stop() { running = false; }
+            @Override public boolean isRunning() { return running; }
+            @Override public int getPhase() { return 100; }
+        };
+    }
+
+    @Bean
     @ConditionalOnMissingBean(AgentTaskWorkflowControl.class)
     AgentTaskWorkflowControl localWorkflowControl() { return new LocalAgentTaskWorkflowControl(); }
 

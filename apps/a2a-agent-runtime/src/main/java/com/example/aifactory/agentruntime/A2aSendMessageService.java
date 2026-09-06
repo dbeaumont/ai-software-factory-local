@@ -88,14 +88,17 @@ public final class A2aSendMessageService {
         A2aTaskStore.StoredTask candidate = new A2aTaskStore.StoredTask(
                 UUID.randomUUID().toString(), UUID.randomUUID().toString(), messageId, digest,
                 role, skill, caller.subject(), caller.tenantId(), requiredText(execution, "delegationId"),
-                now, TaskState.SUBMITTED, 0);
+                now, TaskState.SUBMITTED, 0, envelope.toString(), null, null);
         A2aTaskStore.CreateResult result = store.createOrGet(candidate,
                 new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_ACCEPTED", now));
         if (!result.task().messageDigest().equals(digest)) {
             throw new SubmissionRejected("messageId collision with a different payload");
         }
         Submission submission = submission(result.task());
-        if (result.created()) workflowStarter.start(submission, envelope.toString());
+        if (result.created()) {
+            AgentTaskWorkflowStarter.Execution executionReference = workflowStarter.start(submission, envelope.toString());
+            store.recordWorkflowExecution(submission.taskId(), executionReference.workflowId(), executionReference.runId());
+        }
         return submission;
     }
 
