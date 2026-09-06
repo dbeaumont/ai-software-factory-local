@@ -499,7 +499,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   exact du manifeste, attend `PR_CREATED`, compare le Run ID et compte les PR via l'API Gitea. Une seconde
   approbation ne crée aucun doublon. Validation réelle : tâche `2500dfb2`, run
   `01a0746e-e3a8-7319-a558-975cf0bbd8a2`, PR `aiadmin/customer-api#2`.)_
-- [ ] Vérifier que `docker compose down` puis `up` conserve tâches et historiques.
+- [x] Vérifier que `docker compose down` puis `up` conserve tâches et historiques. _(La cible
+  `make test-temporal-compose-cycle` empreinte historique, projection et identités des volumes PostgreSQL, exécute
+  un vrai `down --remove-orphans` sans `-v`, recrée toute la stack, puis compare les données et la vue API.
+  Validation réelle : tâche livrée `2500dfb2`, run `01a0746e-e3a8-7319-a558-975cf0bbd8a2`, 93 événements et deux
+  volumes PostgreSQL inchangés.)_
 
 ### 12.5 Tests de charge et de durée
 

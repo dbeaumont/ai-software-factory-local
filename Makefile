@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -40,6 +40,7 @@ help:
 	@echo -e "  $(CYAN)make test-temporal-storage-restarts$(NC) - restart Temporal and its PostgreSQL without data loss"
 	@echo -e "  $(CYAN)make test-temporal-dependency-outages$(NC) - inject and recover all external dependency outages"
 	@echo -e "  $(CYAN)make test-temporal-pipeline-delivery$(NC) - approve one full pipeline and verify exactly one PR"
+	@echo -e "  $(CYAN)make test-temporal-compose-cycle$(NC) - verify tasks and histories survive Compose down/up"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify the static Compose sandbox runner"
 	@echo -e "  $(CYAN)make test-sandbox-network$(NC) - verify Compose runner network isolation"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
@@ -168,6 +169,10 @@ test-temporal-dependency-outages:
 test-temporal-pipeline-delivery:
 	$(log-target)
 	@./scripts/test-temporal-pipeline-delivery.sh
+
+test-temporal-compose-cycle:
+	$(log-target)
+	@./scripts/test-temporal-compose-cycle.sh
 
 test-sandbox-runtime:
 	$(log-target)
