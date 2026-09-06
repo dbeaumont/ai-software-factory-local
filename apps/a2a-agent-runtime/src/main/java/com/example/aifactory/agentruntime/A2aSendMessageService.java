@@ -19,11 +19,13 @@ public final class A2aSendMessageService {
     static final String EXECUTION_CONTEXT_EXTENSION =
             "https://ai-factory.local/extensions/execution-context/v1";
     private static final int MAX_PARTS = 16;
+    static final int MAX_HISTORY_LENGTH = 50;
 
     private final String activeRole;
     private final Set<String> allowedSkills;
     private final ObjectMapper mapper;
     private final Map<String, RegisteredSubmission> byMessageId = new ConcurrentHashMap<>();
+    private final Map<String, RegisteredSubmission> byTaskId = new ConcurrentHashMap<>();
 
     public A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
                                  ObjectMapper mapper) {
@@ -71,9 +73,37 @@ public final class A2aSendMessageService {
             Submission created = new Submission(
                     UUID.randomUUID().toString(), UUID.randomUUID().toString(), messageId,
                     role, skill, caller.subject(), requiredText(execution, "delegationId"), Instant.now());
-            byMessageId.put(messageId, new RegisteredSubmission(digest, created));
+            RegisteredSubmission registered = new RegisteredSubmission(digest, created,
+                    List.of(new HistoryItem(messageId, "MESSAGE_ACCEPTED", created.submittedAt())));
+            byMessageId.put(messageId, registered);
+            byTaskId.put(created.taskId(), registered);
             return created;
         }
+    }
+
+    public TaskView getTask(JsonNode params, Caller caller) {
+        if (caller == null || caller.subject() == null || caller.subject().isBlank()) {
+            throw new TaskLookupRejected("Task not found");
+        }
+        String taskId = requiredText(params, "id");
+        int historyLength = params.path("historyLength").asInt(0);
+        if (historyLength < 0 || historyLength > MAX_HISTORY_LENGTH) {
+            throw new SubmissionRejected("historyLength must be between 0 and " + MAX_HISTORY_LENGTH);
+        }
+        RegisteredSubmission task = byTaskId.get(taskId);
+        if (task == null) throw new TaskLookupRejected("Task not found");
+        Submission submission = task.submission();
+        try {
+            requireScopes(caller.scopes(), Set.of("a2a.read", "a2a.role." + submission.role()));
+        } catch (SubmissionRejected forbidden) {
+            throw new TaskLookupRejected("Task not found");
+        }
+        if (!submission.caller().equals(caller.subject())) {
+            throw new TaskLookupRejected("Task not found");
+        }
+        int from = Math.max(0, task.history().size() - historyLength);
+        List<HistoryItem> history = historyLength == 0 ? List.of() : task.history().subList(from, task.history().size());
+        return new TaskView(submission, history, List.of());
     }
 
     private void validateExecutionContext(JsonNode execution, String role) {
@@ -143,10 +173,24 @@ public final class A2aSendMessageService {
             String delegationId,
             Instant submittedAt) {}
 
-    private record RegisteredSubmission(String messageDigest, Submission submission) {}
+    public record HistoryItem(String messageId, String event, Instant occurredAt) {}
+
+    public record TaskView(Submission submission, List<HistoryItem> history, List<Map<String, Object>> artifacts) {
+        public TaskView {
+            history = List.copyOf(history);
+            artifacts = List.copyOf(artifacts);
+        }
+    }
+
+    private record RegisteredSubmission(
+            String messageDigest, Submission submission, List<HistoryItem> history) {}
 
     public static final class SubmissionRejected extends RuntimeException {
         public SubmissionRejected(String message) { super(message); }
         public SubmissionRejected(String message, Throwable cause) { super(message, cause); }
+    }
+
+    public static final class TaskLookupRejected extends RuntimeException {
+        public TaskLookupRejected(String message) { super(message); }
     }
 }

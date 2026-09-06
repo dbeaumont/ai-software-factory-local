@@ -47,17 +47,25 @@ final class A2aJsonRpcController {
             }
             JsonNode request = mapper.readTree(body);
             requestId = request.has("id") ? mapper.treeToValue(request.get("id"), Object.class) : null;
-            if (!"2.0".equals(request.path("jsonrpc").asText())
-                    || !"message/send".equals(request.path("method").asText())) {
-                throw new RpcFailure(A2AErrorCodes.METHOD_NOT_FOUND, "Only message/send is available");
+            if (!"2.0".equals(request.path("jsonrpc").asText())) {
+                throw new RpcFailure(A2AErrorCodes.INVALID_REQUEST, "JSON-RPC version 2.0 is required");
             }
-            A2aSendMessageService.Submission submission = service.send(
-                    request.path("params"), caller(authentication));
-            return response(requestId, submission);
+            return switch (request.path("method").asText()) {
+                case "message/send" -> response(requestId,
+                        task(service.send(request.path("params"), caller(authentication)), List.of(), List.of()));
+                case "tasks/get" -> {
+                    A2aSendMessageService.TaskView view = service.getTask(
+                            request.path("params"), caller(authentication));
+                    yield response(requestId, task(view.submission(), view.history(), view.artifacts()));
+                }
+                default -> throw new RpcFailure(A2AErrorCodes.METHOD_NOT_FOUND, "A2A method is not available");
+            };
         } catch (RpcFailure failure) {
             return error(requestId, failure.code, failure.getMessage());
         } catch (A2aSendMessageService.SubmissionRejected failure) {
             return error(requestId, A2AErrorCodes.INVALID_PARAMS, failure.getMessage());
+        } catch (A2aSendMessageService.TaskLookupRejected failure) {
+            return error(requestId, A2AErrorCodes.TASK_NOT_FOUND, failure.getMessage());
         } catch (Exception failure) {
             return error(requestId, A2AErrorCodes.JSON_PARSE, "Invalid JSON-RPC request");
         }
@@ -73,20 +81,32 @@ final class A2aJsonRpcController {
         return new A2aSendMessageService.Caller(authentication.getName(), scopes);
     }
 
-    private static Map<String, Object> response(Object id, A2aSendMessageService.Submission submission) {
+    private static Map<String, Object> response(Object id, Map<String, Object> task) {
+        return Map.of("jsonrpc", "2.0", "id", id == null ? "null" : id, "result", task);
+    }
+
+    private static Map<String, Object> task(
+            A2aSendMessageService.Submission submission,
+            List<A2aSendMessageService.HistoryItem> history,
+            List<Map<String, Object>> artifacts) {
         Map<String, Object> task = new LinkedHashMap<>();
         task.put("kind", "task");
         task.put("id", submission.taskId());
         task.put("contextId", submission.contextId());
         task.put("status", Map.of("state", "TASK_STATE_SUBMITTED", "timestamp", submission.submittedAt().toString()));
-        task.put("artifacts", List.of());
-        task.put("history", List.of());
+        task.put("artifacts", List.copyOf(artifacts));
+        task.put("history", history.stream().map(item -> Map.of(
+                "kind", "message",
+                "role", "ROLE_USER",
+                "messageId", item.messageId(),
+                "parts", List.of(Map.of("kind", "text", "text", item.event())),
+                "metadata", Map.of("occurredAt", item.occurredAt().toString()))).toList());
         task.put("metadata", Map.of(
                 "messageId", submission.messageId(),
                 "delegationId", submission.delegationId(),
                 "agentRole", submission.role(),
                 "skillId", submission.skill()));
-        return Map.of("jsonrpc", "2.0", "id", id == null ? "null" : id, "result", task);
+        return Map.copyOf(task);
     }
 
     private static Map<String, Object> error(Object id, A2AErrorCodes code, String message) {
