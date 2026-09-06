@@ -34,6 +34,11 @@ public final class TemporalAgentTaskWorkflowGateway
             return new Execution(execution.getWorkflowId(), execution.getRunId());
         } catch (WorkflowExecutionAlreadyStarted existing) {
             return new Execution(existing.getExecution().getWorkflowId(), existing.getExecution().getRunId());
+        } catch (io.grpc.StatusRuntimeException unavailable) {
+            A2aOperationalException.Category category = unavailable.getStatus().getCode()
+                    == io.grpc.Status.Code.DEADLINE_EXCEEDED
+                    ? A2aOperationalException.Category.TIMEOUT : A2aOperationalException.Category.DEPENDENCY;
+            throw new A2aOperationalException(category, "Temporal workflow start failed", unavailable);
         }
     }
 

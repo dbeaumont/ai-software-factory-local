@@ -80,6 +80,48 @@ class A2aSendMessageServiceTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> authError = (Map<String, Object>) unauthenticated.get("error");
         assertThat(authError.get("message")).isEqualTo("Unauthenticated A2A caller");
+        assertThat(errorInfo(authError)).containsEntry("reason", "CALLER_UNAUTHENTICATED")
+                .extracting("metadata").asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                .containsEntry("category", "AUTH").containsEntry("retryable", "false");
+    }
+
+    @Test
+    void classifiesDependencyFailuresWithoutLeakingTheirCause() throws Exception {
+        AgentRuntimeProperties runtime = new AgentRuntimeProperties(
+                "developer", URI.create("http://localhost:8090/a2a"));
+        A2aSendMessageService unavailableService = new A2aSendMessageService(runtime,
+                new AgentCardCatalogGenerator(new com.example.aifactory.agentcore.AgentCatalog(), mapper), mapper,
+                (taskId, contextId, reason) -> { },
+                (submission, envelope) -> { throw new A2aOperationalException(
+                        A2aOperationalException.Category.DEPENDENCY, "secret backend detail", null); },
+                new InMemoryA2aTaskStore());
+        A2aJsonRpcController controller = new A2aJsonRpcController(mapper, unavailableService, unsecured);
+
+        Map<String, Object> response = controller.handle("1.0",
+                mapper.writeValueAsBytes(request("message-dependency", "developer", "a".repeat(64))),
+                authenticated());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> error = (Map<String, Object>) response.get("error");
+        assertThat(error.get("code")).isEqualTo(A2AErrorCodes.INTERNAL.code());
+        assertThat(error.get("message")).isEqualTo("A2A dependency is temporarily unavailable");
+        assertThat(error.toString()).doesNotContain("secret backend detail");
+        assertThat(errorInfo(error)).containsEntry("reason", "DEPENDENCY_UNAVAILABLE")
+                .extracting("metadata").asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                .containsEntry("category", "DEPENDENCY").containsEntry("task_state", "TASK_STATE_FAILED");
+    }
+
+    private static UsernamePasswordAuthenticationToken authenticated() {
+        return new UsernamePasswordAuthenticationToken("orchestrator", "not-serialized", Set.of(
+                new SimpleGrantedAuthority("SCOPE_a2a.invoke"),
+                new SimpleGrantedAuthority("SCOPE_a2a.role.developer"),
+                new SimpleGrantedAuthority("SCOPE_a2a.skill.developer.code-task-v1")));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> errorInfo(Map<String, Object> error) {
+        Map<String, Object> status = (Map<String, Object>) error.get("data");
+        return (Map<String, Object>) ((java.util.List<?>) status.get("details")).getFirst();
     }
 
     private JsonNode request(String messageId, String role, String digest) throws Exception {

@@ -51,7 +51,12 @@ final class A2aJsonRpcController {
             if (body == null || body.length == 0 || body.length > MAX_REQUEST_BYTES) {
                 throw new RpcFailure(A2AErrorCodes.INVALID_REQUEST, "JSON-RPC request size is invalid");
             }
-            JsonNode request = mapper.readTree(body);
+            JsonNode request;
+            try {
+                request = mapper.readTree(body);
+            } catch (Exception malformed) {
+                throw new RpcFailure(A2AErrorCodes.JSON_PARSE, "Invalid JSON-RPC document");
+            }
             requestId = request.has("id") ? mapper.treeToValue(request.get("id"), Object.class) : null;
             if (!"2.0".equals(request.path("jsonrpc").asText())) {
                 throw new RpcFailure(A2AErrorCodes.INVALID_REQUEST, "JSON-RPC version 2.0 is required");
@@ -82,15 +87,37 @@ final class A2aJsonRpcController {
                 default -> throw new RpcFailure(A2AErrorCodes.METHOD_NOT_FOUND, "A2A method is not available");
             };
         } catch (RpcFailure failure) {
-            return error(requestId, failure.code, failure.getMessage());
+            return error(requestId, failure.code, failure.getMessage(), classify(failure.code, failure.getMessage()));
         } catch (A2aSendMessageService.SubmissionRejected failure) {
-            return error(requestId, A2AErrorCodes.INVALID_PARAMS, failure.getMessage());
+            return error(requestId, A2AErrorCodes.INVALID_PARAMS, failure.getMessage(), classifySubmission(failure));
         } catch (A2aSendMessageService.TaskLookupRejected failure) {
-            return error(requestId, A2AErrorCodes.TASK_NOT_FOUND, failure.getMessage());
+            return error(requestId, A2AErrorCodes.TASK_NOT_FOUND, failure.getMessage(),
+                    new FailureInfo(5, "TASK_NOT_FOUND", "LOOKUP", false, null));
         } catch (A2aSendMessageService.TaskNotCancelable failure) {
-            return error(requestId, A2AErrorCodes.TASK_NOT_CANCELABLE, failure.getMessage());
+            return error(requestId, A2AErrorCodes.TASK_NOT_CANCELABLE, failure.getMessage(),
+                    new FailureInfo(9, "TASK_NOT_CANCELABLE", "BUSINESS", false, "REJECTED"));
+        } catch (A2aOperationalException failure) {
+            FailureInfo info = switch (failure.category()) {
+                case TIMEOUT -> new FailureInfo(4, "DEPENDENCY_TIMEOUT", "TIMEOUT", true, "FAILED");
+                case QUOTA -> new FailureInfo(8, "QUOTA_EXCEEDED", "QUOTA", true, "FAILED");
+                case DEPENDENCY -> new FailureInfo(14, "DEPENDENCY_UNAVAILABLE", "DEPENDENCY", true, "FAILED");
+            };
+            return error(requestId, A2AErrorCodes.INTERNAL,
+                    failure.category() == A2aOperationalException.Category.TIMEOUT
+                            ? "A2A dependency timed out" : "A2A dependency is temporarily unavailable", info);
+        } catch (org.springframework.dao.TransientDataAccessException
+                 | A2aPushNotificationSender.NotificationDeliveryException failure) {
+            return error(requestId, A2AErrorCodes.INTERNAL, "A2A dependency is temporarily unavailable",
+                    new FailureInfo(14, "DEPENDENCY_UNAVAILABLE", "DEPENDENCY", true, "FAILED"));
+        } catch (SecurityException failure) {
+            return error(requestId, A2AErrorCodes.INVALID_PARAMS, "A2A operation is not authorized",
+                    new FailureInfo(7, "POLICY_DENIED", "AUTH", false, "REJECTED"));
+        } catch (IllegalArgumentException failure) {
+            return error(requestId, A2AErrorCodes.INVALID_PARAMS, "A2A contract validation failed",
+                    new FailureInfo(3, "CONTRACT_INVALID", "CONTRACT", false, "REJECTED"));
         } catch (Exception failure) {
-            return error(requestId, A2AErrorCodes.JSON_PARSE, "Invalid JSON-RPC request");
+            return error(requestId, A2AErrorCodes.INTERNAL, "Internal A2A processing failure",
+                    new FailureInfo(13, "INTERNAL_FAILURE", "INTERNAL", true, "FAILED"));
         }
     }
 
@@ -135,13 +162,56 @@ final class A2aJsonRpcController {
         return Map.copyOf(task);
     }
 
-    private static Map<String, Object> error(Object id, A2AErrorCodes code, String message) {
+    private static Map<String, Object> error(
+            Object id, A2AErrorCodes code, String message, FailureInfo failure) {
+        Map<String, String> metadata = new LinkedHashMap<>();
+        metadata.put("category", failure.category());
+        metadata.put("retryable", Boolean.toString(failure.retryable()));
+        if (failure.taskState() != null) metadata.put("task_state", "TASK_STATE_" + failure.taskState());
+        Map<String, Object> errorInfo = Map.of(
+                "@type", "type.googleapis.com/google.rpc.ErrorInfo",
+                "reason", failure.reason(),
+                "domain", "ai-factory.a2a",
+                "metadata", Map.copyOf(metadata));
+        Map<String, Object> status = Map.of(
+                "@type", "type.googleapis.com/google.rpc.Status",
+                "code", failure.grpcCode(), "message", message, "details", List.of(errorInfo));
         return Map.of("jsonrpc", "2.0", "id", id == null ? "null" : id,
-                "error", Map.of("code", code.code(), "message", message));
+                "error", Map.of("code", code.code(), "message", message, "data", status));
+    }
+
+    private static FailureInfo classifySubmission(A2aSendMessageService.SubmissionRejected failure) {
+        String message = failure.getMessage() == null ? "" : failure.getMessage().toLowerCase(java.util.Locale.ROOT);
+        if (message.contains("unauthenticated")) {
+            return new FailureInfo(16, "CALLER_UNAUTHENTICATED", "AUTH", false, null);
+        }
+        if (message.contains("scope") || message.contains("not admitted")) {
+            return new FailureInfo(7, "CALLER_FORBIDDEN", "AUTH", false, "REJECTED");
+        }
+        if (message.contains("quota") || message.contains("rate limit")) {
+            return new FailureInfo(8, "QUOTA_EXCEEDED", "QUOTA", true, "FAILED");
+        }
+        if (message.contains("collision")) {
+            return new FailureInfo(6, "IDEMPOTENCY_CONFLICT", "CONTRACT", false, "REJECTED");
+        }
+        return new FailureInfo(3, "CONTRACT_INVALID", "CONTRACT", false, "REJECTED");
+    }
+
+    private static FailureInfo classify(A2AErrorCodes code, String message) {
+        return switch (code) {
+            case JSON_PARSE, INVALID_REQUEST -> new FailureInfo(3, "PROTOCOL_INVALID", "CONTRACT", false, null);
+            case METHOD_NOT_FOUND, UNSUPPORTED_OPERATION ->
+                    new FailureInfo(12, "OPERATION_UNSUPPORTED", "CONTRACT", false, null);
+            case VERSION_NOT_SUPPORTED, EXTENSION_SUPPORT_REQUIRED ->
+                    new FailureInfo(9, "PROTOCOL_VERSION_UNSUPPORTED", "CONTRACT", false, null);
+            default -> new FailureInfo(13, code.name(), "INTERNAL", false, null);
+        };
     }
 
     private static final class RpcFailure extends RuntimeException {
         private final A2AErrorCodes code;
         RpcFailure(A2AErrorCodes code, String message) { super(message); this.code = code; }
     }
+
+    private record FailureInfo(int grpcCode, String reason, String category, boolean retryable, String taskState) {}
 }
