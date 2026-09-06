@@ -735,8 +735,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   p95 398,784 ms, 68,225 req/s, 299 Mio ; capacité 32 strictement respectée avec 33 refus bornés sur 64 demandes
   de saturation ; coût fournisseur explicitement non applicable à la mesure protocolaire ; preuve :
   `docs/evidence/a2a/A2A-169-PERFORMANCE.md`.)_
-- [ ] **A2A-170 — Tests E2E métier.** Rejouer toutes les fixtures multi-agents et comparer verdicts, digests,
-  gates, ordre de délégation et usage aux preuves de référence.
+- [x] **A2A-170 — Tests E2E métier.** Rejouer toutes les fixtures multi-agents et comparer verdicts, digests,
+  gates, ordre de délégation et usage aux preuves de référence. _(Terminé le 2026-09-06 : 36 fixtures rejouées,
+  parité exacte des verdicts, gates, ordres de délégation et usages ; les 14 sorties A2A primaires conservent leur
+  digest JCS, et 59 tests Java passent sans échec ; preuve : `docs/evidence/a2a/A2A-170-E2E-PARITY.md`.)_
 - [ ] **A2A-171 — Tests de non-régression pipeline.** Vérifier que le mode `PIPELINE`, s'il reste supporté comme
   mode métier, ne réintroduit aucun appel direct d'agent ni sélection de transport.
 - [ ] **A2A-172 — Audit de dépendances.** Exécuter tests, analyse statique, scan de vulnérabilités, SBOM et

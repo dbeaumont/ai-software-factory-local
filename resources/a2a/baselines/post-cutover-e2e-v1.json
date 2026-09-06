@@ -1,0 +1,38 @@
+{
+  "schema_version": "1",
+  "qualification_id": "a2a-post-cutover-e2e-v1",
+  "reference_baseline": {
+    "id": "a2a-pre-cutover-functional-v1",
+    "path": "resources/a2a/baselines/pre-cutover-functional-v1.json",
+    "sha256": "78fecfdb2417ddcbabee2a0e072e031c398ac1f9ae21f9681eadb50bf399f8cd"
+  },
+  "golden_contracts": {
+    "path": "resources/multiagents/fixtures/golden-contracts-v1.json",
+    "sha256": "1a388f5814ec9ef5b6b862281075a1c8f25076a7e074f17644169e4248d4397a",
+    "documents": 18
+  },
+  "a2a_contract_mapping": {
+    "path": "resources/a2a/skill-contract-map-v1.json",
+    "sha256": "28d48f4d147ca6e35b02f564e1f765bbeb9fd0bde92427ed9e2f9fdb8be12f6d",
+    "primary_outputs": 14
+  },
+  "expected": {
+    "cases": 36,
+    "verdicts": {
+      "SHORT_CODE_PATH": 8,
+      "HIERARCHICAL_PATH": 10,
+      "HUMAN_TRIAGE": 2,
+      "DENY": 7,
+      "SERIALIZE_OR_REPLAN": 1,
+      "RECOVERED_WITHOUT_DUPLICATE_EFFECT": 8
+    },
+    "gates": {
+      "NONE": 8,
+      "BEFORE_EXTERNAL_EFFECT": 10,
+      "BEFORE_CODE": 2
+    },
+    "tokens_total": 134365,
+    "duration_millis_total": 543041,
+    "cost_interpretation": "UNAVAILABLE_NOT_ZERO"
+  }
+}
