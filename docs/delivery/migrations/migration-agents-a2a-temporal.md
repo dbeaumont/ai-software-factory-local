@@ -153,9 +153,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-016 — Définir les types de média.** Utiliser `application/json` pour les contrats métier structurés,
   `text/plain` uniquement pour les messages humains et des références Evidence pour les fichiers. _(Allow-list
   fermée dans `A2aMediaTypes`; `A2aContracts.Part` contrôle la cohérence entre media type et contenu.)_
-- [ ] **A2A-017 — Définir une extension de corrélation.** Versionner une extension A2A
+- [x] **A2A-017 — Définir une extension de corrélation.** Versionner une extension A2A
   `https://ai-factory.local/extensions/execution-context/v1` portant uniquement les identifiants et digests
-  nécessaires, sans secret ni contenu métier volumineux.
+  nécessaires, sans secret ni contenu métier volumineux. _(Schéma Draft 2020-12 fermé et borné ajouté sous
+  `resources/a2a/extensions`; tests positifs et négatifs sur rôles, digests et champs secrets.)_
 
 ### Critères de sortie des décisions protocolaires
 

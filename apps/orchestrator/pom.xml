@@ -21,6 +21,7 @@
     <opentelemetry-instrumentation.version>2.28.1-alpha</opentelemetry-instrumentation.version>
     <mcp.schemas.directory>../../resources/mcp/schemas</mcp.schemas.directory>
     <multiagent.schemas.directory>../../resources/multiagents/schemas</multiagent.schemas.directory>
+    <a2a.directory>../../resources/a2a</a2a.directory>
     <agents.directory>../../resources/agents</agents.directory>
     <multiagent.policies.directory>../../resources/multiagents/policies</multiagent.policies.directory>
     <multiagent.database.directory>../../resources/multiagents/database</multiagent.database.directory>
@@ -134,6 +135,10 @@
       <resource>
         <directory>${multiagent.schemas.directory}</directory>
         <targetPath>multiagents/schemas</targetPath>
+      </resource>
+      <resource>
+        <directory>${a2a.directory}</directory>
+        <targetPath>a2a</targetPath>
       </resource>
       <resource>
         <directory>${agents.directory}</directory>

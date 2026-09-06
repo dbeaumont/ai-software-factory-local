@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/extensions/execution-context/v1/schema.json",
+  "title": "AI Factory A2A execution context v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "taskId",
+    "attemptId",
+    "workflowId",
+    "workflowRunId",
+    "repositoryId",
+    "sourceCommit",
+    "delegationId",
+    "agentRole",
+    "inputDigests"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1"
+    },
+    "taskId": {
+      "$ref": "#/$defs/boundedId"
+    },
+    "attemptId": {
+      "$ref": "#/$defs/boundedId"
+    },
+    "workflowId": {
+      "$ref": "#/$defs/boundedId"
+    },
+    "workflowRunId": {
+      "$ref": "#/$defs/boundedId"
+    },
+    "repositoryId": {
+      "$ref": "#/$defs/boundedId"
+    },
+    "sourceCommit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "delegationId": {
+      "$ref": "#/$defs/boundedId"
+    },
+    "parentDelegationId": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/boundedId"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "agentRole": {
+      "type": "string",
+      "enum": [
+        "supervisor",
+        "architecture-agent",
+        "impact-analysis",
+        "dependencies-contracts",
+        "code-agent",
+        "developer",
+        "patch-repair",
+        "test-agent",
+        "test-design",
+        "test-evidence",
+        "security-agent",
+        "threat-model",
+        "security-findings",
+        "independent-reviewer"
+      ]
+    },
+    "inputDigests": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/sha256"
+      }
+    }
+  },
+  "$defs": {
+    "boundedId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
