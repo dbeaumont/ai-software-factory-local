@@ -10,8 +10,16 @@ import java.util.Map;
 /** Strict readiness aggregate. Failure detail exposes component names only. */
 final class AgentRuntimeReadinessHealthIndicator implements HealthIndicator {
     private final List<ReadinessCheck> checks;
+    private final A2aServerMetrics metrics;
 
-    AgentRuntimeReadinessHealthIndicator(List<ReadinessCheck> checks) { this.checks = List.copyOf(checks); }
+    AgentRuntimeReadinessHealthIndicator(List<ReadinessCheck> checks) {
+        this(checks, A2aServerMetrics.disabled());
+    }
+
+    AgentRuntimeReadinessHealthIndicator(List<ReadinessCheck> checks, A2aServerMetrics metrics) {
+        this.checks = List.copyOf(checks);
+        this.metrics = metrics;
+    }
 
     @Override
     public Health health() {
@@ -26,6 +34,7 @@ final class AgentRuntimeReadinessHealthIndicator implements HealthIndicator {
                 status.put(check.name(), "DOWN");
             }
         }
+        metrics.readiness(ready);
         Health.Builder result = ready ? Health.up() : Health.down();
         return result.withDetail("components", Map.copyOf(status)).build();
     }

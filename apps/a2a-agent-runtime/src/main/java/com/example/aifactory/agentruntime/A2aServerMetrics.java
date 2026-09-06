@@ -14,6 +14,7 @@ import java.time.Instant;
 final class A2aServerMetrics {
     private final MeterRegistry registry;
     private final String role;
+    private final java.util.concurrent.atomic.AtomicInteger ready = new java.util.concurrent.atomic.AtomicInteger();
 
     @Autowired
     A2aServerMetrics(MeterRegistry registry, AgentRuntimeProperties runtime, A2aTaskStore store) {
@@ -23,6 +24,10 @@ final class A2aServerMetrics {
                 .tags(dimensions("none", "execute", "none").tags()).register(registry);
         Gauge.builder("ai.factory.a2a.server.backlog", store, value -> value.backlogCount(role))
                 .tags(dimensions("none", "execute", "submitted").tags()).register(registry);
+        Gauge.builder("ai.factory.a2a.server.ready", ready, java.util.concurrent.atomic.AtomicInteger::get)
+                .tags(dimensions("none", "execute", "none").tags()).register(registry);
+        Gauge.builder("ai.factory.a2a.server.oldest.active.age", store, this::oldestActiveAgeSeconds)
+                .baseUnit("seconds").tags(dimensions("none", "execute", "none").tags()).register(registry);
     }
 
     private A2aServerMetrics() {
@@ -45,6 +50,14 @@ final class A2aServerMetrics {
 
     void deduplication(String skill, String operation) {
         increment("ai.factory.a2a.server.deduplications", skill, operation, "none");
+    }
+
+    void idempotencyCollision(String skill, String operation) {
+        increment("ai.factory.a2a.server.idempotency.collisions", skill, operation, "rejected");
+    }
+
+    void readiness(boolean value) {
+        ready.set(value ? 1 : 0);
     }
 
     void transition(A2aTaskStore.StoredTask task, A2aSendMessageService.TaskState state, Instant occurredAt) {
@@ -77,6 +90,12 @@ final class A2aServerMetrics {
 
     private A2aMetricDimensions dimensions(String skill, String operation, String state) {
         return new A2aMetricDimensions(role, skill, operation, "1.0", state);
+    }
+
+    private double oldestActiveAgeSeconds(A2aTaskStore store) {
+        return store.nonTerminal(role, 1).stream().findFirst()
+                .map(task -> Math.max(0L, Duration.between(task.submittedAt(), Instant.now()).toSeconds()))
+                .orElse(0L).doubleValue();
     }
 
     private static Duration nonNegativeDuration(Instant start, Instant end) {

@@ -3,7 +3,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
-[ -f .env ] && set -a && source .env && set +a
+source scripts/load-dotenv.sh
+load_dotenv .env
 
 now=$(date +%s)
 old="$((now - 120))000000000"
@@ -40,6 +41,15 @@ payload=$(jq -nc --arg old "$old" --arg current "$current" '
       counter("ai_temporal_timeouts";[p($old;0;[]),p($current;1;[])]),
       counter("ai_temporal_continue_as_new_requested";[p($old;0;[]),p($current;1;[])]),
       counter("temporal_workflow_continue_as_new";[p($old;0;[]),p($current;0;[])])
+      ,gauge("temporal_num_pollers";0;[a("task_queue";"a2a-agent-developer-v1")])
+      ,gauge("ai.factory.a2a.server.ready";0;[a("agent_role";"developer")])
+      ,counter("ai.factory.a2a.client.card.validations";[p($old;0;[a("result";"rejected")]),p($current;1;[a("result";"rejected")])])
+      ,counter("ai.factory.a2a.server.transitions";[p($old;0;[a("task_state";"failed")]),p($current;1;[a("task_state";"failed")])])
+      ,gauge("ai.factory.a2a.server.backlog";21;[a("agent_role";"developer")])
+      ,gauge("ai.factory.a2a.server.oldest.active.age";301;[a("agent_role";"developer")])
+      ,gauge("ai.factory.a2a.client.notification.age.max";60001;[a("agent_role";"developer")])
+      ,counter("ai.factory.a2a.server.idempotency.collisions";[p($old;0;[]),p($current;1;[])])
+      ,counter("ai.factory.a2a.client.divergences";[p($old;0;[]),p($current;1;[])])
     ]}]
   }]}' )
 
@@ -91,7 +101,7 @@ recovery_payload=$(jq -nc --arg one "$recovery_one" --arg two "$recovery_two" '
   def a($key;$value): {key:$key,value:{stringValue:$value}};
   def p($time;$value;$attrs): {timeUnixNano:$time,asDouble:$value,attributes:$attrs};
   def counter($name;$value;$attrs): {name:$name,sum:{aggregationTemporality:2,isMonotonic:true,dataPoints:[p($one;$value;$attrs),p($two;$value;$attrs)]}};
-  def gauge($name;$value;$attrs): {name:$name,gauge:{dataPoints:[p($two;$value;$attrs)]}};
+  def gauge($name;$value;$attrs): {name:$name,gauge:{dataPoints:[p($one;$value;$attrs),p($two;$value;$attrs)]}};
   {resourceMetrics:[{
     resource:{attributes:[a("service.name";"otel-alert-fixture"),a("service.namespace";"ai-software-factory"),a("deployment.environment.name";"ai-factory-local")]},
     scopeMetrics:[{scope:{name:"ai-factory-alert-fixture",version:"1"},metrics:[
@@ -113,6 +123,15 @@ recovery_payload=$(jq -nc --arg one "$recovery_one" --arg two "$recovery_two" '
       counter("ai_temporal_timeouts";1;[]),
       counter("ai_temporal_continue_as_new_requested";1;[]),
       counter("temporal_workflow_continue_as_new";1;[])
+      ,gauge("temporal_num_pollers";1;[a("task_queue";"a2a-agent-developer-v1")])
+      ,gauge("ai.factory.a2a.server.ready";1;[a("agent_role";"developer")])
+      ,counter("ai.factory.a2a.client.card.validations";1;[a("result";"rejected")])
+      ,counter("ai.factory.a2a.server.transitions";1;[a("task_state";"failed")])
+      ,gauge("ai.factory.a2a.server.backlog";0;[a("agent_role";"developer")])
+      ,gauge("ai.factory.a2a.server.oldest.active.age";0;[a("agent_role";"developer")])
+      ,gauge("ai.factory.a2a.client.notification.age.max";0;[a("agent_role";"developer")])
+      ,counter("ai.factory.a2a.server.idempotency.collisions";1;[])
+      ,counter("ai.factory.a2a.client.divergences";1;[])
     ]}]
   }]}' )
 
@@ -125,7 +144,8 @@ recovery_end=$(((now + 1150) * 1000))
 recovered=0
 for attempt in {1..20}; do
   recovered=0
-  while IFS= read -r query; do
+  unrecovered=()
+  while IFS=$'\t' read -r alert_name query; do
     request=$(jq -nc --arg query "$query" --argjson start "$recovery_start" --argjson end "$recovery_end" \
       '{schemaVersion:"v1",start:$start,end:$end,requestType:"time_series",compositeQuery:{queries:[{type:"promql",spec:{name:"A",query:$query,step:30}}]}}')
     response=$(curl -fsS -X POST "$base_url/api/v5/query_range" \
@@ -133,14 +153,18 @@ for attempt in {1..20}; do
     if printf '%s' "$response" | jq -e \
       '.status == "success" and ([.data.data.results[]?.aggregations[]?.series[]?] | length == 0)' >/dev/null; then
       recovered=$((recovered + 1))
+    else
+      unrecovered+=("$alert_name")
     fi
-  done < <(jq -r '.[] | select(.labels.component != "observability") | .condition.compositeQuery.queries[0].spec.query' infrastructure/observability/signoz/rules/ai-factory.json)
+  done < <(jq -r '.[] | select(.labels.component != "observability")
+    | [.alert, .condition.compositeQuery.queries[0].spec.query] | @tsv' infrastructure/observability/signoz/rules/ai-factory.json)
   [ "$recovered" -eq "$expected" ] && break
   sleep 1
 done
 
 [ "$recovered" -eq "$expected" ] || {
   echo "Only $recovered/$expected alert fixtures returned to a healthy query state" >&2
+  printf 'Still firing: %s\n' "${unrecovered[*]}" >&2
   printf '%s\n' "$response" | jq . >&2
   exit 1
 }

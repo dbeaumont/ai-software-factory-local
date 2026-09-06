@@ -27,7 +27,7 @@ class AgentReadinessConfiguration {
             AgentTemporalProperties temporal, ObjectProvider<WorkflowServiceStubs> temporalService,
             ObjectProvider<Worker> temporalWorker, LlmAdapterProperties llm, AgentMcpProperties mcp,
             RoleScopedAgentContext role, org.springframework.web.reactive.function.client.WebClient.Builder webClient,
-            tools.jackson.databind.ObjectMapper mapper) {
+            tools.jackson.databind.ObjectMapper mapper, A2aServerMetrics metrics) {
         McpSdkSessionFactory sessions = new McpSdkSessionFactory(webClient, mapper, role, mcp);
         List<AgentRuntimeReadinessHealthIndicator.ReadinessCheck> checks = new ArrayList<>();
         checks.add(check("agentCard", () -> {
@@ -55,7 +55,7 @@ class AgentReadinessConfiguration {
         }));
         checks.add(check("llm", () -> probeLlm(llm)));
         checks.add(check("mcp", () -> probeMcp(role, mcp, sessions)));
-        return new AgentRuntimeReadinessHealthIndicator(checks);
+        return new AgentRuntimeReadinessHealthIndicator(checks, metrics);
     }
 
     private static AgentRuntimeReadinessHealthIndicator.ReadinessCheck check(String name, Runnable probe) {

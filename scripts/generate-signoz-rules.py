@@ -32,7 +32,22 @@ RULES = [
     ("AiFactoryTemporalProjectionLag", "max(ai_temporal_projection_lag_seconds) > 60", 0, "5m", "warning", "temporal", "Temporal UI projection is stale", "The oldest current task projection has not been refreshed for more than sixty seconds.", "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"),
     ("AiFactoryTemporalActivityStuck", "increase(ai_temporal_timeouts[5m]) > 0", 0, "1m", "critical", "temporal", "Temporal activity or workflow timed out", "A Temporal execution exhausted a configured timeout and may require idempotent recovery.", "/docs/operations/runbooks/SATURATION.md"),
     ("AiFactoryTemporalContinueAsNewFailure", "increase(ai_temporal_continue_as_new_requested[10m]) > increase(temporal_workflow_continue_as_new[10m])", 0, "2m", "critical", "temporal", "Temporal continue-as-new did not complete", "A workflow requested history rollover without a matching successful continue-as-new.", "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"),
+    ("AiFactoryA2aPollerAbsent", 'min(temporal_num_pollers{task_queue=~"a2a-agent-.*"}) < 1 or absent_over_time(temporal_num_pollers{task_queue=~"a2a-agent-.*"}[5m])', 0, "2m", "critical", "a2a", "An A2A agent Temporal queue has no poller", "No poller serves at least one required A2A agent task queue.", "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"),
+    ("AiFactoryA2aAgentNotReady", 'min({__name__="ai.factory.a2a.server.ready"}) < 1 or absent_over_time({__name__="ai.factory.a2a.server.ready"}[5m])', 0, "2m", "critical", "a2a", "An A2A agent is not ready", "At least one agent runtime reports a failed mandatory readiness dependency or no readiness signal.", "/docs/operations/runbooks/AGENT-DEFAILLANT.md"),
+    ("AiFactoryA2aCardInvalid", 'increase({__name__="ai.factory.a2a.client.card.validations",result="rejected"}[5m]) > 0', 0, "1m", "critical", "a2a", "An A2A Agent Card was rejected", "The orchestrator rejected an expired, forged, incompatible or unauthorized Agent Card.", "/docs/operations/runbooks/AGENT-DEFAILLANT.md"),
+    ("AiFactoryA2aFailureRate", 'sum(rate({__name__="ai.factory.a2a.server.transitions",task_state=~"failed|rejected"}[5m])) / clamp_min(sum(rate({__name__="ai.factory.a2a.server.transitions"}[5m])), 1e-9) > 0.05', 0, "5m", "warning", "a2a", "A2A task failure rate exceeds five percent", "Terminal A2A failures or rejections exceed five percent of task transitions.", "/docs/operations/runbooks/AGENT-DEFAILLANT.md"),
+    ("AiFactoryA2aBacklog", 'max({__name__="ai.factory.a2a.server.backlog"}) > 20', 0, "10m", "warning", "a2a", "A2A backlog is sustained", "At least one agent runtime has more than twenty submitted tasks for ten minutes.", "/docs/operations/runbooks/SATURATION.md"),
+    ("AiFactoryA2aTaskStuck", 'max({__name__="ai.factory.a2a.server.oldest.active.age"}) > 300', 0, "5m", "critical", "a2a", "An A2A task is stuck", "The oldest non-terminal A2A task has remained active for more than five minutes.", "/docs/operations/runbooks/SATURATION.md"),
+    ("AiFactoryA2aNotificationLate", 'max({__name__="ai.factory.a2a.client.notification.age.max"}) > 60000', 0, "2m", "warning", "a2a", "An A2A notification is late", "Push notification delivery age exceeds sixty seconds.", "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"),
+    ("AiFactoryA2aIdempotencyCollision", 'increase({__name__="ai.factory.a2a.server.idempotency.collisions"}[5m]) > 0', 0, "1m", "critical", "a2a", "An A2A idempotency collision was rejected", "A reused message ID carried a different payload or continuation.", "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"),
+    ("AiFactoryA2aStateDivergence", 'increase({__name__="ai.factory.a2a.client.divergences"}[5m]) > 0', 0, "1m", "critical", "a2a", "Temporal and A2A state diverged", "The orchestrator rejected a task association, continuation or remote response that changed durable correlation.", "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"),
 ]
+
+OWNERS = {
+    "a2a": "agent-platform",
+    "temporal": "workflow-platform",
+    "observability": "platform-observability",
+}
 
 
 def build_rule(definition: tuple) -> dict:
@@ -58,7 +73,8 @@ def build_rule(definition: tuple) -> dict:
         },
         "evaluation": {"kind": "rolling", "spec": {"evalWindow": window, "frequency": "30s"}},
         "notificationSettings": {"groupBy": ["alertname", "component"], "renotify": {"enabled": True, "interval": "4h", "alertStates": ["firing"]}},
-        "labels": {"severity": severity, "component": component, "managed_by": "ai-software-factory"},
+        "labels": {"severity": severity, "component": component, "owner": OWNERS.get(component, "ai-factory"),
+                   "managed_by": "ai-software-factory"},
         "annotations": {"summary": summary, "description": description, "runbook_url": runbook},
     }
 

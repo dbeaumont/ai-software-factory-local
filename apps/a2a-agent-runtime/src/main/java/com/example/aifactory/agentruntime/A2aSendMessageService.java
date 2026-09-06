@@ -166,6 +166,7 @@ public final class A2aSendMessageService {
             }
             if (!result.task().messageDigest().equals(digest)) {
                 metrics.admission(skill, false);
+                metrics.idempotencyCollision(skill, "send");
                 audit.record(A2aDecisionJournal.EventType.COLLISION, A2aDecisionJournal.Outcome.REJECTED,
                         caller.subject(), result.task().taskId(), messageId);
                 throw new SubmissionRejected("messageId collision with a different payload");
@@ -204,6 +205,7 @@ public final class A2aSendMessageService {
                     new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_CONTINUED", now));
         } catch (IllegalStateException rejected) {
             if (rejected.getMessage() != null && rejected.getMessage().contains("collision")) {
+                metrics.idempotencyCollision(skill, "continue");
                 audit.record(A2aDecisionJournal.EventType.COLLISION, A2aDecisionJournal.Outcome.REJECTED,
                         caller.subject(), taskId, messageId);
             }

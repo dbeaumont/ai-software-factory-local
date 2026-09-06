@@ -27,6 +27,8 @@ class A2aServerMetricsTest {
         metrics.admission(task.skill(), false);
         metrics.authenticationRefusal();
         metrics.deduplication(task.skill(), "send");
+        metrics.idempotencyCollision(task.skill(), "send");
+        metrics.readiness(true);
         metrics.polling(task.skill(), "get", task.state());
         metrics.notification("retries", A2aSendMessageService.TaskState.WORKING);
         metrics.notification("delivered", A2aSendMessageService.TaskState.COMPLETED);
@@ -35,10 +37,13 @@ class A2aServerMetricsTest {
 
         assertThat(registry.find("ai.factory.a2a.server.active.tasks").gauge().value()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.backlog").gauge().value()).isEqualTo(1);
+        assertThat(registry.find("ai.factory.a2a.server.ready").gauge().value()).isEqualTo(1);
+        assertThat(registry.find("ai.factory.a2a.server.oldest.active.age").gauge().value()).isGreaterThan(0);
         assertThat(registry.find("ai.factory.a2a.server.admissions.accepted").counter().count()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.admissions.rejected").counter().count()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.auth.refusals").counter().count()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.deduplications").counter().count()).isEqualTo(1);
+        assertThat(registry.find("ai.factory.a2a.server.idempotency.collisions").counter().count()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.polling").counter().count()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.transitions").counter().count()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.task.duration").timer().totalTime(

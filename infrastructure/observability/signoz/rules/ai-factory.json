@@ -60,6 +60,7 @@
     "labels": {
       "severity": "warning",
       "component": "agents",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -129,6 +130,7 @@
     "labels": {
       "severity": "warning",
       "component": "agents",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -198,6 +200,7 @@
     "labels": {
       "severity": "warning",
       "component": "agents",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -267,6 +270,7 @@
     "labels": {
       "severity": "warning",
       "component": "queues",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -336,6 +340,7 @@
     "labels": {
       "severity": "critical",
       "component": "sandbox",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -405,6 +410,7 @@
     "labels": {
       "severity": "warning",
       "component": "sandbox",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -474,6 +480,7 @@
     "labels": {
       "severity": "critical",
       "component": "sandbox",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -543,6 +550,7 @@
     "labels": {
       "severity": "warning",
       "component": "contracts",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -612,6 +620,7 @@
     "labels": {
       "severity": "critical",
       "component": "evidence",
+      "owner": "ai-factory",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -681,6 +690,7 @@
     "labels": {
       "severity": "critical",
       "component": "observability",
+      "owner": "platform-observability",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -750,6 +760,7 @@
     "labels": {
       "severity": "warning",
       "component": "observability",
+      "owner": "platform-observability",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -819,6 +830,7 @@
     "labels": {
       "severity": "critical",
       "component": "observability",
+      "owner": "platform-observability",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -888,6 +900,7 @@
     "labels": {
       "severity": "warning",
       "component": "observability",
+      "owner": "platform-observability",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -957,6 +970,7 @@
     "labels": {
       "severity": "warning",
       "component": "observability",
+      "owner": "platform-observability",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -1026,6 +1040,7 @@
     "labels": {
       "severity": "critical",
       "component": "observability",
+      "owner": "platform-observability",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -1095,6 +1110,7 @@
     "labels": {
       "severity": "critical",
       "component": "temporal",
+      "owner": "workflow-platform",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -1164,6 +1180,7 @@
     "labels": {
       "severity": "warning",
       "component": "temporal",
+      "owner": "workflow-platform",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -1233,6 +1250,7 @@
     "labels": {
       "severity": "critical",
       "component": "temporal",
+      "owner": "workflow-platform",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -1302,6 +1320,7 @@
     "labels": {
       "severity": "warning",
       "component": "temporal",
+      "owner": "workflow-platform",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -1371,6 +1390,7 @@
     "labels": {
       "severity": "critical",
       "component": "temporal",
+      "owner": "workflow-platform",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
@@ -1440,12 +1460,643 @@
     "labels": {
       "severity": "critical",
       "component": "temporal",
+      "owner": "workflow-platform",
       "managed_by": "ai-software-factory"
     },
     "annotations": {
       "summary": "Temporal continue-as-new did not complete",
       "description": "A workflow requested history rollover without a matching successful continue-as-new.",
       "runbook_url": "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aPollerAbsent",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "No poller serves at least one required A2A agent task queue.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "min(temporal_num_pollers{task_queue=~\"a2a-agent-.*\"}) < 1 or absent_over_time(temporal_num_pollers{task_queue=~\"a2a-agent-.*\"}[5m])",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "2m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "An A2A agent Temporal queue has no poller",
+      "description": "No poller serves at least one required A2A agent task queue.",
+      "runbook_url": "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aAgentNotReady",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "At least one agent runtime reports a failed mandatory readiness dependency or no readiness signal.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "min({__name__=\"ai.factory.a2a.server.ready\"}) < 1 or absent_over_time({__name__=\"ai.factory.a2a.server.ready\"}[5m])",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "2m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "An A2A agent is not ready",
+      "description": "At least one agent runtime reports a failed mandatory readiness dependency or no readiness signal.",
+      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aCardInvalid",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The orchestrator rejected an expired, forged, incompatible or unauthorized Agent Card.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase({__name__=\"ai.factory.a2a.client.card.validations\",result=\"rejected\"}[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "An A2A Agent Card was rejected",
+      "description": "The orchestrator rejected an expired, forged, incompatible or unauthorized Agent Card.",
+      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aFailureRate",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "Terminal A2A failures or rejections exceed five percent of task transitions.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "sum(rate({__name__=\"ai.factory.a2a.server.transitions\",task_state=~\"failed|rejected\"}[5m])) / clamp_min(sum(rate({__name__=\"ai.factory.a2a.server.transitions\"}[5m])), 1e-9) > 0.05",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "5m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "A2A task failure rate exceeds five percent",
+      "description": "Terminal A2A failures or rejections exceed five percent of task transitions.",
+      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aBacklog",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "At least one agent runtime has more than twenty submitted tasks for ten minutes.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "max({__name__=\"ai.factory.a2a.server.backlog\"}) > 20",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "10m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "A2A backlog is sustained",
+      "description": "At least one agent runtime has more than twenty submitted tasks for ten minutes.",
+      "runbook_url": "/docs/operations/runbooks/SATURATION.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aTaskStuck",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The oldest non-terminal A2A task has remained active for more than five minutes.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "max({__name__=\"ai.factory.a2a.server.oldest.active.age\"}) > 300",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "5m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "An A2A task is stuck",
+      "description": "The oldest non-terminal A2A task has remained active for more than five minutes.",
+      "runbook_url": "/docs/operations/runbooks/SATURATION.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aNotificationLate",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "Push notification delivery age exceeds sixty seconds.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "max({__name__=\"ai.factory.a2a.client.notification.age.max\"}) > 60000",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "warning",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "2m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "warning",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "An A2A notification is late",
+      "description": "Push notification delivery age exceeds sixty seconds.",
+      "runbook_url": "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aIdempotencyCollision",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "A reused message ID carried a different payload or continuation.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase({__name__=\"ai.factory.a2a.server.idempotency.collisions\"}[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "An A2A idempotency collision was rejected",
+      "description": "A reused message ID carried a different payload or continuation.",
+      "runbook_url": "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"
+    }
+  },
+  {
+    "alert": "AiFactoryA2aStateDivergence",
+    "alertType": "METRIC_BASED_ALERT",
+    "description": "The orchestrator rejected a task association, continuation or remote response that changed durable correlation.",
+    "ruleType": "promql_rule",
+    "version": "v5",
+    "schemaVersion": "v2alpha1",
+    "condition": {
+      "compositeQuery": {
+        "queryType": "promql",
+        "panelType": "graph",
+        "queries": [
+          {
+            "type": "promql",
+            "spec": {
+              "name": "A",
+              "query": "increase({__name__=\"ai.factory.a2a.client.divergences\"}[5m]) > 0",
+              "legend": ""
+            }
+          }
+        ]
+      },
+      "selectedQueryName": "A",
+      "thresholds": {
+        "kind": "basic",
+        "spec": [
+          {
+            "name": "critical",
+            "op": "above",
+            "matchType": "all_the_times",
+            "target": 0,
+            "channels": [
+              "ai-factory-local"
+            ]
+          }
+        ]
+      }
+    },
+    "evaluation": {
+      "kind": "rolling",
+      "spec": {
+        "evalWindow": "1m",
+        "frequency": "30s"
+      }
+    },
+    "notificationSettings": {
+      "groupBy": [
+        "alertname",
+        "component"
+      ],
+      "renotify": {
+        "enabled": true,
+        "interval": "4h",
+        "alertStates": [
+          "firing"
+        ]
+      }
+    },
+    "labels": {
+      "severity": "critical",
+      "component": "a2a",
+      "owner": "agent-platform",
+      "managed_by": "ai-software-factory"
+    },
+    "annotations": {
+      "summary": "Temporal and A2A state diverged",
+      "description": "The orchestrator rejected a task association, continuation or remote response that changed durable correlation.",
+      "runbook_url": "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"
     }
   }
 ]
