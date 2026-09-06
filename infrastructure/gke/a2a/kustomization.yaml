@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - agents.generated.yaml
   - orchestrator-discovery.yaml
+  - private-entry-policy.yaml
 configMapGenerator:
   - name: a2a-runtime-config
     namespace: ai-factory-agents

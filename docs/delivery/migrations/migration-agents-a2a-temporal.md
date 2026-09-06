@@ -613,8 +613,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : le profil `gke` du registre référence exactement les quatorze DNS
     `a2a-<role>.ai-factory-agents.svc.cluster.local`; un ConfigMap sélectionne ce profil fermé côté orchestrateur.
     `verify-a2a-gke-discovery.rb` compare le registre aux Services rendus et refuse IP, HTTP, port ou domaine public.
-- [ ] **A2A-131 — Protéger l'entrée.** Garder les endpoints A2A privés au cluster ; si une exposition externe est
+- [x] **A2A-131 — Protéger l'entrée.** Garder les endpoints A2A privés au cluster ; si une exposition externe est
   ultérieurement requise, la traiter dans une ADR et une threat model dédiées.
+  - Preuve : tous les Services A2A sont `ClusterIP` et la NetworkPolicy n'accepte que l'orchestrateur. Deux
+    ValidatingAdmissionPolicies refusent Service externe, `externalIPs`, Ingress et Gateway API ;
+    `ADR-A2A-005-private-cluster-entry.md` exige une ADR, une threat model et une gate avant toute ouverture.
 
 ### Critères de sortie du lot 7
 

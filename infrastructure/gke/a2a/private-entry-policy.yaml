@@ -1,0 +1,59 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: a2a-services-cluster-private
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["services"]
+  validations:
+    - expression: >-
+        object.metadata.namespace != 'ai-factory-agents' ||
+        !object.metadata.name.startsWith('a2a-') ||
+        (!has(object.spec.type) || object.spec.type == 'ClusterIP')
+      message: A2A Services must remain private ClusterIP services.
+    - expression: >-
+        object.metadata.namespace != 'ai-factory-agents' ||
+        !object.metadata.name.startsWith('a2a-') ||
+        !has(object.spec.externalIPs) || size(object.spec.externalIPs) == 0
+      message: A2A Services must not declare external IPs.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: a2a-services-cluster-private
+spec:
+  policyName: a2a-services-cluster-private
+  validationActions: [Deny, Audit]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: a2a-routes-forbidden
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["networking.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["ingresses"]
+      - apiGroups: ["gateway.networking.k8s.io"]
+        apiVersions: ["v1", "v1beta1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["gateways", "httproutes", "grpcroutes"]
+  validations:
+    - expression: object.metadata.namespace != 'ai-factory-agents'
+      message: External A2A routes are forbidden until a dedicated ADR and threat model are approved.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: a2a-routes-forbidden
+spec:
+  policyName: a2a-routes-forbidden
+  validationActions: [Deny, Audit]
