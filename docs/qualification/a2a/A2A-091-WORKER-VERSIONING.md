@@ -27,3 +27,18 @@ d'image digesté), et `AI_FACTORY_TEMPORAL_DEPLOYMENT_NAME` reste stable pour la
 - `TemporalWorkerRegistryTest.keepsOldAndNewCompatibleBuildIdsRegisteredOnEveryQueueAtTheSameTime` vérifie que
   deux builds distincts peuvent être présents simultanément sur toutes les queues pendant le drainage.
 - Les tests de référence de replay restent attachés aux anciennes implémentations et ne sont pas réécrits.
+
+## Drainage et retrait d'un ancien Build ID
+
+Une version non courante reste déployée tant que Temporal ne la déclare pas `drained`. Le statut `draining`,
+`unspecified`, une version absente, la version courante et la version ramping interdisent tous le retrait. Le
+contrôle s'exécute sur l'état du déploiement renvoyé par Temporal :
+
+```bash
+scripts/a2a-worker-drainage.sh '<ancien-build-id>'
+```
+
+Un résultat `drained` autorise uniquement la préparation du retrait. Avant d'arrêter les derniers pollers, il faut
+encore archiver l'état du déploiement, vérifier qu'aucune tâche A2A non terminale ne référence ce build et obtenir
+l'approbation d'exploitation prévue par la gate de rollback. Une migration explicite d'un workflow est traitée
+comme un changement de données audité et ne peut jamais être déduite d'un timeout ou d'une absence de poller.

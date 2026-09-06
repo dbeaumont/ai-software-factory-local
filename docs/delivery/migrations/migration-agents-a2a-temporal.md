@@ -796,8 +796,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   compatibles avec les tâches déjà créées ; ne jamais réactiver les agents en mémoire. _(Le runbook impose deux
   images digestées et leur Build ID immuable, un redéploiement `--no-build`, la conservation de tous les volumes
   et un retour uniquement vers une release déjà A2A ; `docs/operations/runbooks/ROLLBACK-A2A.md`.)_
-- [ ] **A2A-201 — Définir le drainage.** Conserver les workers associés aux anciens Build IDs jusqu'à terminaison
-  ou migration explicite des workflows épinglés.
+- [x] **A2A-201 — Définir le drainage.** Conserver les workers associés aux anciens Build IDs jusqu'à terminaison
+  ou migration explicite des workflows épinglés. _(La gate exécutable refuse le build courant, ramping, absent ou
+  non drainé et ne permet le retrait qu'après le statut Temporal `drained`, archivage et approbation ;
+  `make a2a-worker-drainage BUILD_ID=...`.)_
 - [ ] **A2A-202 — Geler plutôt que contourner.** Si la flotte A2A est indisponible, suspendre les admissions et
   laisser Temporal attendre/réconcilier au lieu d'exécuter localement.
 - [ ] **A2A-203 — Réconcilier avant retry.** Examiner la tâche A2A, son workflow d'agent et ses artefacts avant
