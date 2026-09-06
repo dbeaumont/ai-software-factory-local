@@ -46,14 +46,14 @@ class EvidenceArtifactPublisherTest {
                         URI.create("http://evidence-mcp:8095")), sessions, mapper);
         AgentArtifactActivities.PublishCommand command = new AgentArtifactActivities.PublishCommand(
                 "task-1", "attempt-1", "developer", "patch-proposal-v1", Set.of(),
-                Base64.getEncoder().encodeToString(content), digest);
+                Base64.getEncoder().encodeToString(content), digest, "protocol-task-1");
 
         AgentArtifactActivities.ArtifactReference first = publisher.publish(command);
         AgentArtifactActivities.ArtifactReference replay = publisher.publish(command);
 
         assertThat(first).isEqualTo(replay);
         assertThat(request.get()).containsEntry("actor", "developer").containsEntry("digest", digest);
-        assertThat(store.artifacts("task-1", "tenant-a", "orchestrator")).singleElement()
+        assertThat(store.artifacts("protocol-task-1", "tenant-a", "orchestrator")).singleElement()
                 .satisfies(artifact -> assertThat(artifact.toString()).contains(first.uri(), digest));
     }
 
@@ -68,7 +68,8 @@ class EvidenceArtifactPublisherTest {
 
         assertThatThrownBy(() -> publisher.publish(new AgentArtifactActivities.PublishCommand(
                 "task-1", "attempt-1", "developer", "patch-proposal-v1", Set.of(),
-                Base64.getEncoder().encodeToString(mapper.writeValueAsBytes(document)), "0".repeat(64))))
+                Base64.getEncoder().encodeToString(mapper.writeValueAsBytes(document)), "0".repeat(64),
+                "protocol-task-1")))
                 .isInstanceOf(SecurityException.class).hasMessageContaining("digest");
     }
 
@@ -95,23 +96,24 @@ class EvidenceArtifactPublisherTest {
                 }, mapper);
         AgentArtifactActivities.PublishCommand command = new AgentArtifactActivities.PublishCommand(
                 "task-1", "attempt-1", "developer", "patch-proposal-v1", Set.of(),
-                Base64.getEncoder().encodeToString(content), digest);
+                Base64.getEncoder().encodeToString(content), digest, "protocol-task-1");
 
         assertThatThrownBy(() -> publisher.publish(command)).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Evidence unavailable");
         publisher.publish(command);
 
         assertThat(calls).hasValue(2);
-        assertThat(store.artifacts("task-1", "tenant-a", "orchestrator")).hasSize(1);
+        assertThat(store.artifacts("protocol-task-1", "tenant-a", "orchestrator")).hasSize(1);
     }
 
     private InMemoryA2aTaskStore taskStore() {
         InMemoryA2aTaskStore store = new InMemoryA2aTaskStore();
         Instant now = Instant.parse("2026-09-06T12:00:00Z");
         store.createOrGet(new A2aTaskStore.StoredTask(
-                "task-1", "context-1", "message-1", "a".repeat(64), "developer",
+                "protocol-task-1", "context-1", "message-1", "a".repeat(64), "developer",
                 "developer.code-task-v1", "orchestrator", "tenant-a", "delegation-1", now,
-                A2aSendMessageService.TaskState.WORKING, 1, "{}", "workflow-1", "run-1"),
+                A2aSendMessageService.TaskState.WORKING, 1, "{}", "workflow-1", "run-1",
+                "task-1", "attempt-1"),
                 new A2aTaskStore.HistoryRecord("message-1", "MESSAGE_ACCEPTED", now));
         return store;
     }

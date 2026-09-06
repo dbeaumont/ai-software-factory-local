@@ -25,9 +25,13 @@ public interface AgentTaskWorkflowV1 {
     String state();
 
     record Input(String taskId, String contextId, String role, String skill, String envelopeJson,
-                 String traceparent, String baggage) {
+                 String traceparent, String baggage, String businessTaskId, String workflowAttemptId) {
         public Input(String taskId, String contextId, String role, String skill, String envelopeJson) {
-            this(taskId, contextId, role, skill, envelopeJson, null, null);
+            this(taskId, contextId, role, skill, envelopeJson, null, null, taskId, "attempt-1");
+        }
+        public Input(String taskId, String contextId, String role, String skill, String envelopeJson,
+                     String traceparent, String baggage) {
+            this(taskId, contextId, role, skill, envelopeJson, traceparent, baggage, taskId, "attempt-1");
         }
     }
     record Outcome(String state, String artifactDigest, String detail, String attemptId,

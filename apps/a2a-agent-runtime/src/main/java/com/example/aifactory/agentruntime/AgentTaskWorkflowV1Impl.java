@@ -36,12 +36,16 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
                 input.taskId(), currentState, input.taskId() + ":working", input.traceparent()));
         try {
             AgentExecutionActivities.Result result = execution.execute(new AgentExecutionActivities.Command(
-                    input.taskId(), input.role(), input.skill(), effectiveEnvelope(input),
+                    input.businessTaskId(), input.role(), input.skill(), effectiveEnvelope(input),
                     input.traceparent(), input.baggage()));
             if (outcome == null && !canceled) {
-                outcome = requireOutcome(new Outcome("COMPLETED", result.artifactDigest(), "validated",
-                        result.attemptId(), result.outputContract(), result.allowedReferenceIds(),
-                        result.artifactContentBase64()));
+                if (!input.workflowAttemptId().equals(result.attemptId())) {
+                    outcome = new Outcome("FAILED", null, "agent execution correlation failed");
+                } else {
+                    outcome = requireOutcome(new Outcome("COMPLETED", result.artifactDigest(), "validated",
+                            result.attemptId(), result.outputContract(), result.allowedReferenceIds(),
+                            result.artifactContentBase64()));
+                }
             }
         } catch (io.temporal.failure.ActivityFailure failure) {
             if (outcome == null && !canceled) {
@@ -51,9 +55,9 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
         Outcome terminal = canceled ? new Outcome("CANCELED", null, cancellationReason) : outcome;
         if ("COMPLETED".equals(terminal.state())) {
             AgentArtifactActivities.ArtifactReference artifact = artifacts.publish(
-                    new AgentArtifactActivities.PublishCommand(input.taskId(), terminal.attemptId(), input.role(),
+                    new AgentArtifactActivities.PublishCommand(input.businessTaskId(), terminal.attemptId(), input.role(),
                             terminal.outputContract(), terminal.allowedReferenceIds(), terminal.artifactContentBase64(),
-                            terminal.artifactDigest()));
+                            terminal.artifactDigest(), input.taskId()));
             terminal = new Outcome(terminal.state(), artifact.digest(), artifact.uri(), terminal.attemptId(),
                     terminal.outputContract(), terminal.allowedReferenceIds(), null);
         }
@@ -99,7 +103,9 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
         if (input == null || input.taskId() == null || input.taskId().isBlank()
                 || input.contextId() == null || input.contextId().isBlank()
                 || input.role() == null || input.role().isBlank() || input.skill() == null || input.skill().isBlank()
-                || input.envelopeJson() == null || input.envelopeJson().isBlank()) {
+                || input.envelopeJson() == null || input.envelopeJson().isBlank()
+                || input.businessTaskId() == null || input.businessTaskId().isBlank()
+                || input.workflowAttemptId() == null || input.workflowAttemptId().isBlank()) {
             throw new IllegalArgumentException("Agent task workflow input is incomplete");
         }
         if (input.traceparent() != null) new A2aW3cTraceContext(input.traceparent(), input.baggage());

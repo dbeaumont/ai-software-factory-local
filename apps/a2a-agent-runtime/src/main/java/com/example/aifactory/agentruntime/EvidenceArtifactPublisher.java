@@ -85,7 +85,7 @@ public final class EvidenceArtifactPublisher {
                 "artifactId", artifactId,
                 "name", command.role() + "-result",
                 "parts", java.util.List.of(Map.of("kind", "data", "data", Map.copyOf(reference))));
-        A2aTaskStore.StoredTask task = store.find(command.taskId())
+        A2aTaskStore.StoredTask task = store.find(command.protocolTaskId())
                 .orElseThrow(() -> new IllegalStateException("A2A task is absent while publishing its artifact"));
         store.putArtifact(new A2aTaskStore.ArtifactRecord(
                 artifactId, task.taskId(), task.tenantId(), task.callerSubject(), returnedDigest, artifact));
@@ -98,7 +98,8 @@ public final class EvidenceArtifactPublisher {
                 || command.role() == null || command.role().isBlank()
                 || command.outputContract() == null || !command.outputContract().matches("[a-z][a-z0-9-]*-v[1-9][0-9]*")
                 || command.contentBase64() == null || command.digest() == null
-                || !command.digest().matches("[0-9a-f]{64}")) {
+                || !command.digest().matches("[0-9a-f]{64}")
+                || command.protocolTaskId() == null || command.protocolTaskId().isBlank()) {
             throw new IllegalArgumentException("Agent artifact publication command is incomplete");
         }
     }

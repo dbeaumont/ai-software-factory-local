@@ -31,7 +31,8 @@ class AgentTaskWorkflowV1Test {
                     environment.getWorkflowClient(), properties, "developer");
             A2aSendMessageService.Submission submission = new A2aSendMessageService.Submission(
                     "task-1", "context-1", "message-1", "developer", "developer.code-task-v1",
-                    "orchestrator", "tenant-a", "delegation-1", Instant.now());
+                    "orchestrator", "tenant-a", "delegation-1", Instant.now(), null, null,
+                    "business-task-1", "attempt-7");
 
             AgentTaskWorkflowStarter.Execution first = gateway.start(submission, "{\"schema_version\":\"1\"}");
             AgentTaskWorkflowStarter.Execution replay = gateway.start(submission, "{\"schema_version\":\"1\"}");
@@ -43,8 +44,10 @@ class AgentTaskWorkflowV1Test {
             AgentTaskWorkflowV1.Outcome outcome = WorkflowStub.fromTyped(workflow)
                     .getResult(AgentTaskWorkflowV1.Outcome.class);
             assertThat(outcome.state()).isEqualTo("COMPLETED");
-            assertThat(outcome.attemptId()).isEqualTo("attempt-1");
+            assertThat(outcome.attemptId()).isEqualTo("attempt-7");
             assertThat(execution.invocations).isEqualTo(1);
+            assertThat(execution.last.taskId()).isEqualTo("business-task-1");
+            assertThat(execution.last.role()).isEqualTo("developer");
 
             WorkflowVersioningBehavior behavior = AgentTaskWorkflowV1Impl.class
                     .getMethod("run", AgentTaskWorkflowV1.Input.class)
@@ -100,9 +103,11 @@ class AgentTaskWorkflowV1Test {
 
     public static final class RecordingExecution implements AgentExecutionActivities {
         volatile int invocations;
+        volatile Command last;
         @Override public Result execute(Command command) {
             invocations++;
-            return new Result("attempt-1", "patch-proposal-v1", java.util.Set.of(),
+            last = command;
+            return new Result("attempt-7", "patch-proposal-v1", java.util.Set.of(),
                     "e30=", "a".repeat(64));
         }
     }

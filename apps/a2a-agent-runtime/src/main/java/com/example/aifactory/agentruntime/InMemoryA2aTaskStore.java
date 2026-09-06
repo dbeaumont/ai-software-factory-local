@@ -52,7 +52,8 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
         StoredTask updated = new StoredTask(current.taskId(), current.contextId(), current.messageId(),
                 current.messageDigest(), current.role(), current.skill(), current.callerSubject(), current.tenantId(),
                 current.delegationId(), current.submittedAt(), A2aSendMessageService.TaskState.WORKING,
-                current.version() + 1, current.envelopeJson(), current.workflowId(), current.workflowRunId());
+                current.version() + 1, current.envelopeJson(), current.workflowId(), current.workflowRunId(),
+                current.businessTaskId(), current.workflowAttemptId());
         byTask.put(taskId, updated);
         taskByMessage.put(messageId, taskId);
         digestByMessage.put(messageId, messageDigest);
@@ -106,7 +107,8 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
         StoredTask updated = new StoredTask(current.taskId(), current.contextId(), current.messageId(),
                 current.messageDigest(), current.role(), current.skill(), current.callerSubject(), current.tenantId(),
                 current.delegationId(), current.submittedAt(), next, expectedVersion + 1,
-                current.envelopeJson(), current.workflowId(), current.workflowRunId());
+                current.envelopeJson(), current.workflowId(), current.workflowRunId(),
+                current.businessTaskId(), current.workflowAttemptId());
         byTask.put(taskId, updated);
         histories.get(taskId).add(new HistoryRecord(
                 event.messageId(), event.event(), event.occurredAt(), expectedVersion + 1));
@@ -132,7 +134,7 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
         byTask.put(taskId, new StoredTask(current.taskId(), current.contextId(), current.messageId(),
                 current.messageDigest(), current.role(), current.skill(), current.callerSubject(), current.tenantId(),
                 current.delegationId(), current.submittedAt(), current.state(), current.version(),
-                current.envelopeJson(), workflowId, runId));
+                current.envelopeJson(), workflowId, runId, current.businessTaskId(), current.workflowAttemptId()));
     }
 
     @Override

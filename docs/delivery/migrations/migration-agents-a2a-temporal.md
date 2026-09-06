@@ -383,7 +383,9 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   `PINNED`; une insertion A2A nouvelle démarre idempotemment `a2a-agent-task-v1/<rôle>/<task>` sur
   `a2a-agent-<rôle>-v1`, dont le worker porte le deployment/build ID configuré. Le workflow exécute désormais
   lui-même une activité de rôle : enveloppe `a2a-envelope-v1` validée, entrée Evidence liée et bornée, contrat
-  métier d'entrée/sortie vérifié, puis résultat transmis à la publication ; aucun signal manuel n'est requis.)_
+  métier d'entrée/sortie vérifié, puis résultat transmis à la publication ; aucun signal manuel n'est requis.
+  La corrélation distingue et persiste désormais le `taskId` A2A du `taskId` métier et de l'`attemptId`, y compris
+  lors d'une reprise ; preuve : `docs/evidence/a2a/A2A-066-BUSINESS-PROTOCOL-CORRELATION.md`.)_
 - [x] **A2A-067 — Projeter l'état du workflow.** Mettre à jour la tâche A2A via des activités idempotentes ; ne
   jamais lire les tables internes de Temporal depuis le serveur A2A. _(`AgentTaskProjectionActivities` projette
   `WORKING` et l'état terminal par CAS sur `A2aTaskStore`; un retry déjà appliqué est un no-op et l'activité ne

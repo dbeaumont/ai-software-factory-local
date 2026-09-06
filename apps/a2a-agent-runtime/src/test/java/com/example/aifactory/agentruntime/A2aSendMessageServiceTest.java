@@ -49,6 +49,8 @@ class A2aSendMessageServiceTest {
         assertThat(first.contextId()).isEqualTo(replay.contextId());
         assertThat(first.role()).isEqualTo("developer");
         assertThat(first.skill()).isEqualTo("developer.code-task-v1");
+        assertThat(first.businessTaskId()).isEqualTo("task-1");
+        assertThat(first.workflowAttemptId()).isEqualTo("attempt-1");
 
         assertThatThrownBy(() -> service.send(
                 request("message-1", "developer", "b".repeat(64)).path("params"), caller))

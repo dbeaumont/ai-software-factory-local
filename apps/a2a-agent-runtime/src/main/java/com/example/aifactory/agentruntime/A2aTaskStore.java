@@ -37,7 +37,17 @@ public interface A2aTaskStore {
             String taskId, String contextId, String messageId, String messageDigest,
             String role, String skill, String callerSubject, String tenantId,
             String delegationId, Instant submittedAt, A2aSendMessageService.TaskState state, long version,
-            String envelopeJson, String workflowId, String workflowRunId) {}
+            String envelopeJson, String workflowId, String workflowRunId,
+            String businessTaskId, String workflowAttemptId) {
+        public StoredTask(String taskId, String contextId, String messageId, String messageDigest,
+                          String role, String skill, String callerSubject, String tenantId,
+                          String delegationId, Instant submittedAt, A2aSendMessageService.TaskState state,
+                          long version, String envelopeJson, String workflowId, String workflowRunId) {
+            this(taskId, contextId, messageId, messageDigest, role, skill, callerSubject, tenantId,
+                    delegationId, submittedAt, state, version, envelopeJson, workflowId, workflowRunId,
+                    taskId, "attempt-1");
+        }
+    }
 
     record HistoryRecord(String messageId, String event, Instant occurredAt, long taskVersion) {
         public HistoryRecord(String messageId, String event, Instant occurredAt) {

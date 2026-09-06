@@ -23,14 +23,15 @@ class A2aRecoveryCoordinatorTest {
                 "task-1", "context-1", "message-1", "a".repeat(64), "developer",
                 "developer.code-task-v1", "orchestrator", "tenant-a", "delegation-1", now,
                 A2aSendMessageService.TaskState.WORKING, 1, "{\"target_role\":\"developer\"}",
-                "a2a-agent-task-v1/developer/task-1", "old-run");
+                "a2a-agent-task-v1/developer/task-1", "old-run", "business-task-42", "attempt-7");
         store.createOrGet(task, new A2aTaskStore.HistoryRecord("message-1", "MESSAGE_ACCEPTED", now));
         store.enqueueNotification(new A2aTaskStore.PendingNotification(
                 "task-1:working", "task-1", "context-1", "developer", 1,
                 A2aSendMessageService.TaskState.WORKING, now));
         List<String> starts = new ArrayList<>();
         AgentTaskWorkflowStarter starter = (submission, envelope) -> {
-            starts.add(submission.taskId() + envelope);
+            starts.add(submission.taskId() + ':' + submission.businessTaskId() + ':'
+                    + submission.workflowAttemptId() + envelope);
             return new AgentTaskWorkflowStarter.Execution(
                     "a2a-agent-task-v1/developer/" + submission.taskId(), "recovered-run");
         };
@@ -44,7 +45,8 @@ class A2aRecoveryCoordinatorTest {
                 "developer", store, starter, (taskId, contextId, reason) -> { }, sender)
                 .reconcile().toCompletableFuture().join();
 
-        assertThat(starts).containsExactly("task-1{\"target_role\":\"developer\"}");
+        assertThat(starts).containsExactly(
+                "task-1:business-task-42:attempt-7{\"target_role\":\"developer\"}");
         assertThat(store.find("task-1").orElseThrow().workflowRunId()).isEqualTo("recovered-run");
         assertThat(store.pendingNotifications("developer", 10)).isEmpty();
         assertThat(report).isEqualTo(new A2aRecoveryCoordinator.Report(1, 1, 0, 0, 0));

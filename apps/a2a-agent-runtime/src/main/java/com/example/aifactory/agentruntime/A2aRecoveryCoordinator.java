@@ -87,7 +87,8 @@ public final class A2aRecoveryCoordinator {
 
     private static A2aSendMessageService.Submission submission(A2aTaskStore.StoredTask task) {
         return new A2aSendMessageService.Submission(task.taskId(), task.contextId(), task.messageId(), task.role(),
-                task.skill(), task.callerSubject(), task.tenantId(), task.delegationId(), task.submittedAt());
+                task.skill(), task.callerSubject(), task.tenantId(), task.delegationId(), task.submittedAt(),
+                null, null, task.businessTaskId(), task.workflowAttemptId());
     }
 
     public record Report(int workflowsReattached, int notificationsAcknowledged, int notificationsPending,

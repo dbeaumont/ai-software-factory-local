@@ -33,12 +33,14 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                 jdbc.update("""
                         INSERT INTO a2a_agent_task
                           (task_id, context_id, message_id, message_digest, agent_role, skill_id,
-                           caller_subject, tenant_id, delegation_id, submitted_at, task_state, version, envelope_json)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           caller_subject, tenant_id, delegation_id, submitted_at, task_state, version, envelope_json,
+                           business_task_id, workflow_attempt_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, candidate.taskId(), candidate.contextId(), candidate.messageId(),
                         candidate.messageDigest(), candidate.role(), candidate.skill(), candidate.callerSubject(),
                         candidate.tenantId(), candidate.delegationId(), Timestamp.from(candidate.submittedAt()),
-                        candidate.state().name(), candidate.version(), candidate.envelopeJson());
+                        candidate.state().name(), candidate.version(), candidate.envelopeJson(),
+                        candidate.businessTaskId(), candidate.workflowAttemptId());
                 jdbc.update("""
                         INSERT INTO a2a_agent_task_message
                           (message_id, task_id, message_digest, envelope_json, accepted_at)
@@ -358,6 +360,7 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                 rs.getString("skill_id"), rs.getString("caller_subject"), rs.getString("tenant_id"),
                 rs.getString("delegation_id"), rs.getTimestamp("submitted_at").toInstant(),
                 A2aSendMessageService.TaskState.valueOf(rs.getString("task_state")), rs.getLong("version"),
-                rs.getString("envelope_json"), rs.getString("workflow_id"), rs.getString("workflow_run_id"));
+                rs.getString("envelope_json"), rs.getString("workflow_id"), rs.getString("workflow_run_id"),
+                rs.getString("business_task_id"), rs.getString("workflow_attempt_id"));
     }
 }

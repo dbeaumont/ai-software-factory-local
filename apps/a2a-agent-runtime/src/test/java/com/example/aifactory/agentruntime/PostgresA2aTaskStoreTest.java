@@ -33,7 +33,8 @@ class PostgresA2aTaskStoreTest {
                 "db/a2a-task-migration/V002__add_a2a_recovery_state.sql"), new ClassPathResource(
                 "db/a2a-task-migration/V003__sequence_a2a_task_history.sql"), new ClassPathResource(
                 "db/a2a-task-migration/V004__add_a2a_task_messages.sql"), new ClassPathResource(
-                "db/a2a-task-migration/V005__add_a2a_cancellation_outbox.sql")).execute(dataSource);
+                "db/a2a-task-migration/V005__add_a2a_cancellation_outbox.sql"), new ClassPathResource(
+                "db/a2a-task-migration/V006__add_a2a_business_correlation.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         store = new PostgresA2aTaskStore(jdbc,
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)), new ObjectMapper());
@@ -45,7 +46,8 @@ class PostgresA2aTaskStoreTest {
         A2aTaskStore.StoredTask task = new A2aTaskStore.StoredTask(
                 "task-1", "context-1", "message-1", "a".repeat(64), "developer",
                 "developer.code-task-v1", "orchestrator", "tenant-a", "delegation-1", now,
-                A2aSendMessageService.TaskState.SUBMITTED, 0, "{\"target_role\":\"developer\"}", null, null);
+                A2aSendMessageService.TaskState.SUBMITTED, 0, "{\"target_role\":\"developer\"}", null, null,
+                "business-task-42", "attempt-7");
         A2aTaskStore.HistoryRecord accepted = new A2aTaskStore.HistoryRecord(
                 "message-1", "MESSAGE_ACCEPTED", now);
 
@@ -84,6 +86,8 @@ class PostgresA2aTaskStoreTest {
                     assertThat(recovered.envelopeJson()).contains("developer");
                     assertThat(recovered.workflowId()).isEqualTo("a2a-agent-task-v1/developer/task-1");
                     assertThat(recovered.workflowRunId()).isEqualTo("run-1");
+                    assertThat(recovered.businessTaskId()).isEqualTo("business-task-42");
+                    assertThat(recovered.workflowAttemptId()).isEqualTo("attempt-7");
                 });
         A2aTaskStore.PendingNotification pending = new A2aTaskStore.PendingNotification(
                 "task-1:working", "task-1", "context-1", "developer", 1,

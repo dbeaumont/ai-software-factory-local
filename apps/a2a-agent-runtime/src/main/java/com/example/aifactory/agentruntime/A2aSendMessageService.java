@@ -161,7 +161,8 @@ public final class A2aSendMessageService {
             A2aTaskStore.StoredTask candidate = new A2aTaskStore.StoredTask(
                     UUID.randomUUID().toString(), UUID.randomUUID().toString(), messageId, digest,
                     role, skill, caller.subject(), caller.tenantId(), requiredText(execution, "delegationId"),
-                    now, TaskState.SUBMITTED, 0, envelope.toString(), null, null);
+                    now, TaskState.SUBMITTED, 0, envelope.toString(), null, null,
+                    requiredText(execution, "taskId"), requiredText(execution, "attemptId"));
             A2aTaskStore.CreateResult result;
             try {
                 result = admission.admit(messageId, role, caller.tenantId(), () ->
@@ -358,13 +359,14 @@ public final class A2aSendMessageService {
 
     private static Submission submission(A2aTaskStore.StoredTask task) {
         return new Submission(task.taskId(), task.contextId(), task.messageId(), task.role(), task.skill(),
-                task.callerSubject(), task.tenantId(), task.delegationId(), task.submittedAt());
+                task.callerSubject(), task.tenantId(), task.delegationId(), task.submittedAt(),
+                null, null, task.businessTaskId(), task.workflowAttemptId());
     }
 
     private static Submission submission(A2aTaskStore.StoredTask task, A2aW3cTraceContext trace) {
         return new Submission(task.taskId(), task.contextId(), task.messageId(), task.role(), task.skill(),
                 task.callerSubject(), task.tenantId(), task.delegationId(), task.submittedAt(),
-                trace.traceparent(), trace.baggage());
+                trace.traceparent(), trace.baggage(), task.businessTaskId(), task.workflowAttemptId());
     }
 
     private static HistoryItem history(A2aTaskStore.HistoryRecord history) {
@@ -480,10 +482,19 @@ public final class A2aSendMessageService {
             String delegationId,
             Instant submittedAt,
             String traceparent,
-            String baggage) {
+            String baggage,
+            String businessTaskId,
+            String workflowAttemptId) {
         public Submission(String taskId, String contextId, String messageId, String role, String skill,
                           String caller, String tenantId, String delegationId, Instant submittedAt) {
-            this(taskId, contextId, messageId, role, skill, caller, tenantId, delegationId, submittedAt, null, null);
+            this(taskId, contextId, messageId, role, skill, caller, tenantId, delegationId, submittedAt,
+                    null, null, taskId, "attempt-1");
+        }
+        public Submission(String taskId, String contextId, String messageId, String role, String skill,
+                          String caller, String tenantId, String delegationId, Instant submittedAt,
+                          String traceparent, String baggage) {
+            this(taskId, contextId, messageId, role, skill, caller, tenantId, delegationId, submittedAt,
+                    traceparent, baggage, taskId, "attempt-1");
         }
     }
 
