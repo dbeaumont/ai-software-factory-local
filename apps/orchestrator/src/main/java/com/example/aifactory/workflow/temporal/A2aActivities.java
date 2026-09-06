@@ -47,6 +47,12 @@ public final class A2aActivities {
         A2aContracts.TaskSnapshot reconcileDispatch(DispatchRequest request);
     }
 
+    @ActivityInterface
+    public interface ContinueTask {
+        @ActivityMethod(name = "A2aContinueTask")
+        A2aContracts.TaskSnapshot continueTask(ContinuationRequest request);
+    }
+
     public static Stubs newStubs() {
         return new Stubs(
                 Workflow.newActivityStub(ResolveAgent.class,
@@ -60,13 +66,18 @@ public final class A2aActivities {
                 Workflow.newActivityStub(ValidateArtifacts.class,
                         TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_VALIDATE)),
                 Workflow.newActivityStub(ReconcileDispatch.class,
-                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_RECONCILE)));
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_RECONCILE)),
+                Workflow.newActivityStub(ContinueTask.class,
+                        TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_CONTINUE)));
     }
 
     public record ValidationRequest(String agentRole, String outputContract, A2aContracts.TaskSnapshot task) {}
 
     public record DispatchRequest(com.example.aifactory.a2a.A2aExecutionContext execution,
                                   String agentCardDigest, A2aContracts.SendCommand command) {}
+
+    public record ContinuationRequest(com.example.aifactory.a2a.A2aExecutionContext execution,
+                                      A2aContracts.SendCommand command) {}
 
     public record EvidenceReference(String artifactId, String uri, String digest, String contract) {}
 
@@ -76,5 +87,5 @@ public final class A2aActivities {
 
     public record Stubs(ResolveAgent resolveAgent, DispatchTask dispatchTask, GetTask getTask,
                         CancelTask cancelTask, ValidateArtifacts validateArtifacts,
-                        ReconcileDispatch reconcileDispatch) {}
+                        ReconcileDispatch reconcileDispatch, ContinueTask continueTask) {}
 }

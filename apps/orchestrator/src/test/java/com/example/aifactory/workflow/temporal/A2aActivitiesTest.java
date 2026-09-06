@@ -79,6 +79,12 @@ class A2aActivitiesTest {
         assertThat(activities.reconcileDispatch(new A2aActivities.DispatchRequest(
                 execution(), "b".repeat(64), command()))).isEqualTo(snapshot);
         assertThat(sends).hasValue(1);
+        A2aContracts.SendCommand continuation = new A2aContracts.SendCommand(
+                "developer", "developer.code-task-v1", "message-2", "task-1", "context-1",
+                command().parts(), Map.of("continuationSequence", 1), true);
+        assertThat(activities.continueTask(new A2aActivities.ContinuationRequest(execution(), continuation)))
+                .isEqualTo(snapshot);
+        assertThat(sends).hasValue(2);
         assertThat(activities.getTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
         assertThat(activities.cancelTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
         assertThat(activities.validateArtifacts(new A2aActivities.ValidationRequest(
@@ -97,6 +103,7 @@ class A2aActivitiesTest {
         ActivityOptions cancel = policy(TemporalActivityPolicies.Kind.A2A_CANCEL);
         ActivityOptions validate = policy(TemporalActivityPolicies.Kind.A2A_VALIDATE);
         ActivityOptions reconcile = policy(TemporalActivityPolicies.Kind.A2A_RECONCILE);
+        ActivityOptions continuation = policy(TemporalActivityPolicies.Kind.A2A_CONTINUE);
 
         assertThat(resolve.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
         assertThat(dispatch.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
@@ -104,8 +111,10 @@ class A2aActivitiesTest {
         assertThat(cancel.getRetryOptions().getMaximumAttempts()).isEqualTo(2);
         assertThat(validate.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
         assertThat(reconcile.getRetryOptions().getMaximumAttempts()).isEqualTo(3);
+        assertThat(continuation.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
         assertThat(List.of(resolve.getStartToCloseTimeout(), dispatch.getStartToCloseTimeout(),
-                get.getStartToCloseTimeout(), cancel.getStartToCloseTimeout(), validate.getStartToCloseTimeout()))
+                get.getStartToCloseTimeout(), cancel.getStartToCloseTimeout(), validate.getStartToCloseTimeout(),
+                continuation.getStartToCloseTimeout()))
                 .doesNotContainNull();
     }
 

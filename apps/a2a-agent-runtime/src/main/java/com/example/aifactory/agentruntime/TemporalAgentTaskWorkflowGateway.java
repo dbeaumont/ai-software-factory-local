@@ -47,6 +47,12 @@ public final class TemporalAgentTaskWorkflowGateway
         client.newWorkflowStub(AgentTaskWorkflowV1.class, workflowId(role, taskId)).cancel(reason);
     }
 
+    @Override
+    public void requestContinuation(String taskId, String contextId, String messageId, String envelopeJson) {
+        client.newWorkflowStub(AgentTaskWorkflowV1.class, workflowId(role, taskId))
+                .continueWith(messageId, envelopeJson);
+    }
+
     static String workflowId(String role, String taskId) {
         return "a2a-agent-task-v1/" + role + "/" + taskId;
     }

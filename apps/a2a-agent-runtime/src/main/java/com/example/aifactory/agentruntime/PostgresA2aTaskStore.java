@@ -39,6 +39,12 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                         candidate.messageDigest(), candidate.role(), candidate.skill(), candidate.callerSubject(),
                         candidate.tenantId(), candidate.delegationId(), Timestamp.from(candidate.submittedAt()),
                         candidate.state().name(), candidate.version(), candidate.envelopeJson());
+                jdbc.update("""
+                        INSERT INTO a2a_agent_task_message
+                          (message_id, task_id, message_digest, envelope_json, accepted_at)
+                        VALUES (?, ?, ?, ?, ?)
+                        """, candidate.messageId(), candidate.taskId(), candidate.messageDigest(),
+                        candidate.envelopeJson(), Timestamp.from(candidate.submittedAt()));
                 insertHistory(candidate.taskId(), new HistoryRecord(
                         accepted.messageId(), accepted.event(), accepted.occurredAt(), candidate.version()));
                 return new CreateResult(candidate, true);
@@ -51,6 +57,54 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
     }
 
     @Override
+    public ContinueResult continueTask(String taskId, String contextId, String messageId, String messageDigest,
+                                       String envelopeJson, HistoryRecord accepted) {
+        List<Map<String, Object>> replayRows = jdbc.queryForList("""
+                SELECT task_id, message_digest FROM a2a_agent_task_message WHERE message_id = ?
+                """, messageId);
+        if (!replayRows.isEmpty()) {
+            Map<String, Object> existing = replayRows.getFirst();
+            if (!taskId.equals(existing.get("task_id")) || !messageDigest.equals(existing.get("message_digest"))) {
+                throw new IllegalStateException("messageId collision with a different continuation");
+            }
+            return new ContinueResult(find(taskId).orElseThrow(), false);
+        }
+        try {
+            return transactions.execute(status -> {
+                StoredTask current = find(taskId)
+                        .orElseThrow(() -> new IllegalStateException("Continuation task correlation is invalid"));
+                if (!current.contextId().equals(contextId)) {
+                    throw new IllegalStateException("Continuation task correlation is invalid");
+                }
+                if (current.state() != A2aSendMessageService.TaskState.INPUT_REQUIRED) {
+                    throw new IllegalStateException("Only INPUT_REQUIRED tasks can be continued");
+                }
+                jdbc.update("""
+                        INSERT INTO a2a_agent_task_message
+                          (message_id, task_id, message_digest, envelope_json, accepted_at)
+                        VALUES (?, ?, ?, ?, ?)
+                        """, messageId, taskId, messageDigest, envelopeJson, Timestamp.from(accepted.occurredAt()));
+                int updated = jdbc.update("""
+                        UPDATE a2a_agent_task SET task_state = 'WORKING', version = version + 1
+                        WHERE task_id = ? AND context_id = ? AND version = ? AND task_state = 'INPUT_REQUIRED'
+                        """, taskId, contextId, current.version());
+                if (updated != 1) throw new IllegalStateException("Concurrent A2A continuation conflict");
+                insertHistory(taskId, new HistoryRecord(messageId, accepted.event(), accepted.occurredAt(),
+                        current.version() + 1));
+                return new ContinueResult(find(taskId).orElseThrow(), true);
+            });
+        } catch (DuplicateKeyException replay) {
+            Map<String, Object> existing = jdbc.queryForMap("""
+                    SELECT task_id, message_digest FROM a2a_agent_task_message WHERE message_id = ?
+                    """, messageId);
+            if (!taskId.equals(existing.get("task_id")) || !messageDigest.equals(existing.get("message_digest"))) {
+                throw new IllegalStateException("messageId collision with a different continuation", replay);
+            }
+            return new ContinueResult(find(taskId).orElseThrow(), false);
+        }
+    }
+
+    @Override
     public Optional<StoredTask> find(String taskId) {
         return jdbc.query("SELECT * FROM a2a_agent_task WHERE task_id = ?", TASK_MAPPER, taskId)
                 .stream().findFirst();
@@ -58,7 +112,11 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
 
     @Override
     public Optional<StoredTask> findByMessageId(String messageId) {
-        return jdbc.query("SELECT * FROM a2a_agent_task WHERE message_id = ?", TASK_MAPPER, messageId)
+        return jdbc.query("""
+                SELECT task.* FROM a2a_agent_task task
+                JOIN a2a_agent_task_message message ON message.task_id = task.task_id
+                WHERE message.message_id = ?
+                """, TASK_MAPPER, messageId)
                 .stream().findFirst();
     }
 

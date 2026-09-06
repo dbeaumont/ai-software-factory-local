@@ -8,6 +8,8 @@ import java.util.Optional;
 /** Durable authority for the A2A task projection, ACL and idempotency identity. */
 public interface A2aTaskStore {
     CreateResult createOrGet(StoredTask candidate, HistoryRecord accepted);
+    ContinueResult continueTask(String taskId, String contextId, String messageId, String messageDigest,
+                                String envelopeJson, HistoryRecord accepted);
     Optional<StoredTask> find(String taskId);
     Optional<StoredTask> findByMessageId(String messageId);
     List<StoredTask> list(String tenantId, String callerSubject, String contextId,
@@ -39,6 +41,8 @@ public interface A2aTaskStore {
     }
 
     record CreateResult(StoredTask task, boolean created) {}
+
+    record ContinueResult(StoredTask task, boolean accepted) {}
 
     record PendingNotification(
             String notificationId, String taskId, String contextId, String role, long sequence,

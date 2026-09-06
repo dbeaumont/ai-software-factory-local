@@ -27,7 +27,8 @@ class PostgresA2aTaskStoreTest {
         new ResourceDatabasePopulator(new ClassPathResource(
                 "db/a2a-task-migration/V001__create_a2a_task_projection.sql"), new ClassPathResource(
                 "db/a2a-task-migration/V002__add_a2a_recovery_state.sql"), new ClassPathResource(
-                "db/a2a-task-migration/V003__sequence_a2a_task_history.sql")).execute(dataSource);
+                "db/a2a-task-migration/V003__sequence_a2a_task_history.sql"), new ClassPathResource(
+                "db/a2a-task-migration/V004__add_a2a_task_messages.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         store = new PostgresA2aTaskStore(jdbc,
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)), new ObjectMapper());
@@ -55,6 +56,22 @@ class PostgresA2aTaskStoreTest {
         assertThat(store.transition("task-1", 0, A2aSendMessageService.TaskState.FAILED,
                 new A2aTaskStore.HistoryRecord("message-1", "TASK_FAILED", now))).isEmpty();
         assertThat(store.history("task-1", 50)).hasSize(2);
+
+        A2aTaskStore.StoredTask inputRequired = store.transition("task-1", 1,
+                A2aSendMessageService.TaskState.INPUT_REQUIRED,
+                new A2aTaskStore.HistoryRecord("message-1", "TASK_INPUT_REQUIRED", now.plusSeconds(2)))
+                .orElseThrow();
+        A2aTaskStore.ContinueResult continued = store.continueTask("task-1", "context-1", "message-2",
+                "b".repeat(64), "{\"decision\":\"approved\"}",
+                new A2aTaskStore.HistoryRecord("message-2", "MESSAGE_CONTINUED", now.plusSeconds(3)));
+        assertThat(inputRequired.state()).isEqualTo(A2aSendMessageService.TaskState.INPUT_REQUIRED);
+        assertThat(continued.accepted()).isTrue();
+        assertThat(continued.task().state()).isEqualTo(A2aSendMessageService.TaskState.WORKING);
+        assertThat(store.continueTask("task-1", "context-1", "message-2", "b".repeat(64),
+                "{\"decision\":\"approved\"}",
+                new A2aTaskStore.HistoryRecord("message-2", "MESSAGE_CONTINUED", now.plusSeconds(3))).accepted())
+                .isFalse();
+        assertThat(store.findByMessageId("message-2")).contains(continued.task());
 
         store.recordWorkflowExecution("task-1", "a2a-agent-task-v1/developer/task-1", "run-1");
         assertThat(store.nonTerminal("developer", 10)).singleElement()

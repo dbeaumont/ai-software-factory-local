@@ -23,11 +23,15 @@ class TemporalActivityPoliciesTest {
                 Duration.ofMillis(500), Duration.ofSeconds(5));
         assertProfile(TemporalActivityPolicies.Kind.SCM, Duration.ofMinutes(4), Duration.ofMinutes(2), 2,
                 Duration.ofSeconds(1), Duration.ofSeconds(10));
+        assertProfile(TemporalActivityPolicies.Kind.A2A_CONTINUE, Duration.ofSeconds(45),
+                Duration.ofSeconds(30), 1, Duration.ofMillis(250), Duration.ofMillis(250));
         assertThat(TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.SANDBOX).getHeartbeatTimeout())
                 .isEqualTo(Duration.ofSeconds(30));
         assertThat(Arrays.stream(TemporalActivityPolicies.Kind.values())
-                .map(TemporalActivityPolicies::forKind).map(ActivityOptions::getStartToCloseTimeout)
-                .distinct()).hasSize(TemporalActivityPolicies.Kind.values().length);
+                .map(TemporalActivityPolicies::forKind)).allSatisfy(options -> {
+                    assertThat(options.getStartToCloseTimeout()).isPositive();
+                    assertThat(options.getScheduleToCloseTimeout()).isGreaterThan(options.getStartToCloseTimeout());
+                });
     }
 
     private static void assertProfile(TemporalActivityPolicies.Kind kind, Duration timeout,

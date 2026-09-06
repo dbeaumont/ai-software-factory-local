@@ -57,6 +57,8 @@ public final class TemporalActivityPolicies {
                 Duration.ofSeconds(10), null, retry(1, Duration.ofMillis(100), Duration.ofMillis(100))));
         options.put(Kind.A2A_RECONCILE, activity(Duration.ofMinutes(3), Duration.ofMinutes(1),
                 Duration.ofSeconds(30), null, retry(3, Duration.ofSeconds(1), Duration.ofSeconds(5))));
+        options.put(Kind.A2A_CONTINUE, activity(Duration.ofMinutes(2), Duration.ofSeconds(45),
+                Duration.ofSeconds(30), null, retry(1, Duration.ofMillis(250), Duration.ofMillis(250))));
         return Map.copyOf(options);
     }
 
@@ -79,6 +81,6 @@ public final class TemporalActivityPolicies {
 
     public enum Kind {
         READ, LLM, SANDBOX, ASSURANCE, EVIDENCE, SCM,
-        A2A_RESOLVE, A2A_DISPATCH, A2A_GET, A2A_CANCEL, A2A_VALIDATE, A2A_RECONCILE
+        A2A_RESOLVE, A2A_DISPATCH, A2A_GET, A2A_CANCEL, A2A_VALIDATE, A2A_RECONCILE, A2A_CONTINUE
     }
 }

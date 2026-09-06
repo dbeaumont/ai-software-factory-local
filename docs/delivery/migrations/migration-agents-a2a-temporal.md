@@ -441,8 +441,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   preuves ; si l'agent est injoignable, conserver un état de réconciliation explicite.
   _(`A2aCancellationCoordinator` borne l'appel et trois cycles de confirmation signal/poll, conserve toutes les
   URI Evidence et retourne explicitement `RECONCILIATION_REQUIRED` lorsque l'agent reste injoignable.)_
-- [ ] **A2A-087 — Reprendre les demandes de complément.** Mapper `INPUT_REQUIRED` vers un signal ou une gate
-  métier autorisée, puis envoyer un nouveau message sur le même `taskId/contextId`.
+- [x] **A2A-087 — Reprendre les demandes de complément.** Mapper `INPUT_REQUIRED` vers un signal ou une gate
+  métier autorisée, puis envoyer un nouveau message sur le même `taskId/contextId`. _(Une décision autorisée et
+  référencée dans Evidence produit un `messageId` déterministe ; l'activité contrôle l'association durable et le
+  runtime accepte atomiquement le message uniquement sur la tâche `INPUT_REQUIRED`, le déduplique puis signale le
+  workflow Temporal existant sans changer `taskId/contextId`.)_
 - [ ] **A2A-088 — Gérer `AUTH_REQUIRED`.** Ne jamais transmettre de secret dans l'historique ; obtenir la décision
   ou le jeton hors bande, avec portée liée à l'opération, puis reprendre par un message contrôlé.
 - [ ] **A2A-089 — Remplacer les child workflows d'agents.** Conserver les child workflows de contrôle nécessaires

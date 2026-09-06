@@ -96,6 +96,15 @@ public final class A2aSendMessageService {
 
         String digest = digest(message);
         Instant now = Instant.now();
+        String requestedTaskId = optionalText(message, "taskId");
+        String requestedContextId = optionalText(message, "contextId");
+        if (requestedTaskId != null || requestedContextId != null) {
+            if (requestedTaskId == null || requestedContextId == null) {
+                throw new SubmissionRejected("A2A continuation requires both taskId and contextId");
+            }
+            return continueTask(requestedTaskId, requestedContextId, messageId, digest, envelope,
+                    role, skill, caller, execution, now);
+        }
         A2aTaskStore.StoredTask candidate = new A2aTaskStore.StoredTask(
                 UUID.randomUUID().toString(), UUID.randomUUID().toString(), messageId, digest,
                 role, skill, caller.subject(), caller.tenantId(), requiredText(execution, "delegationId"),
@@ -112,6 +121,30 @@ public final class A2aSendMessageService {
             store.recordWorkflowExecution(submission.taskId(), executionReference.workflowId(), executionReference.runId());
         }
         return submission;
+    }
+
+    private Submission continueTask(String taskId, String contextId, String messageId, String digest,
+                                    JsonNode envelope, String role, String skill, Caller caller,
+                                    JsonNode execution, Instant now) {
+        A2aTaskStore.StoredTask current = store.find(taskId)
+                .orElseThrow(() -> new TaskLookupRejected("Task not found"));
+        if (!current.contextId().equals(contextId) || !current.callerSubject().equals(caller.subject())
+                || !current.tenantId().equals(caller.tenantId()) || !current.role().equals(role)
+                || !current.skill().equals(skill)
+                || !current.delegationId().equals(requiredText(execution, "delegationId"))) {
+            throw new TaskLookupRejected("Task not found");
+        }
+        A2aTaskStore.ContinueResult result;
+        try {
+            result = store.continueTask(taskId, contextId, messageId, digest, envelope.toString(),
+                    new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_CONTINUED", now));
+        } catch (IllegalStateException rejected) {
+            throw new SubmissionRejected(rejected.getMessage(), rejected);
+        }
+        if (result.accepted()) {
+            workflowControl.requestContinuation(taskId, contextId, messageId, envelope.toString());
+        }
+        return submission(result.task());
     }
 
     public TaskView getTask(JsonNode params, Caller caller) {

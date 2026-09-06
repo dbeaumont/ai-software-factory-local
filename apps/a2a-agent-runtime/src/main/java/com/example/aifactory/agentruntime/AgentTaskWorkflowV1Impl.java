@@ -11,6 +11,8 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
     private Outcome outcome;
     private boolean canceled;
     private String cancellationReason;
+    private String continuationMessageId;
+    private String continuationEnvelope;
     private String currentState = "SUBMITTED";
     private final AgentTaskProjectionActivities projections = Workflow.newActivityStub(
             AgentTaskProjectionActivities.class,
@@ -55,6 +57,16 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
             canceled = true;
             cancellationReason = reason == null ? "canceled" : reason;
         }
+    }
+
+    @Override
+    public void continueWith(String messageId, String envelopeJson) {
+        if (messageId == null || messageId.isBlank() || envelopeJson == null || envelopeJson.isBlank()) {
+            throw new IllegalArgumentException("A2A continuation is incomplete");
+        }
+        continuationMessageId = messageId;
+        continuationEnvelope = envelopeJson;
+        currentState = "WORKING";
     }
 
     @Override

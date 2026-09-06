@@ -9,6 +9,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
@@ -51,6 +52,50 @@ class A2aSendMessageServiceTest {
                 new A2aSendMessageService.Caller("orchestrator", Set.of("a2a.invoke"))))
                 .isInstanceOf(A2aSendMessageService.SubmissionRejected.class)
                 .hasMessageContaining("scope");
+    }
+
+    @Test
+    void continuesInputRequiredOnTheSameTaskAndContextExactlyOnce() throws Exception {
+        AgentRuntimeProperties runtime = new AgentRuntimeProperties(
+                "developer", URI.create("http://localhost:8090/a2a"));
+        InMemoryA2aTaskStore store = new InMemoryA2aTaskStore();
+        java.util.concurrent.atomic.AtomicInteger continuations = new java.util.concurrent.atomic.AtomicInteger();
+        AtomicReference<String> signaledMessage = new AtomicReference<>();
+        AgentTaskWorkflowControl control = new AgentTaskWorkflowControl() {
+            @Override public void requestCancellation(String taskId, String contextId, String reason) { }
+            @Override public void requestContinuation(String taskId, String contextId, String messageId,
+                                                      String envelopeJson) {
+                continuations.incrementAndGet();
+                signaledMessage.set(messageId);
+            }
+        };
+        A2aSendMessageService resumable = new A2aSendMessageService(runtime,
+                new AgentCardCatalogGenerator(new com.example.aifactory.agentcore.AgentCatalog(), mapper), mapper,
+                control, (submission, envelope) -> new AgentTaskWorkflowStarter.Execution("workflow", "run"), store);
+        A2aSendMessageService.Caller caller = new A2aSendMessageService.Caller("orchestrator", Set.of(
+                "a2a.invoke", "a2a.role.developer", "a2a.skill.developer.code-task-v1"));
+        A2aSendMessageService.Submission initial = resumable.send(
+                request("message-initial", "developer", "a".repeat(64)).path("params"), caller);
+        resumable.projectState(initial.taskId(), A2aSendMessageService.TaskState.INPUT_REQUIRED);
+
+        tools.jackson.databind.node.ObjectNode continuation = (tools.jackson.databind.node.ObjectNode) request(
+                "message-continuation", "developer", "b".repeat(64)).deepCopy();
+        tools.jackson.databind.node.ObjectNode message = (tools.jackson.databind.node.ObjectNode)
+                continuation.path("params").path("message");
+        message.put("taskId", initial.taskId());
+        message.put("contextId", initial.contextId());
+
+        A2aSendMessageService.Submission resumed = resumable.send(continuation.path("params"), caller);
+        A2aSendMessageService.Submission replay = resumable.send(continuation.path("params"), caller);
+
+        assertThat(resumed.taskId()).isEqualTo(initial.taskId()).isEqualTo(replay.taskId());
+        assertThat(resumed.contextId()).isEqualTo(initial.contextId());
+        assertThat(store.find(initial.taskId()).orElseThrow().state())
+                .isEqualTo(A2aSendMessageService.TaskState.WORKING);
+        assertThat(store.history(initial.taskId(), 10)).extracting(A2aTaskStore.HistoryRecord::messageId)
+                .contains("message-continuation");
+        assertThat(continuations).hasValue(1);
+        assertThat(signaledMessage).hasValue("message-continuation");
     }
 
     @Test

@@ -18,6 +18,9 @@ public interface AgentTaskWorkflowV1 {
     @SignalMethod
     void cancel(String reason);
 
+    @SignalMethod
+    void continueWith(String messageId, String envelopeJson);
+
     @QueryMethod
     String state();
 

@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aActivities.DispatchTask,
         A2aActivities.GetTask, A2aActivities.CancelTask, A2aActivities.ValidateArtifacts,
-        A2aActivities.ReconcileDispatch {
+        A2aActivities.ReconcileDispatch, A2aActivities.ContinueTask {
     private final AgentCardResolver cards;
     private final A2aClient client;
     private final A2aContractMapping contracts;
@@ -77,6 +77,28 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
             return task;
         }
         return dispatchTask(request);
+    }
+
+    @Override
+    public A2aContracts.TaskSnapshot continueTask(A2aActivities.ContinuationRequest request) {
+        if (request == null || request.execution() == null || request.command() == null
+                || request.command().taskId() == null || request.command().contextId() == null) {
+            throw new IllegalArgumentException("A2A continuation correlation is incomplete");
+        }
+        A2aTaskAssociationStore.Association association = associations.findByDelegation(
+                        request.execution().delegationId())
+                .orElseThrow(() -> new IllegalStateException("A2A continuation has no durable association"));
+        if (!association.a2aTaskId().equals(request.command().taskId())
+                || !association.a2aContextId().equals(request.command().contextId())
+                || !association.agentRole().equals(request.command().agentRole())) {
+            throw new SecurityException("A2A continuation changed task correlation");
+        }
+        A2aContracts.TaskSnapshot result = await(client.send(request.command()), Duration.ofSeconds(45));
+        if (!association.a2aTaskId().equals(result.taskId())
+                || !association.a2aContextId().equals(result.contextId())) {
+            throw new SecurityException("A2A server forked a continuation into another task");
+        }
+        return result;
     }
 
     @Override

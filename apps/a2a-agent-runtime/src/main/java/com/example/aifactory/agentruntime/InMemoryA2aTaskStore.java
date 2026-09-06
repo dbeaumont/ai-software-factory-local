@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class InMemoryA2aTaskStore implements A2aTaskStore {
     private final Map<String, StoredTask> byTask = new ConcurrentHashMap<>();
     private final Map<String, String> taskByMessage = new ConcurrentHashMap<>();
+    private final Map<String, String> digestByMessage = new ConcurrentHashMap<>();
     private final Map<String, List<HistoryRecord>> histories = new ConcurrentHashMap<>();
     private final Map<String, PendingNotification> notifications = new ConcurrentHashMap<>();
     private final Map<String, ArtifactRecord> artifactRecords = new ConcurrentHashMap<>();
@@ -21,9 +22,41 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
         if (existingId != null) return new CreateResult(byTask.get(existingId), false);
         byTask.put(candidate.taskId(), candidate);
         taskByMessage.put(candidate.messageId(), candidate.taskId());
+        digestByMessage.put(candidate.messageId(), candidate.messageDigest());
         histories.put(candidate.taskId(), new ArrayList<>(List.of(new HistoryRecord(
                 accepted.messageId(), accepted.event(), accepted.occurredAt(), candidate.version()))));
         return new CreateResult(candidate, true);
+    }
+
+    @Override
+    public synchronized ContinueResult continueTask(String taskId, String contextId, String messageId,
+                                                     String messageDigest, String envelopeJson,
+                                                     HistoryRecord accepted) {
+        String existingTaskId = taskByMessage.get(messageId);
+        if (existingTaskId != null) {
+            StoredTask existing = byTask.get(existingTaskId);
+            if (!existingTaskId.equals(taskId) || !digestByMessage.get(messageId).equals(messageDigest)) {
+                throw new IllegalStateException("messageId collision with a different continuation");
+            }
+            return new ContinueResult(existing, false);
+        }
+        StoredTask current = byTask.get(taskId);
+        if (current == null || !current.contextId().equals(contextId)) {
+            throw new IllegalStateException("Continuation task correlation is invalid");
+        }
+        if (current.state() != A2aSendMessageService.TaskState.INPUT_REQUIRED) {
+            throw new IllegalStateException("Only INPUT_REQUIRED tasks can be continued");
+        }
+        StoredTask updated = new StoredTask(current.taskId(), current.contextId(), current.messageId(),
+                current.messageDigest(), current.role(), current.skill(), current.callerSubject(), current.tenantId(),
+                current.delegationId(), current.submittedAt(), A2aSendMessageService.TaskState.WORKING,
+                current.version() + 1, current.envelopeJson(), current.workflowId(), current.workflowRunId());
+        byTask.put(taskId, updated);
+        taskByMessage.put(messageId, taskId);
+        digestByMessage.put(messageId, messageDigest);
+        histories.get(taskId).add(new HistoryRecord(messageId, accepted.event(), accepted.occurredAt(),
+                updated.version()));
+        return new ContinueResult(updated, true);
     }
 
     @Override public Optional<StoredTask> find(String taskId) { return Optional.ofNullable(byTask.get(taskId)); }
