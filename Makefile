@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -36,6 +36,7 @@ help:
 	@echo -e "  $(CYAN)make test-temporal-compose$(NC) - verify local namespace, UI, readiness and all pollers"
 	@echo -e "  $(CYAN)make test-temporal-ticket-ui$(NC) - submit a real ticket and verify its Temporal UI identity"
 	@echo -e "  $(CYAN)make test-temporal-orchestrator-restarts$(NC) - recreate the orchestrator across critical phases"
+	@echo -e "  $(CYAN)make test-temporal-worker-heartbeat$(NC) - SIGKILL a sandbox worker activity and verify resume"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify the static Compose sandbox runner"
 	@echo -e "  $(CYAN)make test-sandbox-network$(NC) - verify Compose runner network isolation"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
@@ -148,6 +149,10 @@ test-temporal-ticket-ui:
 test-temporal-orchestrator-restarts:
 	$(log-target)
 	@./scripts/test-temporal-orchestrator-restarts.sh
+
+test-temporal-worker-heartbeat:
+	$(log-target)
+	@./scripts/test-temporal-worker-heartbeat.sh
 
 test-sandbox-runtime:
 	$(log-target)

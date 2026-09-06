@@ -5,6 +5,7 @@ import tools.jackson.databind.JsonNode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
@@ -31,10 +32,18 @@ public class McpSandboxService implements SandboxExecutor {
     private final Counter errors;
     private final Counter invalidHeartbeats;
     private final Timer duration;
+    private final SandboxActivityHeartbeat activityHeartbeat;
 
     public McpSandboxService(McpToolInvoker invoker, McpFactoryProperties properties, MeterRegistry metrics) {
+        this(invoker, properties, metrics, SandboxActivityHeartbeat.noop());
+    }
+
+    @Autowired
+    public McpSandboxService(McpToolInvoker invoker, McpFactoryProperties properties, MeterRegistry metrics,
+                             SandboxActivityHeartbeat activityHeartbeat) {
         this.invoker = invoker;
         this.properties = properties;
+        this.activityHeartbeat = activityHeartbeat;
         this.calls = Counter.builder("ai_factory_mcp_sandbox_calls").register(metrics);
         this.errors = Counter.builder("ai_factory_mcp_sandbox_errors").register(metrics);
         this.invalidHeartbeats = Counter.builder("ai_factory_sandbox_heartbeat_invalid").register(metrics);
@@ -97,15 +106,23 @@ public class McpSandboxService implements SandboxExecutor {
         String patchDigest = patchDigest(workspace);
         Map<String, Object> start = metadata.arguments();
         String inputDigest = patchDigest == null ? digest(sourceCommit) : patchDigest;
-        start.put("idempotency_key", TemporalIds.effectKey(taskId,
-                start.get("attempt_id").toString(), "sandbox", operation, 0, sourceCommit, inputDigest));
+        String effectKey = TemporalIds.effectKey(taskId,
+                start.get("attempt_id").toString(), "sandbox", operation, 0, sourceCommit, inputDigest);
+        start.put("idempotency_key", effectKey);
         if (patchDigest != null) {
             start.put("patch_digest", patchDigest);
         }
-        JsonNode accepted = invoker.call(properties.sandboxServerName(), tool, start);
-        String executionId = requiredText(accepted, "execution_id");
+        String executionId = activityHeartbeat.latest()
+                .filter(checkpoint -> effectKey.equals(checkpoint.effectKey())
+                        && operation.equals(checkpoint.operation()))
+                .map(SandboxActivityHeartbeat.Checkpoint::executionId)
+                .orElseGet(() -> startExecution(tool, start));
+        SandboxActivityHeartbeat.Checkpoint checkpoint =
+                new SandboxActivityHeartbeat.Checkpoint(effectKey, operation, executionId);
+        activityHeartbeat.record(checkpoint);
         long deadline = System.nanoTime() + properties.sandboxPollTimeout().toNanos();
         while (System.nanoTime() < deadline) {
+            activityHeartbeat.record(checkpoint);
             JsonNode execution = invoker.call(properties.sandboxServerName(), "sandbox.get_execution",
                     lookup(metadata, executionId));
             String status = requiredText(execution, "status");
@@ -131,6 +148,21 @@ public class McpSandboxService implements SandboxExecutor {
             sleep(properties.sandboxPollInterval());
         }
         throw new IllegalStateException("Sandbox " + operation + " polling timed out");
+    }
+
+    private String startExecution(String tool, Map<String, Object> start) {
+        try {
+            JsonNode accepted = invoker.call(properties.sandboxServerName(), tool, start);
+            String executionId = requiredText(accepted, "execution_id");
+            if (!executionId.matches("[0-9a-f]{32}")) {
+                throw new IllegalStateException("Malformed sandbox MCP response: invalid execution_id");
+            }
+            return executionId;
+        } catch (RuntimeException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Sandbox execution submission failed", exception);
+        }
     }
 
     private static Map<String, Object> lookup(McpRequestMetadata metadata, String executionId) {

@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,6 +46,28 @@ class McpSandboxServiceTest {
                 .matches("effect-[0-9a-f]{64}"));
         assertTrue(invoker.startArguments.containsKey("patch_digest"));
         assertEquals(16_384, invoker.lastLookupArguments.get("output_limit"));
+    }
+
+    @Test
+    void resumesTheHeartbeatSandboxExecutionWithoutSubmittingItAgain() throws Exception {
+        RecordingHeartbeat heartbeat = new RecordingHeartbeat();
+        FakeInvoker invoker = new FakeInvoker("PASSED", 0, "tests passed");
+        McpSandboxService service = new McpSandboxService(invoker,
+                properties(true, McpFactoryProperties.SandboxMode.MCP_ACTIVE), new SimpleMeterRegistry(), heartbeat);
+
+        assertEquals("tests passed", service.test(workspace, "task-1", "a".repeat(40)));
+        int firstSubmissionCount = invoker.startCalls.get();
+        invoker.pollCalls.set(0);
+
+        assertEquals("tests passed", service.test(workspace, "task-1", "a".repeat(40)));
+
+        assertEquals(1, firstSubmissionCount);
+        assertEquals(firstSubmissionCount, invoker.startCalls.get(),
+                "a matching Temporal heartbeat must resume the existing external job");
+        assertNotNull(heartbeat.checkpoint);
+        assertEquals("run-tests", heartbeat.checkpoint.operation());
+        assertEquals("1".repeat(32), heartbeat.checkpoint.executionId());
+        assertTrue(heartbeat.records.get() >= 4);
     }
 
     @Test
@@ -159,6 +182,22 @@ class McpSandboxServiceTest {
     static McpFactoryProperties properties(boolean enabled, McpFactoryProperties.SandboxMode mode) {
         return new McpFactoryProperties(false, McpFactoryProperties.ContextMode.DIRECT, "repository-context-mcp",
                 enabled, mode, "sandbox-execution-mcp", Duration.ofMillis(1), Duration.ofSeconds(2));
+    }
+
+    private static final class RecordingHeartbeat implements SandboxActivityHeartbeat {
+        private final AtomicInteger records = new AtomicInteger();
+        private Checkpoint checkpoint;
+
+        @Override
+        public Optional<Checkpoint> latest() {
+            return Optional.ofNullable(checkpoint);
+        }
+
+        @Override
+        public void record(Checkpoint checkpoint) {
+            this.checkpoint = checkpoint;
+            records.incrementAndGet();
+        }
     }
 
     private static final class FakeInvoker implements McpToolInvoker {

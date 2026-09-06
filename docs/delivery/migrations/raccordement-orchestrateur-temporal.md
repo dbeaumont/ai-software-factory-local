@@ -479,7 +479,12 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   l'orchestrateur et le worker d'activation, puis vérifie la conservation du `workflowId` et du `runId` avant
   annulation. La projection d'état marque désormais explicitement le début et la fin de chaque activité, le client
   MCP emploie le transport HTTP JDK depuis les threads d'activité et Compose accorde 40 s au drainage Temporal.)_
-- [ ] Tuer un worker pendant une activité avec heartbeat et vérifier la reprise.
+- [x] Tuer un worker pendant une activité avec heartbeat et vérifier la reprise. _(Le checkpoint Temporal lie clé
+  d'effet, opération et `executionId` sandbox ; toute nouvelle tentative reprend ce job au lieu de le soumettre à
+  nouveau. `make test-temporal-worker-heartbeat` fige le runner de tests, vérifie le heartbeat côté serveur, envoie
+  `SIGKILL` au worker, puis contrôle la tentative 2 après `TIMEOUT_TYPE_HEARTBEAT`, le même Run ID et une unique
+  soumission sandbox. Validation Docker Desktop : workflow `ai-factory/8aa2e0fb/pipeline-1`, run
+  `01a07461-2959-774d-aa0e-48c42e3e9da0`.)_
 - [ ] Redémarrer Temporal puis PostgreSQL en préservant les volumes.
 - [ ] Simuler indisponibilité MCP, LiteLLM, Gitea, SonarQube, Artifactory et Collector.
 - [ ] Vérifier le pipeline complet : patch, tests, Sonar, Trivy, revue, approbation et une seule PR.

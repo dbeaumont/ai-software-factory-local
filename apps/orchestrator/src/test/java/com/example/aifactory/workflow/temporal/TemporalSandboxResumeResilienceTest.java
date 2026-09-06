@@ -1,6 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
-import io.temporal.activity.Activity;
+import com.example.aifactory.service.SandboxActivityHeartbeat;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -28,20 +28,22 @@ class TemporalSandboxResumeResilienceTest {
         CountDownLatch simulateWorkerLoss = new CountDownLatch(1);
         AtomicInteger attempts = new AtomicInteger();
         AtomicInteger submissions = new AtomicInteger();
+        TemporalSandboxActivityHeartbeat heartbeat = new TemporalSandboxActivityHeartbeat();
         SandboxActivities activities = () -> {
             int attempt = attempts.incrementAndGet();
-            String executionId = Activity.getExecutionContext().getHeartbeatDetails(String.class)
+            SandboxActivityHeartbeat.Checkpoint checkpoint = heartbeat.latest()
                     .orElseGet(() -> {
                         submissions.incrementAndGet();
-                        return "sandbox-execution-42";
+                        return new SandboxActivityHeartbeat.Checkpoint(
+                                "effect-" + "a".repeat(64), "run-tests", "4".repeat(32));
                     });
-            Activity.getExecutionContext().heartbeat(executionId);
+            heartbeat.record(checkpoint);
             if (attempt == 1) {
                 firstAttemptStarted.countDown();
                 await(simulateWorkerLoss);
                 throw ApplicationFailure.newFailure("sandbox worker lost", "WORKER_RESTART");
             }
-            return executionId;
+            return checkpoint.executionId();
         };
 
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
@@ -60,7 +62,7 @@ class TemporalSandboxResumeResilienceTest {
             worker.resumePolling();
 
             assertThat(WorkflowStub.fromTyped(workflow).getResult(String.class))
-                    .isEqualTo("sandbox-execution-42");
+                    .isEqualTo("4".repeat(32));
             assertThat(attempts).hasValue(2);
             assertThat(submissions).as("the external sandbox job is submitted only once").hasValue(1);
         }
