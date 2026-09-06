@@ -4,6 +4,7 @@ import com.example.aifactory.agentcore.AgentCatalog;
 import com.example.aifactory.agentcore.AgentContractValidator;
 import com.example.aifactory.agentcore.AgentManifest;
 import com.example.aifactory.agentcore.PromptRepository;
+import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,10 +27,20 @@ class A2aAgentRuntimeApplicationTest {
     @Test
     void startsAsGenericRuntimeWithTheSharedCore() {
         assertEquals("developer", properties.role());
-        assertNotNull(context.getBean(AgentCatalog.class));
-        assertNotNull(context.getBean(PromptRepository.class));
-        assertNotNull(context.getBean(AgentContractValidator.class));
+        RoleScopedAgentContext scope = context.getBean(RoleScopedAgentContext.class);
+        assertEquals("developer", scope.identity().role());
+        assertEquals(java.util.Set.of("code-task-v1"), scope.acceptedInputContracts());
+        assertEquals(java.util.Set.of("patch-proposal-v1"), scope.producedOutputContracts());
+        assertThrows(SecurityException.class, () -> scope.requireActiveRole("patch-repair"));
+        assertThrows(SecurityException.class, () -> scope.requireTool("scm.create_commit"));
+        assertNotNull(scope.systemPrompt());
         assertEquals("developer", context.getBean(AgentManifest.class).role());
+        assertThrows(org.springframework.beans.factory.NoSuchBeanDefinitionException.class,
+                () -> context.getBean(AgentCatalog.class));
+        assertThrows(org.springframework.beans.factory.NoSuchBeanDefinitionException.class,
+                () -> context.getBean(PromptRepository.class));
+        assertThrows(org.springframework.beans.factory.NoSuchBeanDefinitionException.class,
+                () -> context.getBean(AgentContractValidator.class));
     }
 
     @Test

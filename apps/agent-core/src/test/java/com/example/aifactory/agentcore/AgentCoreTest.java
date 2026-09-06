@@ -32,6 +32,19 @@ class AgentCoreTest {
     }
 
     @Test
+    void exposesOnlyTheSelectedRoleCapabilities() {
+        RoleScopedAgentContext context = RoleScopedAgentContext.load("developer", new ObjectMapper());
+        assertEquals("developer", context.identity().role());
+        assertEquals(Set.of("code-task-v1"), context.acceptedInputContracts());
+        assertEquals(Set.of("patch-proposal-v1"), context.producedOutputContracts());
+        assertTrue(context.systemPrompt().contains("Developer"));
+        assertTrue(context.promptFingerprint().matches("[0-9a-f]{64}"));
+        context.requireTool("context.read_file");
+        assertThrows(SecurityException.class, () -> context.requireTool("scm.create_commit"));
+        assertThrows(SecurityException.class, () -> context.requireActiveRole("patch-repair"));
+    }
+
+    @Test
     void validatesEveryGoldenBusinessContractWithoutNetwork() throws Exception {
         AgentCatalog catalog = new AgentCatalog();
         AgentContractValidator validator = new AgentContractValidator(new ObjectMapper(), catalog);

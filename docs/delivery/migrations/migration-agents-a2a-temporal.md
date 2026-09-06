@@ -215,8 +215,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   incompatible avec les ressources embarquées. _(`AgentManifest` compare identité, hiérarchie, outils, contrats et
   prompt au catalogue ; les 14 rôles passent, les valeurs absente/inconnue/`workflow` et le démarrage sans rôle
   échouent. L'écart `patch-repair` détecté en A2A-023 est corrigé.)_
-- [ ] **A2A-033 — Charger une seule identité d'agent.** Limiter prompts, skills, sorties et permissions à la
-  définition du rôle actif ; empêcher l'activation dynamique d'un second rôle.
+- [x] **A2A-033 — Charger une seule identité d'agent.** Limiter prompts, skills, sorties et permissions à la
+  définition du rôle actif ; empêcher l'activation dynamique d'un second rôle. _(`RoleScopedAgentContext` est
+  l'unique frontière exposée au runtime : identité et prompt uniques, contrats d'entrée/sortie et outils filtrés ;
+  le catalogue, le dépôt de prompts et le registre global ne sont plus des beans, et un second rôle est refusé.)_
 - [ ] **A2A-034 — Extraire les adaptateurs LLM.** Conserver le comportement, les budgets et les formats de réponse
   existants derrière un port sans couplage à l'orchestrateur.
 - [ ] **A2A-035 — Extraire les clients MCP.** Construire pour chaque instance uniquement les connexions MCP
