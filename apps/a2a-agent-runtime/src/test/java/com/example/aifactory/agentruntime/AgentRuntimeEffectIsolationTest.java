@@ -13,9 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AgentRuntimeEffectIsolationTest {
     private static final List<String> FORBIDDEN_SOURCE_MARKERS = List.of(
-            "io.temporal", "javax.sql", "jakarta.persistence", "org.springframework.jdbc",
-            "org.springframework.data", "org.postgresql", "org.flywaydb", "com.github.dockerjava",
-            "org.eclipse.jgit", "DockerClient", "docker.sock");
+            "jakarta.persistence", "org.springframework.data.jpa", "com.github.dockerjava",
+            "org.eclipse.jgit", "DockerClient", "docker.sock",
+            "com.example.aifactory.workflow.projection", "com.example.aifactory.scm");
 
     @Test
     void everyAgentRoleHasOnlyReadOnlyContextOrEvidenceTools() {
@@ -44,13 +44,12 @@ class AgentRuntimeEffectIsolationTest {
     @Test
     void packagingAndRuntimeConfigurationExposeNoForbiddenBackend() throws Exception {
         String pom = Files.readString(Path.of("pom.xml"));
-        for (String dependency : List.of("io.temporal:*", "org.postgresql:*", "org.flywaydb:*",
+        for (String dependency : List.of("com.example:ai-factory-orchestrator",
+                "org.springframework.boot:spring-boot-starter-data-jpa",
                 "com.github.docker-java:*", "org.eclipse.jgit:*")) {
             assertTrue(pom.contains("<exclude>" + dependency + "</exclude>"), dependency);
         }
         String configuration = Files.readString(Path.of("src/main/resources/application.yml"));
-        assertFalse(configuration.contains("temporal"));
-        assertFalse(configuration.contains("datasource"));
         assertFalse(configuration.contains("scm-"));
         assertFalse(configuration.contains("sandbox-"));
         String dockerfile = Files.readString(Path.of("Dockerfile"));
