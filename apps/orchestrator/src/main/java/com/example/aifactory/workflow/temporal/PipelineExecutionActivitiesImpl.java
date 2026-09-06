@@ -69,6 +69,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         }
         try {
             state.transition(status(command.step()), "Temporal activity: " + command.step());
+            project(state, "started");
             Path workspace = Path.of(request.workspace());
             PipelineProjectionEvent.StepExecution execution = switch (command.step()) {
                 case "plan" -> steps.plan(state, workspace, command);
@@ -82,7 +83,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             };
             execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
             applyArtifacts(state, execution.result());
-            project(state);
+            project(state, "completed");
             return execution.result();
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
@@ -98,9 +99,10 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
         try {
             state.transition(TaskStatus.GENERATING_PATCH, "Temporal activity: generate patch candidate");
+            project(state, "started");
             PipelineProjectionEvent.StepExecution execution = steps.generatePatchCandidate(
                     state, Path.of(request.workspace()), request.command());
-            applyAndProject(state, execution);
+            applyAndProject(state, execution, "completed");
             return execution.result();
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
@@ -115,9 +117,10 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         requireStepRequest(request, "validate-patch-candidate", "sandbox");
         TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
         state.transition(TaskStatus.APPLYING_PATCH, "Temporal activity: validate patch candidate");
+        project(state, "started");
         PipelineStepService.PatchValidationOutcome outcome = steps.validatePatchCandidate(
                 state, Path.of(request.workspace()), request.command());
-        applyAndProject(state, outcome.execution());
+        applyAndProject(state, outcome.execution(), "completed");
         return new PatchValidationResult(outcome.valid(), outcome.execution().result(), outcome.error());
     }
 
@@ -269,13 +272,18 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         }
         Map<String, EvidenceRepository.EvidenceReference> references = new java.util.LinkedHashMap<>();
         Map<String, String> digests = new java.util.LinkedHashMap<>();
-        request.artifacts().forEach((name, artifact) -> {
+        java.util.Set<String> required = java.util.Set.of(
+                "plan", "patch", "tests", "quality", "security", "sbom", "review");
+        required.stream().sorted().forEach(name -> {
+            PipelineStepContracts.ArtifactReference artifact = request.artifacts().get(name);
+            if (artifact == null) throw new SecurityException("Approval manifest is missing evidence: " + name);
             references.put(name, new EvidenceRepository.EvidenceReference(
                     artifact.uri(), artifact.digest(), artifact.status()));
             digests.put(name, artifact.digest());
         });
         EvidenceRepository.PolicyDecision policy = new EvidenceRepository.PolicyDecision(
-                "1", request.taskId(), request.attemptId(), "pipeline-gates", "1", "ALLOW", java.util.List.of(),
+                "1", request.taskId(), request.attemptId(), "pipeline-gates", "1", "ALLOW",
+                java.util.List.of("all-pipeline-gates-passed"),
                 Map.copyOf(digests), java.time.Instant.now());
         EvidenceRepository.StoredManifest manifest = evidence.createManifest(new EvidenceRepository.ManifestRequest(
                 request.taskId(), request.attemptId(),
@@ -309,13 +317,22 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     }
 
     private void applyAndProject(TaskState state, PipelineProjectionEvent.StepExecution execution) {
+        applyAndProject(state, execution, null);
+    }
+
+    private void applyAndProject(TaskState state, PipelineProjectionEvent.StepExecution execution,
+                                 String checkpoint) {
         execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
         applyArtifacts(state, execution.result());
-        project(state);
+        if (checkpoint == null) project(state); else project(state, checkpoint);
     }
 
     private void project(TaskState state) {
         memory.project(projectionEventId(), state);
+    }
+
+    private void project(TaskState state, String checkpoint) {
+        memory.project(projectionEventId() + ':' + checkpoint, state);
     }
 
     private static String projectionEventId() {

@@ -70,7 +70,7 @@ public class EvidenceStore {
                                                        String sourceCommit, String patchDigest,
                                                        Map<String, EvidenceReference> artifacts,
                                                        PolicyDecision policyDecision) throws Exception {
-        Set<String> required = Set.of("plan", "patch", "metadata", "tests", "sonar", "sbom", "trivy", "review", "approval");
+        Set<String> required = Set.of("plan", "patch", "tests", "quality", "security", "sbom", "review");
         if (repositoryId == null || !repositoryId.matches("[a-z0-9][a-z0-9-]{1,62}")
                 || sourceCommit == null || !sourceCommit.matches("[0-9a-f]{40}")
                 || patchDigest == null || !patchDigest.matches("[0-9a-f]{64}")

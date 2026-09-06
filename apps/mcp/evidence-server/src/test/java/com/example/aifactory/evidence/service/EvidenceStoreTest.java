@@ -27,6 +27,13 @@ class EvidenceStoreTest {
         }
         assertEquals("CONFIDENTIAL", policy.requireWrite("security", "workflow").classification());
         assertThrows(SecurityException.class, () -> policy.requireWrite("unregistered", "workflow"));
+        assertDoesNotThrow(() -> policy.requireRead("patch-validation-error", "workflow", "repair-patch"));
+        assertDoesNotThrow(() -> policy.requireRead(
+                "code-patch", "workflow", "apply-patch-integration:" + "a".repeat(64)));
+        assertThrows(SecurityException.class, () -> policy.requireRead(
+                "code-patch", "reviewer", "apply-patch-integration:" + "a".repeat(64)));
+        assertThrows(SecurityException.class, () -> policy.requireRead(
+                "code-patch", "workflow", "apply-patch-integration:not-a-digest"));
     }
 
     @Test
@@ -50,7 +57,7 @@ class EvidenceStoreTest {
     void manifestAcceptsOnlyStoredSameAttemptArtifacts(@TempDir Path root) throws Exception {
         EvidenceStore store = new EvidenceStore(new EvidenceProperties(root, 1024), new ObjectMapper(), new EvidencePolicy());
         Map<String, EvidenceStore.EvidenceReference> artifacts = new LinkedHashMap<>();
-        for (String type : java.util.List.of("plan", "patch", "metadata", "tests", "sonar", "sbom", "trivy", "review", "approval")) {
+        for (String type : java.util.List.of("plan", "patch", "tests", "quality", "security", "sbom", "review")) {
             byte[] content = type.getBytes(StandardCharsets.UTF_8);
             String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
             EvidenceStore.StoredEvidence stored = store.store("task-1", "attempt-1", type, "text/plain",
@@ -70,7 +77,7 @@ class EvidenceStoreTest {
         assertFalse(new String(encryptedManifest, StandardCharsets.UTF_8).contains("policy_decision"));
         assertEquals("CONFIDENTIAL", first.classification());
         Map<String, EvidenceStore.EvidenceReference> incomplete = new LinkedHashMap<>(artifacts);
-        incomplete.remove("approval");
+        incomplete.remove("review");
         assertThrows(IllegalArgumentException.class, () -> store.createManifest("task-1", "attempt-1", "customer-api",
                 "a".repeat(40), patchDigest, incomplete, decision));
         Map<String, EvidenceStore.EvidenceReference> crossTask = new LinkedHashMap<>(artifacts);

@@ -474,7 +474,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   `ai-factory/a0bd34b9/pipeline-1` et le run `01a0741e-48f3-7182-be6e-0d6f7dc8db44`. L'API de Temporal UI et la
   CLI retrouvent exactement ces identifiants et les Search Attributes. `make test-temporal-ticket-ui` rend ce
   contrôle reproductible.)_
-- [ ] Tuer puis recréer l'orchestrateur pendant chaque phase critique.
+- [x] Tuer puis recréer l'orchestrateur pendant chaque phase critique. _(La cible
+  `make test-temporal-orchestrator-restarts` soumet un ticket isolé pour chacune des huit phases, recrée
+  l'orchestrateur et le worker d'activation, puis vérifie la conservation du `workflowId` et du `runId` avant
+  annulation. La projection d'état marque désormais explicitement le début et la fin de chaque activité, le client
+  MCP emploie le transport HTTP JDK depuis les threads d'activité et Compose accorde 40 s au drainage Temporal.)_
 - [ ] Tuer un worker pendant une activité avec heartbeat et vérifier la reprise.
 - [ ] Redémarrer Temporal puis PostgreSQL en préservant les volumes.
 - [ ] Simuler indisponibilité MCP, LiteLLM, Gitea, SonarQube, Artifactory et Collector.

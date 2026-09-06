@@ -33,7 +33,7 @@ public class EvidenceTools {
                                          @ToolParam(description = "Registered repository identifier") String repository_id,
                                          @ToolParam(description = "Immutable source commit") String source_commit,
                                          @ToolParam(description = "Patch SHA-256") String patch_digest,
-                                         @ToolParam(description = "Nine stored evidence references") java.util.Map<String, EvidenceReference> artifacts,
+                                         @ToolParam(description = "Seven final pipeline evidence references") java.util.Map<String, EvidenceReference> artifacts,
                                          @ToolParam(description = "Structured assurance policy decision") PolicyDecision policy_decision,
                                          @ToolParam(description = "Authorized workflow actor") String actor) throws Exception {
         if (!"1".equals(schema_version) || !"workflow".equals(actor)) throw new SecurityException("unauthorized manifest request");

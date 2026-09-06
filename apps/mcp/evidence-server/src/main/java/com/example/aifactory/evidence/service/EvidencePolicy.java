@@ -45,9 +45,12 @@ public class EvidencePolicy {
 
     public Rule requireRead(String type, String actor, String purpose) {
         Rule rule = require(type);
+        boolean workflowInternalPurpose = "workflow".equals(actor) && ("repair-patch".equals(purpose)
+                || (purpose != null && purpose.matches("apply-patch-integration:[0-9a-f]{64}")));
         if (!("workflow".equals(actor) || "reviewer".equals(actor) || "independent-reviewer".equals(actor))
                 || !("human-review".equals(purpose) || "incident-investigation".equals(purpose)
-                || "projection-recovery".equals(purpose) || "legacy-task-read".equals(purpose))
+                || "projection-recovery".equals(purpose) || "legacy-task-read".equals(purpose)
+                || workflowInternalPurpose)
                 || ("approval".equals(type) && !"workflow".equals(actor))) {
             throw new SecurityException("raw evidence read is not authorized");
         }

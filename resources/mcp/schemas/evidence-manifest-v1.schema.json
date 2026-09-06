@@ -15,17 +15,15 @@
     "patch_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "artifacts": {
       "type": "object", "additionalProperties": false,
-      "required": ["plan", "patch", "metadata", "tests", "sonar", "sbom", "trivy", "review", "approval"],
+      "required": ["plan", "patch", "tests", "quality", "security", "sbom", "review"],
       "properties": {
         "plan": { "$ref": "#/$defs/evidence" },
         "patch": { "$ref": "#/$defs/evidence" },
-        "metadata": { "$ref": "#/$defs/evidence" },
         "tests": { "$ref": "#/$defs/evidence" },
-        "sonar": { "$ref": "#/$defs/evidence" },
+        "quality": { "$ref": "#/$defs/evidence" },
+        "security": { "$ref": "#/$defs/evidence" },
         "sbom": { "$ref": "#/$defs/evidence" },
-        "trivy": { "$ref": "#/$defs/evidence" },
-        "review": { "$ref": "#/$defs/evidence" },
-        "approval": { "$ref": "#/$defs/evidence" }
+        "review": { "$ref": "#/$defs/evidence" }
       }
     },
     "policy_decision": {
