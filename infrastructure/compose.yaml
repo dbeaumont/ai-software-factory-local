@@ -689,7 +689,7 @@ services:
         condition: service_healthy
       orchestrator-db:
         condition: service_healthy
-    networks: [factory, mcp-internal, workflow-internal]
+    networks: [factory, mcp-internal, workflow-internal, a2a-internal]
 
   # Local cutover job: makes the fully registered worker Build ID current only after readiness succeeds.
   temporal-worker-activation:
@@ -915,6 +915,10 @@ services:
     networks: [ai-factory-signoz-network]
 
 networks:
+  # Private agent protocol segment: only the orchestrator and A2A role runtimes join it.
+  a2a-internal:
+    name: ai-factory-a2a-internal
+    internal: true
   # Temporal frontend and database remain private; only workflow workers join this segment.
   workflow-internal:
     name: ai-factory-workflow-internal

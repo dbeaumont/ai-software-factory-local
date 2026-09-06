@@ -29,7 +29,7 @@ x-a2a-agent-runtime: &a2a-agent-runtime
     AI_FACTORY_A2A_TEMPORAL_ENABLED: "false"
     AI_FACTORY_A2A_TASK_STORE_ENABLED: "false"
     AI_FACTORY_MCP_ENABLED: "false"
-  networks: [workflow-internal]
+  networks: [a2a-internal, workflow-internal]
 
 services:
   a2a-supervisor:

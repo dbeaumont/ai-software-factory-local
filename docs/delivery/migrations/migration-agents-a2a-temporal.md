@@ -561,8 +561,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `infrastructure/a2a/compose-agents.yaml` instancie les quatorze rôles explicites à partir de l'unique
     image `ai-factory-a2a-agent-runtime`, avec identité et endpoint propres mais sans `container_name` ;
     `verify-a2a-compose-runtime.rb` contrôle exhaustivité, unicité d'image, UID et cohérence rôle/service.
-- [ ] **A2A-121 — Isoler le réseau A2A.** Créer un réseau interne dédié reliant orchestrateur et agents ; ne publier
+- [x] **A2A-121 — Isoler le réseau A2A.** Créer un réseau interne dédié reliant orchestrateur et agents ; ne publier
   aucun endpoint A2A sur l'hôte par défaut.
+  - Preuve : le réseau Compose `ai-factory-a2a-internal` est déclaré `internal` et ne compte que l'orchestrateur et
+    les quatorze runtimes ; aucun service agent ne déclare de port hôte. `verify-a2a-compose-network.rb` contrôle
+    ces invariants sur le modèle Compose entièrement résolu.
 - [ ] **A2A-122 — Conserver les réseaux MCP minimaux.** Chaque agent rejoint seulement les réseaux des MCP qu'il
   peut utiliser ; l'orchestrateur conserve les capacités à effet qui lui appartiennent.
 - [ ] **A2A-123 — Ajouter le stockage local durable.** Fournir la base/projection de tâches A2A et ses migrations,

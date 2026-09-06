@@ -25,6 +25,8 @@ services.each do |name, service|
   abort "#{name} role mismatch" unless environment.fetch("AI_FACTORY_AGENT_ROLE") == role
   abort "#{name} endpoint mismatch" unless environment.fetch("AI_FACTORY_AGENT_ENDPOINT").include?(name)
   abort "#{name} must run as UID 10001" unless service.fetch("user") == "10001:10001"
+  abort "#{name} must join the private A2A network" unless service.fetch("networks").include?("a2a-internal")
+  abort "#{name} must not publish a host port" if service.key?("ports")
 end
 
 puts "A2A Compose runtime verified: #{services.length} explicit roles share #{images.first}."
