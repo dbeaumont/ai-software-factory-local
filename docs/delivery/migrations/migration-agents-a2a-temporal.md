@@ -852,8 +852,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   réconciliation, les effets MCP/Evidence et la chaîne OTLP/SigNoz.)_
 - [ ] **A2A-223 — Mettre à jour le README.** Expliquer que les agents sont désormais adressables par A2A et ne
   résident plus comme rôles directement invoqués dans la JVM de l'orchestrateur.
-- [ ] **A2A-224 — Documenter l'ajout d'un agent.** Catalogue, contrat, Agent Card, identité, task queue, service,
-  permissions, observabilité, tests TCK et gate.
+- [x] **A2A-224 — Documenter l'ajout d'un agent.** Catalogue, contrat, Agent Card, identité, task queue, service,
+  permissions, observabilité, tests TCK et gate. _(La checklist normative
+  `docs/architecture/agents/AJOUTER-UN-AGENT-A2A.md` couvre identité, schémas, découverte, Temporal, Compose/GKE,
+  secrets, réseau, télémétrie, TCK, sécurité, replay, performance et gate de cutover.)_
 - [ ] **A2A-225 — Documenter l'exploitation locale.** Démarrage, diagnostic, cartes, traces, tâches, certificats,
   reset contrôlé et ressources Docker Desktop.
 - [ ] **A2A-226 — Documenter l'exploitation GKE.** Déploiement, scaling, rotation, NetworkPolicies, incidents,
