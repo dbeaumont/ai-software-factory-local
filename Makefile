@@ -156,6 +156,7 @@ test:
 	./scripts/check-no-docker-socket.sh
 	./scripts/test-a2a-pki.sh
 	./scripts/test-a2a-secret-rotation.sh
+	./scripts/verify-a2a-threat-model.rb
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; fi
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/repository-context-server/pom.xml clean test
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/sandbox-execution-server/pom.xml clean test

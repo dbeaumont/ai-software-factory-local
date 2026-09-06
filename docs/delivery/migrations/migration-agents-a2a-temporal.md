@@ -535,8 +535,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
     génèrent 14 jeux isolés en mode `0600`, vérifient PKI/JWK et testent remplacement atomique, rotation, révocation
     et refus des permissions faibles. Les tests de transport prouvent aussi l'absence de secret dans erreurs,
     décisions, métadonnées A2A et historiques.
-- [ ] **A2A-110 — Produire l'analyse de menaces.** Couvrir spoofing de carte, confused deputy, rejeu, SSRF,
+- [x] **A2A-110 — Produire l'analyse de menaces.** Couvrir spoofing de carte, confused deputy, rejeu, SSRF,
   élévation de privilège, poisoning d'artefact, cross-tenant et déni de service.
+  - Preuve : `docs/architecture/a2a/A2A-110-threat-model.md` décrit actifs, adversaires, neuf frontières, STRIDE,
+    cotation, huit scénarios, abus composés, contrôles, détection, réponse, tests et gouvernance ; le vérificateur
+    relie automatiquement chaque scénario à ses preuves et aux vingt risques du registre A2A.
 - [ ] **A2A-111 — Ajouter les scans de supply chain.** SBOM, licences, signatures, provenance, Trivy et politique
   de vulnérabilités pour le SDK A2A et l'image runtime.
 
