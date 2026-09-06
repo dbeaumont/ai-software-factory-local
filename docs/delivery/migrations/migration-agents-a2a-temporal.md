@@ -263,8 +263,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   contrat du rôle, plus des références de preuves optionnelles et bornées. _(Les 15 sorties sont mappées, avec un
   unique contrat principal par rôle et `delegation-plan-v1` interne ; `a2a-result-v1` impose un seul artefact JSON
   principal et au plus 32 références Evidence conformes à A2A-041.)_
-- [ ] **A2A-044 — Conserver la validation actuelle.** Valider le JSON métier avant l'envoi A2A et après réception,
-  indépendamment de la validation du modèle protocolaire A2A.
+- [x] **A2A-044 — Conserver la validation actuelle.** Valider le JSON métier avant l'envoi A2A et après réception,
+  indépendamment de la validation du modèle protocolaire A2A. _(`A2aBusinessContractGuard` vérifie mapping puis
+  schéma métier et corrélation avant envoi et après réception ; un message protocolairement valide ne peut pas
+  contourner les 18 schémas existants.)_
 - [ ] **A2A-045 — Définir la corrélation.** Transporter `taskId`, `attemptId`, `workflowId`, `workflowRunId`,
   `sourceCommit`, `repositoryId`, `delegationId`, `parentDelegationId`, `agentRole` et digests dans l'extension de
   corrélation.
