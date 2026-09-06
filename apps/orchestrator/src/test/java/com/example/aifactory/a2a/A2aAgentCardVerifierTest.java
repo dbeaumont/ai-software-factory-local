@@ -86,6 +86,9 @@ class A2aAgentCardVerifierTest {
         card.put("provider", Map.of("organization", "AI Software Factory", "url", "https://ai-factory.local"));
         card.put("url", "https://agent-developer:8090/a2a");
         card.put("preferredTransport", "JSONRPC");
+        card.put("supportedInterfaces", List.of(Map.of(
+                "url", "https://agent-developer:8090/a2a",
+                "protocolBinding", "JSONRPC", "protocolVersion", "1.0")));
         card.put("capabilities", Map.of("streaming", false, "pushNotifications", false));
         card.put("metadata", Map.of("issuer", "ai-factory", "role", role, "expiresAt", expiresAt));
         card.put("skills", List.of(Map.of("id", "developer.code-task-v1")));

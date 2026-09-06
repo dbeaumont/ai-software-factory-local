@@ -51,6 +51,10 @@ final class AgentCardController {
         card.put("additionalInterfaces", List.of(Map.of(
                 "url", properties.endpoint().toString(),
                 "transport", "JSONRPC")));
+        card.put("supportedInterfaces", List.of(Map.of(
+                "url", properties.endpoint().toString(),
+                "protocolBinding", "JSONRPC",
+                "protocolVersion", "1.0")));
         card.put("version", source.catalogId());
         card.put("capabilities", Map.of(
                 "streaming", false,

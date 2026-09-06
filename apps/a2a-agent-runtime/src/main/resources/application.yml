@@ -34,6 +34,8 @@ management:
 
 ai-factory:
   agent-runtime:
+    tck:
+      enabled: ${AI_FACTORY_A2A_TCK_ENABLED:false}
     role: ${AI_FACTORY_AGENT_ROLE:}
     endpoint: ${AI_FACTORY_AGENT_ENDPOINT:http://localhost:${AI_FACTORY_AGENT_PORT:8090}/a2a}
     security:

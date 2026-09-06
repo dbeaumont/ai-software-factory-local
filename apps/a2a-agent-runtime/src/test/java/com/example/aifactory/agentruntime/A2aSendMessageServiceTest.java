@@ -248,8 +248,7 @@ class A2aSendMessageServiceTest {
 
     @SuppressWarnings("unchecked")
     private static Map<String, Object> errorInfo(Map<String, Object> error) {
-        Map<String, Object> status = (Map<String, Object>) error.get("data");
-        return (Map<String, Object>) ((java.util.List<?>) status.get("details")).getFirst();
+        return (Map<String, Object>) ((java.util.List<?>) error.get("data")).getFirst();
     }
 
     private JsonNode request(String messageId, String role, String digest) throws Exception {

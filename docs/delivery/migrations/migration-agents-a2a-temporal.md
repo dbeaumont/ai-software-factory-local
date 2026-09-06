@@ -697,8 +697,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   leurs schémas et fixtures dorées. _(Les 14 rôles, 33 mappings, 18 contrats métier, enveloppes, artefacts et
   extension de corrélation sont couverts positivement et négativement ; preuve :
   `docs/evidence/a2a/A2A-161-CONTRACT-TESTS.md`.)_
-- [ ] **A2A-162 — Exécuter le TCK A2A officiel.** Tester chaque opération et capacité déclarée avec la version
-  épinglée du protocole et archiver le rapport.
+- [x] **A2A-162 — Exécuter le TCK A2A officiel.** Tester chaque opération et capacité déclarée avec la version
+  épinglée du protocole et archiver le rapport. _(TCK officiel `1.0.0.alpha2` épinglé, correctif amont `#213`
+  vérifiable, SUT isolé sans réseau public : 100 % de compatibilité, 68 tests réussis et aucun échec ; rapports
+  HTML, JSON et JUnit sous `docs/evidence/a2a/tck/`.)_
 - [ ] **A2A-163 — Tester l'interopérabilité.** Appeler au moins un serveur de référence depuis le client du projet
   et le serveur du projet depuis un client officiel indépendant.
 - [ ] **A2A-164 — Tests Temporal embarqués.** Vérifier attentes, signaux, timers, retries, annulation, timeouts

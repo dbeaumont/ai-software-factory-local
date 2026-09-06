@@ -1,0 +1,2 @@
+# The compatibility HTML is the canonical archived report; omit pytest's redundant generated view.
+tck_report.html

@@ -4,6 +4,7 @@ import com.example.aifactory.agentcore.A2aDecisionJournal;
 import org.a2aproject.sdk.spec.A2AErrorCodes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +17,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,15 +32,23 @@ final class A2aJsonRpcController {
     private final A2aSecurityProperties security;
     private final A2aDecisionJournal audit;
     private final A2aServerMetrics metrics;
+    private final A2aTckConformanceService conformance;
+
+    A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security,
+                         A2aDecisionJournal audit, A2aServerMetrics metrics) {
+        this(mapper, service, security, audit, metrics, Optional.empty());
+    }
 
     @Autowired
     A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security,
-                         A2aDecisionJournal audit, A2aServerMetrics metrics) {
+                         A2aDecisionJournal audit, A2aServerMetrics metrics,
+                         Optional<A2aTckConformanceService> conformance) {
         this.mapper = mapper;
         this.service = service;
         this.security = security;
         this.audit = audit;
         this.metrics = metrics;
+        this.conformance = conformance.orElse(null);
     }
 
     A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security,
@@ -57,6 +67,18 @@ final class A2aJsonRpcController {
             Authentication authentication) {
         return reactor.core.publisher.Mono.fromCallable(() -> handle(version, body, authentication))
                 .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
+    }
+
+    @PostMapping(path = ENDPOINT, consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    reactor.core.publisher.Flux<ServerSentEvent<Map<String, Object>>> handleStreaming(
+            @RequestHeader(name = "A2A-Version", required = false) String version,
+            @RequestBody byte[] body,
+            Authentication authentication) {
+        return reactor.core.publisher.Mono.fromCallable(() -> handle(version, body, authentication))
+                .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                .map(payload -> ServerSentEvent.builder(payload).build())
+                .flux();
     }
 
     Map<String, Object> handle(String version, byte[] body, Authentication authentication) {
@@ -78,34 +100,47 @@ final class A2aJsonRpcController {
             if (!"2.0".equals(request.path("jsonrpc").asText())) {
                 throw new RpcFailure(A2AErrorCodes.INVALID_REQUEST, "JSON-RPC version 2.0 is required");
             }
-            return switch (request.path("method").asText()) {
-                case "message/send" -> response(requestId,
+            String method = request.path("method").asText();
+            if (conformance != null) {
+                return response(requestId, conformance.handle(method, request.path("params")));
+            }
+            return switch (method) {
+                case "SendMessage", "message/send" -> response(requestId,
                         task(service.send(request.path("params"), caller(authentication)),
                                 A2aSendMessageService.TaskState.SUBMITTED, 0, List.of(), List.of()));
-                case "tasks/get" -> {
+                case "GetTask", "tasks/get" -> {
                     A2aSendMessageService.TaskView view = service.getTask(
                             request.path("params"), caller(authentication));
                     yield response(requestId, task(view.submission(), view.state(), view.sequence(),
                             view.history(), view.artifacts()));
                 }
-                case "tasks/list" -> {
+                case "ListTasks", "tasks/list" -> {
                     A2aSendMessageService.TaskPage page = service.listTasks(
                             request.path("params"), caller(authentication));
                     Map<String, Object> result = new LinkedHashMap<>();
                     result.put("tasks", page.tasks().stream()
                             .map(view -> task(view.submission(), view.state(), view.sequence(),
                                     view.history(), view.artifacts())).toList());
-                    if (page.nextPageToken() != null) result.put("nextPageToken", page.nextPageToken());
+                    result.put("nextPageToken", page.nextPageToken() == null ? "" : page.nextPageToken());
                     yield response(requestId, Map.copyOf(result));
                 }
-                case "tasks/cancel" -> {
+                case "CancelTask", "tasks/cancel" -> {
                     A2aSendMessageService.TaskView view = service.cancelTask(
                             request.path("params"), caller(authentication));
                     yield response(requestId, task(view.submission(), view.state(), view.sequence(),
                             view.history(), view.artifacts()));
                 }
-                default -> throw new RpcFailure(A2AErrorCodes.METHOD_NOT_FOUND, "A2A method is not available");
+                case "SendStreamingMessage", "SubscribeToTask", "GetExtendedAgentCard" ->
+                        throw new RpcFailure(A2AErrorCodes.UNSUPPORTED_OPERATION, "A2A operation is not supported");
+                case "CreateTaskPushNotificationConfig", "GetTaskPushNotificationConfig",
+                     "ListTaskPushNotificationConfigs", "DeleteTaskPushNotificationConfig" ->
+                        throw new RpcFailure(A2AErrorCodes.PUSH_NOTIFICATION_NOT_SUPPORTED,
+                                "Push notifications are not supported");
+                default -> throw new RpcFailure(A2AErrorCodes.METHOD_NOT_FOUND,
+                        "A2A method is not available");
             };
+        } catch (A2aTckConformanceService.Failure failure) {
+            return error(requestId, failure.code, failure.getMessage(), classify(failure.code, failure.getMessage()));
         } catch (RpcFailure failure) {
             recordRefusal(authentication, requestId, A2aDecisionJournal.EventType.REFUSAL);
             return error(requestId, failure.code, failure.getMessage(), classify(failure.code, failure.getMessage()));
@@ -224,13 +259,10 @@ final class A2aJsonRpcController {
         Map<String, Object> errorInfo = Map.of(
                 "@type", "type.googleapis.com/google.rpc.ErrorInfo",
                 "reason", failure.reason(),
-                "domain", "ai-factory.a2a",
+                "domain", "a2a-protocol.org",
                 "metadata", Map.copyOf(metadata));
-        Map<String, Object> status = Map.of(
-                "@type", "type.googleapis.com/google.rpc.Status",
-                "code", failure.grpcCode(), "message", message, "details", List.of(errorInfo));
         return Map.of("jsonrpc", "2.0", "id", id == null ? "null" : id,
-                "error", Map.of("code", code.code(), "message", message, "data", status));
+                "error", Map.of("code", code.code(), "message", message, "data", List.of(errorInfo)));
     }
 
     private static FailureInfo classifySubmission(A2aSendMessageService.SubmissionRejected failure) {
@@ -254,9 +286,17 @@ final class A2aJsonRpcController {
         return switch (code) {
             case JSON_PARSE, INVALID_REQUEST -> new FailureInfo(3, "PROTOCOL_INVALID", "CONTRACT", false, null);
             case METHOD_NOT_FOUND, UNSUPPORTED_OPERATION ->
-                    new FailureInfo(12, "OPERATION_UNSUPPORTED", "CONTRACT", false, null);
+                    new FailureInfo(12, code == A2AErrorCodes.UNSUPPORTED_OPERATION
+                            ? "UNSUPPORTED_OPERATION" : "METHOD_NOT_FOUND", "CONTRACT", false, null);
             case VERSION_NOT_SUPPORTED, EXTENSION_SUPPORT_REQUIRED ->
-                    new FailureInfo(9, "PROTOCOL_VERSION_UNSUPPORTED", "CONTRACT", false, null);
+                    new FailureInfo(9, code == A2AErrorCodes.VERSION_NOT_SUPPORTED
+                            ? "VERSION_NOT_SUPPORTED" : "EXTENSION_SUPPORT_REQUIRED", "CONTRACT", false, null);
+            case TASK_NOT_FOUND -> new FailureInfo(5, "TASK_NOT_FOUND", "LOOKUP", false, null);
+            case TASK_NOT_CANCELABLE -> new FailureInfo(9, "TASK_NOT_CANCELABLE", "BUSINESS", false, null);
+            case PUSH_NOTIFICATION_NOT_SUPPORTED ->
+                    new FailureInfo(12, "PUSH_NOTIFICATION_NOT_SUPPORTED", "CONTRACT", false, null);
+            case CONTENT_TYPE_NOT_SUPPORTED ->
+                    new FailureInfo(3, "CONTENT_TYPE_NOT_SUPPORTED", "CONTRACT", false, null);
             default -> new FailureInfo(13, code.name(), "INTERNAL", false, null);
         };
     }

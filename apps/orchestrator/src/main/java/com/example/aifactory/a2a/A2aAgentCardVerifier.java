@@ -39,8 +39,11 @@ public final class A2aAgentCardVerifier {
             verifySignature(signatures, canonical, policy.trustedKeyFingerprints());
 
             require("1.0".equals(card.get("protocolVersion")), "Unsupported protocol version");
-            require("JSONRPC".equals(card.get("preferredTransport")), "Unsupported protocol binding");
-            require(policy.expectedEndpoint().toString().equals(card.get("url")), "Unexpected agent endpoint");
+            Map<?, ?> preferredInterface = firstObject(card, "supportedInterfaces");
+            require("JSONRPC".equals(preferredInterface.get("protocolBinding")), "Unsupported protocol binding");
+            require("1.0".equals(preferredInterface.get("protocolVersion")), "Unsupported interface version");
+            require(policy.expectedEndpoint().toString().equals(preferredInterface.get("url")),
+                    "Unexpected agent endpoint");
 
             Map<?, ?> provider = object(card, "provider");
             require(policy.expectedProvider().toString().equals(provider.get("url")), "Unexpected card provider");
@@ -108,6 +111,13 @@ public final class A2aAgentCardVerifier {
         Object value = source.get(field);
         require(value instanceof List<?>, "Missing list " + field);
         return (List<?>) value;
+    }
+
+    private static Map<?, ?> firstObject(Map<String, Object> source, String field) {
+        List<?> values = list(source, field);
+        require(!values.isEmpty() && values.getFirst() instanceof Map<?, ?>,
+                "Missing preferred interface " + field);
+        return (Map<?, ?>) values.getFirst();
     }
 
     private static String string(Map<?, ?> source, String field) {
