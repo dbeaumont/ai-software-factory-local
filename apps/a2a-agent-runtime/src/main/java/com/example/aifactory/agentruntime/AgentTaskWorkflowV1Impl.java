@@ -1,6 +1,8 @@
 package com.example.aifactory.agentruntime;
 
 import io.temporal.common.VersioningBehavior;
+import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
 import io.temporal.workflow.WorkflowVersioningBehavior;
 
@@ -9,13 +11,25 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
     private Outcome outcome;
     private boolean canceled;
     private String cancellationReason;
+    private String currentState = "SUBMITTED";
+    private final AgentTaskProjectionActivities projections = Workflow.newActivityStub(
+            AgentTaskProjectionActivities.class,
+            ActivityOptions.newBuilder().setStartToCloseTimeout(java.time.Duration.ofSeconds(30))
+                    .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(10).build()).build());
 
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
     public Outcome run(Input input) {
         requireInput(input);
+        currentState = "WORKING";
+        projections.project(new AgentTaskProjectionActivities.Projection(
+                input.taskId(), currentState, input.taskId() + ":working"));
         Workflow.await(() -> outcome != null || canceled);
-        return canceled ? new Outcome("CANCELED", null, cancellationReason) : outcome;
+        Outcome terminal = canceled ? new Outcome("CANCELED", null, cancellationReason) : outcome;
+        currentState = terminal.state();
+        projections.project(new AgentTaskProjectionActivities.Projection(
+                input.taskId(), currentState, input.taskId() + ":terminal:" + currentState));
+        return terminal;
     }
 
     @Override
@@ -33,8 +47,7 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
 
     @Override
     public String state() {
-        if (canceled) return "CANCELED";
-        return outcome == null ? "SUBMITTED" : outcome.state();
+        return currentState;
     }
 
     private static void requireInput(Input input) {
@@ -47,7 +60,8 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
     }
 
     private static Outcome requireOutcome(Outcome outcome) {
-        if (outcome == null || outcome.state() == null || outcome.state().isBlank()) {
+        if (outcome == null || outcome.state() == null
+                || !java.util.Set.of("COMPLETED", "REJECTED", "FAILED").contains(outcome.state())) {
             throw new IllegalArgumentException("Agent task workflow outcome is incomplete");
         }
         return outcome;

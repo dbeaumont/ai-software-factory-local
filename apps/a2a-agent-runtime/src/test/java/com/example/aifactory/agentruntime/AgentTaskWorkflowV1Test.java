@@ -22,6 +22,7 @@ class AgentTaskWorkflowV1Test {
             String queue = properties.taskQueue("developer");
             Worker worker = environment.newWorker(queue);
             worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
+            worker.registerActivitiesImplementations(new RecordingProjection());
             environment.start();
             TemporalAgentTaskWorkflowGateway gateway = new TemporalAgentTaskWorkflowGateway(
                     environment.getWorkflowClient(), properties, "developer");
@@ -36,7 +37,7 @@ class AgentTaskWorkflowV1Test {
 
             AgentTaskWorkflowV1 workflow = environment.getWorkflowClient()
                     .newWorkflowStub(AgentTaskWorkflowV1.class, first.workflowId());
-            assertThat(workflow.state()).isEqualTo("SUBMITTED");
+            assertThat(workflow.state()).isEqualTo("WORKING");
             workflow.complete(new AgentTaskWorkflowV1.Outcome("COMPLETED", "a".repeat(64), "validated"));
             assertThat(WorkflowStub.fromTyped(workflow).getResult(AgentTaskWorkflowV1.Outcome.class).state())
                     .isEqualTo("COMPLETED");
@@ -53,7 +54,9 @@ class AgentTaskWorkflowV1Test {
     void cancellationSignalTerminatesTheWaitingWorkflowIdempotently() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             String queue = "a2a-agent-developer-v1";
-            environment.newWorker(queue).registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
+            Worker worker = environment.newWorker(queue);
+            worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
+            worker.registerActivitiesImplementations(new RecordingProjection());
             environment.start();
             AgentTaskWorkflowV1 workflow = environment.getWorkflowClient().newWorkflowStub(
                     AgentTaskWorkflowV1.class, io.temporal.client.WorkflowOptions.newBuilder()
@@ -67,5 +70,9 @@ class AgentTaskWorkflowV1Test {
             assertThat(outcome.state()).isEqualTo("CANCELED");
             assertThat(outcome.detail()).isEqualTo("requested");
         }
+    }
+
+    public static final class RecordingProjection implements AgentTaskProjectionActivities {
+        @Override public void project(Projection projection) { }
     }
 }
