@@ -485,8 +485,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `resources/a2a/service-identities-v1.json`, son schéma et
     `A2aServiceIdentityRegistryTest` lient l'orchestrateur et les 14 rôles à des clients OAuth, sujets SPIFFE et
     références de secrets tous distincts, et rejettent explicitement toute réutilisation inter-rôles.
-- [ ] **A2A-101 — Chiffrer tous les échanges.** Utiliser mTLS entre workloads en production et une PKI locale de
+- [x] **A2A-101 — Chiffrer tous les échanges.** Utiliser mTLS entre workloads en production et une PKI locale de
   développement dans Compose ; vérifier SAN, chaîne, expiration et révocation.
+  - Preuve : `resources/a2a/tls-policy-v1.json`, `scripts/generate-a2a-local-pki.sh` et
+    `scripts/verify-a2a-pki.sh` imposent TLS 1.3, certificats client obligatoires, identité SPIFFE, chaîne locale,
+    durée minimale et CRL ; `scripts/test-a2a-pki.sh` prouve notamment le rejet d'un certificat révoqué.
 - [ ] **A2A-102 — Ajouter OAuth2 client credentials.** Utiliser des jetons courts avec audiences A2A et scopes par
   opération/skill ; ne pas placer les jetons dans les Agent Cards, payloads, logs ou historiques Temporal.
 - [ ] **A2A-103 — Appliquer l'autorisation avant lookup.** Vérifier tenant, client, rôle et skill avant toute

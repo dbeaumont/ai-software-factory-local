@@ -18,12 +18,13 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init a2a-pki build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
 	@echo -e "$(YELLOW)AI Software Factory prototype - Commandes :$(NC)"
 	@echo -e "  $(CYAN)make init$(NC)       - create .env and .vault from their examples"
+	@echo -e "  $(CYAN)make a2a-pki$(NC)    - verify the generated local A2A mTLS material"
 	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
 	@echo -e "  $(CYAN)make up$(NC)         - start the complete local factory stack"
 	@echo -e "  $(CYAN)make all$(NC)        - reset data and start a fully bootstrapped local factory"
@@ -77,6 +78,11 @@ init:
 	@test -f .vault || cp .vault.example .vault
 	@./scripts/init-local-config.sh
 	@echo -e "$(GREEN).env and .vault ready$(NC)"
+
+a2a-pki:
+	$(log-target)
+	@test -d .local/a2a-pki || ./scripts/generate-a2a-local-pki.sh .local/a2a-pki
+	@./scripts/verify-a2a-pki.sh .local/a2a-pki
 
 build: temporal-replay
 	$(log-target)
@@ -142,6 +148,7 @@ test:
 	$(log-target)
 	@echo -e "$(BLUE)Running orchestrator and MCP server tests...$(NC)"
 	./scripts/check-no-docker-socket.sh
+	./scripts/test-a2a-pki.sh
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; fi
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/repository-context-server/pom.xml clean test
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/sandbox-execution-server/pom.xml clean test

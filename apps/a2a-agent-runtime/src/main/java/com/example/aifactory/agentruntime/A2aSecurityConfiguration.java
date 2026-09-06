@@ -47,6 +47,15 @@ class A2aSecurityConfiguration {
                 || !"need".equalsIgnoreCase(environment.getProperty("server.ssl.client-auth", ""))) {
             throw new IllegalStateException("Secure A2A runtime requires server.ssl.enabled and client-auth=need");
         }
+        String protocols = environment.getProperty("server.ssl.enabled-protocols", "");
+        if (protocols.isBlank() || !java.util.Arrays.stream(protocols.split(","))
+                .map(String::trim).allMatch("TLSv1.3"::equals)) {
+            throw new IllegalStateException("Secure A2A runtime permits TLSv1.3 only");
+        }
+        requireTlsPath(environment, "server.ssl.certificate");
+        requireTlsPath(environment, "server.ssl.certificate-private-key");
+        requireTlsPath(environment, "server.ssl.trust-certificate");
+        requireTlsPath(environment, "ai-factory.agent-runtime.security.crl");
         if (runtime.endpoint() == null || !"https".equalsIgnoreCase(runtime.endpoint().getScheme())) {
             throw new IllegalStateException("Secure A2A endpoint must use HTTPS");
         }
@@ -54,6 +63,11 @@ class A2aSecurityConfiguration {
                 || security.audience() == null || security.audience().isBlank()) {
             throw new IllegalStateException("Secure A2A runtime requires OAuth2 issuer, token URL and audience");
         }
+    }
+
+    private static void requireTlsPath(Environment environment, String property) {
+        String value = environment.getProperty(property, "");
+        if (value.isBlank()) throw new IllegalStateException("Secure A2A runtime requires " + property);
     }
 }
 

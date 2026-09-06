@@ -19,9 +19,7 @@ class A2aSecurityDeclarationTest {
                 URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a");
         AgentRuntimeProperties runtime = new AgentRuntimeProperties(
                 "developer", URI.create("https://agent-developer:8090/a2a"));
-        MockEnvironment effectiveTls = new MockEnvironment()
-                .withProperty("server.ssl.enabled", "true")
-                .withProperty("server.ssl.client-auth", "need");
+        MockEnvironment effectiveTls = effectiveTls();
 
         assertThatCode(() -> A2aSecurityConfiguration.requireSecureTransport(security, runtime, effectiveTls))
                 .doesNotThrowAnyException();
@@ -33,6 +31,10 @@ class A2aSecurityDeclarationTest {
                 security, new AgentRuntimeProperties("developer", URI.create("http://agent:8090/a2a")), effectiveTls))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("HTTPS");
+        assertThatThrownBy(() -> A2aSecurityConfiguration.requireSecureTransport(
+                security, runtime, effectiveTls().withProperty("server.ssl.enabled-protocols", "TLSv1.2")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TLSv1.3");
     }
 
     @Test
@@ -72,5 +74,16 @@ class A2aSecurityDeclarationTest {
         } catch (Exception exception) {
             throw new IllegalStateException(exception);
         }
+    }
+
+    private static MockEnvironment effectiveTls() {
+        return new MockEnvironment()
+                .withProperty("server.ssl.enabled", "true")
+                .withProperty("server.ssl.client-auth", "need")
+                .withProperty("server.ssl.enabled-protocols", "TLSv1.3")
+                .withProperty("server.ssl.certificate", "/run/a2a/tls.crt")
+                .withProperty("server.ssl.certificate-private-key", "/run/a2a/tls.key")
+                .withProperty("server.ssl.trust-certificate", "/run/a2a/ca.crt")
+                .withProperty("ai-factory.agent-runtime.security.crl", "/run/a2a/ca.crl");
     }
 }

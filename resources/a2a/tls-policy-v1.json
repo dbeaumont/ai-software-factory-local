@@ -1,0 +1,21 @@
+{
+  "version": "1",
+  "minimumProtocol": "TLSv1.3",
+  "clientAuthentication": "required",
+  "minimumRemainingValiditySeconds": 86400,
+  "revocation": {
+    "mode": "crl",
+    "failClosed": true
+  },
+  "production": {
+    "certificateSource": "workload-pki",
+    "privateKeySource": "external-secret",
+    "trustAnchorSource": "platform-trust-bundle"
+  },
+  "compose": {
+    "certificateSource": ".local/a2a-pki/workloads/<identity>/tls.crt",
+    "privateKeySource": ".local/a2a-pki/workloads/<identity>/tls.key",
+    "trustAnchorSource": ".local/a2a-pki/authority/ca.crt",
+    "revocationListSource": ".local/a2a-pki/authority/ca.crl"
+  }
+}

@@ -147,4 +147,9 @@ sync_optional_secret GITEA_TOKEN 16
 write_value "$ENV_FILE" AI_FACTORY_SANDBOX_RUNTIME compose
 remove_key "$ENV_FILE" DOCKER_SOCKET_GID
 
+if [ ! -d .local/a2a-pki ]; then
+  ./scripts/generate-a2a-local-pki.sh .local/a2a-pki
+fi
+./scripts/verify-a2a-pki.sh .local/a2a-pki
+
 chmod 600 "$ENV_FILE" "$VAULT_FILE"

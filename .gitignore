@@ -4,6 +4,7 @@
 .env.*.local
 !.env.example
 .vault
+.local/
 
 # Maven build output
 **/target/
