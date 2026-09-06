@@ -186,8 +186,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   secrets et réseau nécessaires à chaque rôle. _(Matrice des quatorze rôles et frontières LLM, MCP, stockage,
   filesystem, horloge, secrets et egress consignées dans
   `docs/qualification/a2a/A2A-RUNTIME-DEPENDENCY-INVENTORY.md`.)_
-- [ ] **A2A-025 — Mesurer la baseline opérationnelle.** Capturer latence p50/p95/p99, taux d'échec, volume de
-  payload, tokens, coût, concurrence et consommation mémoire par rôle.
+- [x] **A2A-025 — Mesurer la baseline opérationnelle.** Capturer latence p50/p95/p99, taux d'échec, volume de
+  payload, tokens, coût, concurrence et consommation mémoire par rôle. _(Manifeste recalculable depuis les 20
+  résultats bruts ajouté sous `resources/a2a/baselines`; les mesures absentes de l'ancien monolithe sont marquées
+  indisponibles, jamais zéro, dans `docs/evidence/a2a/A2A-025-OPERATIONAL-BASELINE.md`.)_
 - [ ] **A2A-026 — Créer le registre des risques.** Couvrir double exécution, perte de notification, divergence
   d'état A2A/Temporal, rejeu, usurpation de carte, SSRF, fuite de données et saturation.
 

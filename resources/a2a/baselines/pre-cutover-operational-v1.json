@@ -1,0 +1,123 @@
+{
+  "schema_version": "1",
+  "baseline_id": "a2a-pre-cutover-operational-v1",
+  "captured_at": "2026-09-02",
+  "qualified_at": "2026-09-06",
+  "source": {
+    "campaign_id": "MCP-agent-ab-20260902-01",
+    "results": {
+      "path": "docs/evidence/mcp/baselines/MCP-agent-ab-20260902-01-baseline.jsonl",
+      "sha256": "47ea3ebd6220f18fc5570f936da89631765b0b27457ea847bfde600e743d3237"
+    },
+    "cases": {
+      "path": "resources/mcp/baselines/context-shadow-campaign-v1.json",
+      "sha256": "5624fc78c9709a23f75dbeab2cef7370994d6c32af095c4a3a72782ec91e81c4"
+    },
+    "runner": {
+      "path": "scripts/mcp-agent-ab-campaign.sh",
+      "sha256": "5579095f72688c5b0ef19233c5ad473f1458d4fe9f21c4602b98a13f0831a6f3"
+    }
+  },
+  "sample": {
+    "cases": 20,
+    "execution": "SERIAL",
+    "max_inflight_tasks": 1,
+    "status_counts": {
+      "FAILED": 19,
+      "WAITING_APPROVAL": 1
+    }
+  },
+  "latency_millis": {
+    "scope": "end-to-end pipeline task",
+    "method": "nearest-rank",
+    "min": 8946,
+    "p50": 18363,
+    "p95": 66272,
+    "p99": 80544,
+    "max": 80544,
+    "mean": 27152.05
+  },
+  "failure": {
+    "scope": "terminal campaign status FAILED",
+    "count": 19,
+    "rate": 0.95,
+    "transport_failure_rate": {
+      "status": "UNAVAILABLE",
+      "reason": "The campaign did not separate protocol and business failures."
+    }
+  },
+  "tokens": {
+    "scope": "aggregate task LLM usage",
+    "total": 134365,
+    "min": 2861,
+    "p50": 6651,
+    "p95": 12634,
+    "p99": 13306,
+    "max": 13306,
+    "mean": 6718.25
+  },
+  "cost_micros": {
+    "status": "UNAVAILABLE_NOT_ZERO",
+    "observed_field_total": 0,
+    "reason": "Provider cost telemetry was absent."
+  },
+  "payload_bytes": {
+    "scope": "HTTP task submission request reconstructed from the frozen cases",
+    "status": "RECONSTRUCTED_NOT_OBSERVED",
+    "serializer": "compact JSON UTF-8 with default aiadmin repository owner",
+    "min": 215,
+    "p50": 228,
+    "p95": 237,
+    "p99": 237,
+    "max": 237,
+    "mean": 227.15,
+    "response_and_internal_message_sizes": {
+      "status": "UNAVAILABLE",
+      "reason": "The baseline runner did not record response or internal message byte counts."
+    }
+  },
+  "concurrency": {
+    "status": "CAMPAIGN_DESIGN",
+    "max_inflight_tasks": 1,
+    "reason": "The frozen runner submits and waits for each task before submitting the next one."
+  },
+  "memory_bytes": {
+    "status": "UNAVAILABLE",
+    "reason": "No process or container memory sample was attached to the frozen campaign."
+  },
+  "per_role": {
+    "status": "UNAVAILABLE_MONOLITHIC_AGGREGATE",
+    "roles": [
+      "supervisor",
+      "architecture-agent",
+      "impact-analysis",
+      "dependencies-contracts",
+      "code-agent",
+      "developer",
+      "patch-repair",
+      "test-agent",
+      "test-design",
+      "test-evidence",
+      "security-agent",
+      "threat-model",
+      "security-findings",
+      "independent-reviewer"
+    ],
+    "reason": "The pre-cutover campaign stored only task-level aggregates and the agents shared one JVM."
+  },
+  "comparison_policy": {
+    "zero_is_a_measurement_only_when_status_is_available": true,
+    "post_cutover_required_dimensions": [
+      "role",
+      "skill",
+      "protocol_operation",
+      "outcome"
+    ],
+    "post_cutover_forbidden_metric_dimensions": [
+      "task_id",
+      "workflow_id",
+      "message_id",
+      "a2a_task_id"
+    ]
+  }
+}
