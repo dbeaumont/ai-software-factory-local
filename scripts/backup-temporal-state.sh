@@ -24,7 +24,8 @@ compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
 writers=(orchestrator temporal evidence-mcp scm-delivery-mcp)
 
 restart_writers() {
-  "${compose[@]}" up -d evidence-mcp scm-delivery-mcp temporal orchestrator >/dev/null 2>&1 || true
+  "${compose[@]}" up -d --wait --wait-timeout 180 \
+    evidence-mcp scm-delivery-mcp temporal orchestrator >/dev/null 2>&1 || true
 }
 trap restart_writers EXIT
 
