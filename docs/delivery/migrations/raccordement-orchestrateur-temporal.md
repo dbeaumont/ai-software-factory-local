@@ -558,8 +558,11 @@ est immédiatement l'unique moteur de toutes les admissions.
   PostgreSQL est fermé à la révision `2` avec le motif `temporal_cutover` ; l'API renvoie `503`, l'interface expose
   la maintenance, l'outbox ne contient aucune admission en attente et Temporal ne contient aucun workflow ouvert.
   Les 560 tests Java sont verts. Preuve : `docs/evidence/temporal/TEMP-104-admissions-closed-2026-09-06.md`.)_
-- [ ] **TEMP-105 — Sauvegarder les autorités.** Sauvegarder Gitea, Evidence MCP, configuration, workspaces utiles et
-  bases ; vérifier la restauration avant de poursuivre.
+- [x] **TEMP-105 — Sauvegarder les autorités.** Sauvegarder Gitea, Evidence MCP, configuration, workspaces utiles et
+  bases ; vérifier la restauration avant de poursuivre. _(La sauvegarde privée de 18M couvre Temporal, projection,
+  Evidence, idempotence SCM, Gitea, workspaces et configuration. Tous les SHA-256 et les nombres d'objets ont été
+  vérifiés après restauration isolée ; le verrou restauré reste fermé et aucun volume actif n'a été modifié.
+  Preuve : `docs/evidence/temporal/TEMP-105-authorities-backup-restore-2026-09-06.md`.)_
 - [ ] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,
   coordinateur, projection PostgreSQL, migrations, API, interface, dashboards et alertes.
 - [ ] **TEMP-107 — Retirer le chemin local.** Supprimer `DeterministicWorkflowCoordinator`, son pool de threads,

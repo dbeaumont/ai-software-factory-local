@@ -88,11 +88,17 @@ docker run -d --name "$orchestrator_container" --network none \
   "$postgres_image" >/dev/null
 
 for container in "${containers[@]}"; do
-  for attempt in $(seq 1 60); do
-    if docker exec "$container" pg_isready -U "$( [ "$container" = "$temporal_container" ] && printf temporal || printf ai_factory )" >/dev/null 2>&1; then
-      break
+  user=$( [ "$container" = "$temporal_container" ] && printf temporal || printf ai_factory )
+  database=$( [ "$container" = "$temporal_container" ] && printf temporal || printf "$orchestrator_database" )
+  stable_checks=0
+  for attempt in $(seq 1 90); do
+    if docker exec "$container" psql -U "$user" -d "$database" -Atc 'select 1' >/dev/null 2>&1; then
+      stable_checks=$((stable_checks + 1))
+      [ "$stable_checks" -lt 3 ] || break
+    else
+      stable_checks=0
     fi
-    [ "$attempt" -lt 60 ] || { echo "PostgreSQL restore container did not become ready: $container" >&2; exit 1; }
+    [ "$attempt" -lt 90 ] || { echo "PostgreSQL restore container did not become stable: $container" >&2; exit 1; }
     sleep 1
   done
 done
