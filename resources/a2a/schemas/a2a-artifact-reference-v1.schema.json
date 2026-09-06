@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/a2a/schemas/a2a-artifact-reference-v1.schema.json",
+  "title": "AI Factory A2A artifact reference v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "reference_id", "uri", "digest", "size_bytes", "media_type",
+    "classification", "contract", "contract_version"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "reference_id": { "$ref": "#/$defs/boundedId" },
+    "uri": { "type": "string", "pattern": "^evidence://[A-Za-z0-9._~:/-]{1,1000}$" },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "size_bytes": { "type": "integer", "minimum": 0, "maximum": 10485760 },
+    "media_type": {
+      "type": "string",
+      "enum": ["application/json", "text/plain", "text/markdown", "text/x-diff", "application/spdx+json"]
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"]
+    },
+    "contract": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$"
+    },
+    "contract_version": { "type": "string", "pattern": "^[1-9][0-9]*$" }
+  },
+  "$defs": {
+    "boundedId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    }
+  }
+}

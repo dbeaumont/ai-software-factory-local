@@ -1,0 +1,11 @@
+{
+  "schema_version": "1",
+  "reference_id": "code-task-1",
+  "uri": "evidence://task-1/attempt-1/input/code-task-1",
+  "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "size_bytes": 4096,
+  "media_type": "application/json",
+  "classification": "INTERNAL",
+  "contract": "code-task-v1",
+  "contract_version": "1"
+}
