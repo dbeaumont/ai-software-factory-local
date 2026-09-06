@@ -1,12 +1,12 @@
 # AI Software Factory
 
-Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. La version 1.2.0 introduit une
-architecture **multi-agent hiérarchique gouvernée** tout en conservant le pipeline déterministe 1.1.0 comme
-baseline fonctionnelle. Temporal est l'unique moteur de workflow ; aucun moteur local de repli n'est conservé.
+Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. Les agents sont des services autonomes
+adressables exclusivement avec **A2A 1.0**. Temporal est l'unique moteur de workflow : il planifie les délégations,
+attend les résultats, applique les retries et porte les gates. Aucun runtime agent local ou fallback direct ne
+subsiste dans l'orchestrateur.
 
-Le mode `PIPELINE` reste le mode opérationnel de référence tant que la qualification et les approbations de
-bascule ne sont pas acquises. L'activation des modes `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY` et
-`HIERARCHICAL_ACTIVE` est protégée de façon fail-closed par politique et par rôle.
+Le mode `PIPELINE` reste disponible comme parcours métier séquentiel, mais ses étapes Planner, Developer,
+PatchRepair, Tester et Reviewer sont elles aussi des tâches A2A. Le mode métier ne sélectionne jamais le transport.
 
 Le chemin court historique reste :
 
@@ -24,7 +24,7 @@ la préparation d'une Pull Request, mais ne fusionne ni ne déploie le code en p
 | Contrôler la supply chain | SBOM CycloneDX et scan Trivy des vulnérabilités et secrets | Rapports Syft/Trivy bloquants |
 | Garder l'humain responsable | Effet SCM suspendu jusqu'à une approbation explicite | Pull Request brouillon après approbation |
 | Rendre l'agentique gouvernable | Rôles, contrats JSON, budgets, permissions et kill switch | Décisions auditables et refus fail-closed |
-| Comparer avant de basculer | Pipeline 1.1.0 conservé comme baseline des modes hiérarchiques | Mesures de qualité, coût et latence appariées |
+| Orchestrer durablement | Temporal coordonne chaque tâche A2A et chaque effet | Reprise, retry, annulation et corrélation durables |
 
 Le périmètre actuel couvre les dépôts Maven, Gradle et npm. La fusion de PR, le déploiement, la gestion de
 production et la remédiation automatique d'un finding de sécurité restent hors périmètre.
@@ -33,7 +33,7 @@ production et la remédiation automatique d'un finding de sécurité restent hor
 
 | Répertoire | Contenu |
 |---|---|
-| `apps/` | Applications exécutables : orchestrateur, serveurs MCP et interface web |
+| `apps/` | Applications exécutables : orchestrateur, runtime agent A2A, noyau agent, serveurs MCP et interface web |
 | `resources/` | Ressources métier versionnées : prompts, profils d'agents et modèle de ticket |
 | `infrastructure/` | Compose, proxy, LiteLLM, sandbox et observabilité |
 | `examples/` | Dépôts d'exemple utilisés pour les démonstrations |
@@ -51,7 +51,8 @@ La stack actuelle contient :
 | Interface de saisie & suivi | `factory-web` (SPA HTML/JS/CSS servie par Nginx) |
 | Orchestration | Spring Boot 4.1 / Spring AI 2.0 / Java 25 (`orchestrator`) |
 | Workflow | Temporal obligatoire ; workflow V1 et workers spécialisés actifs |
-| Hiérarchie en qualification | Supervisor, agents Architecture, Code, Tests, Sécurité et Independent Reviewer |
+| Agents A2A | Quatorze rôles autonomes avec Agent Cards signées et task queues dédiées |
+| Transport agent | A2A 1.0 JSON-RPC, mTLS et OAuth2 sur réseau privé |
 | Mémoire de tâche | Projection PostgreSQL active, reconstruisible depuis Temporal et Evidence MCP |
 | Contexte MCP | Serveur MCP stateless en lecture seule (`repository-context-mcp`) |
 | Exécution MCP | Contrôleur de jobs à profils immuables (`sandbox-execution-mcp`) |
@@ -70,32 +71,30 @@ La stack actuelle contient :
 
 ```mermaid
 flowchart LR
-  U[Utilisateur] --> W[Workflow Coordinator]
-  W --> TP[Temporal]
-  W --> S[Supervisor]
-  S --> A[Architecture]
-  S --> C[Code]
-  S --> T[Tests]
-  S --> X[Sécurité]
-  W --> R[Independent Reviewer]
-  A --> M[(Task Memory et Evidence MCP)]
-  C --> M
-  T --> M
-  X --> M
-  M --> R
-  W -. seul propriétaire des effets .-> G[Sandbox / Assurance / SCM MCP]
-  R --> H{Approbation humaine}
+  U[Utilisateur] --> O[Orchestrateur]
+  O --> T[Temporal]
+  T -->|tâche A2A| S[Supervisor A2A]
+  T -->|tâches A2A| A[Architecture / Code / Tests / Sécurité]
+  T -->|tâche A2A| R[Independent Reviewer A2A]
+  S -->|résultat A2A| T
+  A -->|résultats A2A| T
+  R -->|résultat A2A| T
+  S --> M[Context / Evidence MCP]
+  A --> M
+  R --> M
+  T -. seul propriétaire des effets .-> G[Sandbox / Assurance / SCM MCP]
+  T --> H{Approbation humaine}
   H --> G
 ```
 
-Dans le chemin hiérarchique, le Supervisor propose un DAG borné ; l'hôte valide rôles, scopes, dépendances,
-budgets et contrats. Les agents n'appellent jamais directement un outil à effet. Le `WorkflowCoordinator` reste
-seul autorisé à appliquer un patch, lancer les gates, écrire les preuves faisant autorité et livrer une Pull Request.
+Le Supervisor propose un DAG borné ; Temporal valide puis planifie chaque délégation. Les entrées et résultats sont
+des références Evidence digestées dont les contrats sont contrôlés avant et après l'échange A2A. Les agents
+n'appellent jamais directement un pair et ne possèdent aucun outil à effet. Le workflow reste seul autorisé à
+appliquer un patch, lancer les gates et livrer une Pull Request.
 
-Les agents représentés ici ne sont pas des conteneurs Docker dédiés : `Supervisor`, spécialistes et
-`Independent Reviewer` sont des rôles chargés dans la JVM du service `orchestrator`. Compose sépare les capacités
-MCP, pas chaque agent. Une extraction en runtimes autonomes n'est proposée que pour la cible distribuée/GCP et par
-frontière de sécurité ou de montée en charge, comme détaillé dans la [rétrodocumentation](docs/overview/current-state.md#35-pertinence-de-modules-dagents-autonomes).
+Compose démarre un runtime dédié par rôle avec sa propre identité, sa carte, ses secrets, ses permissions MCP et sa
+task queue Temporal. Le même artefact `a2a-agent-runtime` charge un manifeste de rôle immuable au démarrage ; il ne
+peut pas activer dynamiquement un second rôle.
 
 ### Architecture technique locale
 
@@ -106,15 +105,19 @@ flowchart TB
   Proxy --> API[Orchestrateur Spring Boot]
 
   subgraph Control[Plan de contrôle]
-    API --> LLM[LiteLLM]
+    API --> Temporal[Temporal obligatoire]
+    Temporal -->|A2A 1.0| Agents[14 runtimes agents]
+    Agents --> LLM[LiteLLM]
     LLM --> Cloud[Modèle OpenAI]
+    Agents --> Context[Repository Context MCP]
+    Agents --> Evidence[Evidence MCP]
     API --> Context[Repository Context MCP]
     API --> Sandbox[Sandbox Execution MCP]
     API --> Assurance[Assurance MCP]
     API --> Evidence[Evidence MCP]
     API --> SCM[SCM Delivery MCP]
-    API --> Temporal[Temporal obligatoire]
     Temporal --> Projection[(Projection PostgreSQL)]
+    Agents --> AgentState[(État A2A PostgreSQL)]
   end
 
   subgraph Execution[Plan d'exécution non fiable]
@@ -128,6 +131,7 @@ flowchart TB
   Evidence --> EvidenceVolume[(Volume de preuves)]
   API --> Workspace[(Workspaces de tâches)]
   API -->|OTLP| Collector[OpenTelemetry Collector]
+  Agents -->|OTLP| Collector
   Context -->|OTLP| Collector
   Sandbox -->|OTLP| Collector
   Temporal -->|receiver de compatibilité| Collector
@@ -139,9 +143,9 @@ livraison SCM. Les endpoints MCP ne sont pas publiés sur l'hôte. Le réseau Co
 le trafic applicatif (`factory`), MCP (`mcp-internal`), workflow (`workflow-internal`) et les deux niveaux d'accès
 des sandboxes (`sandbox-egress` et `sandbox-quality`).
 
-> **État du prototype.** `TemporalWorkflowCoordinator` et `PostgresTaskMemory` sont les adaptateurs actifs de la
-> configuration locale. Temporal est obligatoire pour toute nouvelle tâche, aucun sélecteur de moteur local
-> n'existe et la projection PostgreSQL survit aux redémarrages.
+> **État du prototype.** Temporal et A2A sont obligatoires pour toute nouvelle tâche. La readiness des quatorze
+> rôles est contrôlée avant admission ; une dépendance indisponible suspend les tickets au lieu de sélectionner un
+> chemin direct. Les projections orchestrateur et les associations A2A survivent aux redémarrages.
 
 ### Repères dans l'implémentation
 
@@ -150,7 +154,8 @@ des sandboxes (`sandbox-egress` et `sandbox-quality`).
 | API de tâches et commandes opérateur | [`TaskController`](apps/orchestrator/src/main/java/com/example/aifactory/controller/TaskController.java) |
 | Admission et mémoire des tâches | [`TaskService`](apps/orchestrator/src/main/java/com/example/aifactory/service/TaskService.java), [`PostgresTaskMemory`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/projection/PostgresTaskMemory.java) |
 | Commandes de workflow | [`TemporalWorkflowCoordinator`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/TemporalWorkflowCoordinator.java) |
-| Runtime et permissions des agents | [`AgentRuntime`](apps/orchestrator/src/main/java/com/example/aifactory/service/AgentRuntime.java), [`ToolPermissionMatrix`](apps/orchestrator/src/main/java/com/example/aifactory/service/ToolPermissionMatrix.java) |
+| Client et activités A2A | [`A2aClientRuntimeConfiguration`](apps/orchestrator/src/main/java/com/example/aifactory/config/A2aClientRuntimeConfiguration.java), [`A2aActivitiesImpl`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/A2aActivitiesImpl.java) |
+| Runtime et identité des agents | [`AgentExecutionWorker`](apps/a2a-agent-runtime/src/main/java/com/example/aifactory/agentruntime/AgentExecutionWorker.java), [`RoleScopedAgentContext`](apps/agent-core/src/main/java/com/example/aifactory/agentcore/RoleScopedAgentContext.java) |
 | Workflow durable actif | [`SoftwareFactoryExecutionWorkflowV1Impl`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/SoftwareFactoryExecutionWorkflowV1Impl.java) |
 | Contexte dépôt | [`McpRepositoryContextService`](apps/orchestrator/src/main/java/com/example/aifactory/service/McpRepositoryContextService.java) |
 | Exécution isolée | [`McpSandboxService`](apps/orchestrator/src/main/java/com/example/aifactory/service/McpSandboxService.java), [`SandboxJobService`](apps/mcp/sandbox-execution-server/src/main/java/com/example/aifactory/sandbox/service/SandboxJobService.java) |
@@ -161,30 +166,23 @@ des sandboxes (`sandbox-egress` et `sandbox-quality`).
 
 ## Ce que fait réellement le prototype
 
-Deux chemins sont représentés dans l'implémentation :
-
-- le mode `PIPELINE`, utilisé par l'API publique dans la configuration actuelle, exécute le flux séquentiel
-  compatible 1.1.0 décrit ci-dessous ;
-- les composants hiérarchiques implémentent le routage, le DAG de délégations typées, les spécialistes et
-  l'Independent Reviewer, mais restent un chemin de qualification qui n'est pas généralisé au flux de création
-  de tâche local.
-
-Une activation hiérarchique non qualifiée, un rôle non promu ou une télémétrie comparative incomplète est
-refusé. Le pipeline de référence est alors conservé sans contourner les gates.
+Deux parcours métier sont représentés dans l'implémentation : le pipeline séquentiel et le DAG hiérarchique. Ils
+partagent la même frontière d'exécution : Temporal ordonnance et chaque invocation d'agent traverse A2A 1.0. Le
+pipeline n'est donc ni un transport alternatif, ni un fallback local.
 
 1. L'utilisateur soumet un ticket depuis l'interface web (`factory-web`) ou via l'API REST `POST /api/tasks`.
 2. L'orchestrateur attribue une référence durable (`AF-0001`, etc.), démarre le workflow Temporal puis clone le
    dépôt cible dans une activité spécialisée.
-3. Le service de contexte extrait la structure et le contenu du projet.
-4. L'agent `Planner` produit une feuille de route (`.ai-plan.md`).
-5. L'agent `Developer` génère un patch `unified diff`.
+3. Temporal prépare une preuve d'entrée, résout l'Agent Card signée et soumet une tâche A2A au rôle requis.
+4. Le runtime `architecture-agent` produit la feuille de route (`.ai-plan.md`) et publie son résultat dans Evidence.
+5. Le runtime `developer` génère un patch `unified diff` via le même cycle A2A.
 6. Le patch est normalisé (`UnifiedDiffNormalizer`), puis validé avec `git apply --check` dans une sandbox sans réseau.
-7. En cas d'échec de validation du diff, l'agent `PatchRepair` tente une réparation complète en analysant les fichiers sources faisant autorité.
+7. En cas d'échec, Temporal délègue une nouvelle tâche A2A au rôle `patch-repair`, bornée à deux réparations.
 8. Le patch est appliqué en sandbox, puis `git diff --check` et `git diff --stat` sont contrôlés.
-9. Les tests unitaires/d'intégration s'exécutent dans la sandbox (via Artifactory pour Maven). L'agent `Tester` analyse les journaux de test avec un contrat JSON validé.
+9. Les tests unitaires/d'intégration s'exécutent dans la sandbox ; le rôle A2A `test-agent` analyse leur preuve déterministe avec un contrat JSON validé.
 10. L'analyse de qualité SonarQube est déclenchée ; son quality gate est bloquant. En l'absence de jeton ou pour un type de projet non encore pris en charge, le run échoue au lieu de considérer le contrôle comme réussi.
 11. Syft génère un SBOM CycloneDX (`.ai-factory/sbom.cdx.json`) et Trivy scanne les vulnérabilités/secrets (`.ai-factory/trivy.txt`) ; une détection HIGH ou CRITICAL est bloquante.
-12. L'agent `Reviewer` synthétise les preuves dans `.ai-review.md` avec un contrat JSON validé. Un rejet ou un finding `blocker` bloque le run.
+12. Le rôle A2A `independent-reviewer` synthétise les preuves dans `.ai-review.md`. Un rejet ou un finding `blocker` bloque le run.
 13. La tâche passe au statut `WAITING_APPROVAL`.
 14. Après approbation humaine (`POST /api/tasks/{id}/approve`), l'orchestrateur bascule sur une branche `ai-factory/<taskId>`, exclut les artefacts de travail IA (`git reset`), committe, pousse vers Gitea et ouvre une Pull Request.
 
@@ -193,6 +191,8 @@ sequenceDiagram
   autonumber
   actor U as Utilisateur
   participant API as Orchestrateur
+  participant T as Temporal
+  participant R as Runtime agent A2A
   participant C as Context MCP
   participant L as LiteLLM
   participant S as Sandbox MCP
@@ -201,20 +201,24 @@ sequenceDiagram
   participant G as Git / Gitea
 
   U->>API: POST /api/tasks
-  API->>G: Cloner le commit source
-  API->>C: Lire le contexte borné du dépôt
-  API->>L: Planifier puis proposer un patch
-  API->>S: Valider et appliquer le patch
-  API->>S: Tests, Sonar, SBOM et Trivy
-  S-->>API: Retourner les preuves déterministes
-  API->>A: Évaluer gates et politiques
-  API->>L: Revue fondée sur les preuves
+  API->>T: Démarrer le workflow
+  T->>G: Cloner le commit source via activité
+  T->>R: Envoyer la tâche A2A et sa référence Evidence
+  R->>C: Lire le contexte autorisé via MCP
+  R->>L: Exécuter le prompt du rôle
+  R-->>T: Notifier le résultat A2A référencé
+  T->>S: Valider/appliquer le patch et lancer les tests
+  S-->>T: Retourner les preuves déterministes
+  T->>A: Évaluer gates et politiques
+  T->>R: Demander la revue indépendante via A2A
+  R-->>T: Retourner la revue validée
   API-->>U: WAITING_APPROVAL
-  U->>API: Approbation de l'effet SCM
-  API->>M: Demander la livraison approuvée
+  U->>API: Approuver le manifeste
+  API->>T: Signaler l'approbation
+  T->>M: Demander la livraison approuvée
   M->>G: Créer branche, commit et PR brouillon
-  G-->>M: Pull Request créée
-  M-->>API: URL de la Pull Request
+  M-->>T: URL de la Pull Request
+  T-->>API: PR_CREATED
   API-->>U: PR_CREATED
 ```
 
@@ -323,7 +327,8 @@ Les 14 statuts du cycle de vie d'une tâche sont :
 
 ## Modèle LLM
 
-Tous les appels passent par LiteLLM vers le modèle cloud `factory-code-cloud` (`gpt-5.6-luna` par défaut).
+Les runtimes agents appellent LiteLLM vers le modèle cloud `factory-code-cloud` (`gpt-5.6-luna` par défaut).
+L'orchestrateur ne demande aucune complétion : il ne conserve qu'une sonde réactive de disponibilité du fournisseur.
 
 ## Contexte dépôt via MCP
 
@@ -574,6 +579,7 @@ contrats MCP pour pouvoir remplacer les backends sans donner davantage de pouvoi
 | Capacité | Local actuel | Cible recommandée | Motivation |
 |---|---|---|---|
 | Web et API | Nginx + Spring sur Compose | Cloud Run ou GKE derrière HTTPS/IAP | Authentification, autoscaling et exposition maîtrisée |
+| Agents | 14 runtimes A2A isolés par rôle | Déploiements GKE dédiés avec Workload Identity | Identité, permissions, scaling et blast radius par rôle |
 | Workflow | Temporal local, workers séparés par task queue | Temporal managé ou opéré avec la même topologie | Reprise durable, signaux humains, retries et versionnement |
 | État | Mémoire JVM et volumes locaux | PostgreSQL/Cloud SQL + stockage objet des preuves | Transactions, sauvegardes, rétention et restauration |
 | Sandbox | Runners Compose statiques sans socket Docker | GKE dédié avec gVisor/Agent Sandbox et Jobs éphémères | Séparer le code non fiable du plan de contrôle |
@@ -582,9 +588,8 @@ contrats MCP pour pouvoir remplacer les backends sans donner davantage de pouvoi
 | SCM, qualité, artefacts | Gitea, SonarQube et Artifactory locaux | Services d'entreprise via adaptateurs MCP | Conserver les politiques et systèmes de référence |
 | Observabilité | Collector OpenTelemetry et SigNoz locaux | Google Cloud Monitoring, Trace et Logging via gateway OTel | SLO, investigation et conformité |
 
-La promotion suit `PIPELINE -> HIERARCHICAL_SHADOW -> HIERARCHICAL_CANARY -> HIERARCHICAL_ACTIVE`. Chaque étape
-exige les seuils de qualification, les rôles autorisés et les preuves de sécurité attendues ; en leur absence, le
-routage reste sur la baseline ou s'arrête de façon fail-closed.
+La bascule de transport est complète : tous les parcours appellent les agents par A2A. Une indisponibilité ferme
+les admissions et le rollback redéploie uniquement une version antérieure déjà compatible A2A.
 
 ## Démonstration
 
@@ -607,6 +612,11 @@ make demo
 |---|---|
 | `make help` | Affiche l'aide des commandes Make |
 | `make init` | Initialise `.env` et `.vault`, puis génère les secrets locaux obligatoires absents |
+| `make a2a-config` | Valide la topologie, les rôles et les frontières de capacités A2A |
+| `make a2a-status` | Affiche l'état de la base A2A et des quatorze runtimes |
+| `make a2a-cards` | Télécharge et valide les quatorze Agent Cards privées |
+| `make a2a-smoke` | Vérifie services, task queues et Agent Cards |
+| `make a2a-up-full` | Démarre explicitement le profil complet des agents A2A |
 | `make build` | Construit l'image sandbox et les services Compose |
 | `make up` | Démarre la stack complète en arrière-plan |
 | `make all` | Remet à zéro les données et démarre une stack entièrement bootstrappée |
@@ -630,17 +640,16 @@ make demo
 
 ## Limites actuelles
 
-- le mode hiérarchique n'est pas généralisé : la campagne cloud comparative, les approbations formelles et le
-  canary réel restent nécessaires ;
+- le raccordement A2A local est complet, mais la qualification de la cible GKE requiert toujours un cluster et
+  des identités Workload Identity disponibles ;
 - le déploiement local Compose ne démontre pas encore la reprise après arrêt simultané de l'orchestrateur, de
   Temporal et de tous les serveurs MCP à chaque phase critique ;
-- les schémas/projections PostgreSQL et Evidence MCP sont implémentés, mais ne sont pas encore intégrés de bout en
-  bout au pipeline de référence ; leur exploitation managée et leur restauration restent à valider ;
-- les prompts, contrats, politiques et qualifications sont versionnés ; leur promotion reste soumise aux
-  propriétaires humains désignés ;
+- les projections PostgreSQL, associations A2A et Evidence sont intégrées ; leur exploitation managée et leur
+  restauration sur la cible GKE restent à valider ;
+- les prompts, cartes, contrats et politiques sont versionnés ; leur promotion reste soumise aux propriétaires
+  humains désignés ;
 - support des builds limité à Maven, Gradle et npm ;
 - pas de SSO, RBAC ni policy engine ;
-- le backend Kubernetes est implémenté mais sa qualification exige encore un cluster GKE cible, son stockage et ses identités Workload Identity ;
 - approbation humaine obligatoire avant push/PR ;
 
 Les règles de confiance des prompts, la validation des contrats de sortie et les gates de tests, qualité et
@@ -655,4 +664,7 @@ ni une sandbox de production : ces limites restent bloquantes pour un usage entr
 - [Architecture cible multi-agent hiérarchique](docs/archive/releases/1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md)
 - [Plan de bascule](docs/archive/releases/1.2.0-archi-04/BASCULE-ARCHI-04-MULTI-AGENTS.md)
 - [Catalogue des agents](docs/architecture/agents/CATALOGUE-AGENTS-V1.md)
+- [Architecture A2A et frontières de confiance](docs/architecture/a2a/README.md)
+- [Exploitation locale A2A sur macOS](docs/development/a2a-macos.md)
+- [Plan de migration A2A/Temporal](docs/delivery/migrations/migration-agents-a2a-temporal.md)
 - [Architecture, workflow et sécurité de la baseline 1.1.0](docs/version-1.1.0-archi-02-mcp/ETAT-PROTO-1.1.0.md)

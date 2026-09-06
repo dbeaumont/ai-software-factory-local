@@ -867,8 +867,10 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   MCP, Evidence et frontières de confiance. _(La vue Mermaid et les tableaux de frontières dans
   `docs/architecture/a2a/README.md` couvrent les deux workflows corrélés, les réseaux Compose/GKE, la
   réconciliation, les effets MCP/Evidence et la chaîne OTLP/SigNoz.)_
-- [ ] **A2A-223 — Mettre à jour le README.** Expliquer que les agents sont désormais adressables par A2A et ne
-  résident plus comme rôles directement invoqués dans la JVM de l'orchestrateur.
+- [x] **A2A-223 — Mettre à jour le README.** Expliquer que les agents sont désormais adressables par A2A et ne
+  résident plus comme rôles directement invoqués dans la JVM de l'orchestrateur. _(Terminé le 2026-09-07 :
+  architecture, séquence, composants, commandes macOS, limites et rollback décrivent la topologie post-bascule ;
+  preuve : `docs/evidence/a2a/A2A-223-README.md`.)_
 - [x] **A2A-224 — Documenter l'ajout d'un agent.** Catalogue, contrat, Agent Card, identité, task queue, service,
   permissions, observabilité, tests TCK et gate. _(La checklist normative
   `docs/architecture/agents/AJOUTER-UN-AGENT-A2A.md` couvre identité, schémas, découverte, Temporal, Compose/GKE,
