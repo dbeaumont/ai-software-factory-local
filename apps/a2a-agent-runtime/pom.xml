@@ -62,7 +62,14 @@
                   <excludes>
                     <exclude>com.example:ai-factory-orchestrator</exclude>
                     <exclude>org.springframework.boot:spring-boot-starter-jdbc</exclude>
+                    <exclude>org.springframework.boot:spring-boot-starter-data-jdbc</exclude>
+                    <exclude>org.springframework.boot:spring-boot-starter-data-jpa</exclude>
                     <exclude>org.springframework.boot:spring-boot-starter-flyway</exclude>
+                    <exclude>io.temporal:*</exclude>
+                    <exclude>org.postgresql:*</exclude>
+                    <exclude>org.flywaydb:*</exclude>
+                    <exclude>com.github.docker-java:*</exclude>
+                    <exclude>org.eclipse.jgit:*</exclude>
                   </excludes>
                   <searchTransitive>true</searchTransitive>
                 </bannedDependencies>
