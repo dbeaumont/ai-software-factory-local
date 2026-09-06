@@ -2,6 +2,7 @@ package com.example.aifactory.agentruntime;
 
 import com.example.aifactory.agentcore.AgentCatalog;
 import com.example.aifactory.agentcore.AgentContractValidator;
+import com.example.aifactory.agentcore.AgentManifest;
 import com.example.aifactory.agentcore.PromptRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ class A2aAgentRuntimeApplicationTest {
         assertNotNull(context.getBean(AgentCatalog.class));
         assertNotNull(context.getBean(PromptRepository.class));
         assertNotNull(context.getBean(AgentContractValidator.class));
+        assertEquals("developer", context.getBean(AgentManifest.class).role());
     }
 
     @Test

@@ -6,7 +6,7 @@
 |---|---|---|
 | `resources/multiagents/schemas/contract-catalog-v1.json` | Catalogue fermé des 18 schémas métier Draft 2020-12 | `32e0174226f9f29353b26a91cd0981edaa01064b525dc2ef9975acd4b4995137` |
 | `resources/multiagents/fixtures/golden-contracts-v1.json` | Un document doré valide par contrat | `1a388f5814ec9ef5b6b862281075a1c8f25076a7e074f17644169e4248d4397a` |
-| `resources/agents/catalog-v1.yaml` | Autorité sur rôles, sorties, délégations et outils | `9c37ea85e4a3a3958561044e89080969f9ebb8b961888db43c094dfd0e12ffc6` |
+| `resources/agents/catalog-v1.yaml` | Autorité sur rôles, sorties, délégations et outils | `93aca9b64d794cccdf34eea487a54fc350b3ae1e324882d8f1902d7ea795da94` |
 | `resources/agents/<role>.yaml` | Entrées/sorties détaillées et budgets de chaque runtime | à contrôler par la gate de cohérence des cartes |
 
 Chaque payload métier reste validé contre son schéma indépendamment de l'enveloppe A2A. Le transport A2A ne
@@ -76,9 +76,8 @@ par couple entrée/sortie réellement supporté ; elle ne déduira pas de capaci
 
 ## Écarts détectés à résoudre avant génération des Agent Cards
 
-- Le catalogue central déclare `patch-repair.outputContract: patch-proposal-v1`, alors que le manifeste du rôle
-  déclare `patch-repair-proposal-v1`. Le schéma spécialisé est l'intention la plus précise ; la cohérence devra être
-  corrigée avant A2A-050/A2A-058, sans l'altérer silencieusement dans une carte.
+- L'écart historique de `patch-repair.outputContract` a été résolu par A2A-032 : catalogue et manifeste déclarent
+  désormais `patch-repair-proposal-v1`. Le contrôle de démarrage teste cette cohérence pour les quatorze rôles.
 - `security-findings` consomme `vulnerability-result-v1`, contrat MCP présent dans
   `resources/mcp/schemas`, mais absent du catalogue multi-agent. Il doit rester une référence de résultat d'outil
   MCP et ne pas être présenté comme une interface agent-à-agent.

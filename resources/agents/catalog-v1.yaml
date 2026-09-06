@@ -163,7 +163,7 @@ roles:
     tools:
       - context.read_file
       - context.get_symbols
-    outputContract: patch-proposal-v1
+    outputContract: patch-repair-proposal-v1
     humanGate: none
 
   test-agent:

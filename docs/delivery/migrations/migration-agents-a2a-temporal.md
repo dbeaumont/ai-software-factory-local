@@ -211,8 +211,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   unique `agentRole`, avec profils strictement séparés du contrôle-plane de l'orchestrateur. _(Application Spring
   Boot dédiée, profil `agent-runtime`, dépendance sur `agent-core`, absence de datasource de contrôle et Dockerfile
   non-root générique ajoutés dans `apps/a2a-agent-runtime`.)_
-- [ ] **A2A-032 — Rendre le rôle obligatoire au démarrage.** Refuser une valeur absente, inconnue, `workflow` ou
-  incompatible avec les ressources embarquées.
+- [x] **A2A-032 — Rendre le rôle obligatoire au démarrage.** Refuser une valeur absente, inconnue, `workflow` ou
+  incompatible avec les ressources embarquées. _(`AgentManifest` compare identité, hiérarchie, outils, contrats et
+  prompt au catalogue ; les 14 rôles passent, les valeurs absente/inconnue/`workflow` et le démarrage sans rôle
+  échouent. L'écart `patch-repair` détecté en A2A-023 est corrigé.)_
 - [ ] **A2A-033 — Charger une seule identité d'agent.** Limiter prompts, skills, sorties et permissions à la
   définition du rôle actif ; empêcher l'activation dynamique d'un second rôle.
 - [ ] **A2A-034 — Extraire les adaptateurs LLM.** Conserver le comportement, les budgets et les formats de réponse
