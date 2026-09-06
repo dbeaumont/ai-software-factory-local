@@ -1,0 +1,81 @@
+{
+  "version": "1",
+  "audience": "ai-factory-a2a",
+  "orchestrator": {
+    "clientId": "ai-factory-orchestrator",
+    "subject": "spiffe://ai-factory.local/control/orchestrator",
+    "credentialRef": "secret://a2a/orchestrator/oauth2-client"
+  },
+  "agents": {
+    "supervisor": {
+      "clientId": "ai-factory-agent-supervisor",
+      "subject": "spiffe://ai-factory.local/agent/supervisor",
+      "credentialRef": "secret://a2a/agent/supervisor/oauth2-client"
+    },
+    "architecture-agent": {
+      "clientId": "ai-factory-agent-architecture-agent",
+      "subject": "spiffe://ai-factory.local/agent/architecture-agent",
+      "credentialRef": "secret://a2a/agent/architecture-agent/oauth2-client"
+    },
+    "impact-analysis": {
+      "clientId": "ai-factory-agent-impact-analysis",
+      "subject": "spiffe://ai-factory.local/agent/impact-analysis",
+      "credentialRef": "secret://a2a/agent/impact-analysis/oauth2-client"
+    },
+    "dependencies-contracts": {
+      "clientId": "ai-factory-agent-dependencies-contracts",
+      "subject": "spiffe://ai-factory.local/agent/dependencies-contracts",
+      "credentialRef": "secret://a2a/agent/dependencies-contracts/oauth2-client"
+    },
+    "code-agent": {
+      "clientId": "ai-factory-agent-code-agent",
+      "subject": "spiffe://ai-factory.local/agent/code-agent",
+      "credentialRef": "secret://a2a/agent/code-agent/oauth2-client"
+    },
+    "developer": {
+      "clientId": "ai-factory-agent-developer",
+      "subject": "spiffe://ai-factory.local/agent/developer",
+      "credentialRef": "secret://a2a/agent/developer/oauth2-client"
+    },
+    "patch-repair": {
+      "clientId": "ai-factory-agent-patch-repair",
+      "subject": "spiffe://ai-factory.local/agent/patch-repair",
+      "credentialRef": "secret://a2a/agent/patch-repair/oauth2-client"
+    },
+    "test-agent": {
+      "clientId": "ai-factory-agent-test-agent",
+      "subject": "spiffe://ai-factory.local/agent/test-agent",
+      "credentialRef": "secret://a2a/agent/test-agent/oauth2-client"
+    },
+    "test-design": {
+      "clientId": "ai-factory-agent-test-design",
+      "subject": "spiffe://ai-factory.local/agent/test-design",
+      "credentialRef": "secret://a2a/agent/test-design/oauth2-client"
+    },
+    "test-evidence": {
+      "clientId": "ai-factory-agent-test-evidence",
+      "subject": "spiffe://ai-factory.local/agent/test-evidence",
+      "credentialRef": "secret://a2a/agent/test-evidence/oauth2-client"
+    },
+    "security-agent": {
+      "clientId": "ai-factory-agent-security-agent",
+      "subject": "spiffe://ai-factory.local/agent/security-agent",
+      "credentialRef": "secret://a2a/agent/security-agent/oauth2-client"
+    },
+    "threat-model": {
+      "clientId": "ai-factory-agent-threat-model",
+      "subject": "spiffe://ai-factory.local/agent/threat-model",
+      "credentialRef": "secret://a2a/agent/threat-model/oauth2-client"
+    },
+    "security-findings": {
+      "clientId": "ai-factory-agent-security-findings",
+      "subject": "spiffe://ai-factory.local/agent/security-findings",
+      "credentialRef": "secret://a2a/agent/security-findings/oauth2-client"
+    },
+    "independent-reviewer": {
+      "clientId": "ai-factory-agent-independent-reviewer",
+      "subject": "spiffe://ai-factory.local/agent/independent-reviewer",
+      "credentialRef": "secret://a2a/agent/independent-reviewer/oauth2-client"
+    }
+  }
+}

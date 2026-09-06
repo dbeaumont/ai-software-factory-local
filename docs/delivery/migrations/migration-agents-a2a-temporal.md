@@ -480,8 +480,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 13. Lot 6 — sécurité et isolation
 
-- [ ] **A2A-100 — Définir les identités de service.** Attribuer une identité distincte à l'orchestrateur et à
+- [x] **A2A-100 — Définir les identités de service.** Attribuer une identité distincte à l'orchestrateur et à
   chaque rôle d'agent ; interdire les credentials partagés entre rôles.
+  - Preuve : `resources/a2a/service-identities-v1.json`, son schéma et
+    `A2aServiceIdentityRegistryTest` lient l'orchestrateur et les 14 rôles à des clients OAuth, sujets SPIFFE et
+    références de secrets tous distincts, et rejettent explicitement toute réutilisation inter-rôles.
 - [ ] **A2A-101 — Chiffrer tous les échanges.** Utiliser mTLS entre workloads en production et une PKI locale de
   développement dans Compose ; vérifier SAN, chaîne, expiration et révocation.
 - [ ] **A2A-102 — Ajouter OAuth2 client credentials.** Utiliser des jetons courts avec audiences A2A et scopes par

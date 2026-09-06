@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/schemas/a2a/service-identities-v1.schema.json",
+  "title": "AI Factory A2A service identities v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "audience", "orchestrator", "agents"],
+  "properties": {
+    "version": { "const": "1" },
+    "audience": { "type": "string", "minLength": 1 },
+    "orchestrator": { "$ref": "#/$defs/identity" },
+    "agents": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/identity" }
+    }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clientId", "subject", "credentialRef"],
+      "properties": {
+        "clientId": { "type": "string", "pattern": "^ai-factory-[a-z0-9-]+$" },
+        "subject": { "type": "string", "pattern": "^spiffe://ai-factory\\.local/(control|agent)/[a-z0-9-]+$" },
+        "credentialRef": { "type": "string", "pattern": "^secret://a2a/[a-z0-9/-]+/oauth2-client$" }
+      }
+    }
+  }
+}
