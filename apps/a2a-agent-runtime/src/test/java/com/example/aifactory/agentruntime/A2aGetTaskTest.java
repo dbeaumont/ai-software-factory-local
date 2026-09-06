@@ -25,6 +25,7 @@ class A2aGetTaskTest {
         A2aSendMessageService.TaskView visible = service.getTask(
                 mapper.readTree("{\"id\":\"" + submission.taskId() + "\",\"historyLength\":1}"), reader);
         assertThat(visible.submission().taskId()).isEqualTo(submission.taskId());
+        assertThat(visible.state()).isEqualTo(A2aSendMessageService.TaskState.SUBMITTED);
         assertThat(visible.history()).hasSize(1);
         assertThat(visible.artifacts()).isEmpty();
 

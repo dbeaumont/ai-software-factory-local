@@ -1,6 +1,7 @@
 package com.example.aifactory.agentruntime;
 
 import org.erdtman.jcs.JsonCanonicalizer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -25,18 +26,25 @@ public final class A2aSendMessageService {
     private final String activeRole;
     private final Set<String> allowedSkills;
     private final ObjectMapper mapper;
+    private final AgentTaskWorkflowControl workflowControl;
     private final Map<String, RegisteredSubmission> byMessageId = new ConcurrentHashMap<>();
     private final Map<String, RegisteredSubmission> byTaskId = new ConcurrentHashMap<>();
     private final Map<String, Cursor> cursors = new ConcurrentHashMap<>();
 
+    @Autowired
     public A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
-                                 ObjectMapper mapper) {
+                                 ObjectMapper mapper, AgentTaskWorkflowControl workflowControl) {
         this.activeRole = runtime.role();
         AgentCardCatalogGenerator.GeneratedAgentCard card = cards.generate().get(activeRole);
         if (card == null) throw new IllegalStateException("No Agent Card source for active role");
         this.allowedSkills = card.skills().stream()
                 .map(AgentCardCatalogGenerator.GeneratedSkill::id).collect(java.util.stream.Collectors.toUnmodifiableSet());
         this.mapper = mapper;
+        this.workflowControl = workflowControl;
+    }
+
+    A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards, ObjectMapper mapper) {
+        this(runtime, cards, mapper, (taskId, contextId, reason) -> { });
     }
 
     public Submission send(JsonNode params, Caller caller) {
@@ -77,7 +85,8 @@ public final class A2aSendMessageService {
                     role, skill, caller.subject(), caller.tenantId(),
                     requiredText(execution, "delegationId"), Instant.now());
             RegisteredSubmission registered = new RegisteredSubmission(digest, created,
-                    List.of(new HistoryItem(messageId, "MESSAGE_ACCEPTED", created.submittedAt())));
+                    new java.util.ArrayList<>(List.of(
+                            new HistoryItem(messageId, "MESSAGE_ACCEPTED", created.submittedAt()))));
             byMessageId.put(messageId, registered);
             byTaskId.put(created.taskId(), registered);
             return created;
@@ -104,9 +113,48 @@ public final class A2aSendMessageService {
         if (!submission.caller().equals(caller.subject()) || !submission.tenantId().equals(caller.tenantId())) {
             throw new TaskLookupRejected("Task not found");
         }
-        int from = Math.max(0, task.history().size() - historyLength);
-        List<HistoryItem> history = historyLength == 0 ? List.of() : task.history().subList(from, task.history().size());
-        return new TaskView(submission, history, List.of());
+        synchronized (task) {
+            int from = Math.max(0, task.history().size() - historyLength);
+            List<HistoryItem> history = historyLength == 0 ? List.of()
+                    : List.copyOf(task.history().subList(from, task.history().size()));
+            return new TaskView(submission, task.state(), history, List.of());
+        }
+    }
+
+    public TaskView cancelTask(JsonNode params, Caller caller) {
+        String taskId = requiredText(params, "id");
+        RegisteredSubmission task = byTaskId.get(taskId);
+        if (task == null || caller == null) throw new TaskLookupRejected("Task not found");
+        Submission submission = task.submission();
+        try {
+            requireScopes(caller.scopes(), Set.of("a2a.cancel", "a2a.role." + submission.role()));
+        } catch (SubmissionRejected forbidden) {
+            throw new TaskLookupRejected("Task not found");
+        }
+        if (!submission.caller().equals(caller.subject()) || !submission.tenantId().equals(caller.tenantId())) {
+            throw new TaskLookupRejected("Task not found");
+        }
+        synchronized (task) {
+            if (task.state() == TaskState.CANCELED) {
+                return new TaskView(submission, task.state(), List.copyOf(task.history()), List.of());
+            }
+            if (task.state().terminal()) {
+                throw new TaskNotCancelable("Task is already terminal: " + task.state());
+            }
+            workflowControl.requestCancellation(taskId, submission.contextId(), "A2A tasks/cancel");
+            task.transition(TaskState.CANCELED,
+                    new HistoryItem(submission.messageId(), "TASK_CANCELED", Instant.now()));
+            return new TaskView(submission, task.state(), List.copyOf(task.history()), List.of());
+        }
+    }
+
+    void projectState(String taskId, TaskState state) {
+        RegisteredSubmission task = byTaskId.get(taskId);
+        if (task == null) throw new TaskLookupRejected("Task not found");
+        synchronized (task) {
+            task.transition(state, new HistoryItem(
+                    task.submission().messageId(), "TASK_" + state.name(), Instant.now()));
+        }
     }
 
     public TaskPage listTasks(JsonNode params, Caller caller) {
@@ -120,9 +168,7 @@ public final class A2aSendMessageService {
         }
         String contextId = optionalText(params, "contextId");
         String state = optionalText(params, "status");
-        if (state != null && !"TASK_STATE_SUBMITTED".equals(state)) {
-            throw new SubmissionRejected("Unsupported task status filter");
-        }
+        TaskState stateFilter = state == null ? null : TaskState.fromProtocol(state);
         String pageToken = optionalText(params, "pageToken");
         int offset = 0;
         if (pageToken != null) {
@@ -137,11 +183,12 @@ public final class A2aSendMessageService {
                 .filter(task -> task.submission().tenantId().equals(caller.tenantId()))
                 .filter(task -> task.submission().caller().equals(caller.subject()))
                 .filter(task -> contextId == null || task.submission().contextId().equals(contextId))
+                .filter(task -> stateFilter == null || task.state() == stateFilter)
                 .sorted(java.util.Comparator.comparing(task -> task.submission().submittedAt()))
                 .toList();
         int end = Math.min(visible.size(), offset + pageSize);
         List<TaskView> tasks = visible.subList(Math.min(offset, visible.size()), end).stream()
-                .map(task -> new TaskView(task.submission(), List.of(), List.of())).toList();
+                .map(task -> new TaskView(task.submission(), task.state(), List.of(), List.of())).toList();
         String next = null;
         if (end < visible.size()) {
             next = UUID.randomUUID().toString();
@@ -233,10 +280,26 @@ public final class A2aSendMessageService {
 
     public record HistoryItem(String messageId, String event, Instant occurredAt) {}
 
-    public record TaskView(Submission submission, List<HistoryItem> history, List<Map<String, Object>> artifacts) {
+    public record TaskView(
+            Submission submission, TaskState state, List<HistoryItem> history, List<Map<String, Object>> artifacts) {
         public TaskView {
             history = List.copyOf(history);
             artifacts = List.copyOf(artifacts);
+        }
+    }
+
+    public enum TaskState {
+        SUBMITTED(false), WORKING(false), INPUT_REQUIRED(false), AUTH_REQUIRED(false),
+        COMPLETED(true), REJECTED(true), FAILED(true), CANCELED(true);
+        private final boolean terminal;
+        TaskState(boolean terminal) { this.terminal = terminal; }
+        public boolean terminal() { return terminal; }
+        static TaskState fromProtocol(String value) {
+            try {
+                return valueOf(value.replace("TASK_STATE_", ""));
+            } catch (RuntimeException exception) {
+                throw new SubmissionRejected("Unsupported task status filter");
+            }
         }
     }
 
@@ -244,8 +307,22 @@ public final class A2aSendMessageService {
         public TaskPage { tasks = List.copyOf(tasks); }
     }
 
-    private record RegisteredSubmission(
-            String messageDigest, Submission submission, List<HistoryItem> history) {}
+    private static final class RegisteredSubmission {
+        private final String messageDigest;
+        private final Submission submission;
+        private final List<HistoryItem> history;
+        private volatile TaskState state = TaskState.SUBMITTED;
+        RegisteredSubmission(String messageDigest, Submission submission, List<HistoryItem> history) {
+            this.messageDigest = messageDigest;
+            this.submission = submission;
+            this.history = history;
+        }
+        String messageDigest() { return messageDigest; }
+        Submission submission() { return submission; }
+        List<HistoryItem> history() { return history; }
+        TaskState state() { return state; }
+        void transition(TaskState next, HistoryItem event) { state = next; history.add(event); }
+    }
 
     private record Cursor(String subject, String tenantId, String contextId, String state, int offset) {
         boolean matches(Caller caller, String requestedContext, String requestedState) {
@@ -262,5 +339,9 @@ public final class A2aSendMessageService {
 
     public static final class TaskLookupRejected extends RuntimeException {
         public TaskLookupRejected(String message) { super(message); }
+    }
+
+    public static final class TaskNotCancelable extends RuntimeException {
+        public TaskNotCancelable(String message) { super(message); }
     }
 }

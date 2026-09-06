@@ -363,8 +363,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   maximale ; ne jamais permettre l'énumération inter-tenant. _(`tasks/list` filtre état/contexte dans le périmètre
   tenant+appelant, limite les pages à 100 et lie chaque curseur opaque, à usage unique, à l'identité et aux filtres
   d'origine ; un token étranger est refusé.)_
-- [ ] **A2A-063 — Implémenter `CancelTask`.** Signaler l'annulation au workflow d'agent, rendre l'opération
-  idempotente et refuser proprement un état terminal non annulable.
+- [x] **A2A-063 — Implémenter `CancelTask`.** Signaler l'annulation au workflow d'agent, rendre l'opération
+  idempotente et refuser proprement un état terminal non annulable. _(`tasks/cancel` contrôle propriétaire et
+  scopes avant lookup observable, signale `AgentTaskWorkflowControl` une seule fois, projette `CANCELED` de façon
+  atomique et renvoie `TaskNotCancelableError` pour tout autre état terminal.)_
 - [ ] **A2A-064 — Implémenter les notifications push.** Autoriser seulement le callback fixe de
   l'orchestrateur, authentifier chaque notification, borner retries/backoff et journaliser les accusés sans secret.
 - [ ] **A2A-065 — Créer un stockage durable des tâches.** Persister tâche, messages retenus, transitions,
