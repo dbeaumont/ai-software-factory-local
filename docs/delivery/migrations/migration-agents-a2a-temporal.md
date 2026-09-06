@@ -690,8 +690,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 16. Lot 9 — stratégie de tests et qualification
 
-- [ ] **A2A-160 — Tests unitaires.** Couvrir mapping, limites, états, erreurs, ACL, idempotence, cache de cartes,
-  signature, corrélation et redaction.
+- [x] **A2A-160 — Tests unitaires.** Couvrir mapping, limites, états, erreurs, ACL, idempotence, cache de cartes,
+  signature, corrélation et redaction. _(La barrière d'image JDK 25 exécute toute la suite A2A et ses composants
+  connexes ; preuve : `docs/evidence/a2a/A2A-160-UNIT-TESTS.md`.)_
 - [ ] **A2A-161 — Tests de contrats.** Valider toutes les Agent Cards, enveloppes, artefacts et extensions contre
   leurs schémas et fixtures dorées.
 - [ ] **A2A-162 — Exécuter le TCK A2A officiel.** Tester chaque opération et capacité déclarée avec la version

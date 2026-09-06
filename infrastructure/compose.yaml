@@ -548,6 +548,7 @@ services:
         multiagent-schemas: ../resources/multiagents/schemas
         multiagent-policies: ../resources/multiagents/policies
         multiagent-database: ../resources/multiagents/database
+        multiagent-fixtures: ../resources/multiagents/fixtures
         agent-resources: ../resources/agents
         a2a-resources: ../resources/a2a
       args:

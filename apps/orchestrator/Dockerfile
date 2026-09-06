@@ -51,6 +51,7 @@ COPY --from=mcp-schemas . /src/external-schemas
 COPY --from=multiagent-schemas . /src/external-multiagent-schemas
 COPY --from=multiagent-policies . /src/external-multiagent-policies
 COPY --from=multiagent-database . /src/external-multiagent-database
+COPY --from=multiagent-fixtures . /src/external-multiagent-fixtures
 COPY --from=agent-resources . /src/external-agents
 COPY --from=a2a-resources . /src/external-a2a
 
@@ -60,10 +61,10 @@ RUN --mount=type=secret,id=artifactory_token \
   set -e; \
   if [ -n "${MAVEN_MIRROR_URL}" ]; then \
     export ARTIFACTORY_TOKEN=$(cat /run/secrets/artifactory_token); \
-    mvn test -Dtest=WorkflowDeterminismArchitectureTest,A2aFleetReadinessHealthIndicatorTest,TaskControllerTest -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dmultiagent.database.directory=/src/external-multiagent-database -Dagents.directory=/src/external-agents -Da2a.directory=/src/external-a2a; \
+    mvn test -Dtest='A2a*Test,AllowListedAgentRegistryTest,CachingAgentCardResolverTest,TemporalA2aNotificationReceiverTest,WorkflowDeterminismArchitectureTest,TaskControllerTest' -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dmultiagent.database.directory=/src/external-multiagent-database -Dmultiagent.fixtures.directory=/src/external-multiagent-fixtures -Dagents.directory=/src/external-agents -Da2a.directory=/src/external-a2a; \
     mvn package -DskipTests -B -s .mvn/settings.xml -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dmultiagent.database.directory=/src/external-multiagent-database -Dagents.directory=/src/external-agents -Da2a.directory=/src/external-a2a; \
   else \
-    mvn test -Dtest=WorkflowDeterminismArchitectureTest,A2aFleetReadinessHealthIndicatorTest,TaskControllerTest -B -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dmultiagent.database.directory=/src/external-multiagent-database -Dagents.directory=/src/external-agents -Da2a.directory=/src/external-a2a; \
+    mvn test -Dtest='A2a*Test,AllowListedAgentRegistryTest,CachingAgentCardResolverTest,TemporalA2aNotificationReceiverTest,WorkflowDeterminismArchitectureTest,TaskControllerTest' -B -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dmultiagent.database.directory=/src/external-multiagent-database -Dmultiagent.fixtures.directory=/src/external-multiagent-fixtures -Dagents.directory=/src/external-agents -Da2a.directory=/src/external-a2a; \
     mvn package -DskipTests -B -Dmcp.schemas.directory=/src/external-schemas -Dmultiagent.schemas.directory=/src/external-multiagent-schemas -Dmultiagent.policies.directory=/src/external-multiagent-policies -Dmultiagent.database.directory=/src/external-multiagent-database -Dagents.directory=/src/external-agents -Da2a.directory=/src/external-a2a; \
   fi
 

@@ -16,6 +16,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class A2aTaskAssociationStoreTest {
+    private static final Path DATABASE = Path.of(System.getProperty(
+            "multiagent.database.directory", "../../resources/multiagents/database"));
     @Test
     void persistsServerGeneratedIdsUnderTheBusinessDelegationKeyIdempotently() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
@@ -38,13 +40,11 @@ class A2aTaskAssociationStoreTest {
 
     @Test
     void migrationNeverUsesA2aIdentifiersAsBusinessPrimaryKey() throws Exception {
-        String migration = Files.readString(Path.of(
-                "../../resources/multiagents/database/V016__a2a_task_associations.sql"));
+        String migration = Files.readString(DATABASE.resolve("V016__a2a_task_associations.sql"));
         assertThat(migration).contains("delegation_id      varchar(128) PRIMARY KEY")
                 .contains("a2a_task_id        varchar(255) NOT NULL")
                 .doesNotContain("a2a_task_id        varchar(255) PRIMARY KEY");
-        String extension = Files.readString(Path.of(
-                "../../resources/multiagents/database/V017__complete_a2a_task_correlation.sql"));
+        String extension = Files.readString(DATABASE.resolve("V017__complete_a2a_task_correlation.sql"));
         assertThat(extension).contains("workflow_id varchar(255)", "workflow_run_id varchar(128)",
                 "message_id varchar(200)", "agent_card_digest char(64)");
     }

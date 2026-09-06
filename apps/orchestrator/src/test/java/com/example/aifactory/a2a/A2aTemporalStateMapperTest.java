@@ -15,7 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class A2aTemporalStateMapperTest {
-    private static final Path DOCUMENTATION = Path.of("../..", "resources", "a2a", "temporal-state-mapping-v1.json");
+    private static final Path DOCUMENTATION = Path.of(System.getProperty(
+            "a2a.directory", "../../resources/a2a")).resolve("temporal-state-mapping-v1.json");
     private final A2aTemporalStateMapper mapper = new A2aTemporalStateMapper();
 
     @Test

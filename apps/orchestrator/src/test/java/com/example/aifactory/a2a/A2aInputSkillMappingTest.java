@@ -17,6 +17,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class A2aInputSkillMappingTest {
+    private static final Path AGENTS = Path.of(System.getProperty(
+            "agents.directory", "../../resources/agents"));
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
@@ -48,7 +50,7 @@ class A2aInputSkillMappingTest {
     @SuppressWarnings("unchecked")
     private Set<String> manifestInputs() throws Exception {
         Set<String> result = new HashSet<>();
-        try (var files = Files.list(Path.of("../../resources/agents"))) {
+        try (var files = Files.list(AGENTS)) {
             files.filter(path -> path.toString().endsWith(".yaml"))
                     .filter(path -> !path.getFileName().toString().equals("catalog-v1.yaml"))
                     .forEach(path -> {

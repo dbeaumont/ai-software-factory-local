@@ -13,6 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class A2aBusinessContractGuardTest {
+    private static final Path FIXTURES = Path.of(System.getProperty(
+            "multiagent.fixtures.directory", "../../resources/multiagents/fixtures"));
     private final ObjectMapper mapper = new ObjectMapper();
     private final A2aBusinessContractGuard guard = new A2aBusinessContractGuard(
             new A2aContractMapping(mapper), new MultiAgentContractValidator(mapper));
@@ -43,7 +45,6 @@ class A2aBusinessContractGuardTest {
     }
 
     private JsonNode fixtures() throws Exception {
-        return mapper.readTree(Files.readString(Path.of(
-                "../../resources/multiagents/fixtures/golden-contracts-v1.json"))).path("documents");
+        return mapper.readTree(Files.readString(FIXTURES.resolve("golden-contracts-v1.json"))).path("documents");
     }
 }
