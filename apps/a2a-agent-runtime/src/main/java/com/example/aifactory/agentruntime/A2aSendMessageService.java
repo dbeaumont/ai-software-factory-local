@@ -124,39 +124,42 @@ public final class A2aSendMessageService {
         } catch (IllegalArgumentException invalidTrace) {
             throw new SubmissionRejected(invalidTrace.getMessage(), invalidTrace);
         }
-        if (params.path("configuration").path("blocking").asBoolean(false)) {
-            throw new SubmissionRejected("Blocking message/send is disabled");
-        }
-
-        String digest = digest(message);
-        Instant now = Instant.now();
-        String requestedTaskId = optionalText(message, "taskId");
-        String requestedContextId = optionalText(message, "contextId");
-        if (requestedTaskId != null || requestedContextId != null) {
-            if (requestedTaskId == null || requestedContextId == null) {
-                throw new SubmissionRejected("A2A continuation requires both taskId and contextId");
+        try (A2aTelemetryCorrelation ignored = A2aTelemetryCorrelation.open(
+                requiredText(execution, "taskId"), requiredText(execution, "workflowId"), messageId)) {
+            if (params.path("configuration").path("blocking").asBoolean(false)) {
+                throw new SubmissionRejected("Blocking message/send is disabled");
             }
-            return continueTask(requestedTaskId, requestedContextId, messageId, digest, envelope, metadata,
-                    role, skill, caller, execution, now);
+
+            String digest = digest(message);
+            Instant now = Instant.now();
+            String requestedTaskId = optionalText(message, "taskId");
+            String requestedContextId = optionalText(message, "contextId");
+            if (requestedTaskId != null || requestedContextId != null) {
+                if (requestedTaskId == null || requestedContextId == null) {
+                    throw new SubmissionRejected("A2A continuation requires both taskId and contextId");
+                }
+                return continueTask(requestedTaskId, requestedContextId, messageId, digest, envelope, metadata,
+                        role, skill, caller, execution, now);
+            }
+            A2aTaskStore.StoredTask candidate = new A2aTaskStore.StoredTask(
+                    UUID.randomUUID().toString(), UUID.randomUUID().toString(), messageId, digest,
+                    role, skill, caller.subject(), caller.tenantId(), requiredText(execution, "delegationId"),
+                    now, TaskState.SUBMITTED, 0, envelope.toString(), null, null);
+            A2aTaskStore.CreateResult result = admission.admit(messageId, role, caller.tenantId(), () ->
+                    store.createOrGet(candidate,
+                            new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_ACCEPTED", now)));
+            if (!result.task().messageDigest().equals(digest)) {
+                audit.record(A2aDecisionJournal.EventType.COLLISION, A2aDecisionJournal.Outcome.REJECTED,
+                        caller.subject(), result.task().taskId(), messageId);
+                throw new SubmissionRejected("messageId collision with a different payload");
+            }
+            Submission submission = submission(result.task(), traceContext);
+            if (result.created()) {
+                AgentTaskWorkflowStarter.Execution executionReference = workflowStarter.start(submission, envelope.toString());
+                store.recordWorkflowExecution(submission.taskId(), executionReference.workflowId(), executionReference.runId());
+            }
+            return submission;
         }
-        A2aTaskStore.StoredTask candidate = new A2aTaskStore.StoredTask(
-                UUID.randomUUID().toString(), UUID.randomUUID().toString(), messageId, digest,
-                role, skill, caller.subject(), caller.tenantId(), requiredText(execution, "delegationId"),
-                now, TaskState.SUBMITTED, 0, envelope.toString(), null, null);
-        A2aTaskStore.CreateResult result = admission.admit(messageId, role, caller.tenantId(), () ->
-                store.createOrGet(candidate,
-                        new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_ACCEPTED", now)));
-        if (!result.task().messageDigest().equals(digest)) {
-            audit.record(A2aDecisionJournal.EventType.COLLISION, A2aDecisionJournal.Outcome.REJECTED,
-                    caller.subject(), result.task().taskId(), messageId);
-            throw new SubmissionRejected("messageId collision with a different payload");
-        }
-        Submission submission = submission(result.task(), traceContext);
-        if (result.created()) {
-            AgentTaskWorkflowStarter.Execution executionReference = workflowStarter.start(submission, envelope.toString());
-            store.recordWorkflowExecution(submission.taskId(), executionReference.workflowId(), executionReference.runId());
-        }
-        return submission;
     }
 
     private Submission continueTask(String taskId, String contextId, String messageId, String digest,

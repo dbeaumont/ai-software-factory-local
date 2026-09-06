@@ -6,6 +6,7 @@ import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.a2a.A2aMediaTypes;
 import com.example.aifactory.a2a.A2aTaskAssociationStore;
 import com.example.aifactory.a2a.A2aW3cTraceContext;
+import com.example.aifactory.a2a.A2aTelemetryCorrelation;
 import com.example.aifactory.a2a.AgentCardResolver;
 import com.example.aifactory.a2a.A2aEvidenceUriPolicy;
 
@@ -40,11 +41,14 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     @Override
     public A2aContracts.TaskSnapshot dispatchTask(A2aActivities.DispatchRequest request) {
         requireDispatch(request);
-        A2aContracts.SendCommand command = withCurrentTrace(request.command());
-        A2aContracts.TaskSnapshot task = await(client.send(command), Duration.ofSeconds(45));
-        associations.record(request.execution(), request.command().messageId(), request.agentCardDigest(),
-                task.taskId(), task.contextId());
-        return task;
+        try (A2aTelemetryCorrelation ignored = A2aTelemetryCorrelation.open(
+                request.execution(), request.command().messageId())) {
+            A2aContracts.SendCommand command = withCurrentTrace(request.command());
+            A2aContracts.TaskSnapshot task = await(client.send(command), Duration.ofSeconds(45));
+            associations.record(request.execution(), request.command().messageId(), request.agentCardDigest(),
+                    task.taskId(), task.contextId());
+            return task;
+        }
     }
 
     @Override
@@ -96,7 +100,11 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
                 || !association.agentRole().equals(request.command().agentRole())) {
             throw new SecurityException("A2A continuation changed task correlation");
         }
-        A2aContracts.TaskSnapshot result = await(client.send(withCurrentTrace(request.command())), Duration.ofSeconds(45));
+        A2aContracts.TaskSnapshot result;
+        try (A2aTelemetryCorrelation ignored = A2aTelemetryCorrelation.open(
+                request.execution(), request.command().messageId())) {
+            result = await(client.send(withCurrentTrace(request.command())), Duration.ofSeconds(45));
+        }
         if (!association.a2aTaskId().equals(result.taskId())
                 || !association.a2aContextId().equals(result.contextId())) {
             throw new SecurityException("A2A server forked a continuation into another task");

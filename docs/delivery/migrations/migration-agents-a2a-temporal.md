@@ -639,8 +639,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   Temporal, activités A2A, serveur d'agent, workflow d'agent et MCP. _(Extension W3C fermée et bornée injectée par
   les activités, refusée si absente/invalide par le serveur, portée dans `AgentTaskWorkflowV1` puis injectée dans
   chaque appel MCP ; preuve : `docs/evidence/a2a/A2A-140-W3C-CONTEXT.md`.)_
-- [ ] **A2A-141 — Corréler sans cardinalité excessive.** Placer task/workflow/message IDs dans traces et logs,
+- [x] **A2A-141 — Corréler sans cardinalité excessive.** Placer task/workflow/message IDs dans traces et logs,
   jamais comme labels de métriques ; utiliser rôle, skill, opération, version et état comme dimensions bornées.
+  _(`A2aTelemetryCorrelation` borne la durée de vie des IDs dans spans/MDC ; `A2aMetricDimensions` n'expose que
+  cinq dimensions bornées. Preuve : `docs/evidence/a2a/A2A-141-CARDINALITY.md`.)_
 - [ ] **A2A-142 — Instrumenter le client.** Mesurer durée, résultat, retry, timeout, réconciliation, validation de
   carte, taille de payload et âge de notification.
 - [ ] **A2A-143 — Instrumenter le serveur.** Mesurer admission, refus auth, déduplication, durée de tâche,
