@@ -166,4 +166,11 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
         return (int) byTask.values().stream().filter(task -> task.role().equals(role) && !task.state().terminal())
                 .filter(task -> tenantId == null || task.tenantId().equals(tenantId)).count();
     }
+
+    @Override
+    public int backlogCount(String role) {
+        return (int) byTask.values().stream()
+                .filter(task -> task.role().equals(role) && task.state() == A2aSendMessageService.TaskState.SUBMITTED)
+                .count();
+    }
 }

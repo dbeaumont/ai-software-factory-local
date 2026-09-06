@@ -33,6 +33,7 @@ public final class A2aSendMessageService {
     private final A2aAdmissionController admission;
     private final A2aIdentityRateLimiter rateLimiter;
     private final A2aDecisionJournal audit;
+    private final A2aServerMetrics metrics;
     private final com.example.aifactory.agentcore.AgentCatalog catalog =
             new com.example.aifactory.agentcore.AgentCatalog();
     private final Map<String, Cursor> cursors = new ConcurrentHashMap<>();
@@ -42,7 +43,7 @@ public final class A2aSendMessageService {
                                  ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
                                  AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
                                  A2aAdmissionController admission, A2aIdentityRateLimiter rateLimiter,
-                                 A2aDecisionJournal audit) {
+                                 A2aDecisionJournal audit, A2aServerMetrics metrics) {
         this.activeRole = runtime.role();
         AgentCardCatalogGenerator.GeneratedAgentCard card = cards.generate().get(activeRole);
         if (card == null) throw new IllegalStateException("No Agent Card source for active role");
@@ -55,6 +56,7 @@ public final class A2aSendMessageService {
         this.admission = admission;
         this.rateLimiter = rateLimiter;
         this.audit = audit;
+        this.metrics = metrics;
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
@@ -62,7 +64,7 @@ public final class A2aSendMessageService {
                           AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
                           A2aAdmissionController admission, A2aIdentityRateLimiter rateLimiter) {
         this(runtime, cards, mapper, workflowControl, workflowStarter, store, admission, rateLimiter,
-                new A2aDecisionJournal());
+                new A2aDecisionJournal(), A2aServerMetrics.disabled());
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
@@ -145,14 +147,23 @@ public final class A2aSendMessageService {
                     UUID.randomUUID().toString(), UUID.randomUUID().toString(), messageId, digest,
                     role, skill, caller.subject(), caller.tenantId(), requiredText(execution, "delegationId"),
                     now, TaskState.SUBMITTED, 0, envelope.toString(), null, null);
-            A2aTaskStore.CreateResult result = admission.admit(messageId, role, caller.tenantId(), () ->
-                    store.createOrGet(candidate,
-                            new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_ACCEPTED", now)));
+            A2aTaskStore.CreateResult result;
+            try {
+                result = admission.admit(messageId, role, caller.tenantId(), () ->
+                        store.createOrGet(candidate,
+                                new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_ACCEPTED", now)));
+            } catch (RuntimeException rejected) {
+                metrics.admission(skill, false);
+                throw rejected;
+            }
             if (!result.task().messageDigest().equals(digest)) {
+                metrics.admission(skill, false);
                 audit.record(A2aDecisionJournal.EventType.COLLISION, A2aDecisionJournal.Outcome.REJECTED,
                         caller.subject(), result.task().taskId(), messageId);
                 throw new SubmissionRejected("messageId collision with a different payload");
             }
+            metrics.admission(skill, true);
+            if (!result.created()) metrics.deduplication(skill, "send");
             Submission submission = submission(result.task(), traceContext);
             if (result.created()) {
                 AgentTaskWorkflowStarter.Execution executionReference = workflowStarter.start(submission, envelope.toString());
@@ -191,6 +202,8 @@ public final class A2aSendMessageService {
         }
         if (result.accepted()) {
             workflowControl.requestContinuation(taskId, contextId, messageId, envelope.toString());
+        } else {
+            metrics.deduplication(skill, "continue");
         }
         return submission(result.task());
     }
@@ -221,6 +234,7 @@ public final class A2aSendMessageService {
         }
         List<HistoryItem> history = historyLength == 0 ? List.of()
                 : store.history(taskId, historyLength).stream().map(A2aSendMessageService::history).toList();
+        metrics.polling(task.skill(), "get", task.state());
         return new TaskView(submission, task.state(), task.version(), history,
                 store.artifacts(taskId, caller.tenantId(), caller.subject()));
     }
@@ -247,6 +261,7 @@ public final class A2aSendMessageService {
                     TaskState.CANCELED, new A2aTaskStore.HistoryRecord(
                             submission.messageId(), "TASK_CANCELED", Instant.now()));
             if (updated.isPresent()) {
+                metrics.transition(updated.get(), TaskState.CANCELED, Instant.now());
                 workflowControl.requestCancellation(taskId, submission.contextId(), "A2A tasks/cancel");
                 audit.record(A2aDecisionJournal.EventType.CANCELLATION, A2aDecisionJournal.Outcome.ACCEPTED,
                         caller.subject(), taskId, "temporal-signal");
@@ -260,8 +275,12 @@ public final class A2aSendMessageService {
         while (true) {
             A2aTaskStore.StoredTask task = store.find(taskId)
                     .orElseThrow(() -> new TaskLookupRejected("Task not found"));
+            Instant occurredAt = Instant.now();
             if (store.transition(taskId, task.version(), state, new A2aTaskStore.HistoryRecord(
-                    task.messageId(), "TASK_" + state.name(), Instant.now())).isPresent()) return;
+                    task.messageId(), "TASK_" + state.name(), occurredAt)).isPresent()) {
+                metrics.transition(task, state, occurredAt);
+                return;
+            }
         }
     }
 
@@ -289,6 +308,7 @@ public final class A2aSendMessageService {
         List<TaskView> tasks = store.list(caller.tenantId(), caller.subject(), contextId, stateFilter, offset, pageSize)
                 .stream().map(task -> new TaskView(submission(task), task.state(), task.version(), List.of(),
                         store.artifacts(task.taskId(), caller.tenantId(), caller.subject()))).toList();
+        metrics.polling("none", "list", stateFilter);
         int end = offset + tasks.size();
         String next = null;
         if (end < total) {

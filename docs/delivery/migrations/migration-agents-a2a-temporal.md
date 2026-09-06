@@ -647,8 +647,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   carte, taille de payload et âge de notification. _(Sept instruments Micrometer/OTLP couvrent les opérations des
   activités et le récepteur de notifications, avec tests anti-cardinalité ; preuve :
   `docs/evidence/a2a/A2A-142-CLIENT-METRICS.md`.)_
-- [ ] **A2A-143 — Instrumenter le serveur.** Mesurer admission, refus auth, déduplication, durée de tâche,
-  transitions, tâches actives, backlog, polling et notifications.
+- [x] **A2A-143 — Instrumenter le serveur.** Mesurer admission, refus auth, déduplication, durée de tâche,
+  transitions, tâches actives, backlog, polling et notifications. _(Neuf familles d'instruments Micrometer/OTLP
+  sont raccordées aux décisions durables du serveur, avec jauges actives/backlog issues du task store et tests
+  anti-cardinalité ; preuve : `docs/evidence/a2a/A2A-143-SERVER-METRICS.md`.)_
 - [ ] **A2A-144 — Tracer les liens Temporal/A2A.** Ajouter des span links entre workflow racine, activité d'envoi,
   tâche A2A et workflow d'agent sans produire de doublons pendant un replay.
 - [ ] **A2A-145 — Créer les dashboards SigNoz.** Vue flotte d'agents, latence par rôle/skill, états des tâches,

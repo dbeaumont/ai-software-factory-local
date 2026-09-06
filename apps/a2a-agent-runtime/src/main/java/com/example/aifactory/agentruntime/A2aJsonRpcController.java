@@ -29,18 +29,25 @@ final class A2aJsonRpcController {
     private final A2aSendMessageService service;
     private final A2aSecurityProperties security;
     private final A2aDecisionJournal audit;
+    private final A2aServerMetrics metrics;
 
     @Autowired
     A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security,
-                         A2aDecisionJournal audit) {
+                         A2aDecisionJournal audit, A2aServerMetrics metrics) {
         this.mapper = mapper;
         this.service = service;
         this.security = security;
         this.audit = audit;
+        this.metrics = metrics;
+    }
+
+    A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security,
+                         A2aDecisionJournal audit) {
+        this(mapper, service, security, audit, A2aServerMetrics.disabled());
     }
 
     A2aJsonRpcController(ObjectMapper mapper, A2aSendMessageService service, A2aSecurityProperties security) {
-        this(mapper, service, security, new A2aDecisionJournal());
+        this(mapper, service, security, new A2aDecisionJournal(), A2aServerMetrics.disabled());
     }
 
     @PostMapping(path = ENDPOINT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -147,6 +154,7 @@ final class A2aJsonRpcController {
     }
 
     private void recordRefusal(Authentication authentication, Object requestId, A2aDecisionJournal.EventType type) {
+        if (type == A2aDecisionJournal.EventType.AUTHENTICATION) metrics.authenticationRefusal();
         audit.record(type, A2aDecisionJournal.Outcome.DENIED,
                 authentication == null ? null : authentication.getName(), null,
                 requestId == null ? null : requestId.toString());

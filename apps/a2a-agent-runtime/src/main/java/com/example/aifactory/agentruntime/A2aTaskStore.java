@@ -27,6 +27,7 @@ public interface A2aTaskStore {
     void putArtifact(ArtifactRecord artifact);
     void checkHealth();
     int activeCount(String role, String tenantId);
+    int backlogCount(String role);
 
     record StoredTask(
             String taskId, String contextId, String messageId, String messageDigest,

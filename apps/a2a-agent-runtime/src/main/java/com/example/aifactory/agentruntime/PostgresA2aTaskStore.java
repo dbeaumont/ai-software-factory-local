@@ -276,6 +276,15 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
         return count == null ? 0 : count;
     }
 
+    @Override
+    public int backlogCount(String role) {
+        Integer count = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM a2a_agent_task
+                WHERE agent_role = ? AND task_state = 'SUBMITTED'
+                """, Integer.class, role);
+        return count == null ? 0 : count;
+    }
+
     private void insertHistory(String taskId, HistoryRecord history) {
         jdbc.update("""
                 INSERT INTO a2a_agent_task_history (task_id, message_id, event_type, occurred_at, task_version)

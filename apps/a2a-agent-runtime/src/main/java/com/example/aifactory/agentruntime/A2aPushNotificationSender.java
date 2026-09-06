@@ -36,41 +36,46 @@ public final class A2aPushNotificationSender {
     private final SecretProvider secretProvider;
     private final SecureUriPolicy urlPolicy;
     private final A2aIdentityRateLimiter rateLimiter;
+    private final A2aServerMetrics metrics;
 
     @Autowired
     public A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
-                                     WebClient.Builder webClient, A2aIdentityRateLimiter rateLimiter) {
+                                     WebClient.Builder webClient, A2aIdentityRateLimiter rateLimiter,
+                                     A2aServerMetrics metrics) {
         this(properties, mapper, httpTransport(webClient), () -> loadSecret(properties), systemPolicy(properties),
-                rateLimiter);
+                rateLimiter, metrics);
     }
 
     A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                               NotificationTransport transport, byte[] secret) {
-        this(properties, mapper, transport, secret, testPolicy(properties),
-                new A2aIdentityRateLimiter(A2aRateLimitProperties.defaults()));
+        this(properties, mapper, transport, constantSecret(secret), testPolicy(properties),
+                new A2aIdentityRateLimiter(A2aRateLimitProperties.defaults()), A2aServerMetrics.disabled());
     }
 
     A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                               NotificationTransport transport, byte[] secret, SecureUriPolicy urlPolicy) {
-        this(properties, mapper, transport, secret, urlPolicy,
-                new A2aIdentityRateLimiter(A2aRateLimitProperties.defaults()));
+        this(properties, mapper, transport, constantSecret(secret), urlPolicy,
+                new A2aIdentityRateLimiter(A2aRateLimitProperties.defaults()), A2aServerMetrics.disabled());
     }
 
     A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                               NotificationTransport transport, byte[] secret, SecureUriPolicy urlPolicy,
                               A2aIdentityRateLimiter rateLimiter) {
-        this(properties, mapper, transport, constantSecret(secret), urlPolicy, rateLimiter);
+        this(properties, mapper, transport, constantSecret(secret), urlPolicy, rateLimiter,
+                A2aServerMetrics.disabled());
     }
 
     private A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                               NotificationTransport transport, SecretProvider secretProvider,
-                              SecureUriPolicy urlPolicy, A2aIdentityRateLimiter rateLimiter) {
+                              SecureUriPolicy urlPolicy, A2aIdentityRateLimiter rateLimiter,
+                              A2aServerMetrics metrics) {
         this.properties = properties;
         this.mapper = mapper;
         this.transport = transport;
         this.secretProvider = secretProvider;
         this.urlPolicy = urlPolicy;
         this.rateLimiter = rateLimiter;
+        this.metrics = metrics;
         byte[] probe = secretProvider.acquire();
         try {
             validate(properties, probe);
@@ -114,14 +119,17 @@ public final class A2aPushNotificationSender {
         }
         return transport.post(properties.callback(), body, signature).handle((status, failure) -> {
             if (failure == null && status >= 200 && status < 300) {
+                metrics.notification("delivered", notificationState(body));
                 LOGGER.info("A2A push acknowledged taskId={} attempt={} status={}", taskId, attempt, status);
                 return CompletableFuture.completedFuture(new Acknowledgement(attempt, status));
             }
             if (attempt >= properties.maxAttempts()) {
+                metrics.notification("failed", notificationState(body));
                 LOGGER.warn("A2A push exhausted taskId={} attempts={}", taskId, attempt);
                 return CompletableFuture.<Acknowledgement>failedFuture(new NotificationDeliveryException(
                         "Push notification delivery exhausted", failure));
             }
+            metrics.notification("retries", notificationState(body));
             Duration delay = properties.initialBackoff().multipliedBy(1L << Math.min(attempt - 1, 10));
             CompletableFuture<Acknowledgement> delayed = new CompletableFuture<>();
             CompletableFuture.delayedExecutor(delay.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
@@ -132,6 +140,15 @@ public final class A2aPushNotificationSender {
                             }));
             return delayed;
         }).thenCompose(stage -> stage);
+    }
+
+    private A2aSendMessageService.TaskState notificationState(byte[] body) {
+        try {
+            String value = mapper.readTree(body).path("state").asText();
+            return A2aSendMessageService.TaskState.valueOf(value.replace("TASK_STATE_", ""));
+        } catch (Exception invalid) {
+            return A2aSendMessageService.TaskState.FAILED;
+        }
     }
 
     private String signature(byte[] body) throws Exception {
