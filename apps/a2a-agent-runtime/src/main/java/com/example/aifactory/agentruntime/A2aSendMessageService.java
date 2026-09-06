@@ -30,6 +30,7 @@ public final class A2aSendMessageService {
     private final AgentTaskWorkflowStarter workflowStarter;
     private final A2aTaskStore store;
     private final A2aAdmissionController admission;
+    private final A2aIdentityRateLimiter rateLimiter;
     private final com.example.aifactory.agentcore.AgentCatalog catalog =
             new com.example.aifactory.agentcore.AgentCatalog();
     private final Map<String, Cursor> cursors = new ConcurrentHashMap<>();
@@ -38,7 +39,7 @@ public final class A2aSendMessageService {
     public A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
                                  ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
                                  AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
-                                 A2aAdmissionController admission) {
+                                 A2aAdmissionController admission, A2aIdentityRateLimiter rateLimiter) {
         this.activeRole = runtime.role();
         AgentCardCatalogGenerator.GeneratedAgentCard card = cards.generate().get(activeRole);
         if (card == null) throw new IllegalStateException("No Agent Card source for active role");
@@ -49,6 +50,15 @@ public final class A2aSendMessageService {
         this.workflowStarter = workflowStarter;
         this.store = store;
         this.admission = admission;
+        this.rateLimiter = rateLimiter;
+    }
+
+    A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
+                          ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
+                          AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
+                          A2aAdmissionController admission) {
+        this(runtime, cards, mapper, workflowControl, workflowStarter, store, admission,
+                new A2aIdentityRateLimiter(A2aRateLimitProperties.defaults()));
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
@@ -76,6 +86,7 @@ public final class A2aSendMessageService {
         if (caller == null || caller.subject() == null || caller.subject().isBlank()) {
             throw new SubmissionRejected("Unauthenticated A2A caller");
         }
+        rateLimiter.acquire(caller.subject(), A2aIdentityRateLimiter.Operation.REQUEST);
         JsonNode message = requiredObject(params, "message");
         String messageId = requiredText(message, "messageId");
         JsonNode parts = message.path("parts");
@@ -168,6 +179,7 @@ public final class A2aSendMessageService {
 
     public TaskView getTask(JsonNode params, Caller caller) {
         requireLookupAuthorization(caller, "a2a.read");
+        rateLimiter.acquire(caller.subject(), A2aIdentityRateLimiter.Operation.POLL);
         String taskId = requiredText(params, "id");
         int historyLength = params.path("historyLength").asInt(0);
         if (historyLength < 0 || historyLength > MAX_HISTORY_LENGTH) {
@@ -186,6 +198,7 @@ public final class A2aSendMessageService {
 
     public TaskView cancelTask(JsonNode params, Caller caller) {
         requireLookupAuthorization(caller, "a2a.cancel");
+        rateLimiter.acquire(caller.subject(), A2aIdentityRateLimiter.Operation.CANCELLATION);
         String taskId = requiredText(params, "id");
         A2aTaskStore.StoredTask task = store.find(taskId).orElseThrow(() -> new TaskLookupRejected("Task not found"));
         Submission submission = submission(task);
@@ -221,6 +234,7 @@ public final class A2aSendMessageService {
 
     public TaskPage listTasks(JsonNode params, Caller caller) {
         requireLookupAuthorization(caller, "a2a.read");
+        rateLimiter.acquire(caller.subject(), A2aIdentityRateLimiter.Operation.POLL);
         int pageSize = params.path("pageSize").asInt(50);
         if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
             throw new SubmissionRejected("pageSize must be between 1 and " + MAX_PAGE_SIZE);

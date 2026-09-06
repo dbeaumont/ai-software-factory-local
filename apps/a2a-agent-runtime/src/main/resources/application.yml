@@ -78,6 +78,13 @@ ai-factory:
       max-active-tasks-per-tenant: ${AI_FACTORY_A2A_MAX_TASKS_PER_TENANT:64}
       max-queued-tasks: ${AI_FACTORY_A2A_MAX_QUEUED_TASKS:1000}
       shutdown-grace: ${AI_FACTORY_AGENT_SHUTDOWN_GRACE:30s}
+    rate-limit:
+      window: ${AI_FACTORY_A2A_RATE_LIMIT_WINDOW:1m}
+      requests-per-identity: ${AI_FACTORY_A2A_REQUESTS_PER_IDENTITY:120}
+      polls-per-identity: ${AI_FACTORY_A2A_POLLS_PER_IDENTITY:60}
+      cancellations-per-identity: ${AI_FACTORY_A2A_CANCELLATIONS_PER_IDENTITY:10}
+      notifications-per-role: ${AI_FACTORY_A2A_NOTIFICATIONS_PER_ROLE:120}
+      max-tracked-identities: ${AI_FACTORY_A2A_MAX_TRACKED_IDENTITIES:10000}
     llm:
       base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
       api-key: ${AI_FACTORY_LLM_API_KEY:}

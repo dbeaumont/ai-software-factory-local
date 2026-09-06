@@ -515,8 +515,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `UntrustedData` et `AgentLoop.INPUT_DATA_GUARDRAIL` encadrent toute entrée modèle et neutralisent les
     fermetures de balise injectées ; `AgentExecutionWorkerTest` prouve validation du contrat avant LLM et rejet de
     toute sortie non conforme avant publication.
-- [ ] **A2A-107 — Ajouter quotas et rate limiting.** Borner requêtes par identité, tâches actives, taille, tokens,
+- [x] **A2A-107 — Ajouter quotas et rate limiting.** Borner requêtes par identité, tâches actives, taille, tokens,
   fréquence de polling, annulations et notifications.
+  - Preuve : `A2aIdentityRateLimiter` applique des fenêtres bornées par identité et classe d'opération aux envois,
+    lectures, listes, annulations et tentatives de notification ; les quotas de tâches par tenant, la limite JSON-RPC
+    de 1 Mio et les budgets tours/tokens/coût restent imposés par l'admission et le worker. Les tests du limiter, de
+    l'admission, des opérations A2A, des notifications, du contrôleur et du worker couvrent les refus fail-fast.
 - [ ] **A2A-108 — Journaliser les décisions.** Tracer authentifications échouées, refus, changement de carte,
   délégations, annulations et collisions sans données sensibles.
 - [ ] **A2A-109 — Gérer les secrets.** Monter les secrets en fichiers, vérifier permissions, rotation et absence

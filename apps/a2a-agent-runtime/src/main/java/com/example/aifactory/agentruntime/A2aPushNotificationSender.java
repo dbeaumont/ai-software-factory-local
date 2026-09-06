@@ -35,25 +35,36 @@ public final class A2aPushNotificationSender {
     private final NotificationTransport transport;
     private final byte[] secret;
     private final SecureUriPolicy urlPolicy;
+    private final A2aIdentityRateLimiter rateLimiter;
 
     @Autowired
     public A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
-                                     WebClient.Builder webClient) {
-        this(properties, mapper, httpTransport(webClient), loadSecret(properties), systemPolicy(properties));
+                                     WebClient.Builder webClient, A2aIdentityRateLimiter rateLimiter) {
+        this(properties, mapper, httpTransport(webClient), loadSecret(properties), systemPolicy(properties),
+                rateLimiter);
     }
 
     A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                               NotificationTransport transport, byte[] secret) {
-        this(properties, mapper, transport, secret, testPolicy(properties));
+        this(properties, mapper, transport, secret, testPolicy(properties),
+                new A2aIdentityRateLimiter(A2aRateLimitProperties.defaults()));
     }
 
     A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                               NotificationTransport transport, byte[] secret, SecureUriPolicy urlPolicy) {
+        this(properties, mapper, transport, secret, urlPolicy,
+                new A2aIdentityRateLimiter(A2aRateLimitProperties.defaults()));
+    }
+
+    A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
+                              NotificationTransport transport, byte[] secret, SecureUriPolicy urlPolicy,
+                              A2aIdentityRateLimiter rateLimiter) {
         this.properties = properties;
         this.mapper = mapper;
         this.transport = transport;
         this.secret = secret.clone();
         this.urlPolicy = urlPolicy;
+        this.rateLimiter = rateLimiter;
         validate(properties, this.secret);
     }
 
@@ -72,16 +83,20 @@ public final class A2aPushNotificationSender {
                     "state", "TASK_STATE_" + notification.state().name(),
                     "occurredAt", notification.occurredAt().toString(),
                     "artifacts", notification.artifacts()));
-            return attempt(notification.taskId(), body, signature(body), 1);
+            return attempt(notification.agentRole(), notification.taskId(), body, signature(body), 1);
         } catch (Exception exception) {
             return CompletableFuture.failedFuture(new NotificationDeliveryException(
                     "Cannot serialize push notification", exception));
         }
     }
 
-    private CompletionStage<Acknowledgement> attempt(String taskId, byte[] body, String signature, int attempt) {
+    private CompletionStage<Acknowledgement> attempt(String identity, String taskId, byte[] body, String signature,
+                                                     int attempt) {
         try {
+            rateLimiter.acquire(identity, A2aIdentityRateLimiter.Operation.NOTIFICATION);
             urlPolicy.requireAllowed(properties.callback());
+        } catch (A2aOperationalException limited) {
+            return CompletableFuture.failedFuture(limited);
         } catch (SecurityException blocked) {
             return CompletableFuture.failedFuture(new NotificationDeliveryException(
                     "Push callback network target is forbidden", blocked));
@@ -99,7 +114,7 @@ public final class A2aPushNotificationSender {
             Duration delay = properties.initialBackoff().multipliedBy(1L << Math.min(attempt - 1, 10));
             CompletableFuture<Acknowledgement> delayed = new CompletableFuture<>();
             CompletableFuture.delayedExecutor(delay.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
-                    .execute(() -> attempt(taskId, body, signature, attempt + 1)
+                    .execute(() -> attempt(identity, taskId, body, signature, attempt + 1)
                             .whenComplete((ack, retryFailure) -> {
                                 if (retryFailure == null) delayed.complete(ack);
                                 else delayed.completeExceptionally(retryFailure);
