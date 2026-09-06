@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -42,6 +42,7 @@ help:
 	@echo -e "  $(CYAN)make test-temporal-pipeline-delivery$(NC) - approve one full pipeline and verify exactly one PR"
 	@echo -e "  $(CYAN)make test-temporal-compose-cycle$(NC) - verify tasks and histories survive Compose down/up"
 	@echo -e "  $(CYAN)make test-temporal-backpressure$(NC) - overload a constrained worker and measure its backlog"
+	@echo -e "  $(CYAN)make test-temporal-capacity-limits$(NC) - verify global and per-task-queue capacity guards"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify the static Compose sandbox runner"
 	@echo -e "  $(CYAN)make test-sandbox-network$(NC) - verify Compose runner network isolation"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
@@ -178,6 +179,11 @@ test-temporal-compose-cycle:
 test-temporal-backpressure:
 	$(log-target)
 	@./scripts/test-temporal-backpressure.sh
+
+test-temporal-capacity-limits:
+	$(log-target)
+	@if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=TemporalPropertiesTest,TemporalWorkerRegistryTest,TemporalTaskQueueMonitorTest; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=TemporalPropertiesTest,TemporalWorkerRegistryTest,TemporalTaskQueueMonitorTest; fi
+	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/sandbox-execution-server/pom.xml test -Dtest=SandboxExecutionPropertiesTest,SandboxJobServiceTest
 
 test-sandbox-runtime:
 	$(log-target)

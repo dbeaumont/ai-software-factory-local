@@ -512,7 +512,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   soumet six tickets en parallèle, exige un Run ID pour chacun, mesure le backlog gRPC exposé par Micrometer, puis
   annule la charge et restaure la capacité nominale. Mesure locale : 6 admissions en 1 920 ms, backlog maximal 7
   sur `context`.)_
-- [ ] Tester les limites globales et par task queue.
+- [x] Tester les limites globales et par task queue. _(La cible `make test-temporal-capacity-limits` vérifie les
+  bornes de configuration, l'application uniforme des limites de concurrence et de débit aux sept task queues,
+  les métriques de saturation, ainsi que les quotas globaux et par tâche du sandbox. Les 28 tests ciblés passent.)_
 - [ ] Tester une attente humaine supérieure à un redémarrage et à une rotation de worker.
 - [ ] Tester rétention, purge et reconstruction sur un jeu représentatif.
 
