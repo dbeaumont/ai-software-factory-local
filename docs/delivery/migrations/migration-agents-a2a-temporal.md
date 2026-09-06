@@ -139,8 +139,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-012 — Choisir un binding unique pour la coupure.** Utiliser JSON-RPC 2.0 sur HTTPS comme interface
   A2A préférée initiale ; ne déclarer REST ou gRPC dans les Agent Cards qu'après tests d'équivalence. _(Binding
   initial fixé par `ADR-A2A-001`; le SDK qualifié fournit le transport JSON-RPC sans activer les autres.)_
-- [ ] **A2A-013 — Encapsuler le SDK.** Créer des ports applicatifs `A2aClient`, `A2aTaskServer`,
-  `AgentCardResolver` et `A2aNotificationReceiver` pour isoler le domaine des classes du SDK.
+- [x] **A2A-013 — Encapsuler le SDK.** Créer des ports applicatifs `A2aClient`, `A2aTaskServer`,
+  `AgentCardResolver` et `A2aNotificationReceiver` pour isoler le domaine des classes du SDK. _(Ports asynchrones
+  et contrats immuables ajoutés sous `com.example.aifactory.a2a`; un test de réflexion interdit toute fuite de
+  types A2A SDK, Spring, Reactor ou Temporal dans leurs signatures.)_
 - [ ] **A2A-014 — Fixer le profil asynchrone.** Envoyer `SendMessage` avec `returnImmediately: true`, recevoir les
   transitions par notification push authentifiée et utiliser `GetTask` comme mécanisme de réconciliation.
 - [ ] **A2A-015 — Réserver le streaming à l'observation interactive.** Ne pas conserver de flux SSE ouvert dans
