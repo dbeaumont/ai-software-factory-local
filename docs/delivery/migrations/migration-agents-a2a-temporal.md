@@ -715,8 +715,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   idempotent, continuation `INPUT_REQUIRED` → `WORKING`, redémarrage avec projection PostgreSQL durable,
   résultat et historique réconciliés par `tasks/get` malgré un callback non acquitté, puis annulation ; preuve :
   `docs/evidence/a2a/A2A-165-COMPOSE-INTEGRATION.log`.)_
-- [ ] **A2A-166 — Tests de panne.** Couper réseau, agent, base, Temporal, LLM, MCP et Evidence aux différents
-  instants ; vérifier absence de doublon et reprise contrôlée.
+- [x] **A2A-166 — Tests de panne.** Couper réseau, agent, base, Temporal, LLM, MCP et Evidence aux différents
+  instants ; vérifier absence de doublon et reprise contrôlée. _(Campagne validée le 2026-09-06 : coupures
+  Compose réelles de l'agent, de PostgreSQL et du réseau privé, plus injections déterministes Temporal, LLM,
+  MCP et Evidence ; reprise sur le même `taskId`, un seul enregistrement durable et un seul artefact immuable ;
+  preuve : `docs/evidence/a2a/A2A-166-FAILURE-CAMPAIGN.md`.)_
 - [ ] **A2A-167 — Tests de concurrence.** Envoyer simultanément le même `messageId`, annuler pendant la
   terminaison, faire tourner les clés et redémarrer les workers.
 - [ ] **A2A-168 — Tests de sécurité.** Fuzzing JSON-RPC, payloads malformés, cartes forgées, jetons croisés,

@@ -66,6 +66,28 @@ class RoleScopedMcpClientTest {
         assertEquals("developer", sessions.lastArguments.get("actor"));
     }
 
+    @Test
+    void retriesTheSameBoundedMcpCallAfterATransientOutage() {
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        RoleScopedMcpClient client = new RoleScopedMcpClient(
+                RoleScopedAgentContext.load("developer", new ObjectMapper()),
+                new AgentMcpProperties(true, Duration.ofSeconds(20),
+                        URI.create("http://repository-context-mcp:8091"), URI.create("http://evidence-mcp:8095")),
+                (name, uri, timeout) -> new RoleScopedMcpClient.Session() {
+                    @Override public Set<String> tools() { return Set.of("context.list_tree"); }
+                    @Override public String call(String toolName, Map<String, Object> arguments) {
+                        if (calls.incrementAndGet() == 1) throw new IllegalStateException("MCP unavailable");
+                        return "{\"ok\":true}";
+                    }
+                    @Override public void close() { }
+                });
+
+        assertThrows(IllegalStateException.class, () -> client.call("context.list_tree", Map.of("path", "apps")));
+        assertEquals("{\"ok\":true}", client.call("context.list_tree", Map.of("path", "apps")));
+        assertEquals(2, calls.get());
+        assertEquals(1, client.openConnectionCount());
+    }
+
     private static RoleScopedMcpClient client(String role, RecordingSessions sessions, boolean enabled) {
         return new RoleScopedMcpClient(RoleScopedAgentContext.load(role, new ObjectMapper()),
                 new AgentMcpProperties(enabled, Duration.ofSeconds(20),

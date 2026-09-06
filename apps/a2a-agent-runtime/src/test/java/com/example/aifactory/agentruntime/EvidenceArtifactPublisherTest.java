@@ -15,6 +15,7 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -69,6 +70,39 @@ class EvidenceArtifactPublisherTest {
                 "task-1", "attempt-1", "developer", "patch-proposal-v1", Set.of(),
                 Base64.getEncoder().encodeToString(mapper.writeValueAsBytes(document)), "0".repeat(64))))
                 .isInstanceOf(SecurityException.class).hasMessageContaining("digest");
+    }
+
+    @Test
+    void retriesEvidencePublicationAfterOutageAndKeepsOneImmutableArtifact() throws Exception {
+        JsonNode document = fixtures().path("patch-proposal-v1");
+        byte[] content = mapper.writeValueAsBytes(document);
+        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        InMemoryA2aTaskStore store = taskStore();
+        AtomicInteger calls = new AtomicInteger();
+        EvidenceArtifactPublisher publisher = new EvidenceArtifactPublisher(
+                RoleScopedAgentContext.load("developer", mapper), store,
+                new AgentMcpProperties(true, Duration.ofSeconds(5), URI.create("http://context-mcp:8091"),
+                        URI.create("http://evidence-mcp:8095")),
+                (name, uri, timeout) -> new RoleScopedMcpClient.Session() {
+                    @Override public Set<String> tools() { return Set.of("evidence.store"); }
+                    @Override public String call(String tool, Map<String, Object> arguments) {
+                        if (calls.incrementAndGet() == 1) throw new IllegalStateException("Evidence unavailable");
+                        return "{\"uri\":\"evidence://task-1/attempt-1/agent-result/" + digest
+                                + "\",\"digest\":\"" + digest
+                                + "\",\"status\":\"COMPLETE\",\"classification\":\"INTERNAL\"}";
+                    }
+                    @Override public void close() { }
+                }, mapper);
+        AgentArtifactActivities.PublishCommand command = new AgentArtifactActivities.PublishCommand(
+                "task-1", "attempt-1", "developer", "patch-proposal-v1", Set.of(),
+                Base64.getEncoder().encodeToString(content), digest);
+
+        assertThatThrownBy(() -> publisher.publish(command)).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Evidence unavailable");
+        publisher.publish(command);
+
+        assertThat(calls).hasValue(2);
+        assertThat(store.artifacts("task-1", "tenant-a", "orchestrator")).hasSize(1);
     }
 
     private InMemoryA2aTaskStore taskStore() {

@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -87,6 +88,26 @@ class AgentExecutionWorkerTest {
         assertThrows(com.example.aifactory.agentcore.AgentContractValidator.ContractValidationException.class,
                 () -> worker.execute(request(
                         "developer", "code-task-v1", fixtures.path("code-task-v1"), "patch-proposal-v1")));
+    }
+
+    @Test
+    void retriesCleanlyAfterLlmOutageWithoutDuplicatingAnExternalEffect() throws Exception {
+        JsonNode fixtures = fixtures();
+        AtomicInteger attempts = new AtomicInteger();
+        AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("developer", mapper),
+                (messages, tools, tokens) -> {
+                    if (attempts.incrementAndGet() == 1) throw new IllegalStateException("LLM unavailable");
+                    return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
+                            fixtures.path("patch-proposal-v1").toString(), List.of(), 1, 1, 0);
+                }, new NoTools());
+
+        assertThrows(IllegalStateException.class, () -> worker.execute(request(
+                "developer", "code-task-v1", fixtures.path("code-task-v1"), "patch-proposal-v1")));
+        AgentExecutionWorker.Result recovered = worker.execute(request(
+                "developer", "code-task-v1", fixtures.path("code-task-v1"), "patch-proposal-v1"));
+
+        assertEquals("proposal-1", recovered.document().path("proposal_id").asText());
+        assertEquals(2, attempts.get());
     }
 
     private static AgentExecutionWorker.Request request(String role, String inputContract, JsonNode input,

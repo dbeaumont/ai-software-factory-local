@@ -1,0 +1,6 @@
+A2A-166 failure campaign
+agent_outage=recovered-before-admission
+database_outage=failed-closed,recovered
+private_network_outage=failed-closed,recovered
+task_id=5ae11e2d-a4d8-439c-a910-8c985d47efa4 replay_task_id=5ae11e2d-a4d8-439c-a910-8c985d47efa4 durable_task_count=1
+temporal_llm_mcp_evidence=covered-by-runtime-failure-tests
