@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-worker-drainage a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state a2a-up-role a2a-up-full test-a2a-compose-integration test-a2a-compose-failures test-a2a-security test-a2a-performance test-a2a-e2e-parity test-a2a-rollback-load build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-worker-drainage a2a-rollback-gate a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state a2a-up-role a2a-up-full test-a2a-compose-integration test-a2a-compose-failures test-a2a-security test-a2a-performance test-a2a-e2e-parity test-a2a-rollback-load test-a2a-rollback-gate build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -29,6 +29,7 @@ help:
 	@echo -e "  $(CYAN)make a2a-secrets$(NC) - verify owner-only, role-isolated local A2A secrets"
 	@echo -e "  $(CYAN)make a2a-supply-chain A2A_RUNTIME_IMAGE=...@sha256:...$(NC) - qualify the signed runtime image"
 	@echo -e "  $(CYAN)make a2a-worker-drainage BUILD_ID=...$(NC) - require a retired Temporal build to be drained"
+	@echo -e "  $(CYAN)make a2a-rollback-gate ROLLBACK_GATE=...$(NC) - verify an operator-approved rollback manifest"
 	@echo -e "  $(CYAN)make a2a-config$(NC) - validate A2A Compose topology and capability boundaries"
 	@echo -e "  $(CYAN)make a2a-status$(NC) - show A2A database and role runtime status"
 	@echo -e "  $(CYAN)make a2a-cards$(NC) - fetch and validate all private Agent Cards"
@@ -119,6 +120,11 @@ a2a-worker-drainage:
 	@test -n "$(BUILD_ID)" || (echo "BUILD_ID is required" >&2; exit 2)
 	@./scripts/a2a-worker-drainage.sh "$(BUILD_ID)"
 
+a2a-rollback-gate:
+	$(log-target)
+	@test -n "$(ROLLBACK_GATE)" || (echo "ROLLBACK_GATE is required" >&2; exit 2)
+	@ruby ./scripts/verify-a2a-rollback-gate.rb "$(ROLLBACK_GATE)"
+
 a2a-config:
 	$(log-target)
 	@./scripts/a2a-local.sh config
@@ -175,6 +181,10 @@ test-a2a-e2e-parity:
 test-a2a-rollback-load:
 	$(log-target)
 	@./scripts/test-a2a-rollback-load.sh
+
+test-a2a-rollback-gate:
+	$(log-target)
+	@./scripts/test-a2a-rollback-gate.sh
 
 build: temporal-replay
 	$(log-target)

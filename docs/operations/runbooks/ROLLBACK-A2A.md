@@ -8,6 +8,10 @@ divergence étendue ou d'un dépassement SLO qui ne peut être corrigé en place
 Lire d'abord la [matrice de compatibilité et les limites irréversibles](../A2A-ROLLBACK-COMPATIBILITY.md). Une image
 historique qui ne satisfait pas cette matrice n'est pas une cible de rollback autorisée.
 
+Avant le rétablissement, produire le manifeste décrit par la
+[gate A2A-206](../../qualification/a2a/GATE-A2A-206-ROLLBACK.md) et obtenir sa validation. Sans sortie
+`APPROVED`, conserver les admissions fermées et ne pas exécuter l'étape de redéploiement.
+
 ## Confinement immédiat
 
 Geler toutes les nouvelles admissions A2A et les effets externes inconnus. Temporal reste l'unique orchestrateur :

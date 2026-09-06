@@ -823,8 +823,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   `docs/operations/A2A-ROLLBACK-COMPATIBILITY.md` inventorie le socle versionné, classe les évolutions SQL, états,
   contrats, cartes, historiques, Evidence et identités, fixe les conditions de blocage et explicite notamment le
   plancher V005 dès qu'une annulation non acquittée existe ; le runbook impose cette vérification avant action.)_
-- [ ] **A2A-206 — Exiger une gate de rollback.** Lier décision, incident, versions, état des tâches, sauvegardes et
-  résultat de réconciliation à une approbation opérateur.
+- [x] **A2A-206 — Exiger une gate de rollback.** Lier décision, incident, versions, état des tâches, sauvegardes et
+  résultat de réconciliation à une approbation opérateur. _(La gate fermée
+  `docs/qualification/a2a/GATE-A2A-206-ROLLBACK.md` et son vérificateur exigent deux releases immuables, les huit
+  états, quatre sauvegardes vérifiées, le plancher V005, zéro perte/doublon/irrésolu et une approbation
+  `OPERATIONS` dont le SHA-256 est lié au manifeste JSON canonique exact ; le runbook interdit le redéploiement
+  sans sortie `APPROVED`.)_
 
 ### Critères de sortie du lot 11
 
