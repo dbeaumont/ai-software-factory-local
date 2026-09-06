@@ -594,8 +594,11 @@ est immédiatement l'unique moteur de toutes les admissions.
   est ouvert avec le motif `normal_operation` à la révision `5` ; l'API confirme `admissionsOpen=true`, la readiness
   est verte et l'image active reste celle approuvée. Aucun mécanisme de routage partiel ou moteur local n'existe.
   Preuve : `docs/evidence/temporal/TEMP-110-admissions-open-2026-09-06.md`.)_
-- [ ] **TEMP-111 — Surveiller la fenêtre renforcée.** Maintenir l'équipe de rollback disponible et appliquer les
-  seuils d'arrêt globaux, sans router une partie du trafic vers l'ancien moteur.
+- [x] **TEMP-111 — Surveiller la fenêtre renforcée.** Maintenir l'équipe de rollback disponible et appliquer les
+  seuils d'arrêt globaux, sans router une partie du trafic vers l'ancien moteur. _(Le moniteur fail-closed a observé
+  19 échantillons sur 313 s : zéro admission ancienne, zéro nouvelle tâche en échec et aucun nouveau workflow en
+  échec. Les contrôles finaux Temporal/SigNoz sont verts ; sauvegarde, runbook et image de rollback compatible sont
+  disponibles. Preuve : `docs/evidence/temporal/TEMP-111-strengthened-monitoring-2026-09-06.md`.)_
 
 ### Critères de coupure
 

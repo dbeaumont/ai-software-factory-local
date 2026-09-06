@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -36,6 +36,7 @@ help:
 	@echo -e "  $(CYAN)make temporal-cutover-baseline$(NC) - verify the frozen pre-cutover pipeline baseline"
 	@echo -e "  $(CYAN)make temporal-cutover-freeze$(NC) - reject drift in the qualified cutover scope"
 	@echo -e "  $(CYAN)make qualify-temporal-cutover$(NC) - run the complete cutover qualification barrier"
+	@echo -e "  $(CYAN)make monitor-temporal-cutover$(NC) - monitor the strengthened post-cutover window"
 	@echo -e "  $(CYAN)make admissions-status$(NC) - show the durable ticket admission switch"
 	@echo -e "  $(CYAN)make admissions-close$(NC) - reject new tickets during a maintenance window"
 	@echo -e "  $(CYAN)make admissions-open$(NC) - reopen ticket admissions after verification"
@@ -188,6 +189,10 @@ restore-temporal-cutover:
 	@test -n "$(BACKUP_DIR)" || (echo "BACKUP_DIR is required" >&2; exit 2)
 	@test -n "$(RESTORE_PREFIX)" || (echo "RESTORE_PREFIX is required" >&2; exit 2)
 	@./scripts/restore-temporal-cutover-isolated.sh "$(BACKUP_DIR)" "$(RESTORE_PREFIX)"
+
+monitor-temporal-cutover:
+	$(log-target)
+	@./scripts/monitor-temporal-cutover.sh
 
 test-temporal-compose:
 	$(log-target)
