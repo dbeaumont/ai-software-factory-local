@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -36,6 +36,9 @@ help:
 	@echo -e "  $(CYAN)make temporal-cutover-baseline$(NC) - verify the frozen pre-cutover pipeline baseline"
 	@echo -e "  $(CYAN)make temporal-cutover-freeze$(NC) - reject drift in the qualified cutover scope"
 	@echo -e "  $(CYAN)make qualify-temporal-cutover$(NC) - run the complete cutover qualification barrier"
+	@echo -e "  $(CYAN)make admissions-status$(NC) - show the durable ticket admission switch"
+	@echo -e "  $(CYAN)make admissions-close$(NC) - reject new tickets during a maintenance window"
+	@echo -e "  $(CYAN)make admissions-open$(NC) - reopen ticket admissions after verification"
 	@echo -e "  $(CYAN)make test-temporal-compose$(NC) - verify local namespace, UI, readiness and all pollers"
 	@echo -e "  $(CYAN)make test-temporal-ticket-ui$(NC) - submit a real ticket and verify its Temporal UI identity"
 	@echo -e "  $(CYAN)make test-temporal-orchestrator-restarts$(NC) - recreate the orchestrator across critical phases"
@@ -160,6 +163,18 @@ temporal-cutover-freeze:
 qualify-temporal-cutover:
 	$(log-target)
 	@./scripts/qualify-temporal-cutover.sh
+
+admissions-status:
+	$(log-target)
+	@./scripts/set-admissions.sh status
+
+admissions-close:
+	$(log-target)
+	@./scripts/set-admissions.sh close
+
+admissions-open:
+	$(log-target)
+	@./scripts/set-admissions.sh open
 
 test-temporal-compose:
 	$(log-target)

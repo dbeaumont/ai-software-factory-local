@@ -33,6 +33,8 @@
       .tool-link span { font-size: 11px; font-weight: 700; }
       .topnav { flex: 1; }
       .topnav .about-link { margin-left: auto; }
+      .maintenance-banner { margin: 0 0 20px; padding: 14px 16px; border: 1px solid #f5a623; border-left: 4px solid #f5a623; border-radius: 4px; color: #5f3811; background: #fff7d6; line-height: 1.5; }
+      .maintenance-banner strong { display: block; }
     </style>
   </head>
   <body>
@@ -44,6 +46,7 @@
     <main class="app-main">
       <nav id="breadcrumbs" class="breadcrumbs" aria-label="Fil d'Ariane"><a href="/">AI Software Factory</a><span>/</span><strong>Tickets</strong></nav>
       <section id="ticket-view" class="app-view">
+      <div id="maintenance-banner" class="maintenance-banner" role="alert" hidden><strong>Maintenance Temporal en cours.</strong> Les nouvelles admissions sont temporairement suspendues ; le suivi des exécutions existantes reste disponible.</div>
       <section class="issue-heading">
         <div class="issue-icon" aria-hidden="true">✦</div><div><p id="ticket-key" class="issue-key">AF-NEW <span>·</span> DEMANDE DE LIVRAISON</p><h1 id="ticket-title">Créer un ticket pour l'usine</h1><p>Transformez une spécification métier en plan, patch, contrôles et pull request.</p></div>
       </section>

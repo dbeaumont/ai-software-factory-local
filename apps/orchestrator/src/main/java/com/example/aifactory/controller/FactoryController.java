@@ -6,6 +6,7 @@ import com.example.aifactory.model.FactoryCapabilities;
 import com.example.aifactory.service.LlmGatewayClient;
 import com.example.aifactory.service.McpRepositoryContextService;
 import com.example.aifactory.service.McpSandboxService;
+import com.example.aifactory.service.AdmissionControl;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,28 +20,35 @@ public class FactoryController {
     private final LlmGatewayClient llm;
     private final McpRepositoryContextService repositoryContextMcp;
     private final McpSandboxService sandboxMcp;
+    private final AdmissionControl admissionControl;
 
     public FactoryController(AiFactoryProperties props,
                              McpFactoryProperties mcpProperties,
                              LlmGatewayClient llm,
                              McpRepositoryContextService repositoryContextMcp,
-                             McpSandboxService sandboxMcp) {
+                             McpSandboxService sandboxMcp,
+                             AdmissionControl admissionControl) {
         this.props = props;
         this.mcpProperties = mcpProperties;
         this.llm = llm;
         this.repositoryContextMcp = repositoryContextMcp;
         this.sandboxMcp = sandboxMcp;
+        this.admissionControl = admissionControl;
     }
 
     @GetMapping("/capabilities")
     public Mono<FactoryCapabilities> capabilities() {
-        return llm.cloudAvailabilityAsync()
-                .map(cloud -> {
+        return Mono.zip(llm.cloudAvailabilityAsync(), Mono.fromCallable(admissionControl::status)
+                        .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()))
+                .map(values -> {
+                    var cloud = values.getT1();
+                    var admission = values.getT2();
                     McpRepositoryContextService.Availability mcp = repositoryContextMcp.availability();
                     McpSandboxService.Availability sandbox = sandboxMcp.availability();
                     return new FactoryCapabilities(props.cloudEnabled(), cloud.available(), cloud.error(),
                             mcpProperties.enabled(), mcp.available(), safeMcpError(mcp),
-                            mcpProperties.sandboxEnabled(), sandbox.available(), safeSandboxError(sandbox));
+                            mcpProperties.sandboxEnabled(), sandbox.available(), safeSandboxError(sandbox),
+                            admission.admissionsOpen(), admission.reason(), admission.revision());
                 });
     }
 

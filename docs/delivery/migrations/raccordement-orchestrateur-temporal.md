@@ -553,8 +553,11 @@ est immédiatement l'unique moteur de toutes les admissions.
   exploitation sur la matrice de preuves complète. _(David Beaumont, autorité unique du POC local, a approuvé les
   quatre responsabilités le 2026-09-06 sur la release exacte `9698fa30aa16a43af5b2d4f56b82f1953eb95080`.
   Le gate signé est archivé dans `docs/qualification/temporal/GATE-TEMP-103-CUTOVER.md`.)_
-- [ ] **TEMP-104 — Fermer toutes les admissions.** Refuser temporairement `POST /api/tasks`, afficher la maintenance
-  dans l'interface et attendre la fin ou l'annulation contrôlée de chaque tâche locale active.
+- [x] **TEMP-104 — Fermer toutes les admissions.** Refuser temporairement `POST /api/tasks`, afficher la maintenance
+  dans l'interface et attendre la fin ou l'annulation contrôlée de chaque tâche locale active. _(Le verrou durable
+  PostgreSQL est fermé à la révision `2` avec le motif `temporal_cutover` ; l'API renvoie `503`, l'interface expose
+  la maintenance, l'outbox ne contient aucune admission en attente et Temporal ne contient aucun workflow ouvert.
+  Les 560 tests Java sont verts. Preuve : `docs/evidence/temporal/TEMP-104-admissions-closed-2026-09-06.md`.)_
 - [ ] **TEMP-105 — Sauvegarder les autorités.** Sauvegarder Gitea, Evidence MCP, configuration, workspaces utiles et
   bases ; vérifier la restauration avant de poursuivre.
 - [ ] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,

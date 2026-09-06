@@ -9,5 +9,8 @@ public record FactoryCapabilities(
         String repositoryContextMcpError,
         boolean sandboxMcpEnabled,
         boolean sandboxMcpAvailable,
-        String sandboxMcpError) {
+        String sandboxMcpError,
+        boolean admissionsOpen,
+        String admissionReason,
+        long admissionRevision) {
 }

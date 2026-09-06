@@ -56,6 +56,7 @@ const reviewHumanPoints = document.querySelector('#review-human-points');
 const reviewRaw = document.querySelector('#review-raw');
 const llmDescription = document.querySelector('#llm-mode-description');
 const cloudUnavailable = document.querySelector('#cloud-unavailable');
+const maintenanceBanner = document.querySelector('#maintenance-banner');
 const taskLlmMode = document.querySelector('#task-llm-mode');
 const advancedDetails = document.querySelector('.advanced-details');
 const breadcrumbs = document.querySelector('#breadcrumbs');
@@ -81,6 +82,7 @@ let activeTaskId;
 let activeTask;
 let pollTimer;
 let executionsPollTimer;
+let admissionsOpen = true;
 
 headerMenus.forEach((menu) => {
   menu.addEventListener('mouseleave', () => {
@@ -96,6 +98,16 @@ async function loadCapabilities(attempt = 0) {
     const response = await fetch('/api/capabilities');
     if (!response.ok) return;
     const capabilities = await response.json();
+    admissionsOpen = capabilities.admissionsOpen !== false;
+    maintenanceBanner.hidden = admissionsOpen;
+    submitButton.disabled = !admissionsOpen;
+    if (!admissionsOpen) {
+      const reason = capabilities.admissionReason === 'temporal_cutover'
+        ? 'Bascule franche vers Temporal en cours.'
+        : 'Maintenance de la plateforme en cours.';
+      maintenanceBanner.querySelector('strong').textContent = reason;
+      message.textContent = `Admissions suspendues (révision ${capabilities.admissionRevision || 0}).`;
+    }
     if (!capabilities.cloudEnabled) {
       llmDescription.textContent = 'Le mode cloud est désactivé par la configuration de cette usine.';
       cloudUnavailable.textContent = 'Aucun moteur LLM n’est disponible.';
@@ -942,6 +954,10 @@ approveButton.addEventListener('click', async () => {
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!admissionsOpen) {
+    message.textContent = 'Les nouvelles admissions sont suspendues pendant la maintenance Temporal.';
+    return;
+  }
   const data = Object.fromEntries(new FormData(form));
   message.textContent = '';
   submitButton.disabled = true;
@@ -969,7 +985,7 @@ form.addEventListener('submit', async (event) => {
   } catch (error) {
     message.textContent = error.message;
   } finally {
-    submitButton.disabled = false;
+    submitButton.disabled = !admissionsOpen;
     submitButton.innerHTML = 'Envoyer à l\'usine <span aria-hidden="true">→</span>';
   }
 });
