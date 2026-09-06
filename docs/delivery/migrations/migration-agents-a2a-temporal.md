@@ -190,14 +190,16 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   payload, tokens, coût, concurrence et consommation mémoire par rôle. _(Manifeste recalculable depuis les 20
   résultats bruts ajouté sous `resources/a2a/baselines`; les mesures absentes de l'ancien monolithe sont marquées
   indisponibles, jamais zéro, dans `docs/evidence/a2a/A2A-025-OPERATIONAL-BASELINE.md`.)_
-- [ ] **A2A-026 — Créer le registre des risques.** Couvrir double exécution, perte de notification, divergence
-  d'état A2A/Temporal, rejeu, usurpation de carte, SSRF, fuite de données et saturation.
+- [x] **A2A-026 — Créer le registre des risques.** Couvrir double exécution, perte de notification, divergence
+  d'état A2A/Temporal, rejeu, usurpation de carte, SSRF, fuite de données et saturation. _(Vingt risques scorés,
+  propriétaires, traitements, signaux, réponses et tickets de preuve consignés dans
+  `docs/qualification/a2a/A2A-RISK-REGISTER.md`.)_
 
 ### Critères de sortie du lot 0
 
-- [ ] Chaque invocation actuelle possède une cible A2A et un propriétaire identifiés.
-- [ ] Les résultats de baseline sont stockés comme preuves immuables.
-- [ ] Aucun accès implicite requis par un agent n'est oublié dans la matrice de permissions.
+- [x] Chaque invocation actuelle possède une cible A2A et un propriétaire identifiés.
+- [x] Les résultats de baseline sont stockés comme preuves immuables.
+- [x] Aucun accès implicite requis par un agent n'est oublié dans la matrice de permissions.
 
 ## 8. Lot 1 — extraire un cœur d'agent indépendant
 
