@@ -4,7 +4,7 @@
 |---|---:|---:|---:|---:|---:|---:|
 | `READ` | 30 s | 30 s | 2 min | aucun, appel court | 3 | 200 ms / 2 s |
 | `LLM` | 2 min | 10 min | 20 min | aucun avant streaming supervisé | 2 | 2 s / 20 s |
-| `SANDBOX` | 5 min | 30 min | 45 min | 30 s | 2 | 2 s / 30 s |
+| `SANDBOX` | 5 min | 30 min | 45 min | 30 s | 3 | 2 s / 30 s |
 | `ASSURANCE` | 1 min | 90 s | 5 min | aucun, appel court | 3 | 500 ms / 5 s |
 | `EVIDENCE` | 1 min | 2 min | 5 min | aucun, appel court | 3 | 500 ms / 5 s |
 | `SCM` | 2 min | 4 min | 10 min | aucun, effet atomique | 2 | 1 s / 10 s |
