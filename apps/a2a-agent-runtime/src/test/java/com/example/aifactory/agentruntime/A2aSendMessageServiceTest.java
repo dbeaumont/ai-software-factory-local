@@ -7,11 +7,16 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -155,6 +160,15 @@ class A2aSendMessageServiceTest {
         assertThatThrownBy(() -> resumable.send(leaked.path("params"), authCaller))
                 .isInstanceOf(A2aSendMessageService.SubmissionRejected.class).hasMessageContaining("Credential");
 
+        tools.jackson.databind.node.ObjectNode nestedLeak = continuation(
+                "auth-nested-leak", initial, "d".repeat(64));
+        tools.jackson.databind.node.ObjectNode nestedMetadata = (tools.jackson.databind.node.ObjectNode)
+                nestedLeak.path("params").path("message").path("metadata");
+        nestedMetadata.put("authGrantId", "grant-1");
+        nestedMetadata.set("extensions", mapper.readTree("[{\"client_secret\":\"must-never-be-persisted\"}]"));
+        assertThatThrownBy(() -> resumable.send(nestedLeak.path("params"), authCaller))
+                .isInstanceOf(A2aSendMessageService.SubmissionRejected.class).hasMessageContaining("Credential");
+
         A2aSendMessageService.Submission resumed = resumable.send(continuation.path("params"), authCaller);
         assertThat(resumed.taskId()).isEqualTo(initial.taskId());
         assertThat(store.find(initial.taskId()).orElseThrow().state())
@@ -227,6 +241,44 @@ class A2aSendMessageServiceTest {
     }
 
     @Test
+    void rejectsMalformedOversizedAndInjectedJsonRpcCorpus() {
+        A2aJsonRpcController controller = new A2aJsonRpcController(mapper, service, unsecured);
+        List<byte[]> corpus = List.of(
+                new byte[0],
+                "{".getBytes(StandardCharsets.UTF_8),
+                "null".getBytes(StandardCharsets.UTF_8),
+                "[]".getBytes(StandardCharsets.UTF_8),
+                "{\"jsonrpc\":true,\"id\":1,\"method\":null}".getBytes(StandardCharsets.UTF_8),
+                "{\"jsonrpc\":\"2.0\",\"id\":{},\"method\":17,\"params\":[]}".getBytes(StandardCharsets.UTF_8),
+                ("{\"jsonrpc\":\"2.0\",\"id\":\"attack\",\"method\":"
+                        + "\"message/send\\nGetTask\",\"params\":{}}").getBytes(StandardCharsets.UTF_8),
+                ("[".repeat(64) + "0" + "]".repeat(64)).getBytes(StandardCharsets.UTF_8));
+
+        for (byte[] payload : corpus) {
+            assertThat(controller.handle("1.0", payload, authenticated()))
+                    .containsKey("error").doesNotContainKey("result");
+        }
+        assertThat(controller.handle("1.0", new byte[A2aJsonRpcController.MAX_REQUEST_BYTES + 1], authenticated()))
+                .containsKey("error").doesNotContainKey("result");
+    }
+
+    @Test
+    void rejectsCrossedJwtIdentityBindingsAsAuthenticationFailures() throws Exception {
+        A2aJsonRpcController controller = new A2aJsonRpcController(mapper, service, unsecured);
+        byte[] body = mapper.writeValueAsBytes(request("crossed-token", "developer", "a".repeat(64)));
+
+        Map<String, Object> response = controller.handle("1.0", body,
+                jwt("ai-factory-agent-test-agent", "developer", "tenant-a"));
+
+        assertThat(response).containsKey("error").doesNotContainKey("result");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> error = (Map<String, Object>) response.get("error");
+        assertThat(errorInfo(error)).containsEntry("reason", "CALLER_FORBIDDEN")
+                .extracting("metadata").asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                .containsEntry("category", "AUTH");
+    }
+
+    @Test
     void classifiesDependencyFailuresWithoutLeakingTheirCause() throws Exception {
         AgentRuntimeProperties runtime = new AgentRuntimeProperties(
                 "developer", URI.create("http://localhost:8090/a2a"));
@@ -254,6 +306,17 @@ class A2aSendMessageServiceTest {
 
     private static UsernamePasswordAuthenticationToken authenticated() {
         return new UsernamePasswordAuthenticationToken("orchestrator", "not-serialized", Set.of(
+                new SimpleGrantedAuthority("SCOPE_a2a.invoke"),
+                new SimpleGrantedAuthority("SCOPE_a2a.role.developer"),
+                new SimpleGrantedAuthority("SCOPE_a2a.skill.developer.code-task-v1")));
+    }
+
+    private static JwtAuthenticationToken jwt(String clientId, String role, String tenantId) {
+        Instant now = Instant.parse("2026-09-06T12:00:00Z");
+        Jwt token = Jwt.withTokenValue("header.payload.signature")
+                .header("alg", "RS256").subject(clientId).issuedAt(now).expiresAt(now.plusSeconds(300))
+                .claim("client_id", clientId).claim("role", role).claim("tenant_id", tenantId).build();
+        return new JwtAuthenticationToken(token, List.of(
                 new SimpleGrantedAuthority("SCOPE_a2a.invoke"),
                 new SimpleGrantedAuthority("SCOPE_a2a.role.developer"),
                 new SimpleGrantedAuthority("SCOPE_a2a.skill.developer.code-task-v1")));

@@ -77,6 +77,9 @@ class A2aAgentCardVerifierTest {
         assertThatThrownBy(() -> verifier.verify(signedCard("patch-repair", "2026-09-06T12:15:00Z"), policy))
                 .isInstanceOf(A2aAgentCardVerifier.CardVerificationException.class)
                 .hasMessageContaining("role");
+        assertThatThrownBy(() -> verifier.verify(new byte[A2aPayloadLimits.MAX_REQUEST_BYTES + 1], policy))
+                .isInstanceOf(A2aAgentCardVerifier.CardVerificationException.class)
+                .hasMessageContaining("size");
     }
 
     private byte[] signedCard(String role, String expiresAt) throws Exception {

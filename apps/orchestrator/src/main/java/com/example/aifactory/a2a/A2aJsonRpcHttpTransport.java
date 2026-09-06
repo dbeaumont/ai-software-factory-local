@@ -104,7 +104,15 @@ public final class A2aJsonRpcHttpTransport implements A2aAuthenticatedClientTran
             }
             return http.sendAsync(request.POST(HttpRequest.BodyPublishers.ofByteArray(body)).build(),
                             HttpResponse.BodyHandlers.ofByteArray())
-                    .thenApply(response -> decode(response.statusCode(), response.body()));
+                    .thenApply(response -> {
+                        if (response.previousResponse().isPresent()) {
+                            throw new A2aTransportException("A2A redirects are forbidden");
+                        }
+                        if (response.body() == null || response.body().length > A2aPayloadLimits.MAX_REQUEST_BYTES) {
+                            throw new A2aTransportException("A2A response size is invalid");
+                        }
+                        return decode(response.statusCode(), response.body());
+                    });
         } catch (Exception failure) {
             return CompletableFuture.failedStage(new A2aTransportException("Cannot encode A2A request", failure));
         }

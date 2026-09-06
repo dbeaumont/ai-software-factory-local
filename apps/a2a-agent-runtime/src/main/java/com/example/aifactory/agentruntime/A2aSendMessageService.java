@@ -224,13 +224,18 @@ public final class A2aSendMessageService {
     }
 
     private static void rejectCredentialMaterial(JsonNode node) {
+        if (node.isArray()) {
+            node.forEach(A2aSendMessageService::rejectCredentialMaterial);
+            return;
+        }
+        if (!node.isObject()) return;
         node.properties().forEach(entry -> {
             String name = entry.getKey().toLowerCase(java.util.Locale.ROOT);
             if (Set.of("token", "bearertoken", "accesstoken", "refreshtoken", "clientsecret",
                     "password", "credential").contains(name.replace("_", "").replace("-", ""))) {
                 throw new SubmissionRejected("Credential material is forbidden in A2A task history");
             }
-            if (entry.getValue().isObject()) rejectCredentialMaterial(entry.getValue());
+            rejectCredentialMaterial(entry.getValue());
         });
     }
 

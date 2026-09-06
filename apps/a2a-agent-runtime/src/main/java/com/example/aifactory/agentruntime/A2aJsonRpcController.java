@@ -289,7 +289,8 @@ final class A2aJsonRpcController {
         if (message.contains("unauthenticated")) {
             return new FailureInfo(16, "CALLER_UNAUTHENTICATED", "AUTH", false, null);
         }
-        if (message.contains("scope") || message.contains("not admitted")) {
+        if (message.contains("scope") || message.contains("not admitted")
+                || message.contains("client or tenant binding") || message.contains("cannot delegate")) {
             return new FailureInfo(7, "CALLER_FORBIDDEN", "AUTH", false, "REJECTED");
         }
         if (message.contains("quota") || message.contains("rate limit")) {

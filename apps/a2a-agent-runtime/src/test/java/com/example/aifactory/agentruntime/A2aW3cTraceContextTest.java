@@ -20,5 +20,8 @@ class A2aW3cTraceContextTest {
                 .hasMessageContaining("Missing");
         assertThatThrownBy(() -> new A2aW3cTraceContext("invalid", null))
                 .hasMessageContaining("traceparent");
+        assertThatThrownBy(() -> new A2aW3cTraceContext(
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "task.id=ok\nforged=true"))
+                .hasMessageContaining("baggage");
     }
 }

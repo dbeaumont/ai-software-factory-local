@@ -27,6 +27,12 @@ class A2aUrlPolicyTest {
         assertThatThrownBy(() -> policy.requireAllowed(allowed)).isInstanceOf(SecurityException.class);
         assertThatThrownBy(() -> SecureUriPolicy.system(Set.of(URI.create("https://localhost/a2a"))))
                 .isInstanceOf(SecurityException.class);
+        for (String privateTarget : List.of(
+                "https://10.0.0.1/a2a", "https://172.16.0.1/a2a", "https://192.168.1.1/a2a",
+                "https://[fc00::1]/a2a")) {
+            assertThatThrownBy(() -> SecureUriPolicy.system(Set.of(URI.create(privateTarget))))
+                    .as(privateTarget).isInstanceOf(SecurityException.class);
+        }
     }
 
     @Test

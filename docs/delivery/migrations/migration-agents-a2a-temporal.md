@@ -725,8 +725,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   simultanées sérialisées sur une tâche, course annulation/terminaison protégée par version optimiste,
   rotations PKI et secrets validées, puis même run Temporal conservé après redémarrage de l'orchestrateur
   et rotation complète des sept queues ; preuve : `docs/evidence/a2a/A2A-167-CONCURRENCY.md`.)_
-- [ ] **A2A-168 — Tests de sécurité.** Fuzzing JSON-RPC, payloads malformés, cartes forgées, jetons croisés,
-  cross-tenant, SSRF, rejeu, redirections, dépassement de taille et injection.
+- [x] **A2A-168 — Tests de sécurité.** Fuzzing JSON-RPC, payloads malformés, cartes forgées, jetons croisés,
+  cross-tenant, SSRF, rejeu, redirections, dépassement de taille et injection. _(Terminé le 2026-09-06 :
+  campagne adverse reproductible de 36 tests, durcissement des secrets JSON imbriqués, de la classification
+  des identités, des destinations privées et des réponses HTTP ; preuve :
+  `docs/evidence/a2a/A2A-168-SECURITY-CAMPAIGN.md`.)_
 - [ ] **A2A-169 — Tests de performance.** Comparer à la baseline latence, débit, mémoire et coût ; valider
   backpressure et comportement à saturation.
 - [ ] **A2A-170 — Tests E2E métier.** Rejouer toutes les fixtures multi-agents et comparer verdicts, digests,

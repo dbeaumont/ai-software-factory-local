@@ -72,7 +72,12 @@ public final class SecureUriPolicy {
 
     private static boolean forbidden(InetAddress address) {
         return address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
-                || address.isMulticastAddress();
+                || address.isSiteLocalAddress() || address.isMulticastAddress() || uniqueLocalIpv6(address);
+    }
+
+    private static boolean uniqueLocalIpv6(InetAddress address) {
+        byte[] raw = address.getAddress();
+        return raw.length == 16 && (raw[0] & 0xfe) == 0xfc;
     }
 
     private static URI normalized(URI uri) {
