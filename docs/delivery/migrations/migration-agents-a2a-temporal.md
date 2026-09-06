@@ -794,8 +794,11 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   puis vérifier toutes les readyness et task queues. _(Terminé le 2026-09-07 : stockage, identité et 14 runtimes
   `healthy`, cartes signées, OAuth2/mTLS validés et 28 files workflow/activité enregistrées sous le Build ID
   `a2a-agent-84a651a` ; preuve : `docs/evidence/a2a/A2A-183-AGENT-DEPLOYMENT.md`.)_
-- [ ] **A2A-184 — Activer la version Temporal A2A.** Déployer le nouveau type/build de workflow et vérifier la
-  compatibilité des workers avant d'autoriser les admissions.
+- [x] **A2A-184 — Activer la version Temporal A2A.** Déployer le nouveau type/build de workflow et vérifier la
+  compatibilité des workers avant d'autoriser les admissions. _(Terminé le 2026-09-07 : le Build ID
+  `a2a-cutover-b83961c` est courant sans ramping, les sept files de coordination et les 28 pollers d'agents sont
+  prêts, l'orchestrateur est `UP` et le commutateur métier reste fermé ; preuve :
+  `docs/evidence/a2a/A2A-184-TEMPORAL-ACTIVATION.md`.)_
 - [ ] **A2A-185 — Couper les appels directs en une fois.** Livrer la suppression des beans/routes directes dans le
   même release que l'activation A2A ; ne conserver aucun feature flag de fallback.
 - [ ] **A2A-186 — Exécuter le smoke test de production.** Vérifier Supervisor, un chemin hiérarchique complet,
