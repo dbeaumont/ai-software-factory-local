@@ -1,12 +1,9 @@
 package com.example.aifactory.service;
 
-import com.example.aifactory.config.AgentToolingProperties;
 import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.PendingEffect;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.workflow.EvidenceRepository;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -36,46 +33,29 @@ public class PipelineStepService {
     private final AiFactoryProperties props;
     private final ProcessRunner runner;
     private final RepositoryContextProvider contextService;
-    private final PromptService prompts;
-    private final LlmGatewayClient llm;
     private final AgentResponseValidator agentResponses;
     private final SandboxExecutor sandbox;
     private final PatchIntegrator patchIntegrator;
     private final AssuranceGateway assurance;
     private final ScmDeliveryGateway scmDelivery;
     private final ObjectMapper objectMapper;
-    private final AgentToolingProperties agentTooling;
-    private final AgentContextToolHost agentTools;
     private final EvidenceRepository evidence;
-    private final WorkflowOperationalMetrics operationalMetrics;
-    private final Counter plannerContractRetries;
 
     public PipelineStepService(AiFactoryProperties props, ProcessRunner runner,
-                               RepositoryContextProvider contextService, PromptService prompts,
-                               LlmGatewayClient llm, AgentResponseValidator agentResponses,
+                               RepositoryContextProvider contextService, AgentResponseValidator agentResponses,
                                SandboxExecutor sandbox, PatchIntegrator patchIntegrator,
                                AssuranceGateway assurance, ScmDeliveryGateway scmDelivery,
-                               MeterRegistry metrics, ObjectMapper objectMapper,
-                               AgentToolingProperties agentTooling, AgentContextToolHost agentTools,
-                               EvidenceRepository evidence) {
+                               ObjectMapper objectMapper, EvidenceRepository evidence) {
         this.props = props;
         this.runner = runner;
         this.contextService = contextService;
-        this.prompts = prompts;
-        this.llm = llm;
         this.agentResponses = agentResponses;
         this.sandbox = sandbox;
         this.patchIntegrator = patchIntegrator;
         this.assurance = assurance;
         this.scmDelivery = scmDelivery;
         this.objectMapper = objectMapper;
-        this.agentTooling = agentTooling;
-        this.agentTools = agentTools;
         this.evidence = evidence;
-        this.operationalMetrics = new WorkflowOperationalMetrics(metrics);
-        this.plannerContractRetries = Counter.builder("ai_factory_planner_contract_retries")
-                .description("Planner calls retried once after an invalid response contract")
-                .register(metrics);
     }
 
     public PipelineProjectionEvent.WorkspaceInitialized initializeWorkspace(TaskState state) throws Exception {
@@ -94,7 +74,7 @@ public class PipelineStepService {
                 state.request.repositoryUrl(), workspace.toString()), null, Duration.ofMinutes(2));
         String sourceCommit = runner.run(List.of("git", "rev-parse", "HEAD"), workspace,
                 Duration.ofSeconds(10)).strip();
-        String model = llm.modelName();
+        String model = "a2a-agent-runtime";
         log.info("Task {} ({}) cloned source commit {} using model {}", state.id, state.ticketNumber,
                 sourceCommit, model);
         var result = PipelineStepContracts.Result.from(command, sourceCommit, Map.of());
@@ -102,47 +82,47 @@ public class PipelineStepService {
                 new PipelineProjectionEvent.SourceCloned(sourceCommit, model));
     }
 
-    public PipelineProjectionEvent.StepExecution plan(TaskState state, Path workspace,
-                                                      PipelineStepContracts.Command command) throws Exception {
-        command.requireStep("plan");
-        String plannerContext = agentTooling.enabledFor("planner")
-                ? "Use the authorized context tools to retrieve only the repository evidence needed for this plan."
-                : contextService.collectForRole(workspace, state.id, state.sourceCommit, "planner");
-        AgentOutput output = chat(state, "planner", untrusted("REQUIREMENT", state.request.requirement())
-                + untrusted("REPOSITORY_CONTEXT", plannerContext));
-        agentResponses.requireImplementablePlan(output.content());
-        Files.writeString(workspace.resolve(".ai-plan.md"), output.content());
-        var artifact = persist(command, "plan", "text/markdown", output.content(), "IMPLEMENTABLE");
-        var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("plan", artifact));
-        return PipelineProjectionEvent.StepExecution.of(result,
-                new PipelineProjectionEvent.PlanProduced(output.content(), output.metadata()));
+    public PreparedAgentInput prepareAgentInput(TaskState state, Path workspace, String operation,
+                                                PipelineStepContracts.Command command,
+                                                PipelineStepContracts.ArtifactReference validationError,
+                                                int repairAttempt) throws Exception {
+        if ("ASSESS_TESTS".equals(operation)) {
+            PreparedTests tests = prepareTests(state, workspace, command);
+            return new PreparedAgentInput(untrusted("REQUIREMENT", state.request.requirement())
+                    + untrusted("PATCH", state.patch)
+                    + untrusted("DETERMINISTIC_TEST_EVIDENCE", tests.summary()), tests.artifact());
+        }
+        String payload = switch (operation) {
+            case "PLAN" -> untrusted("REQUIREMENT", state.request.requirement())
+                    + untrusted("REPOSITORY_CONTEXT", contextService.collectForRole(
+                    workspace, state.id, state.sourceCommit, "planner"));
+            case "GENERATE_PATCH" -> untrusted("REQUIREMENT", state.request.requirement())
+                    + untrusted("PLAN", state.plan)
+                    + untrusted("REPOSITORY_CONTEXT", contextService.collectForRole(
+                    workspace, state.id, state.sourceCommit, "developer"));
+            case "REPAIR_PATCH" -> repairPayload(state, workspace, command, validationError, repairAttempt);
+            case "REVIEW" -> untrusted("REQUIREMENT", state.request.requirement())
+                    + untrusted("PLAN", state.plan) + untrusted("PATCH", state.patch)
+                    + untrusted("ASSURANCE_RESULTS", objectMapper.writeValueAsString(state.assuranceResults));
+            default -> throw new IllegalArgumentException("Unsupported pipeline A2A operation: " + operation);
+        };
+        return new PreparedAgentInput(payload, null);
     }
 
-    public PipelineProjectionEvent.StepExecution generateAndRepairPatch(TaskState state, Path workspace,
-                                                                        PipelineStepContracts.Command command) throws Exception {
-        command.requireStep("generate-patch");
-        String developerContext = contextService.collectForRole(workspace, state.id, state.sourceCommit, "developer");
-        AgentOutput generated = chat(state, "developer", untrusted("REQUIREMENT", state.request.requirement())
-                + untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", developerContext));
-        PatchRepairResult repaired = validateAndRepairPatch(state, workspace, generated.content());
-        var artifact = persist(command, "patch", "text/x-diff", repaired.patch(), "VALID");
-        var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch", artifact));
-        return PipelineProjectionEvent.StepExecution.of(result, new PipelineProjectionEvent.PatchProduced(
-                repaired.patch(), repaired.repairs(), generated.metadata().plus(repaired.agentMetadata())));
-    }
-
-    public PipelineProjectionEvent.StepExecution generatePatchCandidate(TaskState state, Path workspace,
-                                                                         PipelineStepContracts.Command command)
+    public PipelineProjectionEvent.StepExecution consumeAgentResult(TaskState state, Path workspace,
+                                                                     PipelineStepContracts.Command command,
+                                                                     String operation, String content,
+                                                                     PipelineProjectionEvent.AgentMetadata metadata,
+                                                                     PipelineStepContracts.ArtifactReference supportingArtifact)
             throws Exception {
-        command.requireStep("generate-patch-candidate");
-        String developerContext = contextService.collectForRole(workspace, state.id, state.sourceCommit, "developer");
-        AgentOutput generated = chat(state, "developer", untrusted("REQUIREMENT", state.request.requirement())
-                + untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", developerContext));
-        String patch = PatchIntegrator.normalize(generated.content());
-        var artifact = persist(command, "patch-candidate", "text/x-diff", patch, "GENERATED");
-        return PipelineProjectionEvent.StepExecution.of(
-                PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch-candidate", artifact)),
-                new PipelineProjectionEvent.PatchProduced(patch, 0, generated.metadata()));
+        return switch (operation) {
+            case "PLAN" -> consumePlan(state, workspace, command, content, metadata);
+            case "GENERATE_PATCH" -> consumePatch(state, command, content, metadata, 0, "GENERATED");
+            case "REPAIR_PATCH" -> consumePatch(state, command, content, metadata, 1, "REPAIRED");
+            case "ASSESS_TESTS" -> consumeTests(state, workspace, command, content, metadata, supportingArtifact);
+            case "REVIEW" -> consumeReview(state, workspace, command, content, metadata);
+            default -> throw new IllegalArgumentException("Unsupported pipeline A2A operation: " + operation);
+        };
     }
 
     public PatchValidationOutcome validatePatchCandidate(TaskState state, Path workspace,
@@ -166,28 +146,20 @@ public class PipelineStepService {
         }
     }
 
-    public PipelineProjectionEvent.StepExecution repairPatchCandidate(TaskState state, Path workspace,
-                                                                       PipelineStepContracts.Command command,
-                                                                       PipelineStepContracts.ArtifactReference error,
-                                                                       int repairAttempt) throws Exception {
-        command.requireStep("repair-patch-candidate");
+    private String repairPayload(TaskState state, Path workspace, PipelineStepContracts.Command command,
+                                 PipelineStepContracts.ArtifactReference error, int repairAttempt) throws Exception {
         if (repairAttempt < 1 || repairAttempt > MAX_PATCH_REPAIR_ATTEMPTS || error == null) {
             throw new IllegalArgumentException("Patch repair attempt is invalid");
         }
         EvidenceRepository.RawEvidence failure = evidence.read(new EvidenceRepository.ReadRequest(
                 command.taskId(), command.attemptId(), error.uri(), "workflow", "repair-patch"));
         String context = contextService.collectForRole(workspace, state.id, state.sourceCommit, "patch-repair");
-        AgentOutput repaired = chat(state, "patch-repair", untrusted("REQUIREMENT", state.request.requirement())
+        return untrusted("REQUIREMENT", state.request.requirement())
                 + untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", context)
                 + untrusted("CURRENT_FILE_CONTENTS", safeAffectedFileContext(workspace, state.patch))
                 + untrusted("INVALID_PATCH", state.patch)
                 + untrusted("GIT_APPLY_ERROR", new String(failure.content(), StandardCharsets.UTF_8))
-                + untrusted("REPAIR_ATTEMPT", Integer.toString(repairAttempt)));
-        String patch = PatchIntegrator.normalize(repaired.content());
-        var artifact = persist(command, "patch-candidate", "text/x-diff", patch, "REPAIRED");
-        return PipelineProjectionEvent.StepExecution.of(
-                PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch-candidate", artifact)),
-                new PipelineProjectionEvent.PatchProduced(patch, 1, repaired.metadata()));
+                + untrusted("REPAIR_ATTEMPT", Integer.toString(repairAttempt));
     }
 
     private static String safeAffectedFileContext(Path workspace, String patch) {
@@ -210,22 +182,63 @@ public class PipelineStepService {
                 PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of()), List.of());
     }
 
-    public PipelineProjectionEvent.StepExecution test(TaskState state, Path workspace,
-                                                      PipelineStepContracts.Command command) throws Exception {
-        command.requireStep("test");
+    private PreparedTests prepareTests(TaskState state, Path workspace,
+                                       PipelineStepContracts.Command command) throws Exception {
         String deterministicTests = tail(sandbox.test(workspace, state.id, state.sourceCommit), 12_000);
-        AgentOutput output = chat(state, "tester", untrusted("REQUIREMENT", state.request.requirement())
-                + untrusted("PATCH", state.patch)
-                + untrusted("DETERMINISTIC_TEST_EVIDENCE", deterministicTests));
-        agentResponses.requireTesterReport(output.content());
-        String summary = deterministicTests + "\n\n--- AI TESTER REVIEW ---\n" + output.content();
+        var artifact = persist(command, "tests-deterministic", "text/plain", deterministicTests, "PASSED");
+        return new PreparedTests(deterministicTests, artifact);
+    }
+
+    private PipelineProjectionEvent.StepExecution consumePlan(TaskState state, Path workspace,
+                                                               PipelineStepContracts.Command command,
+                                                               String content,
+                                                               PipelineProjectionEvent.AgentMetadata metadata)
+            throws Exception {
+        agentResponses.requireImplementablePlan(content);
+        Files.writeString(workspace.resolve(".ai-plan.md"), content);
+        var artifact = persist(command, "plan", "text/markdown", content, "IMPLEMENTABLE");
+        return PipelineProjectionEvent.StepExecution.of(
+                PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("plan", artifact)),
+                new PipelineProjectionEvent.PlanProduced(content, metadata));
+    }
+
+    private PipelineProjectionEvent.StepExecution consumePatch(TaskState state,
+                                                                PipelineStepContracts.Command command,
+                                                                String content,
+                                                                PipelineProjectionEvent.AgentMetadata metadata,
+                                                                int repairs, String verdict) {
+        String patch = PatchIntegrator.normalize(content);
+        var artifact = persist(command, "patch-candidate", "text/x-diff", patch, verdict);
+        return PipelineProjectionEvent.StepExecution.of(
+                PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("patch-candidate", artifact)),
+                new PipelineProjectionEvent.PatchProduced(patch, repairs, metadata));
+    }
+
+    private PipelineProjectionEvent.StepExecution consumeTests(TaskState state, Path workspace,
+                                                                PipelineStepContracts.Command command,
+                                                                String content,
+                                                                PipelineProjectionEvent.AgentMetadata metadata,
+                                                                PipelineStepContracts.ArtifactReference supportingArtifact)
+            throws Exception {
+        agentResponses.requireTesterReport(content);
+        if (supportingArtifact == null || !"PASSED".equals(supportingArtifact.verdict())) {
+            throw new SecurityException("A2A test assessment lacks deterministic test evidence");
+        }
+        EvidenceRepository.RawEvidence deterministic = evidence.read(new EvidenceRepository.ReadRequest(
+                command.taskId(), command.attemptId(), supportingArtifact.uri(),
+                "workflow", "pipeline-test-consolidation"));
+        if (!supportingArtifact.digest().equals(deterministic.digest())) {
+            throw new SecurityException("Deterministic test evidence digest changed");
+        }
+        String summary = new String(deterministic.content(), StandardCharsets.UTF_8)
+                + "\n\n--- AI TESTER REVIEW ---\n" + content;
         Files.createDirectories(workspace.resolve(".ai-factory"));
         Files.writeString(workspace.resolve(".ai-factory/test.txt"), summary);
         var artifact = persist(command, "tests", "text/plain", summary, "PASSED");
         var assuranceResult = evidenceResult(command, artifact);
         var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("tests", artifact));
         return PipelineProjectionEvent.StepExecution.of(result, new PipelineProjectionEvent.TestsCompleted(
-                summary, Map.of("tests", assuranceResult), output.metadata()));
+                summary, Map.of("tests", assuranceResult), metadata));
     }
 
     public PipelineProjectionEvent.StepExecution quality(TaskState state, Path workspace,
@@ -259,20 +272,19 @@ public class PipelineStepService {
                 summary, Map.of("security", securityResult, "sbom", sbomResult)));
     }
 
-    public PipelineProjectionEvent.StepExecution review(TaskState state, Path workspace,
-                                                        PipelineStepContracts.Command command) throws Exception {
-        command.requireStep("review");
-        AgentOutput output = chat(state, "reviewer", untrusted("REQUIREMENT", state.request.requirement())
-                + untrusted("PLAN", state.plan) + untrusted("PATCH", state.patch)
-                + untrusted("ASSURANCE_RESULTS", objectMapper.writeValueAsString(state.assuranceResults)));
-        AgentResponseValidator.ReviewSummary summary = agentResponses.summarizeReview(output.content());
+    private PipelineProjectionEvent.StepExecution consumeReview(TaskState state, Path workspace,
+                                                                 PipelineStepContracts.Command command,
+                                                                 String content,
+                                                                 PipelineProjectionEvent.AgentMetadata metadata)
+            throws Exception {
+        AgentResponseValidator.ReviewSummary summary = agentResponses.summarizeReview(content);
         logReviewerDecision(state, summary);
         agentResponses.requireReviewAllowsApproval(summary);
-        Files.writeString(workspace.resolve(".ai-review.md"), output.content());
-        var artifact = persist(command, "review", "application/json", output.content(), summary.decision());
+        Files.writeString(workspace.resolve(".ai-review.md"), content);
+        var artifact = persist(command, "review", "application/json", content, summary.decision());
         var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("review", artifact));
         return PipelineProjectionEvent.StepExecution.of(result,
-                new PipelineProjectionEvent.ReviewCompleted(output.content(), output.metadata()));
+                new PipelineProjectionEvent.ReviewCompleted(content, metadata));
     }
 
     public PipelineProjectionEvent.DeliveryPrepared prepareDelivery(TaskState state) {
@@ -297,101 +309,14 @@ public class PipelineStepService {
                 new PipelineProjectionEvent.PullRequestCreated(pullRequestUrl));
     }
 
-    private PatchRepairResult validateAndRepairPatch(TaskState state, Path workspace, String rawPatch) throws Exception {
-        String patch = PatchIntegrator.normalize(rawPatch);
-        int repairs = 0;
-        PipelineProjectionEvent.AgentMetadata metadata = PipelineProjectionEvent.AgentMetadata.none();
-        for (int repairAttempt = 0; repairAttempt <= MAX_PATCH_REPAIR_ATTEMPTS; repairAttempt++) {
-            try {
-                return new PatchRepairResult(
-                        patchIntegrator.validate(workspace, state.id, state.sourceCommit, patch).content(),
-                        repairs, metadata);
-            } catch (Exception validationFailure) {
-                if (repairAttempt == MAX_PATCH_REPAIR_ATTEMPTS) throw validationFailure;
-                repairs++;
-                operationalMetrics.repair();
-                log.warn("Task {} ({}) patch validation failed; starting repair attempt {}/{}: {}",
-                        state.id, state.ticketNumber, repairAttempt + 1, MAX_PATCH_REPAIR_ATTEMPTS,
-                        validationFailure.getMessage());
-                Files.writeString(workspace.resolve("changes.invalid.patch"), patch);
-                String context = contextService.collectForRole(workspace, state.id, state.sourceCommit,
-                        "patch-repair");
-                AgentOutput repaired = chat(state, "patch-repair", untrusted("REQUIREMENT", state.request.requirement())
-                        + untrusted("PLAN", state.plan) + untrusted("REPOSITORY_CONTEXT", context)
-                        + untrusted("CURRENT_FILE_CONTENTS", affectedFileContext(workspace, patch))
-                        + untrusted("INVALID_PATCH", patch)
-                        + untrusted("GIT_APPLY_ERROR", validationFailure.getMessage())
-                        + untrusted("REPAIR_ATTEMPT", Integer.toString(repairAttempt + 1)));
-                metadata = metadata.plus(repaired.metadata());
-                patch = PatchIntegrator.normalize(repaired.content());
-            }
-        }
-        throw new IllegalStateException("Patch validation exited unexpectedly");
-    }
-
-    private AgentOutput chat(TaskState state, String promptName, String untrustedInput) {
-        String fingerprint = prompts.fingerprint(promptName);
-        log.info("Task {} ({}) invoking {} agent with prompt sha256={}", state.id, state.ticketNumber,
-                promptName, fingerprint.substring(0, 12));
-        String systemPrompt = prompts.load(promptName);
-        if (agentTooling.enabledFor(promptName)) {
-            long started = System.nanoTime();
-            AgentToolLoop loop = new AgentToolLoop(
-                    messages -> llm.nextToolTurn(messages, agentTools.definitions(), maxTokensFor(promptName)),
-                    agentTools.executor(state.id, "pipeline-1", state.sourceCommit, promptName),
-                    agentTools.authorization());
-            AgentToolLoop.Result result = loop.run(new AgentToolLoop.Actor(state.id, promptName), systemPrompt,
-                    untrustedInput, new AgentToolLoop.Budget(6, Duration.ofMinutes(3), 12_000, 5_000_000));
-            log.info("Task {} ({}) {} tool loop completed; turns={} tokens={} duration_ms={}",
-                    state.id, state.ticketNumber, promptName, result.turns(), result.tokens(),
-                    Duration.ofNanos(System.nanoTime() - started).toMillis());
-            return new AgentOutput(result.finalResult(), new PipelineProjectionEvent.AgentMetadata(
-                    Map.of(promptName, fingerprint), result.tokens(), result.costMicros(), result.turns()));
-        }
-        Map<String, Object> responseFormat = PlannerResponseFormat.forPrompt(promptName);
-        List<LlmGatewayClient.LlmCallResult> calls = new java.util.ArrayList<>();
-        Supplier<String> invocation = () -> regularChat(systemPrompt, untrustedInput,
-                maxTokensFor(promptName), responseFormat, calls);
-        Supplier<String> retryInvocation = () -> regularChat(systemPrompt, untrustedInput,
-                retryMaxTokensFor(promptName), responseFormat, calls);
-        String response;
-        if ("planner".equals(promptName)) {
-            response = withSingleContractRetry(invocation, retryInvocation, agentResponses::hasValidPlannerContract,
-                    reason -> {
-                        plannerContractRetries.increment();
-                        log.warn("Task {} ({}) planner retrying once; reason={}", state.id, state.ticketNumber,
-                                reason);
-                    });
-        } else {
-            response = withSingleRetryableCompletion(invocation, retryInvocation, reason -> {
-                operationalMetrics.retry("agent");
-                log.warn("Task {} ({}) {} retrying once with a larger output budget; reason={}",
-                        state.id, state.ticketNumber, promptName, reason);
-            });
-        }
-        log.info("Task {} ({}) {} agent completed; response_chars={}", state.id, state.ticketNumber,
-                promptName, response.length());
-        long tokens = calls.stream().mapToLong(LlmGatewayClient.LlmCallResult::tokens).sum();
-        long costMicros = calls.stream().mapToLong(LlmGatewayClient.LlmCallResult::costMicros).sum();
-        return new AgentOutput(response, new PipelineProjectionEvent.AgentMetadata(
-                Map.of(promptName, fingerprint), tokens, costMicros, 0));
-    }
-
-    private String regularChat(String systemPrompt, String input, int maxTokens,
-                               Map<String, Object> responseFormat, List<LlmGatewayClient.LlmCallResult> calls) {
-        LlmGatewayClient.LlmCallResult result = llm.chatDetailed(systemPrompt, input, maxTokens, responseFormat);
-        calls.add(result);
-        return result.content();
-    }
-
     public void writeRunMetadata(Path workspace, TaskState state) throws Exception {
         writeMetadata(workspace, state);
     }
 
-    private record AgentOutput(String content, PipelineProjectionEvent.AgentMetadata metadata) {}
+    public record PreparedAgentInput(String payload,
+                                     PipelineStepContracts.ArtifactReference supportingArtifact) {}
 
-    private record PatchRepairResult(String patch, int repairs,
-                                     PipelineProjectionEvent.AgentMetadata agentMetadata) {}
+    private record PreparedTests(String summary, PipelineStepContracts.ArtifactReference artifact) {}
 
     static String stripFence(String value) {
         return PatchIntegrator.stripFence(value);

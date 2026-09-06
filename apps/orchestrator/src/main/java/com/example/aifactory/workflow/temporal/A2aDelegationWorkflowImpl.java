@@ -51,9 +51,9 @@ public final class A2aDelegationWorkflowImpl implements DelegationWorkflow {
             A2aContracts.TaskSnapshot completed = new A2aContracts.TaskSnapshot(terminal.taskId(),
                     terminal.contextId(), terminal.state(), terminal.occurredAt(), terminal.artifacts(),
                     Map.of("sequence", terminal.sequence()));
-            activities.validateArtifacts().validateArtifacts(new A2aActivities.ValidationRequest(
+            A2aActivities.ValidatedArtifacts validated = activities.validateArtifacts().validateArtifacts(new A2aActivities.ValidationRequest(
                     request.role(), outputContract(request.role()), request.attemptId(), completed));
-            return new Result(request.nodeId(), request.role(), "READY_FOR_ACTIVITIES");
+            return new Result(request.nodeId(), request.role(), "READY_FOR_ACTIVITIES", validated.references());
         }
         return new Result(request.nodeId(), request.role(), switch (terminal.state()) {
             case CANCELED -> "CANCELLED";

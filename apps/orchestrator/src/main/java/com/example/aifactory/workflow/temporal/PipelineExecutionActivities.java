@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.model.PendingEffect;
+import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.ActivityInterface;
@@ -16,14 +17,14 @@ public interface PipelineExecutionActivities {
     @ActivityMethod(name = "ExecutePipelineStep")
     PipelineStepContracts.Result execute(StepRequest request);
 
-    @ActivityMethod(name = "GeneratePatchCandidate")
-    PipelineStepContracts.Result generatePatchCandidate(StepRequest request);
-
     @ActivityMethod(name = "ValidatePatchCandidate")
     PatchValidationResult validatePatchCandidate(StepRequest request);
 
-    @ActivityMethod(name = "RepairPatchCandidate")
-    PipelineStepContracts.Result repairPatchCandidate(PatchRepairRequest request);
+    @ActivityMethod(name = "PreparePipelineA2aInput")
+    PipelineAgentInput prepareAgentInput(PipelineAgentInputRequest request);
+
+    @ActivityMethod(name = "ConsumePipelineA2aResult")
+    PipelineStepContracts.Result consumeAgentResult(PipelineAgentResultRequest request);
 
     @ActivityMethod(name = "PreparePipelineDelivery")
     PendingEffect prepareDelivery(DeliveryRequest request);
@@ -51,11 +52,21 @@ public interface PipelineExecutionActivities {
 
     record StepRequest(PipelineStepContracts.Command command, String workspace) {}
 
-    record PatchRepairRequest(PipelineStepContracts.Command command, String workspace,
-                              PipelineStepContracts.ArtifactReference validationError, int repairAttempt) {}
-
     record PatchValidationResult(boolean valid, PipelineStepContracts.Result result,
                                  PipelineStepContracts.ArtifactReference validationError) {}
+
+    record PipelineAgentInputRequest(PipelineStepContracts.Command command, String workspace,
+                                     String role, String operation,
+                                     PipelineStepContracts.ArtifactReference validationError,
+                                     int repairAttempt) {}
+
+    record PipelineAgentInput(A2aContracts.Part reference,
+                              PipelineStepContracts.ArtifactReference supportingArtifact) {}
+
+    record PipelineAgentResultRequest(PipelineStepContracts.Command command, String workspace,
+                                      String role, String operation,
+                                      A2aActivities.EvidenceReference resultReference,
+                                      PipelineStepContracts.ArtifactReference supportingArtifact) {}
 
     record DeliveryRequest(String taskId, String attemptId, String sourceCommit) {}
 

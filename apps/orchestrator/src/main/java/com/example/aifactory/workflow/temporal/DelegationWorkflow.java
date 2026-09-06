@@ -83,5 +83,14 @@ public interface DelegationWorkflow {
         }
     }
 
-    record Result(String nodeId, String role, String status) {}
+    record Result(String nodeId, String role, String status,
+                  java.util.List<A2aActivities.EvidenceReference> artifacts) {
+        public Result {
+            artifacts = artifacts == null ? java.util.List.of() : java.util.List.copyOf(artifacts);
+        }
+
+        public Result(String nodeId, String role, String status) {
+            this(nodeId, role, status, java.util.List.of());
+        }
+    }
 }

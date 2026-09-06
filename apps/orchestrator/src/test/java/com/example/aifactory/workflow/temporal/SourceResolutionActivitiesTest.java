@@ -1,6 +1,8 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.config.AiFactoryProperties;
+import com.example.aifactory.a2a.A2aContracts;
+import com.example.aifactory.a2a.A2aEvidencePartFactory;
 import com.example.aifactory.service.ProcessRunner;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -11,6 +13,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -89,6 +93,7 @@ class SourceResolutionActivitiesTest {
             workflowWorker.registerWorkflowImplementationTypes(SoftwareFactoryExecutionWorkflowV1Impl.class);
             Worker contextWorker = environment.newWorker("ai-factory-context");
             CompactPipelineActivities pipeline = new CompactPipelineActivities();
+            workflowWorker.registerActivitiesImplementations(pipeline);
             contextWorker.registerActivitiesImplementations((SourceResolutionActivities) request ->
                     new SourceResolutionActivities.Result(request.repositoryId(), request.branch(), "c".repeat(40),
                             "/workspace/" + request.taskId(), "d".repeat(64)), pipeline);
@@ -122,7 +127,9 @@ class SourceResolutionActivitiesTest {
         }
     }
 
-    private static final class CompactPipelineActivities implements PipelineExecutionActivities {
+    private static final class CompactPipelineActivities implements PipelineExecutionActivities,
+            A2aActivities.ResolveAgent, A2aActivities.ReconcileDispatch, A2aActivities.GetTask,
+            A2aActivities.ValidateArtifacts {
         private int validations;
         private int repairs;
         private int approvals;
@@ -145,10 +152,27 @@ class SourceResolutionActivitiesTest {
                     request.command(), request.command().sourceCommit(), artifacts);
         }
 
-        @Override
-        public com.example.aifactory.service.PipelineStepContracts.Result generatePatchCandidate(StepRequest request) {
+        @Override public PipelineAgentInput prepareAgentInput(PipelineAgentInputRequest request) {
+            return new PipelineAgentInput(A2aEvidencePartFactory.reference(
+                    request.command().step() + "-input",
+                    "evidence://task-1/attempt-1/input/" + request.operation().toLowerCase(),
+                    "d".repeat(64), "pipeline-agent-task-v1", 1),
+                    "ASSESS_TESTS".equals(request.operation())
+                            ? artifact("tests-deterministic", "PASSED") : null);
+        }
+
+        @Override public com.example.aifactory.service.PipelineStepContracts.Result consumeAgentResult(
+                PipelineAgentResultRequest request) {
+            String name = switch (request.operation()) {
+                case "PLAN" -> "plan";
+                case "GENERATE_PATCH", "REPAIR_PATCH" -> "patch-candidate";
+                case "ASSESS_TESTS" -> "tests";
+                case "REVIEW" -> "review";
+                default -> throw new IllegalArgumentException(request.operation());
+            };
+            if ("REPAIR_PATCH".equals(request.operation())) repairs++;
             return com.example.aifactory.service.PipelineStepContracts.Result.from(request.command(),
-                    request.command().sourceCommit(), Map.of("patch-candidate", artifact("patch-candidate", "GENERATED")));
+                    request.command().sourceCommit(), Map.of(name, artifact(name, "PASSED")));
         }
 
         @Override
@@ -165,12 +189,34 @@ class SourceResolutionActivitiesTest {
                             request.command().sourceCommit(), Map.of("patch", artifact("patch", "VALID"))), null);
         }
 
-        @Override
-        public com.example.aifactory.service.PipelineStepContracts.Result repairPatchCandidate(
-                PatchRepairRequest request) {
-            repairs++;
-            return com.example.aifactory.service.PipelineStepContracts.Result.from(request.command(),
-                    request.command().sourceCommit(), Map.of("patch-candidate", artifact("patch-candidate", "REPAIRED")));
+        @Override public A2aContracts.AgentCardDescriptor resolveAgent(String role) {
+            return new A2aContracts.AgentCardDescriptor(role,
+                    URI.create("https://" + role + "/.well-known/agent-card.json"),
+                    URI.create("https://" + role + "/a2a"), "JSONRPC", "1.0", "a".repeat(64),
+                    List.of(role + ".pipeline-agent-task-v1"), false, true);
+        }
+
+        @Override public A2aContracts.TaskSnapshot reconcileDispatch(A2aActivities.DispatchRequest request) {
+            String uri = "evidence://task-1/attempt-1/agent-result/" + request.command().messageId();
+            A2aContracts.Part part = new A2aContracts.Part(
+                    com.example.aifactory.a2a.A2aMediaTypes.EVIDENCE_REFERENCE, null,
+                    Map.of("uri", uri, "digest", "c".repeat(64), "contract", "pipeline-agent-result-v1"),
+                    URI.create(uri));
+            return new A2aContracts.TaskSnapshot("a2a-" + request.command().messageId(), "context-1",
+                    A2aContracts.TaskState.COMPLETED, Instant.EPOCH,
+                    List.of(new A2aContracts.Artifact("artifact-1", "result", List.of(part), Map.of())),
+                    Map.of("sequence", 1L));
+        }
+
+        @Override public A2aContracts.TaskSnapshot getTask(A2aContracts.TaskQuery query) {
+            throw new AssertionError("completed dispatch must not be polled");
+        }
+
+        @Override public A2aActivities.ValidatedArtifacts validateArtifacts(A2aActivities.ValidationRequest request) {
+            A2aContracts.Part part = request.task().artifacts().getFirst().parts().getFirst();
+            return new A2aActivities.ValidatedArtifacts(request.task().taskId(), List.of(
+                    new A2aActivities.EvidenceReference("artifact-1", part.uri().toString(),
+                            "c".repeat(64), request.outputContract())));
         }
 
         @Override

@@ -1,38 +1,48 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.config.TemporalProperties;
+import com.example.aifactory.a2a.A2aEvidencePartFactory;
 import com.example.aifactory.model.PendingEffect;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.service.PipelineProjectionEvent;
 import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.service.PipelineStepService;
+import com.example.aifactory.service.MultiAgentContractValidator;
 import com.example.aifactory.workflow.TaskMemory;
 import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.Activity;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 import java.util.Map;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /** Host-side adapter from compact Temporal commands to extracted pipeline steps and projection events. */
 @Component
 public final class PipelineExecutionActivitiesImpl implements PipelineExecutionActivities {
     private static final Map<String, String> STEP_WORKERS = Map.of(
-            "plan", "llm", "generate-patch", "llm", "review", "llm",
-            "apply-patch", "sandbox", "test", "sandbox",
+            "apply-patch", "sandbox",
             "quality", "assurance", "security", "assurance");
     private final PipelineStepService steps;
     private final TaskMemory memory;
     private final Map<String, String> taskQueues;
     private final EvidenceRepository evidence;
+    private final ObjectMapper mapper;
+    private final MultiAgentContractValidator contracts;
 
     public PipelineExecutionActivitiesImpl(PipelineStepService steps, TaskMemory memory,
-                                           TemporalProperties properties, EvidenceRepository evidence) {
+                                           TemporalProperties properties, EvidenceRepository evidence,
+                                           ObjectMapper mapper, MultiAgentContractValidator contracts) {
         this.steps = steps;
         this.memory = memory;
         this.taskQueues = properties.taskQueues();
         this.evidence = evidence;
+        this.mapper = mapper;
+        this.contracts = contracts;
     }
 
     @Override
@@ -72,13 +82,9 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             project(state, "started");
             Path workspace = Path.of(request.workspace());
             PipelineProjectionEvent.StepExecution execution = switch (command.step()) {
-                case "plan" -> steps.plan(state, workspace, command);
-                case "generate-patch" -> steps.generateAndRepairPatch(state, workspace, command);
                 case "apply-patch" -> steps.applyPatch(state, workspace, command);
-                case "test" -> steps.test(state, workspace, command);
                 case "quality" -> steps.quality(state, workspace, command);
                 case "security" -> steps.security(state, workspace, command);
-                case "review" -> steps.review(state, workspace, command);
                 default -> throw new IllegalArgumentException("Unsupported Temporal pipeline step");
             };
             execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
@@ -90,25 +96,6 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         } catch (Exception failure) {
             throw TemporalFailureClassifier.toApplicationFailure(
                     new IllegalStateException("Pipeline step failed: " + command.step(), failure));
-        }
-    }
-
-    @Override
-    public PipelineStepContracts.Result generatePatchCandidate(StepRequest request) {
-        requireStepRequest(request, "generate-patch-candidate", "llm");
-        TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
-        try {
-            state.transition(TaskStatus.GENERATING_PATCH, "Temporal activity: generate patch candidate");
-            project(state, "started");
-            PipelineProjectionEvent.StepExecution execution = steps.generatePatchCandidate(
-                    state, Path.of(request.workspace()), request.command());
-            applyAndProject(state, execution, "completed");
-            return execution.result();
-        } catch (RuntimeException failure) {
-            throw TemporalFailureClassifier.toApplicationFailure(failure);
-        } catch (Exception failure) {
-            throw TemporalFailureClassifier.toApplicationFailure(
-                    new IllegalStateException("Patch candidate generation failed", failure));
         }
     }
 
@@ -125,22 +112,87 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
     }
 
     @Override
-    public PipelineStepContracts.Result repairPatchCandidate(PatchRepairRequest request) {
-        if (request == null) throw new IllegalArgumentException("Patch repair request is invalid");
-        StepRequest step = new StepRequest(request.command(), request.workspace());
-        requireStepRequest(step, "repair-patch-candidate", "llm");
+    public PipelineAgentInput prepareAgentInput(PipelineAgentInputRequest request) {
+        requireAgentRequest(request);
+        String queue = "ASSESS_TESTS".equals(request.operation()) ? "sandbox" : "llm";
+        requireQueue(queue);
         TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
+        requireSourceAndWorkspace(request.command(), request.workspace(), state);
         try {
-            PipelineProjectionEvent.StepExecution execution = steps.repairPatchCandidate(state,
-                    Path.of(request.workspace()), request.command(), request.validationError(),
-                    request.repairAttempt());
-            applyAndProject(state, execution);
+            state.transition(agentStatus(request.operation()), "Temporal prepares A2A agent input: "
+                    + request.operation());
+            project(state, "a2a-input-started");
+            PipelineStepService.PreparedAgentInput prepared = steps.prepareAgentInput(state,
+                    Path.of(request.workspace()), request.operation(), request.command(),
+                    request.validationError(), request.repairAttempt());
+            Map<String, Object> document = Map.of(
+                    "schema_version", "1",
+                    "task_id", request.command().taskId(),
+                    "attempt_id", request.command().attemptId(),
+                    "role", request.role(),
+                    "operation", request.operation(),
+                    "source_commit", request.command().sourceCommit(),
+                    "payload", prepared.payload());
+            JsonNode validated = contracts.validate("pipeline-agent-task-v1", mapper.valueToTree(document),
+                    new MultiAgentContractValidator.ContractContext(request.command().taskId(),
+                            request.command().attemptId(), java.util.Set.of()));
+            byte[] content = mapper.writeValueAsBytes(validated);
+            String digest = sha256(content);
+            String type = "a2a-input-" + request.operation().toLowerCase(java.util.Locale.ROOT)
+                    .replace('_', '-');
+            EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
+                    request.command().taskId(), request.command().attemptId(), type, "application/json",
+                    content, digest, "workflow"));
+            state.recordArtifact(type, type, stored.status(), stored.classification(), stored.uri(),
+                    stored.digest(), stored.sizeBytes(), true);
+            project(state, "a2a-input-stored");
+            return new PipelineAgentInput(A2aEvidencePartFactory.reference(
+                    request.command().step() + "-input", stored.uri(), stored.digest(),
+                    "pipeline-agent-task-v1", stored.sizeBytes()), prepared.supportingArtifact());
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Pipeline A2A input preparation failed", failure));
+        }
+    }
+
+    @Override
+    public PipelineStepContracts.Result consumeAgentResult(PipelineAgentResultRequest request) {
+        requireAgentResult(request);
+        String queue = "ASSESS_TESTS".equals(request.operation()) ? "sandbox" : "llm";
+        requireQueue(queue);
+        TaskState state = requireTask(request.command().taskId(), request.command().attemptId());
+        requireSourceAndWorkspace(request.command(), request.workspace(), state);
+        try {
+            EvidenceRepository.RawEvidence evidenceResult = evidence.read(new EvidenceRepository.ReadRequest(
+                    request.command().taskId(), request.command().attemptId(), request.resultReference().uri(),
+                    "workflow", "pipeline-a2a-result"));
+            if (!request.resultReference().digest().equals(evidenceResult.digest())) {
+                throw new SecurityException("A2A result Evidence digest changed");
+            }
+            JsonNode document = contracts.validate("pipeline-agent-result-v1",
+                    mapper.readTree(evidenceResult.content()), new MultiAgentContractValidator.ContractContext(
+                            request.command().taskId(), request.command().attemptId(), java.util.Set.of()));
+            if (!request.role().equals(document.path("role").asText())
+                    || !request.operation().equals(document.path("operation").asText())
+                    || !"COMPLETED".equals(document.path("status").asText())) {
+                throw new SecurityException("A2A pipeline result changed its admitted role or operation");
+            }
+            PipelineProjectionEvent.AgentMetadata metadata = new PipelineProjectionEvent.AgentMetadata(
+                    Map.of(promptName(request.operation()), document.path("prompt_fingerprint").asText()),
+                    document.path("tokens").asLong(), document.path("cost_micros").asLong(),
+                    document.path("turns").asInt());
+            PipelineProjectionEvent.StepExecution execution = steps.consumeAgentResult(state,
+                    Path.of(request.workspace()), request.command(), request.operation(),
+                    document.path("content").asText(), metadata, request.supportingArtifact());
+            applyAndProject(state, execution, "a2a-result-consumed");
             return execution.result();
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
         } catch (Exception failure) {
             throw TemporalFailureClassifier.toApplicationFailure(
-                    new IllegalStateException("Patch repair failed", failure));
+                    new IllegalStateException("Pipeline A2A result consumption failed", failure));
         }
     }
 
@@ -313,6 +365,84 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         if (!request.command().sourceCommit().equals(state.sourceCommit)
                 || !request.workspace().equals(state.workspace)) {
             throw new SecurityException("Pipeline step is not bound to the projected source");
+        }
+    }
+
+    private static void requireAgentRequest(PipelineAgentInputRequest request) {
+        if (request == null || request.command() == null || request.workspace() == null
+                || request.role() == null || request.operation() == null
+                || !expectedStep(request.operation()).equals(request.command().step())) {
+            throw new IllegalArgumentException("Pipeline A2A input request is invalid");
+        }
+        requireRoleOperation(request.role(), request.operation());
+    }
+
+    private static void requireAgentResult(PipelineAgentResultRequest request) {
+        if (request == null || request.command() == null || request.workspace() == null
+                || request.role() == null || request.operation() == null || request.resultReference() == null
+                || !"pipeline-agent-result-v1".equals(request.resultReference().contract())
+                || !expectedStep(request.operation()).equals(request.command().step())) {
+            throw new IllegalArgumentException("Pipeline A2A result request is invalid");
+        }
+        requireRoleOperation(request.role(), request.operation());
+    }
+
+    private static void requireRoleOperation(String role, String operation) {
+        String expectedRole = switch (operation) {
+            case "PLAN" -> "architecture-agent";
+            case "GENERATE_PATCH" -> "developer";
+            case "REPAIR_PATCH" -> "patch-repair";
+            case "ASSESS_TESTS" -> "test-agent";
+            case "REVIEW" -> "independent-reviewer";
+            default -> throw new IllegalArgumentException("Unsupported pipeline A2A operation");
+        };
+        if (!expectedRole.equals(role)) throw new SecurityException("Pipeline A2A role/operation mismatch");
+    }
+
+    private static String expectedStep(String operation) {
+        return switch (operation) {
+            case "PLAN" -> "plan";
+            case "GENERATE_PATCH" -> "generate-patch-candidate";
+            case "REPAIR_PATCH" -> "repair-patch-candidate";
+            case "ASSESS_TESTS" -> "test";
+            case "REVIEW" -> "review";
+            default -> throw new IllegalArgumentException("Unsupported pipeline A2A operation");
+        };
+    }
+
+    private static String promptName(String operation) {
+        return switch (operation) {
+            case "PLAN" -> "planner";
+            case "GENERATE_PATCH" -> "developer";
+            case "REPAIR_PATCH" -> "patch-repair";
+            case "ASSESS_TESTS" -> "tester";
+            case "REVIEW" -> "reviewer";
+            default -> throw new IllegalArgumentException("Unsupported pipeline A2A operation");
+        };
+    }
+
+    private static TaskStatus agentStatus(String operation) {
+        return switch (operation) {
+            case "PLAN" -> TaskStatus.PLANNING;
+            case "GENERATE_PATCH", "REPAIR_PATCH" -> TaskStatus.GENERATING_PATCH;
+            case "ASSESS_TESTS" -> TaskStatus.TESTING;
+            case "REVIEW" -> TaskStatus.REVIEWING;
+            default -> throw new IllegalArgumentException("Unsupported pipeline A2A operation");
+        };
+    }
+
+    private static void requireSourceAndWorkspace(PipelineStepContracts.Command command, String workspace,
+                                                  TaskState state) {
+        if (!command.sourceCommit().equals(state.sourceCommit) || !workspace.equals(state.workspace)) {
+            throw new SecurityException("Pipeline A2A operation is not bound to the projected source");
+        }
+    }
+
+    private static String sha256(byte[] content) {
+        try {
+            return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(content));
+        } catch (Exception failure) {
+            throw new IllegalStateException("Cannot digest pipeline A2A input", failure);
         }
     }
 

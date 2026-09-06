@@ -1,10 +1,14 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.a2a.A2aContracts;
+import com.example.aifactory.a2a.A2aEnvelopeFactory;
+import com.example.aifactory.a2a.A2aExecutionContext;
+import com.example.aifactory.a2a.A2aExtensions;
 import io.temporal.common.VersioningBehavior;
 import io.temporal.workflow.WorkflowVersioningBehavior;
 
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /** V1 admission wrapper around the already replay-tested durable coordination implementation. */
@@ -18,6 +22,8 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     private final Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts =
             new LinkedHashMap<>();
     private final A2aTaskAwaiter a2aTasks = new A2aTaskAwaiter();
+    private final A2aActivities.Stubs a2a = A2aActivities.newStubs();
+    private final List<DelegationWorkflow.Result> pipelineDelegations = new java.util.ArrayList<>();
 
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
@@ -44,21 +50,21 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 request.repositoryId(), resolved.sourceCommit(), resolved.workspace(), resolved.attestationDigest()));
         try {
             throwIfCancelled();
-            runStep(source, request, resolved, "plan", TemporalActivityPolicies.Kind.LLM,
-                    Map.of("requirement", request.requirementDigest()));
+            runPipelineAgent(source, request, resolved, "architecture-agent", "PLAN", "plan",
+                    Map.of("requirement", request.requirementDigest()), null, 0);
             generateAndRepairPatch(source, request, resolved);
             runStep(source, request, resolved, "apply-patch", TemporalActivityPolicies.Kind.SANDBOX,
                     Map.of("patch", artifacts.get("patch").digest()));
-            runStep(source, request, resolved, "test", TemporalActivityPolicies.Kind.SANDBOX,
-                    Map.of("patch", artifacts.get("patch").digest()));
+            runPipelineAgent(source, request, resolved, "test-agent", "ASSESS_TESTS", "test",
+                    Map.of("patch", artifacts.get("patch").digest()), null, 0);
             runStep(source, request, resolved, "quality", TemporalActivityPolicies.Kind.ASSURANCE,
                     Map.of("tests", artifacts.get("tests").digest()));
             runStep(source, request, resolved, "security", TemporalActivityPolicies.Kind.ASSURANCE,
                     Map.of("quality", artifacts.get("quality").digest()));
-            runStep(source, request, resolved, "review", TemporalActivityPolicies.Kind.LLM, Map.of(
+            runPipelineAgent(source, request, resolved, "independent-reviewer", "REVIEW", "review", Map.of(
                     "plan", artifacts.get("plan").digest(), "patch", artifacts.get("patch").digest(),
                     "tests", artifacts.get("tests").digest(), "quality", artifacts.get("quality").digest(),
-                    "security", artifacts.get("security").digest()));
+                    "security", artifacts.get("security").digest()), null, 0);
             currentStep = "prepare-delivery";
             pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
                     new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
@@ -78,7 +84,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
             artifacts.keySet().forEach(name -> chronology.add("EVIDENCE_PRESERVED:" + name));
             chronology.add("GATE_REJECTED:" + currentStep);
             return new SoftwareFactoryWorkflow.Result(request.taskId(), request.attemptId(),
-                    resolved.sourceCommit(), phase, chronology, List.of(), Map.of(),
+                    resolved.sourceCommit(), phase, chronology, pipelineDelegations, Map.of(),
                     null, null, null, null);
         }
         var storedManifest = pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE)
@@ -123,7 +129,8 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
             chronology.add("DELIVERY_COMPLETED");
         }
         return new SoftwareFactoryWorkflow.Result(coordinated.taskId(), coordinated.attemptId(),
-                coordinated.sourceCommit(), phase, chronology, coordinated.delegations(),
+                coordinated.sourceCommit(), phase, chronology,
+                java.util.stream.Stream.concat(pipelineDelegations.stream(), coordinated.delegations().stream()).toList(),
                 coordinated.humanDecisions(), coordinated.approvedManifestId(), coordinated.approvedBy(),
                 coordinated.cancellationReasonDigest(), coordinated.independentReview());
     }
@@ -140,7 +147,8 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
         artifacts.keySet().forEach(name -> chronology.add("EVIDENCE_PRESERVED:" + name));
         chronology.add("CANCELLED");
         return new SoftwareFactoryWorkflow.Result(request.taskId(), request.attemptId(), resolved.sourceCommit(),
-                "CANCELLED", chronology, List.of(), Map.of(), null, null, cancellation.reasonDigest(), null);
+                "CANCELLED", chronology, pipelineDelegations, Map.of(), null, null,
+                cancellation.reasonDigest(), null);
     }
 
     private void throwIfCancelled() {
@@ -168,13 +176,9 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                                         SoftwareFactoryWorkflow.Request request,
                                         SourceResolutionActivities.Result resolved) {
         currentStep = "generate-patch";
-        PipelineExecutionActivities llm = pipeline(source, "llm", TemporalActivityPolicies.Kind.LLM);
         PipelineExecutionActivities sandbox = pipeline(source, "sandbox", TemporalActivityPolicies.Kind.SANDBOX);
-        var generated = command(request, resolved, "generate-patch-candidate",
-                Map.of("plan", artifacts.get("plan").digest()));
-        var candidate = llm.generatePatchCandidate(
-                new PipelineExecutionActivities.StepRequest(generated, resolved.workspace()));
-        artifacts.putAll(candidate.artifacts());
+        runPipelineAgent(source, request, resolved, "developer", "GENERATE_PATCH", "generate-patch-candidate",
+                Map.of("plan", artifacts.get("plan").digest()), null, 0);
         for (int repairAttempt = 0; repairAttempt <= 2; repairAttempt++) {
             var validationCommand = command(request, resolved, "validate-patch-candidate", Map.of(
                     "candidate", artifacts.get("patch-candidate").digest(),
@@ -188,14 +192,94 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
                         "Patch remains invalid after two workflow repair attempts", "BUSINESS_REJECTION");
             }
-            var repairCommand = command(request, resolved, "repair-patch-candidate", Map.of(
-                    "candidate", artifacts.get("patch-candidate").digest(),
-                    "validation-error", validation.validationError().digest()));
-            var repaired = llm.repairPatchCandidate(new PipelineExecutionActivities.PatchRepairRequest(
-                    repairCommand, resolved.workspace(), validation.validationError(), repairAttempt + 1));
-            artifacts.putAll(repaired.artifacts());
+            runPipelineAgent(source, request, resolved, "patch-repair", "REPAIR_PATCH",
+                    "repair-patch-candidate", Map.of(
+                            "candidate", artifacts.get("patch-candidate").digest(),
+                            "validation-error", validation.validationError().digest()),
+                    validation.validationError(), repairAttempt + 1);
             throwIfCancelled();
         }
+    }
+
+    private void runPipelineAgent(SoftwareFactoryWorkflow.SourceLocation source,
+                                  SoftwareFactoryWorkflow.Request request,
+                                  SourceResolutionActivities.Result resolved,
+                                  String role, String operation, String step,
+                                  Map<String, String> inputDigests,
+                                  com.example.aifactory.service.PipelineStepContracts.ArtifactReference validationError,
+                                  int repairAttempt) {
+        currentStep = step;
+        var stepCommand = command(request, resolved, step, inputDigests);
+        boolean sandboxPreparation = "ASSESS_TESTS".equals(operation);
+        PipelineExecutionActivities host = pipeline(source, sandboxPreparation ? "sandbox" : "llm",
+                sandboxPreparation ? TemporalActivityPolicies.Kind.SANDBOX : TemporalActivityPolicies.Kind.LLM);
+        PipelineExecutionActivities.PipelineAgentInput prepared = host.prepareAgentInput(
+                new PipelineExecutionActivities.PipelineAgentInputRequest(stepCommand, resolved.workspace(),
+                        role, operation, validationError, repairAttempt));
+        A2aContracts.AgentCardDescriptor card = a2a.resolveAgent().resolveAgent(role);
+        String skill = role + ".pipeline-agent-task-v1";
+        if (!card.skillIds().contains(skill)) {
+            throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                    "Agent Card does not expose the pipeline compatibility skill", "INCOMPATIBLE_SCHEMA");
+        }
+        String delegationId = "pipeline-" + step.replaceAll("[^A-Za-z0-9_-]", "-")
+                + (repairAttempt > 0 ? "-" + repairAttempt : "");
+        var info = io.temporal.workflow.Workflow.getInfo();
+        A2aExecutionContext execution = new A2aExecutionContext("1", request.taskId(), request.attemptId(),
+                info.getWorkflowId(), info.getRunId(), request.repositoryId(), resolved.sourceCommit(),
+                delegationId, null, role, List.of(String.valueOf(prepared.reference().data().get("digest"))));
+        String messageId = TemporalIds.sha256(String.join("\n", request.taskId(), request.attemptId(),
+                delegationId, role, String.valueOf(prepared.reference().data().get("digest")), card.cardDigest()));
+        DelegationWorkflow.Budget budget = new DelegationWorkflow.Budget(12_000, 5_000_000, 6, 900);
+        Map<String, Object> metadata = Map.of(
+                A2aExtensions.EXECUTION_CONTEXT_V1, executionMetadata(execution),
+                "budget", Map.of("maxTokens", budget.maxTokens(), "maxCostMicros", budget.maxCostMicros(),
+                        "maxTurns", budget.maxTurns(), "timeoutSeconds", budget.timeoutSeconds()));
+        A2aContracts.SendCommand send = new A2aContracts.SendCommand(role, skill, messageId, null, null,
+                List.of(A2aEnvelopeFactory.create(role, skill, "pipeline-agent-result-v1",
+                        List.of(prepared.reference()), budget)), metadata, true);
+        A2aContracts.TaskSnapshot submitted = a2a.reconcileDispatch().reconcileDispatch(
+                new A2aActivities.DispatchRequest(execution, card.cardDigest(), send));
+        A2aContracts.Notification terminal = a2aTasks.awaitUntilTerminal(role, submitted,
+                java.time.Duration.ofSeconds(30), a2a.getTask());
+        if (terminal.state() != A2aContracts.TaskState.COMPLETED) {
+            pipelineDelegations.add(new DelegationWorkflow.Result(delegationId, role,
+                    terminal.state() == A2aContracts.TaskState.CANCELED ? "CANCELLED" : "FAILED"));
+            throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                    "Pipeline A2A agent ended in " + terminal.state(), "BUSINESS_REJECTION");
+        }
+        A2aContracts.TaskSnapshot completed = new A2aContracts.TaskSnapshot(terminal.taskId(),
+                terminal.contextId(), terminal.state(), terminal.occurredAt(), terminal.artifacts(),
+                Map.of("sequence", terminal.sequence()));
+        A2aActivities.ValidatedArtifacts validated = a2a.validateArtifacts().validateArtifacts(
+                new A2aActivities.ValidationRequest(role, "pipeline-agent-result-v1",
+                        request.attemptId(), completed));
+        if (validated.references().size() != 1) {
+            throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                    "Pipeline A2A agent returned an ambiguous result set", "INCOMPATIBLE_SCHEMA");
+        }
+        pipelineDelegations.add(new DelegationWorkflow.Result(
+                delegationId, role, "READY_FOR_ACTIVITIES", validated.references()));
+        var consumed = host.consumeAgentResult(new PipelineExecutionActivities.PipelineAgentResultRequest(
+                stepCommand, resolved.workspace(), role, operation, validated.references().getFirst(),
+                prepared.supportingArtifact()));
+        artifacts.putAll(consumed.artifacts());
+        throwIfCancelled();
+    }
+
+    private static Map<String, Object> executionMetadata(A2aExecutionContext value) {
+        java.util.LinkedHashMap<String, Object> metadata = new java.util.LinkedHashMap<>();
+        metadata.put("schemaVersion", value.schemaVersion());
+        metadata.put("taskId", value.taskId());
+        metadata.put("attemptId", value.attemptId());
+        metadata.put("workflowId", value.workflowId());
+        metadata.put("workflowRunId", value.workflowRunId());
+        metadata.put("repositoryId", value.repositoryId());
+        metadata.put("sourceCommit", value.sourceCommit());
+        metadata.put("delegationId", value.delegationId());
+        metadata.put("agentRole", value.agentRole());
+        metadata.put("inputDigests", value.inputDigests());
+        return Map.copyOf(metadata);
     }
 
     private static com.example.aifactory.service.PipelineStepContracts.Command command(

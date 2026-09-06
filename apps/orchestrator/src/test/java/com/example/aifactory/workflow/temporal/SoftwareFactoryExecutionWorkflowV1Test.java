@@ -1,6 +1,8 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.model.PendingEffect;
+import com.example.aifactory.a2a.A2aContracts;
+import com.example.aifactory.a2a.A2aEvidencePartFactory;
 import com.example.aifactory.service.PipelineStepContracts;
 import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.client.WorkflowClient;
@@ -13,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Instant;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,6 +134,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         for (String queue : queues().values()) workers.put(queue, environment.newWorker(queue));
         workers.get("test-workflow").registerWorkflowImplementationTypes(
                 SoftwareFactoryExecutionWorkflowV1Impl.class);
+        workers.get("test-workflow").registerActivitiesImplementations(activities);
         workers.get("test-context").registerActivitiesImplementations(activities);
         for (String queue : List.of("test-llm", "test-sandbox", "test-assurance",
                 "test-evidence", "test-scm")) {
@@ -164,7 +168,9 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         assertThat(workflow.status()).isEqualTo(expected);
     }
 
-    private static final class TestActivities implements SourceResolutionActivities, PipelineExecutionActivities {
+    private static final class TestActivities implements SourceResolutionActivities, PipelineExecutionActivities,
+            A2aActivities.ResolveAgent, A2aActivities.ReconcileDispatch, A2aActivities.GetTask,
+            A2aActivities.ValidateArtifacts {
         private final AtomicInteger deliveries;
         private final String rejectedGate;
         private final java.util.List<String> rejectedGates = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -199,26 +205,43 @@ class SoftwareFactoryExecutionWorkflowV1Test {
 
         @Override public PipelineStepContracts.Result execute(StepRequest request) {
             String step = request.command().step();
-            if ("plan".equals(step)) blockIf("llm");
-            if ("test".equals(step)) blockIf("sandbox");
             if (step.equals(rejectedGate)) {
                 throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
                         "gate rejected by fixture", "BUSINESS_REJECTION");
             }
             String name = switch (step) {
-                case "plan" -> "plan";
                 case "apply-patch" -> "integration";
-                case "test" -> "tests";
                 case "quality" -> "quality";
                 case "security" -> "security";
-                case "review" -> "review";
                 default -> throw new IllegalArgumentException(step);
             };
             return result(step, Map.of(name, artifact(name)));
         }
 
-        @Override public PipelineStepContracts.Result generatePatchCandidate(StepRequest request) {
-            return result(request.command().step(), Map.of("patch-candidate", artifact("patch-candidate")));
+        @Override public PipelineAgentInput prepareAgentInput(PipelineAgentInputRequest request) {
+            if (!"ASSESS_TESTS".equals(request.operation())) blockIf("llm");
+            if ("ASSESS_TESTS".equals(request.operation())) blockIf("sandbox");
+            return new PipelineAgentInput(A2aEvidencePartFactory.reference(
+                    request.command().step() + "-input",
+                    "evidence://task-1/pipeline-1/agent-input/" + TemporalIds.sha256(request.operation()),
+                    TemporalIds.sha256(request.operation()), "pipeline-agent-task-v1", 64),
+                    "ASSESS_TESTS".equals(request.operation()) ? artifact("tests-deterministic") : null);
+        }
+
+        @Override public PipelineStepContracts.Result consumeAgentResult(PipelineAgentResultRequest request) {
+            String step = request.command().step();
+            if (step.equals(rejectedGate)) {
+                throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                        "gate rejected by fixture", "BUSINESS_REJECTION");
+            }
+            String name = switch (request.operation()) {
+                case "PLAN" -> "plan";
+                case "GENERATE_PATCH", "REPAIR_PATCH" -> "patch-candidate";
+                case "ASSESS_TESTS" -> "tests";
+                case "REVIEW" -> "review";
+                default -> throw new IllegalArgumentException(request.operation());
+            };
+            return result(step, Map.of(name, artifact(name)));
         }
 
         @Override public PatchValidationResult validatePatchCandidate(StepRequest request) {
@@ -226,8 +249,34 @@ class SoftwareFactoryExecutionWorkflowV1Test {
                     result(request.command().step(), Map.of("patch", artifact("patch"))), null);
         }
 
-        @Override public PipelineStepContracts.Result repairPatchCandidate(PatchRepairRequest request) {
-            throw new AssertionError("valid candidate must not be repaired");
+        @Override public A2aContracts.AgentCardDescriptor resolveAgent(String role) {
+            return new A2aContracts.AgentCardDescriptor(role,
+                    URI.create("https://" + role + "/.well-known/agent-card.json"),
+                    URI.create("https://" + role + "/a2a"), "JSONRPC", "1.0", "a".repeat(64),
+                    List.of(role + ".pipeline-agent-task-v1"), false, true);
+        }
+
+        @Override public A2aContracts.TaskSnapshot reconcileDispatch(A2aActivities.DispatchRequest request) {
+            String uri = "evidence://task-1/pipeline-1/agent-result/" + request.command().messageId();
+            A2aContracts.Part part = new A2aContracts.Part(
+                    com.example.aifactory.a2a.A2aMediaTypes.EVIDENCE_REFERENCE, null,
+                    Map.of("uri", uri, "digest", "c".repeat(64), "contract", "pipeline-agent-result-v1"),
+                    URI.create(uri));
+            return new A2aContracts.TaskSnapshot("a2a-" + request.command().messageId(), "context-1",
+                    A2aContracts.TaskState.COMPLETED, Instant.EPOCH,
+                    List.of(new A2aContracts.Artifact("artifact-1", "result", List.of(part), Map.of())),
+                    Map.of("sequence", 1L));
+        }
+
+        @Override public A2aContracts.TaskSnapshot getTask(A2aContracts.TaskQuery query) {
+            throw new AssertionError("completed dispatch must not be polled");
+        }
+
+        @Override public A2aActivities.ValidatedArtifacts validateArtifacts(A2aActivities.ValidationRequest request) {
+            A2aContracts.Part part = request.task().artifacts().getFirst().parts().getFirst();
+            return new A2aActivities.ValidatedArtifacts(request.task().taskId(), List.of(
+                    new A2aActivities.EvidenceReference("artifact-1", part.uri().toString(),
+                            "c".repeat(64), request.outputContract())));
         }
 
         @Override public PendingEffect prepareDelivery(DeliveryRequest request) {
