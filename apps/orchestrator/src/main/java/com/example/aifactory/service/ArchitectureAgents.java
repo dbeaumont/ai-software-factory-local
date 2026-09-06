@@ -21,7 +21,7 @@ public final class ArchitectureAgents {
         this.catalog = catalog;
     }
 
-    public AgentRuntime.Result execute(Request request) {
+    public AgentExecutor.Result execute(Request request) {
         String outputContract = OUTPUT_CONTRACTS.get(request.role());
         if (outputContract == null) {
             throw new IllegalArgumentException("Role is outside the Architecture perimeter: " + request.role());
@@ -30,7 +30,7 @@ public final class ArchitectureAgents {
         if (role.tools().stream().anyMatch(tool -> !tool.startsWith("context."))) {
             throw new IllegalStateException("Architecture role is not read-only: " + role.name());
         }
-        return runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
+        return runtime.execute(new AgentExecutor.Invocation(request.taskId(), request.attemptId(),
                 request.sourceCommit(), role.name(), role.name(), outputContract, Set.copyOf(role.tools()),
                 request.allowedReferenceIds(), request.untrustedInput(), request.budget()));
     }

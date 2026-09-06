@@ -1,6 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
-import com.example.aifactory.service.AgentRuntime;
+import com.example.aifactory.service.AgentExecutor;
 import com.example.aifactory.service.ExecutionIdentity;
 import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.ActivityInterface;
@@ -61,7 +61,7 @@ public interface DurableExecutionActivities {
         }
     }
 
-    record AgentCall(Metadata metadata, AgentRuntime.Invocation invocation) {}
+    record AgentCall(Metadata metadata, AgentExecutor.Invocation invocation) {}
 
     record AgentResult(String document, String promptFingerprint, int turns, int tokens, long costMicros) {}
 

@@ -28,7 +28,7 @@ class PatchRepairAgentTest {
         new PatchRepairAgent(runtime, new AgentCatalog(), contracts, new PatchScopeValidator())
                 .execute(request(documents.path("patch-repair-task-v1").toString()));
 
-        AgentRuntime.Invocation invocation = runtime.invocations.getFirst();
+        AgentExecutor.Invocation invocation = runtime.invocations.getFirst();
         assertThat(invocation.role()).isEqualTo("patch-repair");
         assertThat(invocation.promptName()).isEqualTo("patch-repair-hierarchical");
         assertThat(invocation.outputContract()).isEqualTo("patch-repair-proposal-v1");
@@ -122,13 +122,13 @@ class PatchRepairAgentTest {
 
     private static final class RecordingExecutor implements AgentExecutor {
         private final JsonNode result;
-        private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final List<AgentExecutor.Invocation> invocations = new ArrayList<>();
 
         private RecordingExecutor(JsonNode result) { this.result = result; }
 
-        @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
+        @Override public AgentExecutor.Result execute(AgentExecutor.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(result, "f".repeat(64), 1, 10, 1);
+            return new AgentExecutor.Result(result, "f".repeat(64), 1, 10, 1);
         }
     }
 }

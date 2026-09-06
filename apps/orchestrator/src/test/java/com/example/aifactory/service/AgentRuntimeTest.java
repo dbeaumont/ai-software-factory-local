@@ -41,7 +41,7 @@ class AgentRuntimeTest {
         AgentRuntime runtime = new AgentRuntime(prompts, llm, host,
                 new MultiAgentContractValidator(new ObjectMapper()));
 
-        AgentRuntime.Result result = runtime.execute(invocation(Set.of("context.read_file")));
+        AgentExecutor.Result result = runtime.execute(invocation(Set.of("context.read_file")));
 
         assertThat(result.document().path("role").asText()).isEqualTo("developer");
         assertThat(result.promptFingerprint()).hasSize(64);
@@ -96,7 +96,7 @@ class AgentRuntimeTest {
     void rejectsAnInvocationThatExceedsTheRoleBudgetBeforeCallingDependencies() {
         AgentRuntime runtime = new AgentRuntime(mock(PromptService.class), mock(LlmGatewayClient.class),
                 mock(AgentContextToolHost.class), new MultiAgentContractValidator(new ObjectMapper()));
-        AgentRuntime.Invocation excessive = new AgentRuntime.Invocation(
+        AgentExecutor.Invocation excessive = new AgentExecutor.Invocation(
                 "task-1", "attempt-1", "a".repeat(40), "developer", "developer-v1",
                 "agent-run-event-v1", Set.of(), Set.of(), "untrusted input",
                 new AgentToolLoop.Budget(7, Duration.ofSeconds(30), 1_000, 1_000));
@@ -114,7 +114,7 @@ class AgentRuntimeTest {
         AgentRuntime runtime = new AgentRuntime(mock(PromptService.class), mock(LlmGatewayClient.class),
                 mock(AgentContextToolHost.class), new MultiAgentContractValidator(new ObjectMapper()), budgets,
                 new TaskUsageLedger(budgets), new OperationalKillSwitch(control));
-        AgentRuntime.Invocation candidate = new AgentRuntime.Invocation(
+        AgentExecutor.Invocation candidate = new AgentExecutor.Invocation(
                 "task-1", "attempt-1", "a".repeat(40), "developer", "developer-v1",
                 "agent-run-event-v1", Set.of(), Set.of(), "untrusted input",
                 new AgentToolLoop.Budget(2, Duration.ofSeconds(30), 1000, 1000),
@@ -126,8 +126,8 @@ class AgentRuntimeTest {
                 .isEqualTo(AgentToolLoop.StopCondition.POLICY_DENIED);
     }
 
-    private static AgentRuntime.Invocation invocation(Set<String> tools) {
-        return new AgentRuntime.Invocation("task-1", "attempt-1", "a".repeat(40), "developer",
+    private static AgentExecutor.Invocation invocation(Set<String> tools) {
+        return new AgentExecutor.Invocation("task-1", "attempt-1", "a".repeat(40), "developer",
                 "developer-v1", "agent-run-event-v1", tools, Set.of("specialist-1", "node-1"),
                 "untrusted input", new AgentToolLoop.Budget(2, Duration.ofSeconds(30), 1000, 1000));
     }

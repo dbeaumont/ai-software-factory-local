@@ -231,8 +231,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   au Docker daemon, à la base Temporal ou à la projection applicative. _(Enforcer interdit SDK SCM/Docker/Temporal,
   JDBC/JPA/PostgreSQL/Flyway ; configuration, code source et image sont contrôlés automatiquement, seuls MCP
   Context et les lectures Evidence restent joignables. Preuve : `docs/qualification/a2a/A2A-036-RUNTIME-EFFECT-ISOLATION.md`.)_
-- [ ] **A2A-037 — Ajouter des règles d'architecture.** Interdire par test les imports du contrôle-plane vers les
-  implémentations d'agents et les imports des agents vers les contrôleurs, projections ou clients SCM.
+- [x] **A2A-037 — Ajouter des règles d'architecture.** Interdire par test les imports du contrôle-plane vers les
+  implémentations d'agents et les imports des agents vers les contrôleurs, projections ou clients SCM. _(Les DTO
+  sont déplacés dans le port `AgentExecutor`, Temporal n'importe plus `AgentRuntime`, et
+  `AgentArchitectureRulesTest` contrôle les deux sens de dépendance. Preuve :
+  `docs/qualification/a2a/A2A-037-ARCHITECTURE-RULES.md`.)_
 - [ ] **A2A-038 — Produire deux exécutables distincts.** L'orchestrateur embarque le client A2A et les workers de
   contrôle ; le runtime d'agent embarque le serveur A2A et les workers d'exécution d'un rôle.
 

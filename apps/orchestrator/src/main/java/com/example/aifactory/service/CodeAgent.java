@@ -15,9 +15,9 @@ public final class CodeAgent {
         this.catalog = catalog;
     }
 
-    public AgentRuntime.Result coordinate(Request request) {
+    public AgentExecutor.Result coordinate(Request request) {
         AgentCatalog.Role role = catalog.require("code-agent");
-        return runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
+        return runtime.execute(new AgentExecutor.Invocation(request.taskId(), request.attemptId(),
                 request.sourceCommit(), role.name(), role.name(), "integration-proposal-v1",
                 Set.copyOf(role.tools()), request.allowedReferenceIds(), request.untrustedInput(), request.budget()));
     }

@@ -22,7 +22,7 @@ public final class DeveloperAgent {
         this.scopes = scopes;
     }
 
-    public AgentRuntime.Result execute(Request request) {
+    public AgentExecutor.Result execute(Request request) {
         MultiAgentContractValidator.ContractContext inputContext =
                 new MultiAgentContractValidator.ContractContext(request.taskId(), request.attemptId(),
                         request.allowedReferenceIds());
@@ -34,7 +34,7 @@ public final class DeveloperAgent {
         outputReferences.add(task.path("code_task_id").asText());
         outputReferences.add(task.path("node_id").asText());
         AgentCatalog.Role role = catalog.require("developer");
-        AgentRuntime.Result result = runtime.execute(new AgentRuntime.Invocation(
+        AgentExecutor.Result result = runtime.execute(new AgentExecutor.Invocation(
                 request.taskId(), request.attemptId(), request.sourceCommit(), role.name(),
                 "developer-hierarchical", "patch-proposal-v1", Set.copyOf(role.tools()),
                 Set.copyOf(outputReferences), task.toString(), request.budget()));

@@ -41,7 +41,7 @@ class SecurityAgentsTest {
             assertThat(Files.readString(RESOURCES.resolve(manifest.get("prompt").toString())))
                     .startsWith("# ").contains("security-assessment-v1");
         }
-        assertThat(runtime.invocations).extracting(AgentRuntime.Invocation::role)
+        assertThat(runtime.invocations).extracting(AgentExecutor.Invocation::role)
                 .containsExactly("security-agent", "threat-model", "security-findings");
     }
 
@@ -59,7 +59,7 @@ class SecurityAgentsTest {
         AgentCatalog catalog = new AgentCatalog();
         agents(runtime).execute(request("threat-model"));
 
-        AgentRuntime.Invocation invocation = runtime.invocations.getFirst();
+        AgentExecutor.Invocation invocation = runtime.invocations.getFirst();
         assertThat(invocation.allowedTools()).containsExactlyInAnyOrder(
                 "context.search_code", "context.read_file", "context.get_dependencies", "context.get_symbols");
         assertThat(invocation.allowedTools()).noneMatch(tool -> tool.startsWith("evidence.")
@@ -94,15 +94,15 @@ class SecurityAgentsTest {
     }
 
     private static final class RecordingExecutor implements AgentExecutor {
-        private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final List<AgentExecutor.Invocation> invocations = new ArrayList<>();
 
-        @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
+        @Override public AgentExecutor.Result execute(AgentExecutor.Invocation invocation) {
             invocations.add(invocation);
             try {
                 var document = new ObjectMapper().readTree(Files.readString(
                         RESOURCES.resolve("multiagents/fixtures/golden-contracts-v1.json")))
                         .path("documents").path("security-assessment-v1");
-                return new AgentRuntime.Result(document, "f".repeat(64), 1, 10, 1);
+                return new AgentExecutor.Result(document, "f".repeat(64), 1, 10, 1);
             } catch (Exception exception) {
                 throw new IllegalStateException(exception);
             }

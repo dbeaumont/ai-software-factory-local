@@ -29,7 +29,7 @@ class ArchitectureAgentsTest {
             assertThat(invocation.allowedTools()).allMatch(tool -> tool.startsWith("context."));
             assertThat(invocation.promptName()).isEqualTo(invocation.role());
         });
-        assertThat(runtime.invocations).extracting(AgentRuntime.Invocation::outputContract)
+        assertThat(runtime.invocations).extracting(AgentExecutor.Invocation::outputContract)
                 .containsExactly("architecture-assessment-v1", "specialist-result-v1", "specialist-result-v1");
         assertThat(new AgentContextToolHost(null, null, null).definitions())
                 .extracting(LlmGatewayClient.ToolDefinition::name).contains("context.get_symbols");
@@ -52,11 +52,11 @@ class ArchitectureAgentsTest {
     }
 
     private static final class RecordingExecutor implements AgentExecutor {
-        private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final List<AgentExecutor.Invocation> invocations = new ArrayList<>();
 
-        @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
+        @Override public AgentExecutor.Result execute(AgentExecutor.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(null, "f".repeat(64), 1, 10, 1);
+            return new AgentExecutor.Result(null, "f".repeat(64), 1, 10, 1);
         }
     }
 }

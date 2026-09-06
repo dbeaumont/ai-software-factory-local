@@ -20,11 +20,11 @@ class SupervisorAgentTest {
         supervisor.execute(request("CONSOLIDATE"));
         supervisor.execute(request("REPLAN"));
 
-        assertThat(runtime.invocations).extracting(AgentRuntime.Invocation::role)
+        assertThat(runtime.invocations).extracting(AgentExecutor.Invocation::role)
                 .containsOnly("supervisor");
-        assertThat(runtime.invocations).extracting(AgentRuntime.Invocation::promptName)
+        assertThat(runtime.invocations).extracting(AgentExecutor.Invocation::promptName)
                 .containsOnly("supervisor");
-        assertThat(runtime.invocations).extracting(AgentRuntime.Invocation::outputContract)
+        assertThat(runtime.invocations).extracting(AgentExecutor.Invocation::outputContract)
                 .containsExactly("delegation-plan-v1", "supervisor-decision-v1", "supervisor-decision-v1");
     }
 
@@ -139,18 +139,18 @@ class SupervisorAgentTest {
     }
 
     private static final class RecordingExecutor implements AgentExecutor {
-        private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final List<AgentExecutor.Invocation> invocations = new ArrayList<>();
         private final tools.jackson.databind.JsonNode document;
 
         private RecordingExecutor(tools.jackson.databind.JsonNode document) {
             this.document = document;
         }
 
-        @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
+        @Override public AgentExecutor.Result execute(AgentExecutor.Invocation invocation) {
             invocations.add(invocation);
             tools.jackson.databind.JsonNode output = "supervisor-decision-v1".equals(invocation.outputContract())
                     ? new ObjectMapper().createObjectNode().put("action", "CONSOLIDATE") : document;
-            return new AgentRuntime.Result(output, "f".repeat(64), 1, 100, 10);
+            return new AgentExecutor.Result(output, "f".repeat(64), 1, 100, 10);
         }
     }
 }

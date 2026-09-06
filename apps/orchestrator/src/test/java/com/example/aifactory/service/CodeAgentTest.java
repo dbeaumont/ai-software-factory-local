@@ -29,7 +29,7 @@ class CodeAgentTest {
                 "untrusted architecture assessment",
                 new AgentToolLoop.Budget(4, Duration.ofMinutes(2), 4_000, 1_000_000)));
 
-        AgentRuntime.Invocation invocation = runtime.invocations.getFirst();
+        AgentExecutor.Invocation invocation = runtime.invocations.getFirst();
         assertThat(invocation.role()).isEqualTo("code-agent");
         assertThat(invocation.outputContract()).isEqualTo("integration-proposal-v1");
         assertThat(invocation.allowedTools()).containsExactlyInAnyOrderElementsOf(
@@ -48,11 +48,11 @@ class CodeAgentTest {
     }
 
     private static final class RecordingExecutor implements AgentExecutor {
-        private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final List<AgentExecutor.Invocation> invocations = new ArrayList<>();
 
-        @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
+        @Override public AgentExecutor.Result execute(AgentExecutor.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(null, "f".repeat(64), 1, 10, 1);
+            return new AgentExecutor.Result(null, "f".repeat(64), 1, 10, 1);
         }
     }
 }

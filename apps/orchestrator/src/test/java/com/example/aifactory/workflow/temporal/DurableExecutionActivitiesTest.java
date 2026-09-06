@@ -1,6 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
-import com.example.aifactory.service.AgentRuntime;
+import com.example.aifactory.service.AgentExecutor;
 import com.example.aifactory.service.McpToolInvoker;
 import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.ActivityInterface;
@@ -37,7 +37,7 @@ class DurableExecutionActivitiesTest {
                 "text/plain", content.length, "INTERNAL", Instant.now(), Instant.now());
         when(evidence.store(store)).thenReturn(stored);
         DurableExecutionActivitiesImpl activities = new DurableExecutionActivitiesImpl(
-                mock(AgentRuntime.class), mcp, evidence);
+                mock(AgentExecutor.class), mcp, evidence);
         DurableExecutionActivities.Metadata metadata = metadata();
 
         activities.invokeMcp(new DurableExecutionActivities.McpCall(
@@ -60,8 +60,8 @@ class DurableExecutionActivitiesTest {
     @Test
     void requiresActivityPayloadsToRemainBoundToTheWorkflow() {
         DurableExecutionActivitiesImpl activities = new DurableExecutionActivitiesImpl(
-                mock(AgentRuntime.class), mock(McpToolInvoker.class), mock(EvidenceRepository.class));
-        AgentRuntime.Invocation invocation = new AgentRuntime.Invocation(
+                mock(AgentExecutor.class), mock(McpToolInvoker.class), mock(EvidenceRepository.class));
+        AgentExecutor.Invocation invocation = new AgentExecutor.Invocation(
                 "another-task", "attempt-1", COMMIT, "developer", "developer-v1", "patch-proposal-v1",
                 Set.of(), Set.of(), "input", new com.example.aifactory.service.AgentToolLoop.Budget(
                 1, Duration.ofSeconds(1), 10, 10));

@@ -47,11 +47,11 @@ class TestAgentsTest {
             assertThat(Files.readString(RESOURCES.resolve(manifest.get("prompt").toString())))
                     .contains("# Test", contracts.get(role));
         }
-        assertThat(runtime.invocations).extracting(AgentRuntime.Invocation::role)
+        assertThat(runtime.invocations).extracting(AgentExecutor.Invocation::role)
                 .containsExactlyInAnyOrderElementsOf(contracts.keySet());
-        AgentRuntime.Invocation design = runtime.invocations.stream()
+        AgentExecutor.Invocation design = runtime.invocations.stream()
                 .filter(value -> value.role().equals("test-design")).findFirst().orElseThrow();
-        AgentRuntime.Invocation evidence = runtime.invocations.stream()
+        AgentExecutor.Invocation evidence = runtime.invocations.stream()
                 .filter(value -> value.role().equals("test-evidence")).findFirst().orElseThrow();
         assertThat(design.outputContract()).isEqualTo("test-strategy-v1");
         assertThat(design.allowedTools()).allMatch(tool -> tool.startsWith("context."));
@@ -60,15 +60,15 @@ class TestAgentsTest {
     }
 
     private static final class RecordingExecutor implements AgentExecutor {
-        private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final List<AgentExecutor.Invocation> invocations = new ArrayList<>();
         private final tools.jackson.databind.JsonNode documents;
 
         private RecordingExecutor(tools.jackson.databind.JsonNode documents) { this.documents = documents; }
 
-        @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
+        @Override public AgentExecutor.Result execute(AgentExecutor.Invocation invocation) {
             invocations.add(invocation);
             String contract = invocation.outputContract();
-            return new AgentRuntime.Result(documents.path(contract), "f".repeat(64), 1, 10, 1);
+            return new AgentExecutor.Result(documents.path(contract), "f".repeat(64), 1, 10, 1);
         }
     }
 }

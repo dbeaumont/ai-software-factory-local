@@ -23,7 +23,7 @@ public final class SecurityAgents {
         this.decisionValidator = decisionValidator;
     }
 
-    public AgentRuntime.Result execute(Request request) {
+    public AgentExecutor.Result execute(Request request) {
         if (!ROLES.contains(request.role())) {
             throw new IllegalArgumentException("Role is outside the Security perimeter");
         }
@@ -36,7 +36,7 @@ public final class SecurityAgents {
                             request.sourceCommit(), request.evidenceReferences()));
             if ("security-findings".equals(request.role())) input = normalizedFindings.toString();
         }
-        AgentRuntime.Result result = runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
+        AgentExecutor.Result result = runtime.execute(new AgentExecutor.Invocation(request.taskId(), request.attemptId(),
                 request.sourceCommit(), role.name(), role.name(), "security-assessment-v1",
                 Set.copyOf(role.tools()), request.allowedReferenceIds(), input, request.budget()));
         if (normalizedFindings != null) {

@@ -27,7 +27,7 @@ public final class PatchRepairAgent {
         this.scopes = scopes;
     }
 
-    public AgentRuntime.Result execute(Request request) {
+    public AgentExecutor.Result execute(Request request) {
         JsonNode task = contracts.validate("patch-repair-task-v1", request.repairTask(),
                 new MultiAgentContractValidator.ContractContext(
                         request.taskId(), request.attemptId(), request.allowedReferenceIds()));
@@ -42,7 +42,7 @@ public final class PatchRepairAgent {
             outputReferences.add(task.path(field).asText());
         }
         AgentCatalog.Role role = catalog.require("patch-repair");
-        AgentRuntime.Result result = runtime.execute(new AgentRuntime.Invocation(
+        AgentExecutor.Result result = runtime.execute(new AgentExecutor.Invocation(
                 request.taskId(), request.attemptId(), request.sourceCommit(), role.name(),
                 "patch-repair-hierarchical", "patch-repair-proposal-v1", Set.copyOf(role.tools()),
                 Set.copyOf(outputReferences), task.toString(), request.budget()));

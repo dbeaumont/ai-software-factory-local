@@ -20,7 +20,7 @@ public final class SupervisorAgent {
         this.consolidationGuard = consolidationGuard;
     }
 
-    public AgentRuntime.Result execute(Request request) {
+    public AgentExecutor.Result execute(Request request) {
         Operation operation;
         try {
             operation = Operation.valueOf(request.operation());
@@ -32,7 +32,7 @@ public final class SupervisorAgent {
             case CONSOLIDATE, REPLAN -> "supervisor-decision-v1";
         };
         AgentCatalog.Role role = catalog.require("supervisor");
-        AgentRuntime.Result result = runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
+        AgentExecutor.Result result = runtime.execute(new AgentExecutor.Invocation(request.taskId(), request.attemptId(),
                 request.sourceCommit(), role.name(), "supervisor", outputContract, Set.copyOf(role.tools()),
                 request.allowedReferenceIds(), request.untrustedInput(), request.budget()));
         if (operation == Operation.DECOMPOSE) {

@@ -54,7 +54,7 @@ class IndependentReviewerAgentTest {
                 "task-1", "attempt-1", "a".repeat(40), bundle(),
                 new AgentToolLoop.Budget(4, Duration.ofMinutes(2), 4000, 2_000_000)));
 
-        AgentRuntime.Invocation invocation = runtime.invocations.getFirst();
+        AgentExecutor.Invocation invocation = runtime.invocations.getFirst();
         assertThat(invocation.role()).isEqualTo("independent-reviewer");
         assertThat(invocation.promptName()).isEqualTo("independent-reviewer");
         assertThat(invocation.outputContract()).isEqualTo("independent-review-v1");
@@ -90,11 +90,11 @@ class IndependentReviewerAgentTest {
     }
 
     private static final class RecordingExecutor implements AgentExecutor {
-        private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final List<AgentExecutor.Invocation> invocations = new ArrayList<>();
 
-        @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
+        @Override public AgentExecutor.Result execute(AgentExecutor.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(null, "f".repeat(64), 1, 100, 10);
+            return new AgentExecutor.Result(null, "f".repeat(64), 1, 100, 10);
         }
     }
 }

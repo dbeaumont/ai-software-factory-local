@@ -25,11 +25,11 @@ public final class TestAgents {
         this.evidence = evidence;
     }
 
-    public AgentRuntime.Result execute(Request request) {
+    public AgentExecutor.Result execute(Request request) {
         String contract = OUTPUT_CONTRACTS.get(request.role());
         if (contract == null) throw new IllegalArgumentException("Role is outside the Tests perimeter");
         AgentCatalog.Role role = catalog.require(request.role());
-        AgentRuntime.Result result = runtime.execute(new AgentRuntime.Invocation(request.taskId(), request.attemptId(),
+        AgentExecutor.Result result = runtime.execute(new AgentExecutor.Invocation(request.taskId(), request.attemptId(),
                 request.sourceCommit(), role.name(), role.name(), contract, Set.copyOf(role.tools()),
                 request.allowedReferenceIds(), request.untrustedInput(), request.budget()));
         if ("test-design".equals(request.role())) strategies.validate(result.document());

@@ -35,7 +35,7 @@ class DeveloperAgentTest {
 
         developer.execute(request(fixtures.path("code-task-v1").toString()));
 
-        AgentRuntime.Invocation invocation = runtime.invocations.getFirst();
+        AgentExecutor.Invocation invocation = runtime.invocations.getFirst();
         assertThat(invocation.role()).isEqualTo("developer");
         assertThat(invocation.promptName()).isEqualTo("developer-hierarchical");
         assertThat(invocation.outputContract()).isEqualTo("patch-proposal-v1");
@@ -99,15 +99,15 @@ class DeveloperAgentTest {
 
     private static final class RecordingExecutor implements AgentExecutor {
         private final JsonNode result;
-        private final List<AgentRuntime.Invocation> invocations = new ArrayList<>();
+        private final List<AgentExecutor.Invocation> invocations = new ArrayList<>();
 
         private RecordingExecutor(JsonNode result) {
             this.result = result;
         }
 
-        @Override public AgentRuntime.Result execute(AgentRuntime.Invocation invocation) {
+        @Override public AgentExecutor.Result execute(AgentExecutor.Invocation invocation) {
             invocations.add(invocation);
-            return new AgentRuntime.Result(result, "f".repeat(64), 1, 10, 1);
+            return new AgentExecutor.Result(result, "f".repeat(64), 1, 10, 1);
         }
     }
 }
