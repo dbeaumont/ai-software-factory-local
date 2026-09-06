@@ -49,9 +49,9 @@ La migration doit préserver :
 - [x] **A2A-007 — Ne pas placer de contenu volumineux dans A2A ou Temporal.** Patchs, journaux, rapports et SBOM
   restent dans Evidence MCP ; A2A et Temporal ne transportent que des références URI internes, digests, tailles,
   types de média et verdicts. _(Autorités et règle de compacité fixées dans `ADR-A2A-001`.)_
-- [ ] **A2A-008 — Fonctionner en fail-closed.** Une Agent Card invalide, une identité non autorisée, une version
+- [x] **A2A-008 — Fonctionner en fail-closed.** Une Agent Card invalide, une identité non autorisée, une version
   incompatible ou l'indisponibilité d'un agent suspend ou échoue explicitement le workflow ; aucun fallback local
-  n'est permis.
+  n'est permis. _(Politique de coupure et rollback sans chemin direct adoptée dans `ADR-A2A-001`.)_
 
 ## 3. Architecture cible
 
