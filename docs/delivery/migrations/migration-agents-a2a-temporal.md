@@ -182,8 +182,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   `supervisor-decision-v1`, les contrats par domaine et les références Evidence attendues. _(Les 18 contrats,
   producteurs/consommateurs, matrices de rôles, règles de preuve et quatre écarts de catalogue sont consignés dans
   `docs/qualification/a2a/A2A-BUSINESS-CONTRACT-INVENTORY.md` avec les digests des sources.)_
-- [ ] **A2A-024 — Inventorier les dépendances runtime.** Relever les accès LLM, MCP, base, filesystem, horloge,
-  secrets et réseau nécessaires à chaque rôle.
+- [x] **A2A-024 — Inventorier les dépendances runtime.** Relever les accès LLM, MCP, base, filesystem, horloge,
+  secrets et réseau nécessaires à chaque rôle. _(Matrice des quatorze rôles et frontières LLM, MCP, stockage,
+  filesystem, horloge, secrets et egress consignées dans
+  `docs/qualification/a2a/A2A-RUNTIME-DEPENDENCY-INVENTORY.md`.)_
 - [ ] **A2A-025 — Mesurer la baseline opérationnelle.** Capturer latence p50/p95/p99, taux d'échec, volume de
   payload, tokens, coût, concurrence et consommation mémoire par rôle.
 - [ ] **A2A-026 — Créer le registre des risques.** Couvrir double exécution, perte de notification, divergence
