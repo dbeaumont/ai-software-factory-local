@@ -314,8 +314,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-051 — Publier une carte par rôle.** Exposer la carte à l'URI well-known du rôle et une carte étendue
   uniquement si un besoin authentifié est démontré. _(`AgentCardController` publie uniquement la carte du rôle
   actif à `/.well-known/agent-card.json`; aucune route de carte étendue n'est exposée.)_
-- [ ] **A2A-052 — Déclarer fidèlement les interfaces.** Publier URL interne, binding `JSONRPC`, version `1.0` et
-  capacités réellement actives ; ne pas annoncer streaming ou push avant leur implémentation complète.
+- [x] **A2A-052 — Déclarer fidèlement les interfaces.** Publier URL interne, binding `JSONRPC`, version `1.0` et
+  capacités réellement actives ; ne pas annoncer streaming ou push avant leur implémentation complète. _(La carte
+  publie l'endpoint configuré, `preferredTransport`/interface `JSONRPC`, protocole `1.0` et les deux capacités à
+  `false`, conformément au runtime effectivement disponible.)_
 - [ ] **A2A-053 — Déclarer la sécurité.** Décrire les schémas mTLS/OAuth2 réellement appliqués et les exigences
   d'autorisation par skill.
 - [ ] **A2A-054 — Signer les cartes.** Canonicaliser selon RFC 8785, signer en JWS, publier `kid` et chaîne de

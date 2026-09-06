@@ -32,6 +32,10 @@ final class AgentCardController {
         card.put("name", "AI Factory " + source.role());
         card.put("description", "Role " + source.role() + " owned by " + source.owner());
         card.put("url", properties.endpoint().toString());
+        card.put("preferredTransport", "JSONRPC");
+        card.put("additionalInterfaces", List.of(Map.of(
+                "url", properties.endpoint().toString(),
+                "transport", "JSONRPC")));
         card.put("version", source.catalogId());
         card.put("capabilities", Map.of("streaming", false, "pushNotifications", false));
         card.put("defaultInputModes", source.skills().stream()

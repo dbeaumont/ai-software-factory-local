@@ -24,6 +24,11 @@ class AgentCardControllerTest {
                 .jsonPath("$.protocolVersion").isEqualTo("1.0")
                 .jsonPath("$.name").isEqualTo("AI Factory developer")
                 .jsonPath("$.url").isEqualTo("http://agent-developer:8090/a2a")
+                .jsonPath("$.preferredTransport").isEqualTo("JSONRPC")
+                .jsonPath("$.additionalInterfaces[0].transport").isEqualTo("JSONRPC")
+                .jsonPath("$.additionalInterfaces[0].url").isEqualTo("http://agent-developer:8090/a2a")
+                .jsonPath("$.capabilities.streaming").isEqualTo(false)
+                .jsonPath("$.capabilities.pushNotifications").isEqualTo(false)
                 .jsonPath("$.skills[0].id").isEqualTo("developer.code-task-v1");
 
         client.get().uri("/.well-known/agent-card-extended.json")
