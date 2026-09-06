@@ -18,6 +18,7 @@ class A2aClientMetricsTest {
         metrics.payload("developer", "developer.code-task-v1", 512);
         metrics.retry("developer", "developer.code-task-v1");
         metrics.reconciliation("developer", "remote_task");
+        metrics.divergence("developer");
         metrics.cardValidation("developer", "accepted");
         metrics.notificationAge("developer", Instant.parse("2026-09-06T12:00:00Z"),
                 Instant.parse("2026-09-06T12:00:02Z"));
@@ -25,6 +26,7 @@ class A2aClientMetricsTest {
         assertThat(registry.getMeters()).extracting(meter -> meter.getId().getName())
                 .contains("ai.factory.a2a.client.duration", "ai.factory.a2a.client.payload.bytes",
                         "ai.factory.a2a.client.retries", "ai.factory.a2a.client.reconciliations",
+                        "ai.factory.a2a.client.divergences",
                         "ai.factory.a2a.client.card.validations", "ai.factory.a2a.client.notification.age");
         assertThat(registry.getMeters()).allSatisfy(meter -> assertThat(meter.getId().getTags())
                 .extracting(io.micrometer.core.instrument.Tag::getKey)

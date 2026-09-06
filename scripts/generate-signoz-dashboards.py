@@ -83,6 +83,47 @@ DASHBOARDS = {
             ("Agent outcomes", ['sum by (role, outcome) (rate({__name__="ai_agent_duration.count"}[5m]))']),
         ],
     },
+    "a2a": {
+        "name": "AI Factory A2A Fleet",
+        "description": "Flotte A2A, latence, états, erreurs, divergences, retries, files et saturation.",
+        "panels": [
+            ("Agent fleet", ['count by (agent_role) ({__name__="ai.factory.a2a.server.active.tasks"})']),
+            ("Active tasks and backlog", [
+                'max by (agent_role) ({__name__="ai.factory.a2a.server.active.tasks"})',
+                'max by (agent_role) ({__name__="ai.factory.a2a.server.backlog"})',
+            ]),
+            ("Client latency p95 by role and skill", [
+                'histogram_quantile(0.95, sum by (le, agent_role, agent_skill) (rate({__name__="ai.factory.a2a.client.duration.bucket"}[5m])))',
+            ]),
+            ("Server task latency p95 by role and skill", [
+                'histogram_quantile(0.95, sum by (le, agent_role, agent_skill) (rate({__name__="ai.factory.a2a.server.task.duration.bucket"}[5m])))',
+            ]),
+            ("Task state transitions", [
+                'sum by (agent_role, agent_skill, task_state) (rate({__name__="ai.factory.a2a.server.transitions"}[5m]))',
+            ]),
+            ("Protocol and admission errors", [
+                'sum by (agent_role) (rate({__name__="ai.factory.a2a.server.auth.refusals"}[5m]))',
+                'sum by (agent_role, agent_skill) (rate({__name__="ai.factory.a2a.server.admissions.rejected"}[5m]))',
+                'sum by (agent_role, result) (rate({__name__="ai.factory.a2a.client.card.validations"}[5m]))',
+            ]),
+            ("Temporal to A2A divergence", [
+                'sum by (agent_role) (rate({__name__="ai.factory.a2a.client.divergences"}[5m]))',
+            ]),
+            ("Retries, timeouts and reconciliations", [
+                'sum by (agent_role) (rate({__name__="ai.factory.a2a.client.retries"}[5m]))',
+                'sum by (agent_role) (rate({__name__="ai.factory.a2a.client.timeouts"}[5m]))',
+                'sum by (agent_role, result) (rate({__name__="ai.factory.a2a.client.reconciliations"}[5m]))',
+            ]),
+            ("Polling and notifications", [
+                'sum by (agent_role, rpc_operation) (rate({__name__="ai.factory.a2a.server.polling"}[5m]))',
+                'sum by (agent_role) (rate({__name__=~"ai.factory.a2a.server.notifications.*"}[5m]))',
+            ]),
+            ("Admission saturation", [
+                'sum by (agent_role) (rate({__name__="ai.factory.a2a.server.admissions.rejected"}[5m]))',
+                'max by (agent_role) ({__name__="ai.factory.a2a.server.backlog"})',
+            ]),
+        ],
+    },
     "mcp": {
         "name": "AI Factory MCP",
         "description": "Appels, latence, retries et concurrence des serveurs MCP.",

@@ -3,7 +3,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-[ -f .env ] && set -a && source .env && set +a
+source scripts/load-dotenv.sh
+load_dotenv .env
 
 SIGNOZ_BASE_URL=${SIGNOZ_BASE_URL:-http://127.0.0.1:${SIGNOZ_PORT:-3301}}
 SIGNOZ_ROOT_EMAIL=${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}

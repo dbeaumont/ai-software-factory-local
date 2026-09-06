@@ -112,6 +112,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
             if (!value.messageId().equals(request.command().messageId())
                     || !value.agentCardDigest().equals(request.agentCardDigest())
                     || !value.agentRole().equals(request.command().agentRole())) {
+                metrics.divergence(request.command().agentRole());
                 throw new SecurityException("Divergent durable A2A dispatch correlation");
             }
             return getTask(new A2aContracts.TaskQuery(value.agentRole(), value.a2aTaskId(), 0));
@@ -142,6 +143,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
         if (!association.a2aTaskId().equals(request.command().taskId())
                 || !association.a2aContextId().equals(request.command().contextId())
                 || !association.agentRole().equals(request.command().agentRole())) {
+            metrics.divergence(request.command().agentRole());
             throw new SecurityException("A2A continuation changed task correlation");
         }
         A2aContracts.TaskSnapshot result = spanLinks.call("ai.factory.a2a.continue", "temporal-to-a2a", null,
@@ -160,6 +162,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
                 });
         if (!association.a2aTaskId().equals(result.taskId())
                 || !association.a2aContextId().equals(result.contextId())) {
+            metrics.divergence(request.command().agentRole());
             throw new SecurityException("A2A server forked a continuation into another task");
         }
         return result;

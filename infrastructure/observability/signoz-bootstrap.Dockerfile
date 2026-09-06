@@ -4,6 +4,7 @@ RUN apk add --no-cache bash curl jq
 
 WORKDIR /opt/ai-factory
 COPY scripts/bootstrap-signoz.sh scripts/bootstrap-signoz.sh
+COPY scripts/load-dotenv.sh scripts/load-dotenv.sh
 COPY infrastructure/observability/signoz/dashboards infrastructure/observability/signoz/dashboards
 COPY infrastructure/observability/signoz/rules infrastructure/observability/signoz/rules
 

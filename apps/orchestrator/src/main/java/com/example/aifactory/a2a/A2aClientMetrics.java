@@ -51,6 +51,10 @@ public final class A2aClientMetrics {
         increment("ai.factory.a2a.client.reconciliations", role, "none", "reconcile", result);
     }
 
+    public void divergence(String role) {
+        increment("ai.factory.a2a.client.divergences", role, "none", "reconcile", "divergent");
+    }
+
     public void cardValidation(String role, String result) {
         increment("ai.factory.a2a.client.card.validations", role, "none", "card", result);
     }

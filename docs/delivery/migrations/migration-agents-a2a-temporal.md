@@ -656,8 +656,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   autonome liée par `SpanLink` au contexte source ; seules les activités Temporal, le handler A2A et le worker
   d'exécution émettent ces spans, jamais le code rejoué du workflow. Preuve :
   `docs/evidence/a2a/A2A-144-SPAN-LINKS.md`.)_
-- [ ] **A2A-145 — Créer les dashboards SigNoz.** Vue flotte d'agents, latence par rôle/skill, états des tâches,
-  erreurs protocolaires, divergence Temporal/A2A, retries, files et saturation.
+- [x] **A2A-145 — Créer les dashboards SigNoz.** Vue flotte d'agents, latence par rôle/skill, états des tâches,
+  erreurs protocolaires, divergence Temporal/A2A, retries, files et saturation. _(Le dashboard provisionné
+  « AI Factory A2A Fleet » contient dix panneaux et dix-sept requêtes limitées aux dimensions bornées ; les
+  divergences disposent d'un compteur dédié. Preuve : `docs/evidence/a2a/A2A-145-SIGNOZ-DASHBOARDS.md`.)_
 - [ ] **A2A-146 — Créer les alertes.** Détecter absence de poller, agent non prêt, carte invalide, taux d'échec,
   backlog, tâche bloquée, notification en retard, collision d'idempotence et divergence d'état.
 - [ ] **A2A-147 — Ajouter des SLO.** Définir disponibilité de dispatch, délai de prise en charge, délai de

@@ -2,7 +2,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-[ -f .env ] && set -a && source .env && set +a
+source scripts/load-dotenv.sh
+load_dotenv .env
 
 base_url=${SIGNOZ_BASE_URL:-http://127.0.0.1:${SIGNOZ_PORT:-3301}}
 email=${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}
@@ -22,26 +23,40 @@ metric_count=$(printf '%s' "$metrics" | jq -er '.data.metrics // .metrics | leng
 
 dashboards=$(curl -fsS "$base_url/api/v2/dashboards?limit=100" "${auth[@]}")
 dashboard_count=$(printf '%s' "$dashboards" | jq '[.data.dashboards[] | select(.tags[]? | .key == "project" and .value == "ai-software-factory")] | length')
-[ "$dashboard_count" -eq 7 ] || { echo "Expected 7 managed dashboards, got $dashboard_count" >&2; exit 1; }
+expected_dashboard_count=$(find infrastructure/observability/signoz/dashboards -name '*.json' | wc -l | tr -d ' ')
+[ "$dashboard_count" -eq "$expected_dashboard_count" ] || {
+  echo "Expected $expected_dashboard_count managed dashboards, got $dashboard_count" >&2; exit 1;
+}
 dashboard_navigation_count=0
 for dashboard_id in $(printf '%s' "$dashboards" | jq -r '.data.dashboards[]
   | select(.tags[]? | .key == "project" and .value == "ai-software-factory") | .id'); do
   dashboard_detail=$(curl -fsS "$base_url/api/v2/dashboards/$dashboard_id" "${auth[@]}")
-  if printf '%s' "$dashboard_detail" | jq -e '
-    (.data.spec.variables | length) == 6
-    and (.data.spec.links | length) == 5
-    and ([.data.spec.panels[].spec.links | length] | all(. == 5))' >/dev/null; then
+  dashboard_name=$(printf '%s' "$dashboard_detail" | jq -er '.data.spec.display.name')
+  dashboard_file=
+  for candidate in infrastructure/observability/signoz/dashboards/*.json; do
+    if [ "$(jq -r '.spec.display.name' "$candidate")" = "$dashboard_name" ]; then dashboard_file=$candidate; break; fi
+  done
+  [ -n "$dashboard_file" ] || continue
+  expected_variables=$(jq '.spec.variables | length' "$dashboard_file")
+  expected_links=$(jq '.spec.links | length' "$dashboard_file")
+  if printf '%s' "$dashboard_detail" | jq -e --argjson variables "$expected_variables" --argjson links "$expected_links" '
+    (.data.spec.variables | length) == $variables
+    and (.data.spec.links | length) == $links
+    and ([.data.spec.panels[].spec.links | length] | all(. == $links))' >/dev/null; then
     dashboard_navigation_count=$((dashboard_navigation_count + 1))
   fi
 done
-[ "$dashboard_navigation_count" -eq 7 ] || {
+[ "$dashboard_navigation_count" -eq "$expected_dashboard_count" ] || {
   echo "Expected search variables and operational links on all managed dashboards, got $dashboard_navigation_count" >&2
   exit 1
 }
 
 rules=$(curl -fsS "$base_url/api/v2/rules" "${auth[@]}")
 rule_count=$(printf '%s' "$rules" | jq '[.data[] | select(.labels.managed_by == "ai-software-factory")] | length')
-[ "$rule_count" -eq 15 ] || { echo "Expected 9 parity and 6 technical rules, got $rule_count" >&2; exit 1; }
+expected_rule_count=$(jq -s 'map(length) | add' infrastructure/observability/signoz/rules/*.json)
+[ "$rule_count" -eq "$expected_rule_count" ] || {
+  echo "Expected $expected_rule_count managed rules, got $rule_count" >&2; exit 1;
+}
 
 metrics_retention=$(curl -fsS --get "$base_url/api/v1/settings/ttl" "${auth[@]}" --data-urlencode 'type=metrics' | jq -er '.metrics_ttl_duration_hrs')
 traces_retention=$(curl -fsS --get "$base_url/api/v1/settings/ttl" "${auth[@]}" --data-urlencode 'type=traces' | jq -er '.traces_ttl_duration_hrs')
