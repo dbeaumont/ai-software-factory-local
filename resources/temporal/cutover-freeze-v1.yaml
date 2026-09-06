@@ -1,0 +1,38 @@
+schemaVersion: "1"
+freezeId: temporal-cutover-v1
+baselineCommit: f999dee
+policy: No workflow, activity, contract, prompt, model configuration or infrastructure drift is allowed.
+frozenObjects:
+  temporalWorkflows:
+    path: apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal
+    object: 50a6e38b75dfb65ef8e3e55c9696ed2ad1ceb350
+  pipelineContracts:
+    path: apps/orchestrator/src/main/java/com/example/aifactory/service/PipelineStepContracts.java
+    object: 1378a7e22ce9f49de5e4968ad1f010ef3ff827ec
+  pipelineActivities:
+    path: apps/orchestrator/src/main/java/com/example/aifactory/service/PipelineStepService.java
+    object: f4f327d71493215a4ed733111230cc58c57bc275
+  applicationConfiguration:
+    path: apps/orchestrator/src/main/resources/application.yml
+    object: 00c1d7b348642c9b882c47d23dce0cf96e11b2a2
+  dependencyModel:
+    path: apps/orchestrator/pom.xml
+    object: 9832ad3fc430ae307ba4a9c190e432c3ff21ba9d
+  environmentContract:
+    path: .env.example
+    object: 0f38087e1759aaab3816bda2ac6583383d71d6e2
+  prompts:
+    path: resources/prompts
+    object: f5cf80661f62296e0274e078522f8eb32c53d93e
+  agentDescriptors:
+    path: resources/agents
+    object: 2d925adb9d02a0ca7cff8c06021e508692ff7c5e
+  mcpContracts:
+    path: resources/mcp/schemas
+    object: 785f4ae021ab55170faeacd8287ca9cb1db4f71d
+  multiAgentContracts:
+    path: resources/multiagents/schemas
+    object: 8485e8c2a889f3a71a5985b4ffc354b59851a1a9
+  infrastructure:
+    path: infrastructure
+    object: 7320a54b8b9fc7ba2aedb9dcddd079f064216233

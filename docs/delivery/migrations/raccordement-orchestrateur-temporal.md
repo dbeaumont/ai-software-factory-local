@@ -537,8 +537,11 @@ est immédiatement l'unique moteur de toutes les admissions.
   `make temporal-cutover-baseline` vérifie le corpus figé de 20 cas, ses états, 543 041 ms de durée cumulée,
   134 365 tokens, le statut de coût `UNAVAILABLE_NOT_ZERO`, les objets Git et les SHA-256 des deux artefacts. Les
   chemins des preuves archivées ont été remis en cohérence sans modifier leurs digests.)_
-- [ ] **TEMP-101 — Geler le périmètre.** Interdire tout changement de workflow, activité, contrat, prompt, modèle
-  ou infrastructure entre la qualification finale et la fin de la fenêtre de bascule.
+- [x] **TEMP-101 — Geler le périmètre.** Interdire tout changement de workflow, activité, contrat, prompt, modèle
+  ou infrastructure entre la qualification finale et la fin de la fenêtre de bascule. _(Le manifeste
+  `resources/temporal/cutover-freeze-v1.yaml` fige onze objets Git au commit `f999dee`. La cible
+  `make temporal-cutover-freeze` refuse toute modification suivie ou tout ajout non suivi dans ces chemins ; le
+  contrôle passe sur le périmètre qualifié.)_
 - [ ] **TEMP-102 — Qualifier la release complète hors trafic.** Exécuter tests fonctionnels, replay, charge,
   redémarrages, partitions réseau, sauvegarde, restauration et rollback sur l'artefact exact à déployer.
 - [ ] **TEMP-103 — Obtenir l'autorisation de coupure.** Exiger les validations produit, architecture, sécurité et
