@@ -21,6 +21,11 @@ REQUIRED_PANELS = {
     "Retries, timeouts and reconciliations",
     "Polling and notifications",
     "Admission saturation",
+    "SLO dispatch availability",
+    "SLO pickup delay p95",
+    "SLO terminal delay p95",
+    "SLO duplicate execution invariant",
+    "SLO cancellation propagation p95",
 }
 ALLOWED_GROUPS = {"le", "agent_role", "agent_skill", "rpc_operation", "a2a_version", "task_state", "result"}
 FORBIDDEN_LABELS = {"task_id", "message_id", "workflow_id", "context_id", "delegation_id", "tenant_id", "caller"}

@@ -122,6 +122,21 @@ DASHBOARDS = {
                 'sum by (agent_role) (rate({__name__="ai.factory.a2a.server.admissions.rejected"}[5m]))',
                 'max by (agent_role) ({__name__="ai.factory.a2a.server.backlog"})',
             ]),
+            ("SLO dispatch availability", [
+                'sum(rate({__name__="ai.factory.a2a.client.duration.count",rpc_operation="send",result="success"}[28d])) / clamp_min(sum(rate({__name__="ai.factory.a2a.client.duration.count",rpc_operation="send",result=~"success|error|timeout"}[28d])), 1e-9)',
+            ]),
+            ("SLO pickup delay p95", [
+                'histogram_quantile(0.95, sum by (le, agent_role) (rate({__name__="ai.factory.a2a.server.pickup.duration.bucket"}[28d])))',
+            ]),
+            ("SLO terminal delay p95", [
+                'histogram_quantile(0.95, sum by (le, agent_role) (rate({__name__="ai.factory.a2a.server.task.duration.bucket"}[28d])))',
+            ]),
+            ("SLO duplicate execution invariant", [
+                'sum(increase({__name__="ai.factory.a2a.server.duplicate.executions"}[28d]))',
+            ]),
+            ("SLO cancellation propagation p95", [
+                'histogram_quantile(0.95, sum by (le, agent_role) (rate({__name__="ai.factory.a2a.client.duration.bucket",rpc_operation="cancel",result="success"}[28d])))',
+            ]),
         ],
     },
     "mcp": {

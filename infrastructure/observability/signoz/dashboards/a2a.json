@@ -1118,6 +1118,481 @@
             }
           ]
         }
+      },
+      "65150469-ea33-575a-9f28-421e5781227e": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "SLO dispatch availability",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum(rate({__name__=\"ai.factory.a2a.client.duration.count\",rpc_operation=\"send\",result=\"success\"}[28d])) / clamp_min(sum(rate({__name__=\"ai.factory.a2a.client.duration.count\",rpc_operation=\"send\",result=~\"success|error|timeout\"}[28d])), 1e-9)",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "a662bda3-fcec-5bfb-b582-4d285e3fff84": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "SLO pickup delay p95",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "histogram_quantile(0.95, sum by (le, agent_role) (rate({__name__=\"ai.factory.a2a.server.pickup.duration.bucket\"}[28d])))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "3029f98f-8722-5df3-bd09-cab83bfbc140": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "SLO terminal delay p95",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "histogram_quantile(0.95, sum by (le, agent_role) (rate({__name__=\"ai.factory.a2a.server.task.duration.bucket\"}[28d])))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "8fd2f9d6-2a18-5818-9903-c3c70b0afc00": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "SLO duplicate execution invariant",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "sum(increase({__name__=\"ai.factory.a2a.server.duplicate.executions\"}[28d]))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
+        }
+      },
+      "c440bfa6-b0ad-586b-84d5-b6f99b9ac67f": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "SLO cancellation propagation p95",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "none",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "histogram_quantile(0.95, sum by (le, agent_role) (rate({__name__=\"ai.factory.a2a.client.duration.bucket\",rpc_operation=\"cancel\",result=\"success\"}[28d])))",
+                          "disabled": false,
+                          "step": 0,
+                          "stats": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "name": "Search traces",
+              "url": "/trace",
+              "renderVariables": true
+            },
+            {
+              "name": "Search logs",
+              "url": "/logs-explorer",
+              "renderVariables": true
+            },
+            {
+              "name": "Temporal UI",
+              "url": "http://localhost:8233",
+              "renderVariables": true
+            },
+            {
+              "name": "Task API",
+              "url": "http://localhost:8088/api/tasks/$task_id",
+              "renderVariables": true
+            },
+            {
+              "name": "Observability runbooks",
+              "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+              "renderVariables": true
+            }
+          ]
+        }
       }
     },
     "layouts": [
@@ -1213,6 +1688,51 @@
               "height": 6,
               "content": {
                 "$ref": "#/spec/panels/38220c93-d82b-5e67-8d21-64e358735a81"
+              }
+            },
+            {
+              "x": 0,
+              "y": 30,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/65150469-ea33-575a-9f28-421e5781227e"
+              }
+            },
+            {
+              "x": 6,
+              "y": 30,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/a662bda3-fcec-5bfb-b582-4d285e3fff84"
+              }
+            },
+            {
+              "x": 0,
+              "y": 36,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/3029f98f-8722-5df3-bd09-cab83bfbc140"
+              }
+            },
+            {
+              "x": 6,
+              "y": 36,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/8fd2f9d6-2a18-5818-9903-c3c70b0afc00"
+              }
+            },
+            {
+              "x": 0,
+              "y": 42,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/c440bfa6-b0ad-586b-84d5-b6f99b9ac67f"
               }
             }
           ]

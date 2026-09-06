@@ -28,6 +28,8 @@ final class A2aServerMetrics {
                 .tags(dimensions("none", "execute", "none").tags()).register(registry);
         Gauge.builder("ai.factory.a2a.server.oldest.active.age", store, this::oldestActiveAgeSeconds)
                 .baseUnit("seconds").tags(dimensions("none", "execute", "none").tags()).register(registry);
+        registry.counter("ai.factory.a2a.server.duplicate.executions",
+                dimensions("none", "execute", "none").tags());
     }
 
     private A2aServerMetrics() {
@@ -63,6 +65,12 @@ final class A2aServerMetrics {
     void transition(A2aTaskStore.StoredTask task, A2aSendMessageService.TaskState state, Instant occurredAt) {
         String stateTag = state.name().toLowerCase(java.util.Locale.ROOT);
         increment("ai.factory.a2a.server.transitions", task.skill(), "execute", stateTag);
+        if (state == A2aSendMessageService.TaskState.WORKING && registry != null) {
+            Timer.builder("ai.factory.a2a.server.pickup.duration")
+                    .tags(dimensions(task.skill(), "execute", stateTag).tags())
+                    .register(registry)
+                    .record(nonNegativeDuration(task.submittedAt(), occurredAt));
+        }
         if (state.terminal() && registry != null) {
             Timer.builder("ai.factory.a2a.server.task.duration")
                     .tags(dimensions(task.skill(), "execute", stateTag).tags())

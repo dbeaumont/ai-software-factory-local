@@ -1,0 +1,55 @@
+{
+  "version": "1",
+  "policyId": "a2a-slo-policy-v1",
+  "status": "initial-supervised",
+  "evaluationWindow": "P28D",
+  "minimumEligibleTasks": 100,
+  "objectives": {
+    "dispatchAvailability": {
+      "targetRatio": 0.995,
+      "scope": "per-agent-role",
+      "metric": "ai.factory.a2a.client.duration.count",
+      "operation": "send",
+      "eligibleResults": ["success", "error", "timeout"]
+    },
+    "pickupDelay": {
+      "percentile": 0.95,
+      "target": "PT10S",
+      "scope": "per-agent-role",
+      "metric": "ai.factory.a2a.server.pickup.duration"
+    },
+    "terminalDelay": {
+      "percentile": 0.95,
+      "target": "PT30M",
+      "scope": "per-agent-role",
+      "metric": "ai.factory.a2a.server.task.duration"
+    },
+    "duplicateExecution": {
+      "targetCount": 0,
+      "scope": "fleet",
+      "metric": "ai.factory.a2a.server.duplicate.executions",
+      "invariant": true
+    },
+    "cancellationPropagationDelay": {
+      "percentile": 0.95,
+      "target": "PT30S",
+      "scope": "per-agent-role",
+      "metric": "ai.factory.a2a.client.duration",
+      "operation": "cancel",
+      "terminalState": "canceled"
+    }
+  },
+  "eligibility": {
+    "include": ["authenticated dispatches admitted for execution", "idempotent replays returning the original task"],
+    "exclude": ["authorization and policy refusals", "invalid Agent Cards", "invalid request envelopes", "operator test traffic"]
+  },
+  "errorBudget": {
+    "dispatchFailuresPer1000": 5,
+    "duplicateExecutions": 0,
+    "fastBurn": {"shortWindow": "PT1H", "longWindow": "PT6H", "burnRate": 6},
+    "slowBurn": {"shortWindow": "PT6H", "longWindow": "P3D", "burnRate": 2}
+  },
+  "dimensions": ["agent_role", "agent_skill", "rpc_operation", "a2a_version", "task_state", "result"],
+  "owner": "agent-platform",
+  "reviewAfter": "P28D"
+}

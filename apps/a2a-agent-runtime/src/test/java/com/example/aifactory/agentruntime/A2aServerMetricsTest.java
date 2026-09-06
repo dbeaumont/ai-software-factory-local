@@ -33,6 +33,7 @@ class A2aServerMetricsTest {
         metrics.notification("retries", A2aSendMessageService.TaskState.WORKING);
         metrics.notification("delivered", A2aSendMessageService.TaskState.COMPLETED);
         metrics.notification("failed", A2aSendMessageService.TaskState.FAILED);
+        metrics.transition(task, A2aSendMessageService.TaskState.WORKING, submittedAt.plusSeconds(2));
         metrics.transition(task, A2aSendMessageService.TaskState.COMPLETED, submittedAt.plusSeconds(3));
 
         assertThat(registry.find("ai.factory.a2a.server.active.tasks").gauge().value()).isEqualTo(1);
@@ -45,9 +46,13 @@ class A2aServerMetricsTest {
         assertThat(registry.find("ai.factory.a2a.server.deduplications").counter().count()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.idempotency.collisions").counter().count()).isEqualTo(1);
         assertThat(registry.find("ai.factory.a2a.server.polling").counter().count()).isEqualTo(1);
-        assertThat(registry.find("ai.factory.a2a.server.transitions").counter().count()).isEqualTo(1);
+        assertThat(registry.find("ai.factory.a2a.server.transitions").counters())
+                .extracting(io.micrometer.core.instrument.Counter::count).containsOnly(1.0, 1.0);
+        assertThat(registry.find("ai.factory.a2a.server.pickup.duration").timer().totalTime(
+                java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(2);
         assertThat(registry.find("ai.factory.a2a.server.task.duration").timer().totalTime(
                 java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(3);
+        assertThat(registry.find("ai.factory.a2a.server.duplicate.executions").counter().count()).isZero();
         assertThat(registry.getMeters()).flatExtracting(meter -> meter.getId().getTags())
                 .extracting(io.micrometer.core.instrument.Tag::getKey)
                 .noneMatch(key -> key.contains("task") && key.contains("id"))
