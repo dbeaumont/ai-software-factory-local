@@ -54,6 +54,18 @@
   </dependencies>
   <build>
     <finalName>a2a-agent-runtime</finalName>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>../../resources/a2a</directory>
+        <targetPath>a2a</targetPath>
+        <includes>
+          <include>skill-contract-map-v1.json</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

@@ -308,8 +308,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 10. Lot 3 — Agent Cards, découverte et catalogue
 
-- [ ] **A2A-050 — Générer les Agent Cards depuis le catalogue.** Éviter toute duplication manuelle des rôles,
-  skills, propriétaires, contrats, types de média et capacités.
+- [x] **A2A-050 — Générer les Agent Cards depuis le catalogue.** Éviter toute duplication manuelle des rôles,
+  skills, propriétaires, contrats, types de média et capacités. _(`AgentCardCatalogGenerator` joint au démarrage
+  le catalogue canonique des 14 rôles et le mapping versionné des skills, et échoue si leurs périmètres divergent.)_
 - [ ] **A2A-051 — Publier une carte par rôle.** Exposer la carte à l'URI well-known du rôle et une carte étendue
   uniquement si un besoin authentifié est démontré.
 - [ ] **A2A-052 — Déclarer fidèlement les interfaces.** Publier URL interne, binding `JSONRPC`, version `1.0` et
