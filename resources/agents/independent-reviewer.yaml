@@ -15,8 +15,10 @@ input_contracts:
   - test-assessment-v1
   - security-assessment-v1
   - contradiction-v1
+  - pipeline-agent-task-v1
 output_contracts:
   - independent-review-v1
+  - pipeline-agent-result-v1
 may_delegate_to: []
 allowed_tools:
   - context.search_code
@@ -32,3 +34,4 @@ default_budget:
   timeout_seconds: 600
   max_tool_calls: 24
 human_gate: required-after-review
+compatibility_prompt: prompts/reviewer.md

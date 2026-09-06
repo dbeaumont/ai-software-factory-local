@@ -11,8 +11,10 @@ effectful: false
 prompt: prompts/developer-hierarchical.md
 input_contracts:
   - code-task-v1
+  - pipeline-agent-task-v1
 output_contracts:
   - patch-proposal-v1
+  - pipeline-agent-result-v1
 may_delegate_to: []
 allowed_tools:
   - context.list_tree

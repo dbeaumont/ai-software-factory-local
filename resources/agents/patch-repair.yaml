@@ -11,8 +11,10 @@ effectful: false
 prompt: prompts/patch-repair-hierarchical.md
 input_contracts:
   - patch-repair-task-v1
+  - pipeline-agent-task-v1
 output_contracts:
   - patch-repair-proposal-v1
+  - pipeline-agent-result-v1
 may_delegate_to: []
 allowed_tools:
   - context.read_file

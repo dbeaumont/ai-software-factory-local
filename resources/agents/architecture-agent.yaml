@@ -12,8 +12,10 @@ prompt: prompts/architecture-agent.md
 input_contracts:
   - specialist-task-v1
   - specialist-result-v1
+  - pipeline-agent-task-v1
 output_contracts:
   - architecture-assessment-v1
+  - pipeline-agent-result-v1
 may_delegate_to:
   - impact-analysis
   - dependencies-contracts
@@ -31,3 +33,4 @@ default_budget:
   timeout_seconds: 600
   max_tool_calls: 24
 human_gate: risk-dependent
+compatibility_prompt: prompts/planner.md

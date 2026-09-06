@@ -174,7 +174,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
                 || request.outputContract() == null || request.attemptId() == null) {
             throw new IllegalArgumentException("A2A artifact validation request is incomplete");
         }
-        contracts.requirePrimaryOutput(request.agentRole(), request.outputContract());
+        contracts.requireOutput(request.agentRole(), request.outputContract());
         if (request.task().state() != A2aContracts.TaskState.COMPLETED || request.task().artifacts().isEmpty()) {
             throw new IllegalArgumentException("Completed A2A task has no final artifact");
         }

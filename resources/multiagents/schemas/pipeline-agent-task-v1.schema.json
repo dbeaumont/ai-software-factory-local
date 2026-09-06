@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/pipeline-agent-task-v1.schema.json",
+  "title": "PipelineAgentTask v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "attempt_id", "role", "operation", "source_commit", "payload"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "task_id": {"$ref": "#/$defs/id"},
+    "attempt_id": {"$ref": "#/$defs/id"},
+    "role": {"enum": ["architecture-agent", "developer", "patch-repair", "test-agent", "independent-reviewer"]},
+    "operation": {"enum": ["PLAN", "GENERATE_PATCH", "REPAIR_PATCH", "ASSESS_TESTS", "REVIEW"]},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "payload": {"type": "string", "minLength": 1, "maxLength": 1000000}
+  },
+  "allOf": [
+    {"if": {"properties": {"operation": {"const": "PLAN"}}}, "then": {"properties": {"role": {"const": "architecture-agent"}}}},
+    {"if": {"properties": {"operation": {"const": "GENERATE_PATCH"}}}, "then": {"properties": {"role": {"const": "developer"}}}},
+    {"if": {"properties": {"operation": {"const": "REPAIR_PATCH"}}}, "then": {"properties": {"role": {"const": "patch-repair"}}}},
+    {"if": {"properties": {"operation": {"const": "ASSESS_TESTS"}}}, "then": {"properties": {"role": {"const": "test-agent"}}}},
+    {"if": {"properties": {"operation": {"const": "REVIEW"}}}, "then": {"properties": {"role": {"const": "independent-reviewer"}}}}
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"}
+  }
+}

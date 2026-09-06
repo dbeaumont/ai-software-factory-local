@@ -13,7 +13,7 @@ import java.util.Set;
 public record AgentManifest(String manifestId, String role, String version, String owner, String parent,
                             String kind, String autonomy, String promptName, List<String> inputContracts,
                             List<String> outputContracts, Set<String> allowedTools,
-                            Set<String> mayDelegateTo, String humanGate) {
+                            Set<String> mayDelegateTo, String humanGate, String compatibilityPromptName) {
     public AgentManifest {
         inputContracts = List.copyOf(inputContracts);
         outputContracts = List.copyOf(outputContracts);
@@ -43,6 +43,8 @@ public record AgentManifest(String manifestId, String role, String version, Stri
         }
         String promptName = promptPath.substring("prompts/".length(), promptPath.length() - ".md".length());
         prompts.fingerprint(promptName);
+        String compatibilityPromptName = promptName(descriptor.get("compatibility_prompt"));
+        if (compatibilityPromptName != null) prompts.fingerprint(compatibilityPromptName);
         List<String> outputs = strings(descriptor, "output_contracts");
         Set<String> tools = Set.copyOf(strings(descriptor, "allowed_tools"));
         Set<String> delegates = Set.copyOf(strings(descriptor, "may_delegate_to"));
@@ -66,7 +68,8 @@ public record AgentManifest(String manifestId, String role, String version, Stri
         }
         return new AgentManifest(text(descriptor, "manifest_id"), requestedRole, text(descriptor, "version"),
                 catalogRole.owner(), catalogRole.parent(), catalogRole.kind(), catalogRole.autonomy(), promptName,
-                strings(descriptor, "input_contracts"), outputs, tools, delegates, catalogRole.humanGate());
+                strings(descriptor, "input_contracts"), outputs, tools, delegates, catalogRole.humanGate(),
+                compatibilityPromptName);
     }
 
     @SuppressWarnings("unchecked")
@@ -94,6 +97,14 @@ public record AgentManifest(String manifestId, String role, String version, Stri
         return value;
     }
     private static String nullable(Object value) { return value == null ? null : value.toString(); }
+    private static String promptName(Object value) {
+        String path = nullable(value);
+        if (path == null) return null;
+        if (!path.matches("prompts/[a-z][a-z0-9-]{1,63}\\.md")) {
+            throw new IllegalStateException("Compatibility prompt path is invalid");
+        }
+        return path.substring("prompts/".length(), path.length() - ".md".length());
+    }
     private static void requireEqual(String field, Object expected, Object actual) {
         if (!java.util.Objects.equals(expected, actual)) {
             throw new IllegalStateException("Role " + field + " diverges from central catalog");

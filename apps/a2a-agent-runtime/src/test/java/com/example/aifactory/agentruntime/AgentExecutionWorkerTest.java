@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AgentExecutionWorkerTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -40,6 +41,30 @@ class AgentExecutionWorkerTest {
         assertEquals("proposal-1", result.document().path("proposal_id").asText());
         assertEquals(60, result.tokens());
         assertEquals(123, result.costMicros());
+    }
+
+    @Test
+    void wrapsPipelineCompatibilityOutputAndUsesTheRoleCompatibilityPrompt() throws Exception {
+        AtomicReference<List<AgentLoop.Message>> seen = new AtomicReference<>();
+        AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("developer", mapper),
+                (messages, tools, tokens) -> {
+                    seen.set(messages);
+                    return new AgentLoop.Turn(AgentLoop.Stop.FINAL, "diff --git a/A b/A", List.of(), 7, 3, 21);
+                }, new NoTools());
+        JsonNode input = mapper.readTree("""
+                {"schema_version":"1","task_id":"task-1","attempt_id":"attempt-1","role":"developer",
+                 "operation":"GENERATE_PATCH","source_commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                 "payload":"Generate this patch"}
+                """);
+
+        AgentExecutionWorker.Result result = worker.execute(request(
+                "developer", "pipeline-agent-task-v1", input, "pipeline-agent-result-v1"));
+
+        assertEquals("diff --git a/A b/A", result.document().path("content").asText());
+        assertEquals("GENERATE_PATCH", result.document().path("operation").asText());
+        assertEquals(10, result.tokens());
+        assertTrue(seen.get().getFirst().content().contains("Developer Agent"));
+        assertTrue(!seen.get().getFirst().content().contains("mode hiérarchique"));
     }
 
     @Test

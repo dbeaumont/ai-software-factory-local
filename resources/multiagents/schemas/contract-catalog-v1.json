@@ -19,6 +19,8 @@
     "test-strategy-v1": "test-strategy-v1.schema.json",
     "test-assessment-v1": "test-assessment-v1.schema.json",
     "security-assessment-v1": "security-assessment-v1.schema.json",
-    "independent-review-v1": "independent-review-v1.schema.json"
+    "independent-review-v1": "independent-review-v1.schema.json",
+    "pipeline-agent-task-v1": "pipeline-agent-task-v1.schema.json",
+    "pipeline-agent-result-v1": "pipeline-agent-result-v1.schema.json"
   }
 }

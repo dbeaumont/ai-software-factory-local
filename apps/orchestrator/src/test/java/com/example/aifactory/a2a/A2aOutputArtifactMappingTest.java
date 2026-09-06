@@ -24,7 +24,7 @@ class A2aOutputArtifactMappingTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
-    void mapsAllFifteenDeclaredOutputsAndExactlyOnePrimaryPerAgentRole() throws Exception {
+    void mapsAllDeclaredOutputsAndExactlyOnePrimaryPerAgentRole() throws Exception {
         JsonNode mappings = json("a2a/skill-contract-map-v1.json").path("outputs");
         AgentCatalog catalog = new AgentCatalog();
         Set<String> actual = new HashSet<>();
@@ -43,7 +43,7 @@ class A2aOutputArtifactMappingTest {
             }
         });
         Set<String> expected = manifestOutputs(catalog.roles().keySet());
-        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected).hasSize(15);
+        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected).hasSize(20);
         catalog.roles().values().stream().filter(role -> !"control-plane".equals(role.kind())).forEach(role ->
                 assertThat(primaryCount.getOrDefault(role.name(), 0L)).as(role.name()).isEqualTo(1));
     }

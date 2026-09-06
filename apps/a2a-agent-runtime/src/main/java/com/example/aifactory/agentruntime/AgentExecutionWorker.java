@@ -44,9 +44,11 @@ public final class AgentExecutionWorker {
                 call -> mcp.call(call.name(), call.arguments()),
                 (actor, tool) -> role.allowedTools().contains(tool),
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
+        boolean pipelineCompatibility = "pipeline-agent-task-v1".equals(request.inputContract());
+        String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : request.input().toString();
         java.util.concurrent.Callable<AgentLoop.Result> invocation = () -> loop.run(
                 new AgentLoop.Actor(request.taskId(), role.identity().role(), request.executionMode()),
-                role.systemPrompt(), request.input().toString(), request.budget());
+                role.systemPrompt(request.inputContract()), agentInput, request.budget());
         AgentLoop.Result result;
         try {
             result = request.traceparent() == null ? invocation.call()
@@ -56,8 +58,25 @@ public final class AgentExecutionWorker {
         } catch (Exception failure) {
             throw new IllegalStateException("Agent execution failed", failure);
         }
-        JsonNode document = role.validateOutput(request.outputContract(), result.finalResult(), contractContext);
-        return new Result(document, role.promptFingerprint(), result.turns(), result.tokens(), result.costMicros());
+        JsonNode document;
+        if (pipelineCompatibility) {
+            var wrapped = tools.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+            wrapped.put("schema_version", "1");
+            wrapped.put("task_id", request.taskId());
+            wrapped.put("attempt_id", request.attemptId());
+            wrapped.put("role", request.role());
+            wrapped.put("operation", request.input().path("operation").asText());
+            wrapped.put("status", "COMPLETED");
+            wrapped.put("content", result.finalResult());
+            wrapped.put("prompt_fingerprint", role.promptFingerprint(request.inputContract()));
+            wrapped.put("turns", result.turns());
+            wrapped.put("tokens", result.tokens());
+            wrapped.put("cost_micros", result.costMicros());
+            document = role.validateOutput(request.outputContract(), wrapped, contractContext);
+        } else {
+            document = role.validateOutput(request.outputContract(), result.finalResult(), contractContext);
+        }
+        return new Result(document, role.promptFingerprint(request.inputContract()), result.turns(), result.tokens(), result.costMicros());
     }
 
     public record Request(String taskId, String attemptId, String role, String inputContract, JsonNode input,

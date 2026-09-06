@@ -364,6 +364,46 @@
         "application/json",
         "application/vnd.ai-factory.evidence-reference+json"
       ]
+    },
+    {
+      "skill_id": "architecture-agent.pipeline-agent-task-v1",
+      "role": "architecture-agent",
+      "input_contract": "pipeline-agent-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-task-v1.schema.json",
+      "accepted_media_types": ["application/json", "application/vnd.ai-factory.evidence-reference+json"]
+    },
+    {
+      "skill_id": "developer.pipeline-agent-task-v1",
+      "role": "developer",
+      "input_contract": "pipeline-agent-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-task-v1.schema.json",
+      "accepted_media_types": ["application/json", "application/vnd.ai-factory.evidence-reference+json"]
+    },
+    {
+      "skill_id": "patch-repair.pipeline-agent-task-v1",
+      "role": "patch-repair",
+      "input_contract": "pipeline-agent-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-task-v1.schema.json",
+      "accepted_media_types": ["application/json", "application/vnd.ai-factory.evidence-reference+json"]
+    },
+    {
+      "skill_id": "test-agent.pipeline-agent-task-v1",
+      "role": "test-agent",
+      "input_contract": "pipeline-agent-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-task-v1.schema.json",
+      "accepted_media_types": ["application/json", "application/vnd.ai-factory.evidence-reference+json"]
+    },
+    {
+      "skill_id": "independent-reviewer.pipeline-agent-task-v1",
+      "role": "independent-reviewer",
+      "input_contract": "pipeline-agent-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-task-v1.schema.json",
+      "accepted_media_types": ["application/json", "application/vnd.ai-factory.evidence-reference+json"]
     }
   ],
   "outputs": [
@@ -499,6 +539,51 @@
       "schema_version": "1",
       "schema_uri": "classpath:/multiagents/schemas/security-assessment-v1.schema.json",
       "primary_artifact": true,
+      "media_type": "application/json",
+      "max_evidence_references": 32
+    },
+    {
+      "role": "architecture-agent",
+      "output_contract": "pipeline-agent-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-result-v1.schema.json",
+      "primary_artifact": false,
+      "media_type": "application/json",
+      "max_evidence_references": 32
+    },
+    {
+      "role": "developer",
+      "output_contract": "pipeline-agent-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-result-v1.schema.json",
+      "primary_artifact": false,
+      "media_type": "application/json",
+      "max_evidence_references": 32
+    },
+    {
+      "role": "patch-repair",
+      "output_contract": "pipeline-agent-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-result-v1.schema.json",
+      "primary_artifact": false,
+      "media_type": "application/json",
+      "max_evidence_references": 32
+    },
+    {
+      "role": "test-agent",
+      "output_contract": "pipeline-agent-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-result-v1.schema.json",
+      "primary_artifact": false,
+      "media_type": "application/json",
+      "max_evidence_references": 32
+    },
+    {
+      "role": "independent-reviewer",
+      "output_contract": "pipeline-agent-result-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/pipeline-agent-result-v1.schema.json",
+      "primary_artifact": false,
       "media_type": "application/json",
       "max_evidence_references": 32
     }

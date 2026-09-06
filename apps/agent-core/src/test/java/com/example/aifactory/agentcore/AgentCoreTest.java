@@ -37,8 +37,8 @@ class AgentCoreTest {
     void exposesOnlyTheSelectedRoleCapabilities() {
         RoleScopedAgentContext context = RoleScopedAgentContext.load("developer", new ObjectMapper());
         assertEquals("developer", context.identity().role());
-        assertEquals(Set.of("code-task-v1"), context.acceptedInputContracts());
-        assertEquals(Set.of("patch-proposal-v1"), context.producedOutputContracts());
+        assertEquals(Set.of("code-task-v1", "pipeline-agent-task-v1"), context.acceptedInputContracts());
+        assertEquals(Set.of("patch-proposal-v1", "pipeline-agent-result-v1"), context.producedOutputContracts());
         assertTrue(context.systemPrompt().contains("Developer"));
         assertTrue(context.promptFingerprint().matches("[0-9a-f]{64}"));
         context.requireTool("context.read_file");
@@ -57,7 +57,7 @@ class AgentCoreTest {
         try (InputStream input = getClass().getClassLoader()
                 .getResourceAsStream("multiagents/fixtures/golden-contracts-v1.json")) {
             JsonNode documents = new ObjectMapper().readTree(input).path("documents");
-            assertEquals(18, validator.contracts().size());
+            assertEquals(20, validator.contracts().size());
             validator.contracts().forEach(contract -> {
                 JsonNode document = documents.path(contract);
                 Set<String> references = collectTextualIds(document);

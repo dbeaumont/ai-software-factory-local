@@ -16,15 +16,20 @@ public final class RoleScopedAgentContext {
     private final AgentManifest identity;
     private final String systemPrompt;
     private final String promptFingerprint;
+    private final String compatibilitySystemPrompt;
+    private final String compatibilityPromptFingerprint;
     private final AgentContractValidator contracts;
     private final Set<String> inputContracts;
     private final Set<String> outputContracts;
 
     private RoleScopedAgentContext(AgentManifest identity, String systemPrompt, String promptFingerprint,
+                                   String compatibilitySystemPrompt, String compatibilityPromptFingerprint,
                                    AgentContractValidator contracts) {
         this.identity = identity;
         this.systemPrompt = systemPrompt;
         this.promptFingerprint = promptFingerprint;
+        this.compatibilitySystemPrompt = compatibilitySystemPrompt;
+        this.compatibilityPromptFingerprint = compatibilityPromptFingerprint;
         this.contracts = contracts;
         this.inputContracts = Set.copyOf(identity.inputContracts());
         this.outputContracts = Set.copyOf(identity.outputContracts());
@@ -34,13 +39,31 @@ public final class RoleScopedAgentContext {
         AgentCatalog catalog = new AgentCatalog();
         PromptRepository prompts = new PromptRepository();
         AgentManifest identity = AgentManifest.load(role, catalog, prompts);
+        String compatibility = identity.compatibilityPromptName();
         return new RoleScopedAgentContext(identity, prompts.load(identity.promptName()),
-                prompts.fingerprint(identity.promptName()), new AgentContractValidator(mapper, catalog));
+                prompts.fingerprint(identity.promptName()),
+                compatibility == null ? null : prompts.load(compatibility),
+                compatibility == null ? null : prompts.fingerprint(compatibility),
+                new AgentContractValidator(mapper, catalog));
     }
 
     public AgentManifest identity() { return identity; }
     public String systemPrompt() { return systemPrompt; }
     public String promptFingerprint() { return promptFingerprint; }
+    public String systemPrompt(String inputContract) {
+        if (!"pipeline-agent-task-v1".equals(inputContract)) return systemPrompt;
+        if (compatibilitySystemPrompt == null) {
+            throw new SecurityException("Pipeline compatibility is not granted to role " + identity.role());
+        }
+        return compatibilitySystemPrompt;
+    }
+    public String promptFingerprint(String inputContract) {
+        if (!"pipeline-agent-task-v1".equals(inputContract)) return promptFingerprint;
+        if (compatibilityPromptFingerprint == null) {
+            throw new SecurityException("Pipeline compatibility is not granted to role " + identity.role());
+        }
+        return compatibilityPromptFingerprint;
+    }
     public Set<String> acceptedInputContracts() { return inputContracts; }
     public Set<String> producedOutputContracts() { return outputContracts; }
     public Set<String> allowedTools() { return identity.allowedTools(); }

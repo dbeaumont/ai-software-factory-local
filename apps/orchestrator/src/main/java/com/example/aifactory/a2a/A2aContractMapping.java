@@ -13,6 +13,7 @@ import java.util.Set;
 public final class A2aContractMapping {
     private final Set<Key> inputs;
     private final Set<Key> primaryOutputs;
+    private final Set<Key> outputs;
     private final java.util.Map<String, Set<String>> inputSkills;
 
     public A2aContractMapping(ObjectMapper mapper) {
@@ -31,12 +32,15 @@ public final class A2aContractMapping {
                         .add(value.path("skill_id").asText());
             });
             Set<Key> loadedOutputs = new HashSet<>();
+            Set<Key> declaredOutputs = new HashSet<>();
             catalog.path("outputs").forEach(value -> {
-                if (value.path("primary_artifact").asBoolean()) loadedOutputs.add(
-                        new Key(value.path("role").asText(), value.path("output_contract").asText()));
+                Key output = new Key(value.path("role").asText(), value.path("output_contract").asText());
+                declaredOutputs.add(output);
+                if (value.path("primary_artifact").asBoolean()) loadedOutputs.add(output);
             });
             inputs = Set.copyOf(loadedInputs);
             primaryOutputs = Set.copyOf(loadedOutputs);
+            outputs = Set.copyOf(declaredOutputs);
             inputSkills = loadedSkills.entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
                     java.util.Map.Entry::getKey, entry -> Set.copyOf(entry.getValue())));
         } catch (Exception exception) {
@@ -53,6 +57,12 @@ public final class A2aContractMapping {
     public void requirePrimaryOutput(String role, String contract) {
         if (!primaryOutputs.contains(new Key(role, contract))) {
             throw new IllegalArgumentException("Contract is not the primary A2A output for role " + role);
+        }
+    }
+
+    public void requireOutput(String role, String contract) {
+        if (!outputs.contains(new Key(role, contract))) {
+            throw new IllegalArgumentException("Contract is not an A2A output for role " + role);
         }
     }
 

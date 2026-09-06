@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/multiagents/schemas/pipeline-agent-result-v1.schema.json",
+  "title": "PipelineAgentResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "attempt_id", "role", "operation", "status", "content", "prompt_fingerprint", "turns", "tokens", "cost_micros"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "task_id": {"$ref": "#/$defs/id"},
+    "attempt_id": {"$ref": "#/$defs/id"},
+    "role": {"enum": ["architecture-agent", "developer", "patch-repair", "test-agent", "independent-reviewer"]},
+    "operation": {"enum": ["PLAN", "GENERATE_PATCH", "REPAIR_PATCH", "ASSESS_TESTS", "REVIEW"]},
+    "status": {"const": "COMPLETED"},
+    "content": {"type": "string", "minLength": 1, "maxLength": 1000000},
+    "prompt_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "turns": {"type": "integer", "minimum": 0, "maximum": 64},
+    "tokens": {"type": "integer", "minimum": 0, "maximum": 100000},
+    "cost_micros": {"type": "integer", "minimum": 0, "maximum": 100000000}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"}
+  }
+}
