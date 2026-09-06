@@ -14,10 +14,13 @@ final class AgentCardController {
     static final String WELL_KNOWN_PATH = "/.well-known/agent-card.json";
 
     private final AgentRuntimeProperties properties;
+    private final A2aSecurityProperties security;
     private final AgentCardCatalogGenerator generator;
 
-    AgentCardController(AgentRuntimeProperties properties, AgentCardCatalogGenerator generator) {
+    AgentCardController(AgentRuntimeProperties properties, A2aSecurityProperties security,
+                        AgentCardCatalogGenerator generator) {
         this.properties = properties;
+        this.security = security;
         this.generator = generator;
     }
 
@@ -38,6 +41,18 @@ final class AgentCardController {
                 "transport", "JSONRPC")));
         card.put("version", source.catalogId());
         card.put("capabilities", Map.of("streaming", false, "pushNotifications", false));
+        if (security.enabled()) {
+            card.put("securitySchemes", Map.of(
+                    "mutualTLS", Map.of("type", "mutualTLS", "description", "Workload mTLS certificate"),
+                    "oauth2", Map.of(
+                            "type", "oauth2",
+                            "flows", Map.of("clientCredentials", Map.of(
+                                    "tokenUrl", security.oauth2TokenUrl().toString(),
+                                    "scopes", operationScopes())))));
+            card.put("security", List.of(Map.of(
+                    "mutualTLS", List.of(),
+                    "oauth2", List.of("a2a.invoke", "a2a.role." + source.role()))));
+        }
         card.put("defaultInputModes", source.skills().stream()
                 .flatMap(skill -> skill.acceptedMediaTypes().stream()).distinct().sorted().toList());
         card.put("defaultOutputModes", List.of("application/json", "application/vnd.ai-factory.evidence-reference+json"));
@@ -48,11 +63,22 @@ final class AgentCardController {
                 "tags", List.of(source.role(), source.owner()),
                 "inputModes", skill.acceptedMediaTypes(),
                 "outputModes", List.of("application/json", "application/vnd.ai-factory.evidence-reference+json"),
+                "security", security.enabled() ? List.of(Map.of(
+                        "mutualTLS", List.of(),
+                        "oauth2", List.of("a2a.invoke", "a2a.skill." + skill.id()))) : List.of(),
                 "metadata", Map.of(
                         "inputContract", skill.inputContract(),
                         "inputSchema", skill.schemaUri(),
                         "outputContract", source.outputContract())))
                 .toList());
         return Map.copyOf(card);
+    }
+
+    private Map<String, String> operationScopes() {
+        return Map.of(
+                "a2a.invoke", "Submit an A2A task",
+                "a2a.read", "Read an A2A task",
+                "a2a.cancel", "Cancel an A2A task",
+                "a2a.role." + properties.role(), "Invoke the active role");
     }
 }

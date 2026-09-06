@@ -24,6 +24,12 @@ ai-factory:
   agent-runtime:
     role: ${AI_FACTORY_AGENT_ROLE:}
     endpoint: ${AI_FACTORY_AGENT_ENDPOINT:http://localhost:${AI_FACTORY_AGENT_PORT:8090}/a2a}
+    security:
+      enabled: ${AI_FACTORY_A2A_SECURITY_ENABLED:false}
+      mtls-required: ${AI_FACTORY_A2A_MTLS_REQUIRED:false}
+      oauth2-issuer: ${AI_FACTORY_A2A_OAUTH2_ISSUER:}
+      oauth2-token-url: ${AI_FACTORY_A2A_OAUTH2_TOKEN_URL:}
+      audience: ${AI_FACTORY_A2A_OAUTH2_AUDIENCE:}
     llm:
       base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
       api-key: ${AI_FACTORY_LLM_API_KEY:}

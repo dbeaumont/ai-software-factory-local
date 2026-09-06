@@ -318,8 +318,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   capacités réellement actives ; ne pas annoncer streaming ou push avant leur implémentation complète. _(La carte
   publie l'endpoint configuré, `preferredTransport`/interface `JSONRPC`, protocole `1.0` et les deux capacités à
   `false`, conformément au runtime effectivement disponible.)_
-- [ ] **A2A-053 — Déclarer la sécurité.** Décrire les schémas mTLS/OAuth2 réellement appliqués et les exigences
-  d'autorisation par skill.
+- [x] **A2A-053 — Déclarer la sécurité.** Décrire les schémas mTLS/OAuth2 réellement appliqués et les exigences
+  d'autorisation par skill. _(Le profil sécurisé installe le resource server OAuth2 et refuse de démarrer sans
+  HTTPS/mTLS `client-auth=need`; la carte annonce alors seulement ces mécanismes et génère les scopes de rôle,
+  d'opération et de skill depuis le catalogue.)_
 - [ ] **A2A-054 — Signer les cartes.** Canonicaliser selon RFC 8785, signer en JWS, publier `kid` et chaîne de
   confiance, et permettre une rotation avec chevauchement de clés.
 - [ ] **A2A-055 — Vérifier les cartes côté client.** Contrôler signature, issuer/provider, rôle attendu, URL,
