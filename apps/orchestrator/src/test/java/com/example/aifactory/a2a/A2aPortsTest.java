@@ -67,6 +67,10 @@ class A2aPortsTest {
                 () -> new A2aContracts.SendCommand("supervisor", "plan", "message-1",
                         null, null, List.of(), Map.of(), true));
         assertThrows(IllegalArgumentException.class,
+                () -> new A2aContracts.SendCommand("supervisor", "plan", "message-1",
+                        null, null, List.of(new A2aContracts.Part("text/plain", "instruction", Map.of(), null)),
+                        Map.of(), false));
+        assertThrows(IllegalArgumentException.class,
                 () -> new A2aContracts.TaskQuery("supervisor", "task-1", -1));
 
         A2aContracts.TaskSnapshot snapshot = new A2aContracts.TaskSnapshot(

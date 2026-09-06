@@ -143,8 +143,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   `AgentCardResolver` et `A2aNotificationReceiver` pour isoler le domaine des classes du SDK. _(Ports asynchrones
   et contrats immuables ajoutés sous `com.example.aifactory.a2a`; un test de réflexion interdit toute fuite de
   types A2A SDK, Spring, Reactor ou Temporal dans leurs signatures.)_
-- [ ] **A2A-014 — Fixer le profil asynchrone.** Envoyer `SendMessage` avec `returnImmediately: true`, recevoir les
+- [x] **A2A-014 — Fixer le profil asynchrone.** Envoyer `SendMessage` avec `returnImmediately: true`, recevoir les
   transitions par notification push authentifiée et utiliser `GetTask` comme mécanisme de réconciliation.
+  _(`SendCommand` rejette tout profil bloquant ; les ports dédiés imposent notification et réconciliation.)_
 - [ ] **A2A-015 — Réserver le streaming à l'observation interactive.** Ne pas conserver de flux SSE ouvert dans
   une activité Temporal ; `SendStreamingMessage` et `SubscribeToTask` restent désactivés tant qu'un besoin et des
   tests de reprise ne les justifient pas.

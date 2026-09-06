@@ -46,6 +46,9 @@ public final class A2aContracts {
                 throw new IllegalArgumentException("parts must not be empty");
             }
             metadata = immutableMap(metadata);
+            if (!returnImmediately) {
+                throw new IllegalArgumentException("A2A sends must use the asynchronous returnImmediately profile");
+            }
         }
     }
 
