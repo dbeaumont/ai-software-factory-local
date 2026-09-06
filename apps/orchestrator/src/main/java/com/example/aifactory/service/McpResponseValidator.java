@@ -30,8 +30,16 @@ public class McpResponseValidator {
             Map.entry("sandbox.run_security", "sandbox-execution-result-v1.schema.json"),
             Map.entry("sandbox.get_execution", "sandbox-execution-result-v1.schema.json"),
             Map.entry("sandbox.cancel_execution", "sandbox-execution-result-v1.schema.json"),
+            Map.entry("scm.get_repository", "scm-repository-result-v1.schema.json"),
+            Map.entry("scm.resolve_revision", "scm-revision-result-v1.schema.json"),
             Map.entry("scm.create_draft_pull_request", "scm-delivery-result-v1.schema.json"),
-            Map.entry("assurance.evaluate_quality_gate", "quality-gate-result-v1.schema.json"));
+            Map.entry("assurance.evaluate_quality_gate", "quality-gate-result-v1.schema.json"),
+            Map.entry("assurance.normalize_findings", "vulnerability-result-v1.schema.json"),
+            Map.entry("assurance.evaluate_policy", "policy-decision-v1.schema.json"),
+            Map.entry("evidence.store", "evidence-store-result-v1.schema.json"),
+            Map.entry("evidence.create_manifest", "evidence-manifest-result-v1.schema.json"),
+            Map.entry("evidence.get_summary", "evidence-summary-result-v1.schema.json"),
+            Map.entry("evidence.read", "evidence-read-result-v1.schema.json"));
 
     private final ObjectMapper objectMapper;
     private final int maxResponseBytes;

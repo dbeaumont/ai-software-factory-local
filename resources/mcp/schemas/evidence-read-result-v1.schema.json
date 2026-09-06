@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/evidence-read-result-v1.schema.json",
+  "title": "Evidence read result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["uri", "type", "digest", "status", "classification", "size_bytes", "content_base64"],
+  "properties": {
+    "uri": { "type": "string", "pattern": "^evidence://", "maxLength": 1024 },
+    "type": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "const": "COMPLETE" },
+    "classification": { "enum": ["INTERNAL", "CONFIDENTIAL", "RESTRICTED"] },
+    "size_bytes": { "type": "integer", "minimum": 0, "maximum": 1048576 },
+    "content_base64": { "type": "string", "maxLength": 1398104 }
+  }
+}

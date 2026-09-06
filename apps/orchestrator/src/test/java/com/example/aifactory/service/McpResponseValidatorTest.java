@@ -94,6 +94,33 @@ class McpResponseValidatorTest {
                 """)));
     }
 
+    @Test
+    void validatesEveryEffectBoundaryUsedByTheTemporalPipeline() throws Exception {
+        McpResponseValidator validator = new McpResponseValidator(mapper, properties(65_536));
+        String digest = "a".repeat(64);
+
+        assertThatNoException().isThrownBy(() -> validator.validate("evidence.store", mapper.readTree("""
+                {
+                  "uri": "evidence://task-1/pipeline-1/metadata/%s", "digest": "%s",
+                  "status": "COMPLETE", "media_type": "application/json", "size_bytes": 42,
+                  "classification": "INTERNAL", "retain_until": "2026-10-01T00:00:00Z",
+                  "stored_at": "2026-09-01T00:00:00Z"
+                }
+                """.formatted(digest, digest))));
+        assertThatNoException().isThrownBy(() -> validator.validate("scm.get_repository", mapper.readTree("""
+                {
+                  "repositoryId": "customer-api", "owner": "aiadmin", "name": "customer-api",
+                  "defaultBranch": "main", "archived": false, "empty": false
+                }
+                """)));
+        assertThatNoException().isThrownBy(() -> validator.validate("scm.resolve_revision", mapper.readTree("""
+                {
+                  "repositoryId": "customer-api", "ref": "main",
+                  "sourceCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                }
+                """)));
+    }
+
     private static McpClientProperties properties(int maxResponseBytes) {
         McpClientProperties.RetryPolicy readOnly = new McpClientProperties.RetryPolicy(
                 3, Duration.ofMillis(200), Duration.ofSeconds(2), 2.0, 0.2);

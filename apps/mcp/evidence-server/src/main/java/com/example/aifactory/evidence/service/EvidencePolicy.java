@@ -12,8 +12,13 @@ public class EvidencePolicy {
             "security-findings", "independent-reviewer", "planner", "reviewer");
     private static final Map<String, Rule> RULES = Map.ofEntries(
             Map.entry("plan", new Rule("INTERNAL", 90)), Map.entry("patch", new Rule("INTERNAL", 90)),
+            Map.entry("patch-candidate", new Rule("INTERNAL", 90)),
+            Map.entry("patch-validation-error", new Rule("INTERNAL", 90)),
+            Map.entry("code-patch", new Rule("INTERNAL", 90)),
             Map.entry("evaluation", new Rule("INTERNAL", 180)), Map.entry("integration", new Rule("INTERNAL", 90)),
             Map.entry("metadata", new Rule("INTERNAL", 180)), Map.entry("tests", new Rule("INTERNAL", 90)),
+            Map.entry("quality", new Rule("INTERNAL", 180)),
+            Map.entry("security", new Rule("CONFIDENTIAL", 365)),
             Map.entry("sonar", new Rule("INTERNAL", 180)), Map.entry("sbom", new Rule("INTERNAL", 365)),
             Map.entry("trivy", new Rule("CONFIDENTIAL", 365)), Map.entry("review", new Rule("CONFIDENTIAL", 365)),
             Map.entry("approval", new Rule("CONFIDENTIAL", 365)), Map.entry("manifest", new Rule("CONFIDENTIAL", 365)));

@@ -17,6 +17,19 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class EvidenceStoreTest {
     @Test
+    void acceptsEveryEvidenceTypeEmittedByTheTemporalPipeline() {
+        EvidencePolicy policy = new EvidencePolicy();
+
+        for (String type : java.util.List.of(
+                "plan", "patch", "patch-candidate", "patch-validation-error", "code-patch",
+                "metadata", "tests", "quality", "security", "sbom", "review")) {
+            assertDoesNotThrow(() -> policy.requireWrite(type, "workflow"), type);
+        }
+        assertEquals("CONFIDENTIAL", policy.requireWrite("security", "workflow").classification());
+        assertThrows(SecurityException.class, () -> policy.requireWrite("unregistered", "workflow"));
+    }
+
+    @Test
     void verifiesDigestAndKeepsIdempotentImmutableArtifact(@TempDir Path root) throws Exception {
         EvidenceStore store = new EvidenceStore(new EvidenceProperties(root, 1024), new ObjectMapper(), new EvidencePolicy());
         byte[] content = "proof".getBytes(StandardCharsets.UTF_8);

@@ -469,7 +469,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   14 migrations Flyway avant admission, crée le namespace et ses quatre Search Attributes, active explicitement
   le Build ID local après enregistrement des sept files, puis `make test-temporal-compose` contrôle l'UI
   loopback, la readiness et les sept pollers. Validation macOS Docker Desktop exécutée avec succès.)_
-- [ ] Soumettre un ticket réel et vérifier son apparition dans Temporal UI.
+- [x] Soumettre un ticket réel et vérifier son apparition dans Temporal UI. _(Le ticket réel `AF-0006`
+  (`a0bd34b9`) a été admis par `POST /api/tasks` avec le workflow
+  `ai-factory/a0bd34b9/pipeline-1` et le run `01a0741e-48f3-7182-be6e-0d6f7dc8db44`. L'API de Temporal UI et la
+  CLI retrouvent exactement ces identifiants et les Search Attributes. `make test-temporal-ticket-ui` rend ce
+  contrôle reproductible.)_
 - [ ] Tuer puis recréer l'orchestrateur pendant chaque phase critique.
 - [ ] Tuer un worker pendant une activité avec heartbeat et vérifier la reprise.
 - [ ] Redémarrer Temporal puis PostgreSQL en préservant les volumes.

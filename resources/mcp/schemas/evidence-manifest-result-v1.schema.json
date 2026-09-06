@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/evidence-manifest-result-v1.schema.json",
+  "title": "Evidence manifest result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifest_id", "uri", "digest", "status", "classification", "retain_until", "created_at"],
+  "properties": {
+    "manifest_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "uri": { "type": "string", "pattern": "^evidence://[A-Za-z0-9_-]{1,64}/[A-Za-z0-9_-]{1,128}/manifest/[0-9a-f]{64}$", "maxLength": 1024 },
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "const": "COMPLETE" },
+    "classification": { "enum": ["INTERNAL", "CONFIDENTIAL", "RESTRICTED"] },
+    "retain_until": { "type": "string", "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

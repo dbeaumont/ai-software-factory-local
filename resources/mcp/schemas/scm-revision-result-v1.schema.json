@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/mcp/schemas/scm-revision-result-v1.schema.json",
+  "title": "SCM revision result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["repositoryId", "ref", "sourceCommit"],
+  "properties": {
+    "repositoryId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$" },
+    "ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+  }
+}
