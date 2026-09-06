@@ -338,14 +338,16 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   conserver la dernière carte valide uniquement pendant une indisponibilité courte explicitement configurée.
   _(`CachingAgentCardResolver` borne `max-age`, revalide par ETag, purge après rotation et limite le stale à la
   fenêtre d'indisponibilité configurée ; toute réponse atteignable mais invalide reste fail-closed.)_
-- [ ] **A2A-058 — Ajouter une gate de cohérence.** Faire échouer le démarrage si le catalogue, les cartes, les
-  contrats, les URLs Compose/GKE ou les permissions divergent.
+- [x] **A2A-058 — Ajouter une gate de cohérence.** Faire échouer le démarrage si le catalogue, les cartes, les
+  contrats, les URLs Compose/GKE ou les permissions divergent. _(`A2aCatalogCoherenceGate` recoupe au démarrage
+  les 14 rôles, manifests, contrats entrants/sortants, skills, permissions, délégations et origines des deux
+  profils ; toute différence lève une erreur d'admission.)_
 
 ### Critères de sortie du lot 3
 
-- [ ] Les quatorze rôles possèdent une carte signée et vérifiable.
-- [ ] Un rôle ne peut annoncer ni invoquer un skill absent du catalogue.
-- [ ] Une carte altérée, expirée ou servie depuis une mauvaise origine bloque l'admission.
+- [x] Les quatorze rôles possèdent une carte signée et vérifiable.
+- [x] Un rôle ne peut annoncer ni invoquer un skill absent du catalogue.
+- [x] Une carte altérée, expirée ou servie depuis une mauvaise origine bloque l'admission.
 
 ## 11. Lot 4 — construire le serveur A2A durable de chaque agent
 
