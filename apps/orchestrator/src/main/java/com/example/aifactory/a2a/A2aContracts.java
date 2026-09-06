@@ -133,6 +133,9 @@ public final class A2aContracts {
             protocolVersion = requireText(protocolVersion, "protocolVersion");
             cardDigest = requireText(cardDigest, "cardDigest");
             skillIds = immutableList(skillIds, "skillIds");
+            if (streaming) {
+                throw new IllegalArgumentException("streaming is not enabled for the initial A2A release");
+            }
         }
     }
 

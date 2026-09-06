@@ -146,9 +146,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-014 — Fixer le profil asynchrone.** Envoyer `SendMessage` avec `returnImmediately: true`, recevoir les
   transitions par notification push authentifiée et utiliser `GetTask` comme mécanisme de réconciliation.
   _(`SendCommand` rejette tout profil bloquant ; les ports dédiés imposent notification et réconciliation.)_
-- [ ] **A2A-015 — Réserver le streaming à l'observation interactive.** Ne pas conserver de flux SSE ouvert dans
+- [x] **A2A-015 — Réserver le streaming à l'observation interactive.** Ne pas conserver de flux SSE ouvert dans
   une activité Temporal ; `SendStreamingMessage` et `SubscribeToTask` restent désactivés tant qu'un besoin et des
-  tests de reprise ne les justifient pas.
+  tests de reprise ne les justifient pas. _(Les ports n'exposent aucune opération de streaming et une carte qui
+  tenterait de l'annoncer est rejetée par le contrat interne.)_
 - [ ] **A2A-016 — Définir les types de média.** Utiliser `application/json` pour les contrats métier structurés,
   `text/plain` uniquement pour les messages humains et des références Evidence pour les fichiers.
 - [ ] **A2A-017 — Définir une extension de corrélation.** Versionner une extension A2A

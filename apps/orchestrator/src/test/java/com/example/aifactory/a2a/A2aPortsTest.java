@@ -80,6 +80,11 @@ class A2aPortsTest {
                 URI.create("https://agent.example/.well-known/agent-card.json"),
                 URI.create("https://agent.example/a2a"),
                 "JSONRPC", "1.0", "sha256:abc", List.of("plan"), false, true).endpoint());
+        assertThrows(IllegalArgumentException.class, () -> new A2aContracts.AgentCardDescriptor(
+                "supervisor",
+                URI.create("https://agent.example/.well-known/agent-card.json"),
+                URI.create("https://agent.example/a2a"),
+                "JSONRPC", "1.0", "sha256:abc", List.of("plan"), true, true));
         assertEquals(A2aContracts.TaskState.SUBMITTED, snapshot.state());
     }
 
