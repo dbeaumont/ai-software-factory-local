@@ -83,7 +83,8 @@ final class AgentCardController {
                 "outputModes", List.of("application/json", "application/vnd.ai-factory.evidence-reference+json"),
                 "security", security.enabled() ? List.of(Map.of(
                         "mutualTLS", List.of(),
-                        "oauth2", List.of("a2a.invoke", "a2a.skill." + skill.id()))) : List.of(),
+                        "oauth2", List.of("a2a.invoke", "a2a.role." + source.role(),
+                                "a2a.skill." + skill.id()))) : List.of(),
                 "metadata", Map.of(
                         "inputContract", skill.inputContract(),
                         "inputSchema", skill.schemaUri(),

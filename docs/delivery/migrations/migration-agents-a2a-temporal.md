@@ -490,8 +490,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `resources/a2a/tls-policy-v1.json`, `scripts/generate-a2a-local-pki.sh` et
     `scripts/verify-a2a-pki.sh` imposent TLS 1.3, certificats client obligatoires, identité SPIFFE, chaîne locale,
     durée minimale et CRL ; `scripts/test-a2a-pki.sh` prouve notamment le rejet d'un certificat révoqué.
-- [ ] **A2A-102 — Ajouter OAuth2 client credentials.** Utiliser des jetons courts avec audiences A2A et scopes par
+- [x] **A2A-102 — Ajouter OAuth2 client credentials.** Utiliser des jetons courts avec audiences A2A et scopes par
   opération/skill ; ne pas placer les jetons dans les Agent Cards, payloads, logs ou historiques Temporal.
+  - Preuve : `A2aClientCredentialsTokenProvider` lit le secret monté uniquement côté worker et borne le TTL,
+    `A2aScopedOAuth2Client` demande les scopes minimaux puis efface le bearer token, et
+    `A2aSecurityDeclarationTest` vérifie audience, durée et déclaration de scopes rôle/skill.
 - [ ] **A2A-103 — Appliquer l'autorisation avant lookup.** Vérifier tenant, client, rôle et skill avant toute
   requête susceptible de révéler l'existence d'une tâche.
 - [ ] **A2A-104 — Isoler les permissions MCP.** Émettre des identités et tokens MCP par rôle, appliquer

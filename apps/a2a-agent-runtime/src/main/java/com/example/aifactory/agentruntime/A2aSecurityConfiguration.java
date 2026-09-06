@@ -8,7 +8,13 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoders;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
 /** Enforces exactly the mTLS and OAuth2 mechanisms advertised by secure cards. */
@@ -24,7 +30,30 @@ class A2aSecurityConfiguration {
 
     @Bean
     ReactiveJwtDecoder a2aJwtDecoder(A2aSecurityProperties properties) {
-        return ReactiveJwtDecoders.fromIssuerLocation(properties.oauth2Issuer().toString());
+        NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder
+                .withIssuerLocation(properties.oauth2Issuer().toString()).build();
+        decoder.setJwtValidator(a2aJwtValidator(properties));
+        return decoder;
+    }
+
+    static OAuth2TokenValidator<Jwt> a2aJwtValidator(A2aSecurityProperties properties) {
+        OAuth2TokenValidator<Jwt> issuer = JwtValidators.createDefaultWithIssuer(
+                properties.oauth2Issuer().toString());
+        OAuth2TokenValidator<Jwt> audience = jwt -> jwt.getAudience().contains(properties.audience())
+                ? OAuth2TokenValidatorResult.success()
+                : invalidToken("A2A token has an invalid audience");
+        OAuth2TokenValidator<Jwt> lifetime = jwt -> {
+            if (jwt.getIssuedAt() == null || jwt.getExpiresAt() == null
+                    || jwt.getExpiresAt().isAfter(jwt.getIssuedAt().plus(properties.maximumTokenLifetime()))) {
+                return invalidToken("A2A token lifetime exceeds the configured maximum");
+            }
+            return OAuth2TokenValidatorResult.success();
+        };
+        return new DelegatingOAuth2TokenValidator<>(issuer, audience, lifetime);
+    }
+
+    private static OAuth2TokenValidatorResult invalidToken(String description) {
+        return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", description, null));
     }
 
     @Bean
@@ -60,7 +89,9 @@ class A2aSecurityConfiguration {
             throw new IllegalStateException("Secure A2A endpoint must use HTTPS");
         }
         if (security.oauth2Issuer() == null || security.oauth2TokenUrl() == null
-                || security.audience() == null || security.audience().isBlank()) {
+                || security.audience() == null || security.audience().isBlank()
+                || security.maximumTokenLifetime() == null || security.maximumTokenLifetime().isNegative()
+                || security.maximumTokenLifetime().isZero()) {
             throw new IllegalStateException("Secure A2A runtime requires OAuth2 issuer, token URL and audience");
         }
     }

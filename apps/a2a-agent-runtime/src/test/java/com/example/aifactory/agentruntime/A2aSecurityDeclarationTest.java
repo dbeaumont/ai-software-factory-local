@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class A2aSecurityDeclarationTest {
@@ -16,7 +18,8 @@ class A2aSecurityDeclarationTest {
     void secureAdvertisementRequiresEffectiveMutualTlsAndOAuth2Configuration() {
         A2aSecurityProperties security = new A2aSecurityProperties(true, true,
                 URI.create("https://identity.internal/issuer"),
-                URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a");
+                URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a",
+                java.time.Duration.ofMinutes(5));
         AgentRuntimeProperties runtime = new AgentRuntimeProperties(
                 "developer", URI.create("https://agent-developer:8090/a2a"));
         MockEnvironment effectiveTls = effectiveTls();
@@ -44,7 +47,8 @@ class A2aSecurityDeclarationTest {
                 "developer", URI.create("https://agent-developer:8090/a2a"));
         A2aSecurityProperties security = new A2aSecurityProperties(true, true,
                 URI.create("https://identity.internal/issuer"),
-                URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a");
+                URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a",
+                java.time.Duration.ofMinutes(5));
         A2aCardIdentityProperties identity = new A2aCardIdentityProperties(
                 "ai-factory", "AI Software Factory", URI.create("https://ai-factory.local"),
                 java.time.Duration.ofMinutes(15));
@@ -59,7 +63,23 @@ class A2aSecurityDeclarationTest {
         List<Map<String, List<String>>> requirements =
                 (List<Map<String, List<String>>>) skills.getFirst().get("security");
         org.assertj.core.api.Assertions.assertThat(requirements.getFirst().get("oauth2"))
-                .containsExactly("a2a.invoke", "a2a.skill.developer.code-task-v1");
+                .containsExactly("a2a.invoke", "a2a.role.developer", "a2a.skill.developer.code-task-v1");
+    }
+
+    @Test
+    void jwtValidationRejectsWrongAudienceAndExcessiveLifetime() {
+        A2aSecurityProperties security = new A2aSecurityProperties(true, true,
+                URI.create("https://identity.internal/issuer"),
+                URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a",
+                java.time.Duration.ofMinutes(5));
+        Instant now = Instant.now();
+        org.springframework.security.oauth2.jwt.Jwt valid = token(now, now.plusSeconds(240), "ai-factory-a2a");
+        org.springframework.security.oauth2.jwt.Jwt wrongAudience = token(now, now.plusSeconds(240), "other");
+        org.springframework.security.oauth2.jwt.Jwt excessive = token(now, now.plusSeconds(301), "ai-factory-a2a");
+
+        assertThat(A2aSecurityConfiguration.a2aJwtValidator(security).validate(valid).hasErrors()).isFalse();
+        assertThat(A2aSecurityConfiguration.a2aJwtValidator(security).validate(wrongAudience).hasErrors()).isTrue();
+        assertThat(A2aSecurityConfiguration.a2aJwtValidator(security).validate(excessive).hasErrors()).isTrue();
     }
 
     private static A2aAgentCardSigner testSigner() {
@@ -85,5 +105,18 @@ class A2aSecurityDeclarationTest {
                 .withProperty("server.ssl.certificate-private-key", "/run/a2a/tls.key")
                 .withProperty("server.ssl.trust-certificate", "/run/a2a/ca.crt")
                 .withProperty("ai-factory.agent-runtime.security.crl", "/run/a2a/ca.crl");
+    }
+
+    private static org.springframework.security.oauth2.jwt.Jwt token(
+            Instant issuedAt, Instant expiresAt, String audience) {
+        return org.springframework.security.oauth2.jwt.Jwt.withTokenValue("header.payload.signature")
+                .header("alg", "RS256")
+                .issuer("https://identity.internal/issuer")
+                .subject("ai-factory-orchestrator")
+                .audience(List.of(audience))
+                .issuedAt(issuedAt)
+                .expiresAt(expiresAt)
+                .claim("scope", "a2a.invoke a2a.role.developer a2a.skill.developer.code-task-v1")
+                .build();
     }
 }

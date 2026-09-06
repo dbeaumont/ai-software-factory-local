@@ -27,7 +27,7 @@ class A2aSendMessageServiceTest {
                 "developer", URI.create("http://localhost:8090/a2a"));
         service = new A2aSendMessageService(runtime,
                 new AgentCardCatalogGenerator(new com.example.aifactory.agentcore.AgentCatalog(), mapper), mapper);
-        unsecured = new A2aSecurityProperties(false, false, null, null, null);
+        unsecured = new A2aSecurityProperties(false, false, null, null, null, java.time.Duration.ofMinutes(5));
     }
 
     @Test
