@@ -271,8 +271,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   `sourceCommit`, `repositoryId`, `delegationId`, `parentDelegationId`, `agentRole` et digests dans l'extension de
   corrélation. _(`A2aExecutionContext` sérialise et relit ces champs sous l'identifiant officiel, avec bornes,
   rôles fermés, SHA de commit complet et 1 à 32 digests SHA-256 uniques.)_
-- [ ] **A2A-046 — Respecter les identifiants A2A.** Laisser le serveur générer `Task.id` et `contextId`; persister
+- [x] **A2A-046 — Respecter les identifiants A2A.** Laisser le serveur générer `Task.id` et `contextId`; persister
   leur association avec les identifiants métier et ne jamais utiliser l'ID A2A comme clé métier principale.
+  _(V016 et `PostgresA2aTaskAssociationStore` indexent l'association par `delegation_id`, enregistrent les deux IDs
+  retournés par le serveur et refusent tout replay divergent ; aucun ID A2A n'est clé métier.)_
 - [ ] **A2A-047 — Rendre `messageId` idempotent.** Dériver un UUID stable de l'identité d'exécution, du rôle, du
   skill, de la séquence et du digest d'entrée ; retourner la même tâche pour un message identique et rejeter une
   collision avec un payload différent.
