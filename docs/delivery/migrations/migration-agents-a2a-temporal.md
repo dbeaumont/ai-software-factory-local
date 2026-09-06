@@ -576,8 +576,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `a2a-task-db` persiste sur le volume nommé `a2a-task-db-data`, possède un healthcheck PostgreSQL et
     conditionne les quatorze runtimes. Ceux-ci activent `PostgresA2aTaskStore`, dont Flyway applique V001 à V004 au
     démarrage, et l'image expose un healthcheck HTTP de liveness sans port hôte.
-- [ ] **A2A-124 — Générer les certificats locaux.** Fournir une cible d'initialisation idempotente, des fichiers
+- [x] **A2A-124 — Générer les certificats locaux.** Fournir une cible d'initialisation idempotente, des fichiers
   hors Git, une rotation simple et des valeurs `.env.example` sans secret réel.
+  - Preuve : `make a2a-pki` initialise ou vérifie les certificats hors Git ; `make a2a-pki-rotate` prépare et
+    vérifie un nouveau jeu avant échange atomique, conserve le précédent pour récupération et restaure sur échec.
+    Chaque service monte uniquement son certificat, sa clé, la CA/CRL et sa clé de signature de carte, active
+    TLS 1.3/mTLS et publie désormais son endpoint HTTPS.
 - [ ] **A2A-125 — Aligner `.env` et `.env.example`.** Regrouper URLs, version, timeouts, limites, certificats,
   cache de cartes et notifications dans le même ordre.
 - [ ] **A2A-126 — Ajouter les cibles Make.** Fournir `a2a-config`, `a2a-status`, `a2a-cards`, `a2a-smoke`,

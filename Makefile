@@ -18,13 +18,14 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init a2a-pki a2a-secrets a2a-supply-chain build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
 	@echo -e "$(YELLOW)AI Software Factory prototype - Commandes :$(NC)"
 	@echo -e "  $(CYAN)make init$(NC)       - create .env and .vault from their examples"
 	@echo -e "  $(CYAN)make a2a-pki$(NC)    - verify the generated local A2A mTLS material"
+	@echo -e "  $(CYAN)make a2a-pki-rotate$(NC) - rotate local A2A mTLS material with a recoverable backup"
 	@echo -e "  $(CYAN)make a2a-secrets$(NC) - verify owner-only, role-isolated local A2A secrets"
 	@echo -e "  $(CYAN)make a2a-supply-chain A2A_RUNTIME_IMAGE=...@sha256:...$(NC) - qualify the signed runtime image"
 	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
@@ -85,6 +86,10 @@ a2a-pki:
 	$(log-target)
 	@test -d .local/a2a-pki || ./scripts/generate-a2a-local-pki.sh .local/a2a-pki
 	@./scripts/verify-a2a-pki.sh .local/a2a-pki
+
+a2a-pki-rotate:
+	$(log-target)
+	@./scripts/rotate-a2a-local-pki.sh .local/a2a-pki
 
 a2a-secrets:
 	$(log-target)
@@ -161,6 +166,7 @@ test:
 	@echo -e "$(BLUE)Running orchestrator and MCP server tests...$(NC)"
 	./scripts/check-no-docker-socket.sh
 	./scripts/test-a2a-pki.sh
+	./scripts/test-a2a-pki-rotation.sh
 	./scripts/test-a2a-secret-rotation.sh
 	./scripts/verify-a2a-threat-model.rb
 	./scripts/test-a2a-supply-chain-policy.sh

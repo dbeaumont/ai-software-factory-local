@@ -25,6 +25,9 @@ services.each do |name, service|
   environment = service.fetch("environment")
   abort "#{name} role mismatch" unless environment.fetch("AI_FACTORY_AGENT_ROLE") == role
   abort "#{name} endpoint mismatch" unless environment.fetch("AI_FACTORY_AGENT_ENDPOINT").include?(name)
+  abort "#{name} endpoint must use HTTPS" unless environment.fetch("AI_FACTORY_AGENT_ENDPOINT").start_with?("https://")
+  abort "#{name} must enforce mTLS" unless environment.fetch("AI_FACTORY_A2A_MTLS_REQUIRED") == "true"
+  abort "#{name} must mount role PKI and card keys" unless service.fetch("volumes").length == 2
   abort "#{name} must run as UID 10001" unless service.fetch("user") == "10001:10001"
   abort "#{name} must use the durable task store" unless
     environment.fetch("AI_FACTORY_A2A_TASK_STORE_ENABLED") == "true"

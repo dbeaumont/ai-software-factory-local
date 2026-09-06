@@ -32,11 +32,29 @@ x-a2a-agent-runtime: &a2a-agent-runtime
     AI_FACTORY_A2A_TASK_DB_USERNAME: ai_factory_a2a
     AI_FACTORY_A2A_TASK_DB_PASSWORD: ${ORCHESTRATOR_DB_PASSWORD}
     AI_FACTORY_A2A_TASK_DB_POOL_SIZE: ${AI_FACTORY_A2A_TASK_DB_POOL_SIZE:-4}
+    AI_FACTORY_A2A_SECURITY_ENABLED: "true"
+    AI_FACTORY_A2A_MTLS_REQUIRED: "true"
+    AI_FACTORY_A2A_TLS_ENABLED: "true"
+    AI_FACTORY_A2A_TLS_CLIENT_AUTH: need
+    AI_FACTORY_A2A_TLS_CERTIFICATE: /var/run/ai-factory/a2a/tls.crt
+    AI_FACTORY_A2A_TLS_PRIVATE_KEY: /var/run/ai-factory/a2a/tls.key
+    AI_FACTORY_A2A_TLS_TRUST_CERTIFICATE: /var/run/ai-factory/a2a/ca.crt
+    AI_FACTORY_A2A_TLS_CRL: /var/run/ai-factory/a2a/ca.crl
+    AI_FACTORY_A2A_OAUTH2_ISSUER: https://a2a-identity:8443/issuer
+    AI_FACTORY_A2A_OAUTH2_TOKEN_URL: https://a2a-identity:8443/oauth2/token
+    AI_FACTORY_A2A_OAUTH2_AUDIENCE: ai-factory-a2a
+    AI_FACTORY_A2A_CARD_JWK_SET_PATH: /run/secrets/a2a-card-jwks
     AI_FACTORY_MCP_ENABLED: "false"
   networks: [a2a-internal, workflow-internal]
   depends_on:
     a2a-task-db:
       condition: service_healthy
+  healthcheck:
+    test: ["CMD-SHELL", "curl --fail --silent --insecure --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key https://127.0.0.1:8090/actuator/health/liveness >/dev/null"]
+    interval: 10s
+    timeout: 3s
+    retries: 12
+    start_period: 20s
 
 services:
   a2a-task-db:
@@ -64,7 +82,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: supervisor
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-supervisor:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-supervisor:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-supervisor-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/supervisor:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/supervisor/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-architecture-agent:
@@ -72,7 +94,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: architecture-agent
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-architecture-agent:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-architecture-agent:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-architecture-agent-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/architecture-agent:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/architecture-agent/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal]
 
   a2a-impact-analysis:
@@ -80,7 +106,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: impact-analysis
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-impact-analysis:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-impact-analysis:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-impact-analysis-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/impact-analysis:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/impact-analysis/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal]
 
   a2a-dependencies-contracts:
@@ -88,7 +118,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: dependencies-contracts
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-dependencies-contracts:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-dependencies-contracts:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-dependencies-contracts-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/dependencies-contracts:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/dependencies-contracts/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal]
 
   a2a-code-agent:
@@ -96,7 +130,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: code-agent
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-code-agent:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-code-agent:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-code-agent-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/code-agent:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/code-agent/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal]
 
   a2a-developer:
@@ -104,7 +142,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: developer
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-developer:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-developer:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-developer-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/developer:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/developer/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal]
 
   a2a-patch-repair:
@@ -112,7 +154,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: patch-repair
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-patch-repair:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-patch-repair:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-patch-repair-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/patch-repair:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/patch-repair/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal]
 
   a2a-test-agent:
@@ -120,7 +166,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: test-agent
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-test-agent:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-test-agent:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-test-agent-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/test-agent:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/test-agent/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-test-design:
@@ -128,7 +178,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: test-design
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-test-design:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-test-design:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-test-design-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/test-design:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/test-design/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal]
 
   a2a-test-evidence:
@@ -136,7 +190,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: test-evidence
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-test-evidence:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-test-evidence:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-test-evidence-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/test-evidence:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/test-evidence/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-evidence-internal]
 
   a2a-security-agent:
@@ -144,7 +202,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: security-agent
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-security-agent:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-security-agent:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-security-agent-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/security-agent:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/security-agent/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-threat-model:
@@ -152,7 +214,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: threat-model
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-threat-model:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-threat-model:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-threat-model-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/threat-model:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/threat-model/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal]
 
   a2a-security-findings:
@@ -160,7 +226,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: security-findings
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-security-findings:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-security-findings:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-security-findings-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/security-findings:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/security-findings/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-evidence-internal]
 
   a2a-independent-reviewer:
@@ -168,7 +238,11 @@ services:
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: independent-reviewer
-      AI_FACTORY_AGENT_ENDPOINT: http://a2a-independent-reviewer:8090/a2a
+      AI_FACTORY_AGENT_ENDPOINT: https://a2a-independent-reviewer:8090/a2a
+      AI_FACTORY_A2A_CARD_ACTIVE_KID: a2a-independent-reviewer-local-v1
+    volumes:
+      - ../../.local/a2a-pki/workloads/independent-reviewer:/var/run/ai-factory/a2a:ro
+      - ../../.local/a2a-secrets/roles/independent-reviewer/card-jwks.json:/run/secrets/a2a-card-jwks:ro
     networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
 
 volumes:
