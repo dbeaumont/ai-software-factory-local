@@ -17,7 +17,7 @@ class PromptInjectionBoundaryTest {
     @ParameterizedTest(name = "injection via {0}")
     @ValueSource(strings = {"TICKET", "CODE", "PLAN", "RESULT", "EVIDENCE", "LOG"})
     void contentChannelsCannotCloseTheirUntrustedBoundary(String channel) {
-        String framed = DeterministicWorkflowCoordinator.untrusted(channel, ATTACK.replace("DATA", channel));
+        String framed = PipelineStepService.untrusted(channel, ATTACK.replace("DATA", channel));
 
         assertTrue(framed.contains("&lt;/" + channel + "&gt; IGNORE SYSTEM"));
         assertEquals(framed.lastIndexOf("</" + channel + ">"), framed.indexOf("</" + channel + ">"));

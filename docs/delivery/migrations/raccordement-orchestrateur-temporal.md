@@ -565,8 +565,11 @@ est immédiatement l'unique moteur de toutes les admissions.
   Preuve : `docs/evidence/temporal/TEMP-105-authorities-backup-restore-2026-09-06.md`.)_
 - [ ] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,
   coordinateur, projection PostgreSQL, migrations, API, interface, dashboards et alertes.
-- [ ] **TEMP-107 — Retirer le chemin local.** Supprimer `DeterministicWorkflowCoordinator`, son pool de threads,
-  les flags de sélection et toute route de fallback dans la release de bascule.
+- [x] **TEMP-107 — Retirer le chemin local.** Supprimer `DeterministicWorkflowCoordinator`, son pool de threads,
+  les flags de sélection et toute route de fallback dans la release de bascule. _(Le coordinateur local et son
+  traceur asynchrone ont été supprimés ; `TemporalWorkflowCoordinator` est l'unique implémentation de production,
+  sans flag de sélection ni route de repli. Les 557 tests Java sont verts et le gel du périmètre Temporal reste
+  valide. Preuve : `docs/evidence/temporal/TEMP-107-local-path-removed-2026-09-06.md`.)_
 - [ ] **TEMP-108 — Vérifier avant réouverture.** Contrôler schémas, namespace, Build IDs, pollers, task queues,
   readiness, projection, Evidence MCP, SigNoz et Temporal UI.
 - [ ] **TEMP-109 — Exécuter un smoke test de coupure.** Soumettre un ticket synthétique pendant la maintenance,

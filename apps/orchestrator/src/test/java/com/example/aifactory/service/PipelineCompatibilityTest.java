@@ -4,12 +4,12 @@ import com.example.aifactory.config.AgentToolingProperties;
 import com.example.aifactory.config.AiFactoryProperties;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskState;
+import com.example.aifactory.model.TaskStatus;
 import com.example.aifactory.model.TaskView;
 import com.example.aifactory.workflow.EvidenceRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
@@ -42,7 +42,7 @@ class PipelineCompatibilityTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void localOracleRecomposesExtractedStepsAndMatchesTheFrozenVersion02OutputContract() throws Exception {
+    void extractedStepsRecomposeAndMatchTheFrozenVersion02OutputContract() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         ProcessRunner runner = mock(ProcessRunner.class);
         when(runner.run(anyList(), nullable(Path.class), any(Duration.class))).thenReturn("cloned", SOURCE_COMMIT);
@@ -78,17 +78,17 @@ class PipelineCompatibilityTest {
                     request.digest(), "COMPLETE", request.mediaType(), request.content().length,
                     "INTERNAL", Instant.parse("2030-01-01T00:00:00Z"), Instant.EPOCH);
         });
-        DeterministicWorkflowCoordinator coordinator = new DeterministicWorkflowCoordinator(
+        PipelineStepService steps = new PipelineStepService(
                 new AiFactoryProperties(null, null, "baseline-model", true, workspaces.toString(), null,
-                        null, null, null, null, null, null, null),
-                runner, context, prompts, llm, responses, sandbox, new PatchIntegrator(sandbox), assurance,
-                mock(ScmDeliveryGateway.class), new SimpleMeterRegistry(), mapper,
+                        null, null, null, null, null, null, null), runner, context, prompts, llm, responses,
+                sandbox, new PatchIntegrator(sandbox), assurance, mock(ScmDeliveryGateway.class),
+                new SimpleMeterRegistry(), mapper,
                 new AgentToolingProperties(Set.of(), "INCOMPLETE", 0, false, false, Set.of()),
                 mock(AgentContextToolHost.class), evidence);
         TaskState state = new TaskState("task-1", "AF-0001", new TaskRequest(
                 "https://example.test/repo.git", "main", "change", null));
 
-        ReflectionTestUtils.invokeMethod(coordinator, "runPipeline", state);
+        recomposePipeline(steps, state);
 
         Map<String, Object> expected;
         try (var input = Files.newInputStream(Path.of(
@@ -98,6 +98,49 @@ class PipelineCompatibilityTest {
         assertThat(expected.get("baselineCommit")).isEqualTo("45e72011a8cc2c81006a5ff7b8b3a3f725db5174");
         assertThat(snapshot(state)).isEqualTo(withoutMetadata(expected));
         verify(evidence, times(7)).store(any(EvidenceRepository.StoreRequest.class));
+    }
+
+    private static void recomposePipeline(PipelineStepService steps, TaskState state) throws Exception {
+        PipelineProjectionEvent.Applier.apply(state, steps.initializeWorkspace(state));
+        Path workspace = Path.of(state.workspace);
+        state.transition(TaskStatus.CLONING, "Cloning repository");
+        apply(state, steps.cloneSource(state, workspace, command(state, "clone", Map.of(
+                "repositoryUrl", state.request.repositoryUrl(), "branch", state.request.effectiveBranch()))));
+        steps.writeRunMetadata(workspace, state);
+        state.transition(TaskStatus.PLANNING, "Planning");
+        apply(state, steps.plan(state, workspace, command(state, "plan", Map.of(
+                "requirement", state.request.requirement()))));
+        steps.writeRunMetadata(workspace, state);
+        state.transition(TaskStatus.GENERATING_PATCH, "Generating patch");
+        apply(state, steps.generateAndRepairPatch(state, workspace, command(state, "generate-patch", Map.of(
+                "requirement", state.request.requirement(), "plan", state.plan))));
+        steps.writeRunMetadata(workspace, state);
+        state.transition(TaskStatus.APPLYING_PATCH, "Applying patch");
+        apply(state, steps.applyPatch(state, workspace, command(state, "apply-patch", Map.of(
+                "patch", state.patch))));
+        state.transition(TaskStatus.TESTING, "Testing");
+        apply(state, steps.test(state, workspace, command(state, "test", Map.of("patch", state.patch))));
+        steps.writeRunMetadata(workspace, state);
+        state.transition(TaskStatus.QUALITY_SCANNING, "Quality scanning");
+        apply(state, steps.quality(state, workspace, command(state, "quality", Map.of(
+                "testSummary", state.testSummary))));
+        state.transition(TaskStatus.SECURITY_SCANNING, "Security scanning");
+        apply(state, steps.security(state, workspace, command(state, "security", Map.of(
+                "qualitySummary", state.qualitySummary))));
+        state.transition(TaskStatus.REVIEWING, "Reviewing");
+        apply(state, steps.review(state, workspace, command(state, "review", Map.of(
+                "plan", state.plan, "patch", state.patch, "assurance", state.assuranceResults.toString()))));
+        steps.writeRunMetadata(workspace, state);
+        PipelineProjectionEvent.Applier.apply(state, steps.prepareDelivery(state));
+        state.transition(TaskStatus.WAITING_APPROVAL, "Human approval required");
+    }
+
+    private static PipelineStepContracts.Command command(TaskState state, String step, Map<String, String> inputs) {
+        return PipelineStepContracts.Command.forTask(state, step, inputs);
+    }
+
+    private static void apply(TaskState state, PipelineProjectionEvent.StepExecution execution) {
+        execution.events().forEach(event -> PipelineProjectionEvent.Applier.apply(state, event));
     }
 
     private static Map<String, Object> snapshot(TaskState state) {

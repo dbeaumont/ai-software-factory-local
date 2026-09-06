@@ -1,7 +1,6 @@
 package com.example.aifactory.workflow;
 
 import com.example.aifactory.model.TaskState;
-import com.example.aifactory.service.DeterministicWorkflowCoordinator;
 import com.example.aifactory.workflow.temporal.TemporalWorkflowCoordinator;
 import org.junit.jupiter.api.Test;
 import org.springframework.stereotype.Component;
@@ -9,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WorkflowCoordinatorTest {
     @Test
@@ -25,6 +25,8 @@ class WorkflowCoordinatorTest {
     @Test
     void exposesTemporalAsTheOnlyProductionCoordinator() {
         assertThat(TemporalWorkflowCoordinator.class.isAnnotationPresent(Component.class)).isTrue();
-        assertThat(DeterministicWorkflowCoordinator.class.isAnnotationPresent(Component.class)).isFalse();
+        assertThatThrownBy(() -> Class.forName(
+                "com.example.aifactory.service.DeterministicWorkflowCoordinator"))
+                .isInstanceOf(ClassNotFoundException.class);
     }
 }

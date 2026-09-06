@@ -22,7 +22,7 @@ class TaskServiceTest {
         String response = "Here is the patch:\n```diff\ndiff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-old\n+new\n```";
 
         assertEquals("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-old\n+new",
-                DeterministicWorkflowCoordinator.stripFence(response));
+                PipelineStepService.stripFence(response));
     }
 
     @Test
@@ -55,11 +55,11 @@ class TaskServiceTest {
 
     @Test
     void boundsLlmOutputByAgentRole() {
-        assertEquals(1_200, DeterministicWorkflowCoordinator.maxTokensFor("planner"));
-        assertEquals(1_200, DeterministicWorkflowCoordinator.maxTokensFor("developer"));
-        assertEquals(1_600, DeterministicWorkflowCoordinator.maxTokensFor("patch-repair"));
-        assertEquals(1_200, DeterministicWorkflowCoordinator.maxTokensFor("reviewer"));
-        assertEquals(1_200, DeterministicWorkflowCoordinator.maxTokensFor("unknown"));
+        assertEquals(1_200, PipelineStepService.maxTokensFor("planner"));
+        assertEquals(1_200, PipelineStepService.maxTokensFor("developer"));
+        assertEquals(1_600, PipelineStepService.maxTokensFor("patch-repair"));
+        assertEquals(1_200, PipelineStepService.maxTokensFor("reviewer"));
+        assertEquals(1_200, PipelineStepService.maxTokensFor("unknown"));
     }
 
     @Test
@@ -67,7 +67,7 @@ class TaskServiceTest {
         AtomicInteger calls = new AtomicInteger();
         AtomicInteger retries = new AtomicInteger();
 
-        String response = DeterministicWorkflowCoordinator.withSingleContractRetry(
+        String response = PipelineStepService.withSingleContractRetry(
                 () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
                 () -> calls.incrementAndGet() == 1 ? "{}" : "{\"status\":\"IMPLEMENTABLE\"}",
                 value -> value.contains("IMPLEMENTABLE"), reason -> retries.incrementAndGet());
@@ -81,7 +81,7 @@ class TaskServiceTest {
     void doesNotRetryAValidPlannerDecision() {
         AtomicInteger calls = new AtomicInteger();
 
-        String response = DeterministicWorkflowCoordinator.withSingleContractRetry(
+        String response = PipelineStepService.withSingleContractRetry(
                 () -> {
                     calls.incrementAndGet();
                     return "{\"status\":\"NEEDS_CLARIFICATION\"}";
@@ -101,7 +101,7 @@ class TaskServiceTest {
     void retriesATruncatedPlannerCompletionWithTheLargerBudget() {
         AtomicInteger retries = new AtomicInteger();
 
-        String response = DeterministicWorkflowCoordinator.withSingleContractRetry(
+        String response = PipelineStepService.withSingleContractRetry(
                 () -> {
                     throw new LlmCompletionException("length", true, "truncated");
                 }, () -> "valid", value -> true,
@@ -112,14 +112,14 @@ class TaskServiceTest {
 
         assertEquals("valid", response);
         assertEquals(1, retries.get());
-        assertEquals(2_400, DeterministicWorkflowCoordinator.retryMaxTokensFor("planner"));
+        assertEquals(2_400, PipelineStepService.retryMaxTokensFor("planner"));
     }
 
     @Test
     void retriesATruncatedPatchRepairCompletionWithTheLargerBudget() {
         AtomicInteger retries = new AtomicInteger();
 
-        String response = DeterministicWorkflowCoordinator.withSingleRetryableCompletion(
+        String response = PipelineStepService.withSingleRetryableCompletion(
                 () -> {
                     throw new LlmCompletionException("length", true, "truncated");
                 }, () -> "valid", reason -> {
@@ -129,20 +129,20 @@ class TaskServiceTest {
 
         assertEquals("valid", response);
         assertEquals(1, retries.get());
-        assertEquals(3_200, DeterministicWorkflowCoordinator.retryMaxTokensFor("patch-repair"));
+        assertEquals(3_200, PipelineStepService.retryMaxTokensFor("patch-repair"));
     }
 
     @Test
     void givesStandardAgentsTheLargerRetryBudget() {
-        assertEquals(2_400, DeterministicWorkflowCoordinator.retryMaxTokensFor("developer"));
-        assertEquals(2_400, DeterministicWorkflowCoordinator.retryMaxTokensFor("tester"));
-        assertEquals(2_400, DeterministicWorkflowCoordinator.retryMaxTokensFor("reviewer"));
+        assertEquals(2_400, PipelineStepService.retryMaxTokensFor("developer"));
+        assertEquals(2_400, PipelineStepService.retryMaxTokensFor("tester"));
+        assertEquals(2_400, PipelineStepService.retryMaxTokensFor("reviewer"));
     }
 
     @Test
     void doesNotRetryANonRetryablePatchRepairCompletion() {
         assertThrows(LlmCompletionException.class,
-                () -> DeterministicWorkflowCoordinator.withSingleRetryableCompletion(
+                () -> PipelineStepService.withSingleRetryableCompletion(
                         () -> {
                             throw new LlmCompletionException("refusal", false, "refused");
                         }, () -> "unexpected", reason -> {
@@ -152,7 +152,7 @@ class TaskServiceTest {
 
     @Test
     void doesNotRetryARefusal() {
-        assertThrows(LlmCompletionException.class, () -> DeterministicWorkflowCoordinator.withSingleContractRetry(
+        assertThrows(LlmCompletionException.class, () -> PipelineStepService.withSingleContractRetry(
                 () -> {
                     throw new LlmCompletionException("refusal", false, "refused");
                 }, () -> "unexpected", value -> true,
