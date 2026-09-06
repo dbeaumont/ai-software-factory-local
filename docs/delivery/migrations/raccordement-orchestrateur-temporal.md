@@ -489,7 +489,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   `make test-temporal-storage-restarts` empreinte une projection et un historique clos, redémarre d'abord le service
   Temporal puis `temporal-db`, et compare après chaque reprise le digest des 63 événements. Le nom et la date de
   création du volume `ai-software-factory_temporal-db-data`, le Run ID et la projection sont restés identiques.)_
-- [ ] Simuler indisponibilité MCP, LiteLLM, Gitea, SonarQube, Artifactory et Collector.
+- [x] Simuler indisponibilité MCP, LiteLLM, Gitea, SonarQube, Artifactory et Collector. _(La cible
+  `make test-temporal-dependency-outages` arrête réellement chaque service, constate son inaccessibilité depuis le
+  réseau de l'orchestrateur, vérifie que le control plane reste vivant, puis attend et sonde la récupération. Pour
+  LiteLLM, l'API expose aussi `cloudAvailable=false` ; le scénario Collector contrôle en plus la file persistante,
+  l'indisponibilité du backend SigNoz et le rejet d'un payload OTLP invalide.)_
 - [ ] Vérifier le pipeline complet : patch, tests, Sonar, Trivy, revue, approbation et une seule PR.
 - [ ] Vérifier que `docker compose down` puis `up` conserve tâches et historiques.
 
