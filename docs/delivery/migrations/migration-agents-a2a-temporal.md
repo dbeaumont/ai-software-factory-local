@@ -790,8 +790,10 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   2026-09-06 : snapshot cohérent de 22 Mio, manifeste SHA-256 vérifié et restauration isolée réussie, incluant
   désormais les 6 tables A2A, les identités signées et les 15 images de workers ; preuve :
   `docs/evidence/a2a/A2A-182-CUTOVER-BACKUP.md`.)_
-- [ ] **A2A-183 — Déployer les agents A2A.** Démarrer stockage, runtimes, Agent Cards, workers et notifications,
-  puis vérifier toutes les readyness et task queues.
+- [x] **A2A-183 — Déployer les agents A2A.** Démarrer stockage, runtimes, Agent Cards, workers et notifications,
+  puis vérifier toutes les readyness et task queues. _(Terminé le 2026-09-07 : stockage, identité et 14 runtimes
+  `healthy`, cartes signées, OAuth2/mTLS validés et 28 files workflow/activité enregistrées sous le Build ID
+  `a2a-agent-84a651a` ; preuve : `docs/evidence/a2a/A2A-183-AGENT-DEPLOYMENT.md`.)_
 - [ ] **A2A-184 — Activer la version Temporal A2A.** Déployer le nouveau type/build de workflow et vérifier la
   compatibilité des workers avant d'autoriser les admissions.
 - [ ] **A2A-185 — Couper les appels directs en une fois.** Livrer la suppression des beans/routes directes dans le
