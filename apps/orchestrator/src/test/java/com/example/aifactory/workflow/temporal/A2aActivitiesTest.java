@@ -60,6 +60,9 @@ class A2aActivitiesTest {
             @Override public java.util.Optional<Association> findByMessageId(String role, String messageId) {
                 return java.util.Optional.ofNullable(persisted.get());
             }
+            @Override public java.util.Optional<Association> findByA2aTaskId(String role, String taskId) {
+                return java.util.Optional.ofNullable(persisted.get());
+            }
         };
         A2aActivitiesImpl activities = new A2aActivitiesImpl(
                 cards, client, new A2aContractMapping(new ObjectMapper()), associations);

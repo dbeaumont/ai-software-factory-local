@@ -11,6 +11,7 @@ import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.config.DelegationPolicyProperties;
 import com.example.aifactory.config.ObservabilityContentProperties;
 import com.example.aifactory.config.TaskQueueObservabilityProperties;
+import com.example.aifactory.config.A2aNotificationProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -21,7 +22,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({AiFactoryProperties.class, McpFactoryProperties.class, McpClientProperties.class,
         ScmDeliveryClientProperties.class, AssuranceClientProperties.class, AgentToolingProperties.class,
         KillSwitchProperties.class, TemporalProperties.class, DelegationPolicyProperties.class,
-        ObservabilityContentProperties.class, TaskQueueObservabilityProperties.class})
+        ObservabilityContentProperties.class, TaskQueueObservabilityProperties.class,
+        A2aNotificationProperties.class})
 public class AiFactoryApplication {
     public static void main(String[] args) {
         SpringApplication.run(AiFactoryApplication.class, args);

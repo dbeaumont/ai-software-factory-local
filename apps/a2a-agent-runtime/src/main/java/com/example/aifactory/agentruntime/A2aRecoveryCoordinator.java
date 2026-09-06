@@ -45,7 +45,8 @@ public final class A2aRecoveryCoordinator {
             A2aTaskStore.StoredTask task = store.find(pending.taskId())
                     .orElseThrow(() -> new IllegalStateException("Notification references an absent A2A task"));
             A2aPushNotificationSender.Notification notification = new A2aPushNotificationSender.Notification(
-                    pending.taskId(), pending.contextId(), pending.sequence(), pending.state(), pending.occurredAt(),
+                    pending.role(), pending.taskId(), pending.contextId(), pending.sequence(), pending.state(),
+                    pending.occurredAt(),
                     store.artifacts(task.taskId(), task.tenantId(), task.callerSubject()));
             CompletableFuture<Void> delivery = notificationSender.send(notification).handle((ack, failure) -> {
                 if (failure == null) {

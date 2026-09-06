@@ -425,8 +425,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   corrélation serveur avant tout nouvel envoi ; ne jamais supposer que la requête n'a pas été traitée.
   _(`reconcileDispatch` consulte d'abord l'association durable, puis le serveur par `messageId`; il ne réémet que
   la commande originale avec la même identité lorsque ces deux recherches prouvent l'absence.)_
-- [ ] **A2A-083 — Recevoir les notifications.** Exposer un endpoint interne authentifié, valider tâche, contexte,
-  transition, séquence et digest, puis émettre un signal Temporal idempotent.
+- [x] **A2A-083 — Recevoir les notifications.** Exposer un endpoint interne authentifié, valider tâche, contexte,
+  transition, séquence et digest, puis émettre un signal Temporal idempotent. _(`/internal/a2a/notifications`
+  vérifie le HMAC du corps brut ; l'association et l'inbox V018 contrôlent corrélation, ordre et digest avant le
+  signal `a2aTaskUpdate`, et un rejeu exact déjà signalé devient un no-op.)_
 - [ ] **A2A-084 — Attendre sans bloquer.** Utiliser `Workflow.await` et un timer de réconciliation ; aucun
   `block()`, `blockFirst()` ou `blockLast()` ne doit être exécuté sur un thread Reactor.
 - [ ] **A2A-085 — Gérer les notifications perdues.** À expiration du timer, appeler `GetTask`, appliquer les

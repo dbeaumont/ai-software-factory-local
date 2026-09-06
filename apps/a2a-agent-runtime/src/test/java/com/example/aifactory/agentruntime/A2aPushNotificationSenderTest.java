@@ -32,7 +32,7 @@ class A2aPushNotificationSenderTest {
                 }, "0123456789abcdef0123456789abcdef".getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
         A2aPushNotificationSender.Acknowledgement acknowledgement = sender.send(
-                new A2aPushNotificationSender.Notification("task-1", "context-1", 1,
+                new A2aPushNotificationSender.Notification("developer", "task-1", "context-1", 1,
                         A2aSendMessageService.TaskState.COMPLETED, Instant.now(), List.of()))
                 .toCompletableFuture().join();
 
@@ -57,7 +57,7 @@ class A2aPushNotificationSenderTest {
                         "/mounted/secret", 2, Duration.ZERO),
                 new ObjectMapper(), (uri, body, signature) -> CompletableFuture.completedFuture(503), secret);
         assertThatThrownBy(() -> sender.send(new A2aPushNotificationSender.Notification(
-                        "task-1", "context-1", 1, A2aSendMessageService.TaskState.FAILED,
+                        "developer", "task-1", "context-1", 1, A2aSendMessageService.TaskState.FAILED,
                         Instant.now(), List.of())).toCompletableFuture().join())
                 .hasRootCauseInstanceOf(A2aPushNotificationSender.NotificationDeliveryException.class);
     }

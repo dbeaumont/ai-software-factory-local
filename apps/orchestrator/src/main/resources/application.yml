@@ -136,6 +136,11 @@ management:
         http.server.requests: true
 
 ai-factory:
+  a2a:
+    notifications:
+      enabled: ${AI_FACTORY_A2A_PUSH_RECEIVER_ENABLED:false}
+      hmac-secret-file: ${AI_FACTORY_A2A_PUSH_HMAC_SECRET_FILE:}
+      max-body-bytes: ${AI_FACTORY_A2A_PUSH_MAX_BODY_BYTES:1048576}
   observability:
     content:
       prompts: ${AI_FACTORY_OBSERVABILITY_CAPTURE_PROMPTS:false}

@@ -8,6 +8,7 @@ public interface A2aTaskAssociationStore {
                 String a2aTaskId, String a2aContextId);
     Optional<Association> findByDelegation(String delegationId);
     Optional<Association> findByMessageId(String agentRole, String messageId);
+    Optional<Association> findByA2aTaskId(String agentRole, String a2aTaskId);
 
     record Association(String delegationId, String taskId, String attemptId, String workflowId,
                        String workflowRunId, String sourceCommit, String messageId, String agentRole,

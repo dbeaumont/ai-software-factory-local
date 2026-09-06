@@ -56,6 +56,7 @@ public final class A2aPushNotificationSender {
         }
         try {
             byte[] body = mapper.writeValueAsBytes(Map.of(
+                    "agentRole", notification.agentRole(),
                     "taskId", notification.taskId(),
                     "contextId", notification.contextId(),
                     "sequence", notification.sequence(),
@@ -144,7 +145,7 @@ public final class A2aPushNotificationSender {
     }
 
     public record Notification(
-            String taskId, String contextId, long sequence, A2aSendMessageService.TaskState state,
+            String agentRole, String taskId, String contextId, long sequence, A2aSendMessageService.TaskState state,
             Instant occurredAt, List<Map<String, Object>> artifacts) {
         public Notification { artifacts = List.copyOf(artifacts); }
     }

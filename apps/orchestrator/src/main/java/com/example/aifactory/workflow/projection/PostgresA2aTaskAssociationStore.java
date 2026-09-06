@@ -52,6 +52,11 @@ public final class PostgresA2aTaskAssociationStore implements A2aTaskAssociation
         return find("message_id", messageId, agentRole);
     }
 
+    @Override
+    public Optional<Association> findByA2aTaskId(String agentRole, String a2aTaskId) {
+        return find("a2a_task_id", a2aTaskId, agentRole);
+    }
+
     private Optional<Association> find(String column, String value, String agentRole) {
         String sql = "SELECT delegation_id, task_id, attempt_id, workflow_id, workflow_run_id, source_commit, "
                         + "message_id, agent_role, agent_card_digest, a2a_task_id, a2a_context_id "
