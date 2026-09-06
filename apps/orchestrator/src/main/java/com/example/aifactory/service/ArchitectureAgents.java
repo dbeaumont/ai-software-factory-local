@@ -1,12 +1,9 @@
 package com.example.aifactory.service;
 
-import org.springframework.stereotype.Component;
-
 import java.util.Map;
 import java.util.Set;
 
 /** Host-owned entry point for the Architecture agent and its two read-only specialists. */
-@Component
 public final class ArchitectureAgents {
     private static final Map<String, String> OUTPUT_CONTRACTS = Map.of(
             "architecture-agent", "architecture-assessment-v1",

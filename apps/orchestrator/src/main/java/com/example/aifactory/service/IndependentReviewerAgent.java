@@ -1,11 +1,8 @@
 package com.example.aifactory.service;
 
-import org.springframework.stereotype.Component;
-
 import java.util.Set;
 
 /** Host-owned entry point for the final reviewer, independent from the Supervisor hierarchy. */
-@Component
 public final class IndependentReviewerAgent {
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;

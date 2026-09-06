@@ -1,6 +1,5 @@
 package com.example.aifactory.service;
 
-import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
 import java.util.LinkedHashSet;
@@ -8,7 +7,6 @@ import java.util.List;
 import java.util.Set;
 
 /** Patch Repair entry point bound to one delegation, worktree and numbered repair attempt. */
-@Component
 public final class PatchRepairAgent {
     private static final List<String> EXACT_BINDINGS = List.of(
             "repair_task_id", "task_id", "attempt_id", "node_id", "code_task_id", "source_commit",

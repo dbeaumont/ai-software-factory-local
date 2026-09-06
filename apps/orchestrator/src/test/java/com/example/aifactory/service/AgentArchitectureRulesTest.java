@@ -44,10 +44,15 @@ class AgentArchitectureRulesTest {
     }
 
     @Test
-    void temporalActivityDependsOnAgentExecutorPort() {
-        assertThat(com.example.aifactory.workflow.temporal.DurableExecutionActivitiesImpl.class
-                .getDeclaredConstructors()).allSatisfy(constructor -> assertThat(constructor.getParameterTypes())
-                .contains(AgentExecutor.class).doesNotContain(AgentRuntime.class));
+    void productionSpringGraphExcludesDirectAgentImplementations() {
+        AGENT_IMPLEMENTATIONS.forEach(implementation -> {
+            Path path = Path.of("src/main/java/com/example/aifactory/service", implementation + ".java");
+            assertThat(read(path)).as("%s must not be Spring-managed", implementation)
+                    .doesNotContain("@Component", "@Service", "@Bean");
+        });
+        String activities = read(Path.of(
+                "src/main/java/com/example/aifactory/workflow/temporal/DurableExecutionActivitiesImpl.java"));
+        assertThat(activities).doesNotContain("AgentExecutor", "invokeAgent(", "InvokeAgent");
     }
 
     private static String read(Path path) {

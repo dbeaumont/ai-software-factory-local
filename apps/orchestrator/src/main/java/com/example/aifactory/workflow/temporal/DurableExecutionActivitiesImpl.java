@@ -1,6 +1,5 @@
 package com.example.aifactory.workflow.temporal;
 
-import com.example.aifactory.service.AgentExecutor;
 import com.example.aifactory.service.McpToolInvoker;
 import com.example.aifactory.service.ExecutionTracer;
 import com.example.aifactory.workflow.EvidenceRepository;
@@ -13,43 +12,20 @@ import java.util.Map;
 /** Activity adapter registered by a worker once the corresponding execution mode is enabled. */
 @Component
 public final class DurableExecutionActivitiesImpl implements DurableExecutionActivities {
-    private final AgentExecutor agents;
     private final McpToolInvoker mcp;
     private final EvidenceRepository evidence;
     private final ExecutionTracer tracer;
 
-    public DurableExecutionActivitiesImpl(AgentExecutor agents, McpToolInvoker mcp, EvidenceRepository evidence) {
-        this(agents, mcp, evidence, ExecutionTracer.noop());
+    public DurableExecutionActivitiesImpl(McpToolInvoker mcp, EvidenceRepository evidence) {
+        this(mcp, evidence, ExecutionTracer.noop());
     }
 
     @Autowired
-    public DurableExecutionActivitiesImpl(AgentExecutor agents, McpToolInvoker mcp, EvidenceRepository evidence,
+    public DurableExecutionActivitiesImpl(McpToolInvoker mcp, EvidenceRepository evidence,
                                           ExecutionTracer tracer) {
-        this.agents = agents;
         this.mcp = mcp;
         this.evidence = evidence;
         this.tracer = tracer;
-    }
-
-    @Override
-    public AgentResult invokeAgent(AgentCall call) {
-        try {
-            return tracer.trace(ExecutionTracer.SpanKind.ACTIVITY, call.metadata().executionIdentity(),
-                    "InvokeAgent", () -> invokeAgentObserved(call));
-        } catch (RuntimeException failure) {
-            throw TemporalFailureClassifier.toApplicationFailure(failure);
-        }
-    }
-
-    private AgentResult invokeAgentObserved(AgentCall call) {
-        requireBound(call.metadata(), call.invocation().taskId(), call.invocation().attemptId(),
-                call.invocation().sourceCommit());
-        if (!call.metadata().executionIdentity().equals(call.invocation().executionIdentity())) {
-            throw new IllegalArgumentException("Agent invocation is not bound to its workflow correlation identity");
-        }
-        AgentExecutor.Result result = agents.execute(call.invocation());
-        return new AgentResult(result.document().toString(), result.promptFingerprint(),
-                result.turns(), result.tokens(), result.costMicros());
     }
 
     @Override

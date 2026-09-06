@@ -1,6 +1,5 @@
 package com.example.aifactory.workflow.temporal;
 
-import com.example.aifactory.service.AgentExecutor;
 import com.example.aifactory.service.McpToolInvoker;
 import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.ActivityInterface;
@@ -9,13 +8,10 @@ import org.mockito.ArgumentCaptor;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,7 +33,7 @@ class DurableExecutionActivitiesTest {
                 "text/plain", content.length, "INTERNAL", Instant.now(), Instant.now());
         when(evidence.store(store)).thenReturn(stored);
         DurableExecutionActivitiesImpl activities = new DurableExecutionActivitiesImpl(
-                mock(AgentExecutor.class), mcp, evidence);
+                mcp, evidence);
         DurableExecutionActivities.Metadata metadata = metadata();
 
         activities.invokeMcp(new DurableExecutionActivities.McpCall(
@@ -55,22 +51,6 @@ class DurableExecutionActivitiesTest {
                 .containsEntry("delegation_id", metadata.delegationId())
                 .containsEntry("agent_run_id", metadata.agentRunId());
         verify(evidence).store(store);
-    }
-
-    @Test
-    void requiresActivityPayloadsToRemainBoundToTheWorkflow() {
-        DurableExecutionActivitiesImpl activities = new DurableExecutionActivitiesImpl(
-                mock(AgentExecutor.class), mock(McpToolInvoker.class), mock(EvidenceRepository.class));
-        AgentExecutor.Invocation invocation = new AgentExecutor.Invocation(
-                "another-task", "attempt-1", COMMIT, "developer", "developer-v1", "patch-proposal-v1",
-                Set.of(), Set.of(), "input", new com.example.aifactory.service.AgentToolLoop.Budget(
-                1, Duration.ofSeconds(1), 10, 10));
-
-        assertThatThrownBy(() -> activities.invokeAgent(
-                new DurableExecutionActivities.AgentCall(metadata(), invocation)))
-                .isInstanceOf(io.temporal.failure.ApplicationFailure.class)
-                .extracting(failure -> ((io.temporal.failure.ApplicationFailure) failure).getType())
-                .isEqualTo("CONTRACT_ERROR");
     }
 
     @Test

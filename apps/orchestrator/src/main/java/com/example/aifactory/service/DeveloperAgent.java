@@ -1,13 +1,11 @@
 package com.example.aifactory.service;
 
-import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 /** Hierarchical Developer entry point bound to one validated code scope and one patch proposal contract. */
-@Component
 public final class DeveloperAgent {
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;

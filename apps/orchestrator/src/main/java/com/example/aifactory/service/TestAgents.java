@@ -1,12 +1,9 @@
 package com.example.aifactory.service;
 
-import org.springframework.stereotype.Component;
-
 import java.util.Map;
 import java.util.Set;
 
 /** Host-owned entry point that keeps test design separate from deterministic evidence assessment. */
-@Component
 public final class TestAgents {
     private static final Map<String, String> OUTPUT_CONTRACTS = Map.of(
             "test-agent", "test-assessment-v1",

@@ -1,12 +1,10 @@
 package com.example.aifactory.service;
 
-import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
 import java.util.Set;
 
 /** Host-owned entry point for Security coordination, threat modeling and findings analysis. */
-@Component
 public final class SecurityAgents {
     private static final Set<String> ROLES = Set.of("security-agent", "threat-model", "security-findings");
     private final AgentExecutor runtime;

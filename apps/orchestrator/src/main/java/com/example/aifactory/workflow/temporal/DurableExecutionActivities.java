@@ -1,6 +1,5 @@
 package com.example.aifactory.workflow.temporal;
 
-import com.example.aifactory.service.AgentExecutor;
 import com.example.aifactory.service.ExecutionIdentity;
 import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.ActivityInterface;
@@ -11,9 +10,6 @@ import java.util.Map;
 
 @ActivityInterface
 public interface DurableExecutionActivities {
-    @ActivityMethod(name = "InvokeAgent")
-    AgentResult invokeAgent(AgentCall call);
-
     @ActivityMethod(name = "InvokeMcpTool")
     McpResult invokeMcp(McpCall call);
 
@@ -60,10 +56,6 @@ public interface DurableExecutionActivities {
             return new ExecutionIdentity(traceId, runId, delegationId, agentRunId);
         }
     }
-
-    record AgentCall(Metadata metadata, AgentExecutor.Invocation invocation) {}
-
-    record AgentResult(String document, String promptFingerprint, int turns, int tokens, long costMicros) {}
 
     record McpCall(Metadata metadata, String server, String tool, Map<String, Object> arguments) {
         public McpCall {

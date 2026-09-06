@@ -37,9 +37,12 @@ La migration doit préserver :
   mais il ne peut pas contacter directement un autre agent pour contourner le DAG, les budgets ou les gates ; le
   workflow valide l'intention puis crée la prochaine interaction A2A. _(La frontière de décision et l'alternative
   « délégations A2A directes » rejetée sont consignées dans `ADR-A2A-001`.)_
-- [ ] **A2A-004 — Supprimer les invocations d'agents en mémoire.** Après la coupure, aucun workflow, activité ou
+- [x] **A2A-004 — Supprimer les invocations d'agents en mémoire.** Après la coupure, aucun workflow, activité ou
   service de coordination ne doit appeler directement `SupervisorAgent`, `ArchitectureAgents`, `CodeAgent`,
-  `TestAgents`, `SecurityAgents`, `IndependentReviewerAgent` ou leurs sous-agents.
+  `TestAgents`, `SecurityAgents`, `IndependentReviewerAgent` ou leurs sous-agents. _(Les implémentations directes
+  sont sorties du graphe Spring, l'activité `InvokeAgent` et la dépendance `AgentExecutor` ont été supprimées de
+  la frontière Temporal, et les règles d'architecture interdisent leur réintroduction ; preuve :
+  `docs/evidence/a2a/A2A-004-DIRECT-AGENT-INVOCATIONS.md`.)_
 - [x] **A2A-005 — Maintenir la distinction A2A/MCP.** A2A transporte messages, états et références d'artefacts
   entre agents ; MCP reste le protocole d'accès aux capacités `context`, `sandbox`, `assurance`, `evidence` et
   `scm`. _(Responsabilités et alternative MCP rejetée formalisées dans `ADR-A2A-001`.)_
@@ -248,7 +251,7 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 - [x] Le cœur d'agent est testable sans réseau, Temporal ou Spring.
 - [x] Démarrer un runtime avec un rôle ne charge aucun autre rôle.
-- [ ] L'orchestrateur compile sans implémentation concrète d'agent dans son graphe Spring.
+- [x] L'orchestrateur compile sans implémentation concrète d'agent dans son graphe Spring.
 
 ## 9. Lot 2 — définir la correspondance entre contrats métier et A2A
 

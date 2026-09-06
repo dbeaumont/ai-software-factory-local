@@ -1,14 +1,11 @@
 package com.example.aifactory.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 import java.util.Set;
 
 /** Executes one explicitly configured role and validates its final structured result. */
-@Component
 public final class AgentRuntime implements AgentExecutor {
     private final PromptService prompts;
     private final LlmGatewayClient llm;
@@ -51,7 +48,6 @@ public final class AgentRuntime implements AgentExecutor {
                 AgentActivationGuard.allowAllForTests());
     }
 
-    @Autowired
     public AgentRuntime(PromptService prompts, LlmGatewayClient llm, AgentContextToolHost toolHost,
                         MultiAgentContractValidator contracts, HierarchicalBudgetPolicy budgets,
                         TaskUsageLedger usage, OperationalKillSwitch killSwitch, ExecutionTracer tracer,

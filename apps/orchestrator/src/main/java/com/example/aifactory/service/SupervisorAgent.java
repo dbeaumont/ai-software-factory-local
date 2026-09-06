@@ -1,11 +1,8 @@
 package com.example.aifactory.service;
 
-import org.springframework.stereotype.Component;
-
 import java.util.Set;
 
 /** Host-owned entry point that constrains the Supervisor to its coordination responsibilities. */
-@Component
 public final class SupervisorAgent {
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;

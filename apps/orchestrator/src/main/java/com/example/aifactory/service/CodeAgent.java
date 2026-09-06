@@ -1,11 +1,8 @@
 package com.example.aifactory.service;
 
-import org.springframework.stereotype.Component;
-
 import java.util.Set;
 
 /** Logical Code coordinator. Worktree creation, patch application and integration remain workflow effects. */
-@Component
 public final class CodeAgent {
     private final AgentExecutor runtime;
     private final AgentCatalog catalog;
