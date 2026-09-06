@@ -550,7 +550,9 @@ est immédiatement l'unique moteur de toutes les admissions.
   fois observable, rotation de worker et cycle Compose sont verts. Preuve :
   `docs/evidence/temporal/TEMP-102-qualification-release-2026-09-06.md`.)_
 - [ ] **TEMP-103 — Obtenir l'autorisation de coupure.** Exiger les validations produit, architecture, sécurité et
-  exploitation sur la matrice de preuves complète.
+  exploitation sur la matrice de preuves complète. _(Dossier GO/NO-GO préparé dans
+  `docs/qualification/temporal/GATE-TEMP-103-CUTOVER.md` sur la release `9698fa3` ; les quatre sign-offs humains
+  restent `PENDING`, donc la coupure demeure fermée.)_
 - [ ] **TEMP-104 — Fermer toutes les admissions.** Refuser temporairement `POST /api/tasks`, afficher la maintenance
   dans l'interface et attendre la fin ou l'annulation contrôlée de chaque tâche locale active.
 - [ ] **TEMP-105 — Sauvegarder les autorités.** Sauvegarder Gitea, Evidence MCP, configuration, workspaces utiles et
