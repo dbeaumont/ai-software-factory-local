@@ -749,18 +749,21 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ### Seuils de qualification à fixer dans la gate
 
-- [ ] Zéro échec du TCK pour les capacités annoncées.
-- [ ] Zéro doublon logique ou effet externe dupliqué sur les campagnes de panne et de concurrence.
-- [ ] Zéro accès inter-tenant ou hors matrice de permissions.
-- [ ] Zéro erreur de replay Temporal sur les historiques de référence.
-- [ ] Parité fonctionnelle complète sur les fixtures existantes.
-- [ ] Régression p95 et consommation bornées par des seuils approuvés avant la coupure.
-- [ ] Tous les scénarios d'annulation et de reprise disposent de preuves exploitables.
+- [x] Zéro échec du TCK pour les capacités annoncées.
+- [x] Zéro doublon logique ou effet externe dupliqué sur les campagnes de panne et de concurrence.
+- [x] Zéro accès inter-tenant ou hors matrice de permissions.
+- [x] Zéro erreur de replay Temporal sur les historiques de référence.
+- [x] Parité fonctionnelle complète sur les fixtures existantes.
+- [x] Régression p95 et consommation bornées par des seuils approuvés avant la coupure.
+- [x] Tous les scénarios d'annulation et de reprise disposent de preuves exploitables.
 
 ## 17. Lot 10 — préparation et bascule franche
 
-- [ ] **A2A-180 — Créer la gate de cutover.** Rassembler version, commit, images, digests, SBOM, TCK, E2E,
-  sécurité, performance, replay, rollback et approbateurs.
+- [x] **A2A-180 — Créer la gate de cutover.** Rassembler version, commit, images, digests, SBOM, TCK, E2E,
+  sécurité, performance, replay, rollback et approbateurs. _(Gate créée le 2026-09-06 avec les seuils de
+  qualification au vert, les sept digests d'images, les SBOM et les preuves ; elle reste `CLOSED` jusqu'au
+  rollback qualifié, au candidat final et aux quatre approbations :
+  `docs/qualification/a2a/GATE-A2A-180-CUTOVER.md`.)_
 - [ ] **A2A-181 — Geler les admissions.** Suspendre les nouveaux tickets avant le déploiement de coupure et laisser
   terminer ou annuler proprement les exécutions incompatibles.
 - [ ] **A2A-182 — Sauvegarder les états.** Sauvegarder projections, corrélations, preuves de qualification,
