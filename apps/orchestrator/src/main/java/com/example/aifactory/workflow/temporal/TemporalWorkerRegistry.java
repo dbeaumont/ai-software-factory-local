@@ -53,7 +53,7 @@ public final class TemporalWorkerRegistry {
                 SoftwareFactoryExecutionWorkflowV1Impl.class,
                 A2aDelegationWorkflowImpl.class,
                 PatchIntegrationWorkflowImpl.class,
-                IndependentReviewWorkflowImpl.class);
+                A2aIndependentReviewWorkflowImpl.class);
         this.workers = Map.copyOf(registered);
         this.taskQueues = Map.copyOf(taskQueues);
     }

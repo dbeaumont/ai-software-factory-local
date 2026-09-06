@@ -44,7 +44,7 @@ class TemporalWorkerRegistryTest {
                 SoftwareFactoryExecutionWorkflowV1Impl.class,
                 A2aDelegationWorkflowImpl.class,
                 PatchIntegrationWorkflowImpl.class,
-                IndependentReviewWorkflowImpl.class);
+                A2aIndependentReviewWorkflowImpl.class);
         ArgumentCaptor<WorkerOptions> options = ArgumentCaptor.forClass(WorkerOptions.class);
         verify(factory, times(7)).newWorker(anyString(), options.capture());
         assertThat(options.getAllValues()).allSatisfy(value -> {
