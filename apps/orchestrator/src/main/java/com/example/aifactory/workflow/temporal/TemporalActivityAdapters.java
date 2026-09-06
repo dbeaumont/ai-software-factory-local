@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.Map;
 
@@ -11,19 +12,41 @@ public final class TemporalActivityAdapters {
 
     public TemporalActivityAdapters(PatchIntegrationActivities patchIntegration,
                                     SourceResolutionActivities sourceResolution,
-                                    PipelineExecutionActivities pipeline) {
-        registrations = Map.of(
-                "context", new Object[]{sourceResolution, pipeline},
-                "llm", new Object[]{pipeline},
-                "sandbox", new Object[]{patchIntegration, pipeline},
-                "assurance", new Object[]{pipeline},
-                "evidence", new Object[]{pipeline},
-                "scm", new Object[]{pipeline});
+                                    PipelineExecutionActivities pipeline,
+                                    ObjectProvider<A2aActivitiesImpl> a2aProvider) {
+        java.util.LinkedHashMap<String, Object[]> configured = new java.util.LinkedHashMap<>();
+        configured.put("context", new Object[]{sourceResolution, pipeline});
+        configured.put("llm", new Object[]{pipeline});
+        configured.put("sandbox", new Object[]{patchIntegration, pipeline});
+        configured.put("assurance", new Object[]{pipeline});
+        configured.put("evidence", new Object[]{pipeline});
+        configured.put("scm", new Object[]{pipeline});
+        A2aActivitiesImpl a2a = a2aProvider.getIfAvailable();
+        configured.put("workflow", a2a == null ? new Object[]{} : new Object[]{a2a});
+        registrations = Map.copyOf(configured);
+    }
+
+    TemporalActivityAdapters(PatchIntegrationActivities patchIntegration,
+                             SourceResolutionActivities sourceResolution,
+                             PipelineExecutionActivities pipeline) {
+        this(patchIntegration, sourceResolution, pipeline, new EmptyProvider<>());
     }
 
     public Object[] forWorker(String kind) {
         Object[] activities = registrations.get(kind);
         if (activities == null) throw new IllegalArgumentException("Unknown Temporal activity worker: " + kind);
         return activities.clone();
+    }
+
+    private static final class EmptyProvider<T> implements ObjectProvider<T> {
+        @Override public T getObject(Object... args) {
+            throw new org.springframework.beans.factory.NoSuchBeanDefinitionException(Object.class);
+        }
+        @Override public T getIfAvailable() { return null; }
+        @Override public T getObject() {
+            throw new org.springframework.beans.factory.NoSuchBeanDefinitionException(Object.class);
+        }
+        @Override public T getIfUnique() { return null; }
+        @Override public java.util.Iterator<T> iterator() { return java.util.Collections.emptyIterator(); }
     }
 }

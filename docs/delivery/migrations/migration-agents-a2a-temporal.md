@@ -451,8 +451,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   sérialise qu'un grant non secret lié au rôle, à l'opération, à la tâche, au contexte, à l'expiration et à un
   digest ; l'activité consomme le jeton hors bande, l'efface après l'appel, et le runtime exige le scope
   `a2a.auth-resume` tout en refusant tout credential dans le message ou son historique.)_
-- [ ] **A2A-089 — Remplacer les child workflows d'agents.** Conserver les child workflows de contrôle nécessaires
-  au DAG, mais remplacer leur exécution Java directe par les activités A2A.
+- [x] **A2A-089 — Remplacer les child workflows d'agents.** Conserver les child workflows de contrôle nécessaires
+  au DAG, mais remplacer leur exécution Java directe par les activités A2A. _(Le registre de production utilise
+  désormais `A2aDelegationWorkflowImpl` : le child vérifie la carte et le skill, construit une corrélation compacte,
+  appelle `dispatchTask`, attend signal/réconciliation, puis valide l'artefact final ; l'ancienne implémentation
+  reste uniquement comme type de compatibilité pour les historiques et tests antérieurs.)_
 - [ ] **A2A-090 — Maintenir la revue indépendante.** Adresser `independent-reviewer` par A2A avec les mêmes digests
   et sans accès aux raisonnements privés ou sorties non validées des autres agents.
 - [ ] **A2A-091 — Versionner le déterminisme.** Introduire un nouveau type de workflow ou Worker Versioning pour

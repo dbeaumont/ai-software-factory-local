@@ -51,7 +51,7 @@ public final class TemporalWorkerRegistry {
                 factory.newWorker(taskQueues.get(kind), options)));
         registered.get("workflow").registerWorkflowImplementationTypes(
                 SoftwareFactoryExecutionWorkflowV1Impl.class,
-                DelegationWorkflowImpl.class,
+                A2aDelegationWorkflowImpl.class,
                 PatchIntegrationWorkflowImpl.class,
                 IndependentReviewWorkflowImpl.class);
         this.workers = Map.copyOf(registered);

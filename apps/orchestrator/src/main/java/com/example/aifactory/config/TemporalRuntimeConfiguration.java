@@ -59,8 +59,9 @@ public class TemporalRuntimeConfiguration {
                                                   TemporalActivityAdapters activities) {
         TemporalWorkerRegistry registry = new TemporalWorkerRegistry(factory, properties.taskQueues(),
                 properties.deploymentName(), properties.buildId(), properties.capacity());
-        for (String kind : java.util.List.of("context", "llm", "sandbox", "assurance", "evidence", "scm")) {
-            registry.worker(kind).registerActivitiesImplementations(activities.forWorker(kind));
+        for (String kind : java.util.List.of("workflow", "context", "llm", "sandbox", "assurance", "evidence", "scm")) {
+            Object[] implementations = activities.forWorker(kind);
+            if (implementations.length > 0) registry.worker(kind).registerActivitiesImplementations(implementations);
         }
         return registry;
     }

@@ -2,6 +2,7 @@ package com.example.aifactory.workflow.temporal;
 
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
+import io.temporal.workflow.SignalMethod;
 
 import java.util.Set;
 
@@ -9,6 +10,9 @@ import java.util.Set;
 public interface DelegationWorkflow {
     @WorkflowMethod(name = "DelegationWorkflow")
     Result run(Request request);
+
+    @SignalMethod(name = "a2aTaskUpdate")
+    default void a2aTaskUpdate(com.example.aifactory.a2a.A2aContracts.Notification notification) { }
 
     record Request(String taskId, String attemptId, String nodeId, String parentNodeId,
                    String role, String sourceCommit, String objectiveDigest, int priority,
