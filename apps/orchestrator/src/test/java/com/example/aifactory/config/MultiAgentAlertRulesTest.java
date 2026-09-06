@@ -18,6 +18,11 @@ class MultiAgentAlertRulesTest {
             "AiFactoryTaskQueueBacklog", "AiFactorySandboxHeartbeatInvalid",
             "AiFactorySandboxExecutionFailures", "AiFactorySandboxMaintenanceFailure",
             "AiFactoryAgentContractError", "AiFactoryEvidenceAltered");
+    private static final Set<String> REQUIRED_A2A_ALERTS = Set.of(
+            "AiFactoryA2aPollerAbsent", "AiFactoryA2aAgentNotReady", "AiFactoryA2aCardInvalid",
+            "AiFactoryA2aFailureRate", "AiFactoryA2aBacklog", "AiFactoryA2aTaskStuck",
+            "AiFactoryA2aNotificationLate", "AiFactoryA2aIdempotencyCollision",
+            "AiFactoryA2aStateDivergence");
 
     @Test
     void definesActionableSigNozAndTemporalAlerts() throws Exception {
@@ -27,7 +32,7 @@ class MultiAgentAlertRulesTest {
 
         Set<String> names = StreamSupport.stream(rules.spliterator(), false)
                 .map(rule -> rule.path("alert").asText()).collect(Collectors.toSet());
-        assertThat(names).containsAll(REQUIRED_ALERTS).hasSize(21);
+        assertThat(names).containsAll(REQUIRED_ALERTS).containsAll(REQUIRED_A2A_ALERTS).hasSize(30);
         assertThat(names).contains("AiFactoryCollectorExportFailures", "AiFactoryCollectorQueueSaturation",
                 "AiFactoryTelemetryIngestionAbsent", "AiFactoryCollectorRestart",
                 "AiFactoryCollectorMemoryPressure", "AiFactoryCollectorReceiverRefused",

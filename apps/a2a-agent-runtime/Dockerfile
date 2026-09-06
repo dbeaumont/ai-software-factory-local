@@ -33,7 +33,7 @@ RUN --mount=type=secret,id=artifactory_token,required=false \
       mvn -B -pl apps/a2a-agent-runtime -am package; \
     fi
 
-FROM eclipse-temurin:25-jre@sha256:f9e65324a37f28209ce7dd0e5149a7aa954520ed936fb87813cf6ded2400a112
+FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682
 ARG VCS_REF=unknown
 ARG BUILD_CREATED=unknown
 ARG SOURCE_REPOSITORY=https://github.com/dbeaumont/ai-software-factory-local
@@ -43,12 +43,12 @@ LABEL org.opencontainers.image.title="AI Factory A2A Agent Runtime" \
       org.opencontainers.image.created="${BUILD_CREATED}" \
       org.opencontainers.image.source="${SOURCE_REPOSITORY}" \
       org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.base.name="eclipse-temurin:25-jre" \
-      org.opencontainers.image.base.digest="sha256:f9e65324a37f28209ce7dd0e5149a7aa954520ed936fb87813cf6ded2400a112"
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-RUN useradd --system --uid 10001 --create-home agent-runtime
+      org.opencontainers.image.base.name="eclipse-temurin:25-jre-alpine" \
+      org.opencontainers.image.base.digest="sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682"
+RUN apk upgrade --no-cache \
+    && apk add --no-cache curl \
+    && addgroup -S -g 10001 agent-runtime \
+    && adduser -S -D -H -u 10001 -G agent-runtime agent-runtime
 WORKDIR /app
 COPY --from=build /src/apps/a2a-agent-runtime/target/a2a-agent-runtime.jar /app/app.jar
 USER 10001

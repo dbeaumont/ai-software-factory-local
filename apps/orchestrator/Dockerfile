@@ -71,11 +71,11 @@ RUN --mount=type=secret,id=artifactory_token \
 # ─────────────────────────────────────────────────────────────────────────────
 # Runtime stage
 # ─────────────────────────────────────────────────────────────────────────────
-FROM eclipse-temurin:25-jre@sha256:f9e65324a37f28209ce7dd0e5149a7aa954520ed936fb87813cf6ded2400a112
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends git curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10000 --create-home orchestrator
+FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682
+RUN apk upgrade --no-cache \
+    && apk add --no-cache git curl ca-certificates \
+    && addgroup -S -g 10000 orchestrator \
+    && adduser -S -D -H -u 10000 -G orchestrator orchestrator
 WORKDIR /app
 COPY --from=build /src/target/ai-factory-orchestrator.jar app.jar
 USER 10000

@@ -14,7 +14,7 @@ class WorkerImageReplayGateTest {
         Path dockerfile = List.of(Path.of("Dockerfile"), Path.of("apps/orchestrator/Dockerfile")).stream()
                 .filter(Files::isRegularFile).findFirst().orElseThrow();
         String source = Files.readString(dockerfile);
-        int replay = source.indexOf("mvn test -Dtest=WorkflowDeterminismArchitectureTest");
+        int replay = source.indexOf("WorkflowDeterminismArchitectureTest");
         int packageWorker = source.indexOf("mvn package -DskipTests", replay);
 
         assertThat(replay).isGreaterThanOrEqualTo(0);

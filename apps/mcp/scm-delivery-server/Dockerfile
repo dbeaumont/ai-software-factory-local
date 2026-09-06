@@ -12,11 +12,11 @@ RUN --mount=type=secret,id=artifactory_token \
       mvn -B -DskipTests package; \
     fi
 
-FROM eclipse-temurin:25-jre@sha256:f9e65324a37f28209ce7dd0e5149a7aa954520ed936fb87813cf6ded2400a112
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates git \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10003 --create-home scm-mcp \
+FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682
+RUN apk upgrade --no-cache \
+    && apk add --no-cache curl ca-certificates git \
+    && addgroup -S -g 10003 scm-mcp \
+    && adduser -S -D -H -u 10003 -G scm-mcp scm-mcp \
     && mkdir -p /var/lib/ai-factory/scm \
     && chown -R 10003:10003 /var/lib/ai-factory/scm
 WORKDIR /app

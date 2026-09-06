@@ -741,8 +741,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   digest JCS, et 59 tests Java passent sans échec ; preuve : `docs/evidence/a2a/A2A-170-E2E-PARITY.md`.)_
 - [ ] **A2A-171 — Tests de non-régression pipeline.** Vérifier que le mode `PIPELINE`, s'il reste supporté comme
   mode métier, ne réintroduit aucun appel direct d'agent ni sélection de transport.
-- [ ] **A2A-172 — Audit de dépendances.** Exécuter tests, analyse statique, scan de vulnérabilités, SBOM et
-  vérification de licences sur tous les modules et images.
+- [x] **A2A-172 — Audit de dépendances.** Exécuter tests, analyse statique, scan de vulnérabilités, SBOM et
+  vérification de licences sur tous les modules et images. _(Terminé le 2026-09-06 : 801 tests verts, 10
+  manifestes et 7 images sans vulnérabilité HIGH/CRITICAL ni secret, SBOM CycloneDX/SPDX générés et 1 287
+  dépendances déclarées sans licence inconnue ; les runtimes Java utilisent désormais Temurin 25 Alpine épinglé
+  et corrigé ; preuve : `docs/evidence/a2a/A2A-172-DEPENDENCY-AUDIT.md`.)_
 
 ### Seuils de qualification à fixer dans la gate
 

@@ -9,10 +9,23 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class OpenTelemetryParityTest {
+    private static final Set<String> PLATFORM_ALERTS_ADDED_AFTER_THE_PROMETHEUS_BASELINE = Set.of(
+            "AiFactoryCollectorExportFailures", "AiFactoryCollectorQueueSaturation",
+            "AiFactoryTelemetryIngestionAbsent", "AiFactoryCollectorRestart",
+            "AiFactoryCollectorMemoryPressure", "AiFactoryCollectorReceiverRefused",
+            "AiFactoryTemporalPollerAbsent", "AiFactoryTemporalBacklogSustained",
+            "AiFactoryTemporalNonDeterministic", "AiFactoryTemporalProjectionLag",
+            "AiFactoryTemporalActivityStuck", "AiFactoryTemporalContinueAsNewFailure");
+    private static final Set<String> A2A_ALERTS = Set.of(
+            "AiFactoryA2aPollerAbsent", "AiFactoryA2aAgentNotReady", "AiFactoryA2aCardInvalid",
+            "AiFactoryA2aFailureRate", "AiFactoryA2aBacklog", "AiFactoryA2aTaskStuck",
+            "AiFactoryA2aNotificationLate", "AiFactoryA2aIdempotencyCollision",
+            "AiFactoryA2aStateDivergence");
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
@@ -25,7 +38,10 @@ class OpenTelemetryParityTest {
         Map<String, JsonNode> targetByName = new HashMap<>();
         target.forEach(rule -> targetByName.put(rule.path("alert").asText(), rule));
 
-        assertThat(targetByName).hasSize(21);
+        assertThat(targetByName).hasSize(baseline.path("alertRules").size()
+                + PLATFORM_ALERTS_ADDED_AFTER_THE_PROMETHEUS_BASELINE.size() + A2A_ALERTS.size());
+        assertThat(targetByName.keySet()).containsAll(PLATFORM_ALERTS_ADDED_AFTER_THE_PROMETHEUS_BASELINE)
+                .containsAll(A2A_ALERTS);
         for (JsonNode source : baseline.path("alertRules")) {
             JsonNode rule = targetByName.get(source.path("name").asText());
             assertThat(rule).isNotNull();
@@ -72,8 +88,10 @@ class OpenTelemetryParityTest {
             assertThat(targetQueryCount)
                     .isGreaterThanOrEqualTo(source.path("expressions").size());
         }
-        assertThat(Files.list(dashboards).filter(Files::isRegularFile).count()).isEqualTo(7);
+        assertThat(Files.list(dashboards).filter(Files::isRegularFile).count())
+                .isEqualTo(baseline.path("dashboards").size() + 2L);
         assertThat(dashboards.resolve("collector.json")).exists();
+        assertThat(dashboards.resolve("a2a.json")).exists();
     }
 
     private static Duration parseDuration(String value) {

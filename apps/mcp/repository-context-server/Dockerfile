@@ -12,11 +12,11 @@ RUN --mount=type=secret,id=artifactory_token \
       mvn -B -DskipTests package; \
     fi
 
-FROM eclipse-temurin:25-jre@sha256:f9e65324a37f28209ce7dd0e5149a7aa954520ed936fb87813cf6ded2400a112
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates git \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10001 --create-home context-mcp \
+FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682
+RUN apk upgrade --no-cache \
+    && apk add --no-cache curl ca-certificates git \
+    && addgroup -S -g 10001 context-mcp \
+    && adduser -S -D -H -u 10001 -G context-mcp context-mcp \
     && mkdir -p /var/lib/ai-factory/context-registry \
     && chown -R 10001:10001 /var/lib/ai-factory/context-registry
 WORKDIR /app
