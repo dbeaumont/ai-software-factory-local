@@ -166,8 +166,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 7. Lot 0 — inventaire et baseline avant migration
 
-- [ ] **A2A-020 — Cartographier tous les appels directs.** Identifier chaque appel d'un coordinateur ou agent à
-  un autre agent, son contrat d'entrée/sortie, son timeout, ses erreurs et sa couverture de tests.
+- [x] **A2A-020 — Cartographier tous les appels directs.** Identifier chaque appel d'un coordinateur ou agent à
+  un autre agent, son contrat d'entrée/sortie, son timeout, ses erreurs et sa couverture de tests. _(Inventaire
+  actif, latent et test-only, mappings A2A, timeouts, erreurs et points de suppression consignés dans
+  `docs/qualification/a2a/A2A-DIRECT-CALL-INVENTORY.md`.)_
 - [ ] **A2A-021 — Geler une baseline fonctionnelle.** Capturer les verdicts, artefacts, ordres de délégation,
   consommations et chronologies des fixtures `short-path`, `multi-domain`, `adversarial` et `recovery`.
 - [ ] **A2A-022 — Inventorier les états Temporal.** Associer chaque child workflow et activité d'agent actuel à
