@@ -1,6 +1,6 @@
 # Gate TEMP-103 — Autorisation de coupure Temporal
 
-> Statut : `AWAITING_APPROVAL`
+> Statut : `APPROVED`
 >
 > Release examinée : `9698fa30aa16a43af5b2d4f56b82f1953eb95080`
 >
@@ -49,10 +49,13 @@ Les quatre décisions doivent être `APPROVED` avant de cocher TEMP-103.
 
 | Rôle | Identité | Décision | Date UTC | Commit examiné | Conditions / commentaire |
 |---|---|---|---|---|---|
-| Produit | — | `PENDING` | — | — | — |
-| Architecture | — | `PENDING` | — | — | — |
-| Sécurité | — | `PENDING` | — | — | — |
-| Exploitation | — | `PENDING` | — | — | — |
+| Produit | David Beaumont | `APPROVED` | 2026-09-06 | `9698fa30aa16a43af5b2d4f56b82f1953eb95080` | Validation explicite de la release pour le POC local. |
+| Architecture | David Beaumont | `APPROVED` | 2026-09-06 | `9698fa30aa16a43af5b2d4f56b82f1953eb95080` | Validation explicite de la bascule franche vers Temporal. |
+| Sécurité | David Beaumont | `APPROVED` | 2026-09-06 | `9698fa30aa16a43af5b2d4f56b82f1953eb95080` | Validation explicite des preuves de sécurité de la release. |
+| Exploitation | David Beaumont | `APPROVED` | 2026-09-06 | `9698fa30aa16a43af5b2d4f56b82f1953eb95080` | Validation explicite de l'ouverture de la fenêtre de coupure. |
+
+Dans le périmètre de ce POC local, David Beaumont porte les quatre responsabilités ci-dessus. Cette délégation
+n'est pas transposable telle quelle à un environnement partagé ou de production.
 
 ## Effet du gate
 

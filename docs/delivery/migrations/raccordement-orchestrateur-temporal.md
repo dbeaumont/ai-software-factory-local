@@ -549,10 +549,10 @@ est immédiatement l'unique moteur de toutes les admissions.
   huit phases de redémarrage, heartbeat, stockage, dépendances, sauvegarde/restauration, livraison exactement une
   fois observable, rotation de worker et cycle Compose sont verts. Preuve :
   `docs/evidence/temporal/TEMP-102-qualification-release-2026-09-06.md`.)_
-- [ ] **TEMP-103 — Obtenir l'autorisation de coupure.** Exiger les validations produit, architecture, sécurité et
-  exploitation sur la matrice de preuves complète. _(Dossier GO/NO-GO préparé dans
-  `docs/qualification/temporal/GATE-TEMP-103-CUTOVER.md` sur la release `9698fa3` ; les quatre sign-offs humains
-  restent `PENDING`, donc la coupure demeure fermée.)_
+- [x] **TEMP-103 — Obtenir l'autorisation de coupure.** Exiger les validations produit, architecture, sécurité et
+  exploitation sur la matrice de preuves complète. _(David Beaumont, autorité unique du POC local, a approuvé les
+  quatre responsabilités le 2026-09-06 sur la release exacte `9698fa30aa16a43af5b2d4f56b82f1953eb95080`.
+  Le gate signé est archivé dans `docs/qualification/temporal/GATE-TEMP-103-CUTOVER.md`.)_
 - [ ] **TEMP-104 — Fermer toutes les admissions.** Refuser temporairement `POST /api/tasks`, afficher la maintenance
   dans l'interface et attendre la fin ou l'annulation contrôlée de chaque tâche locale active.
 - [ ] **TEMP-105 — Sauvegarder les autorités.** Sauvegarder Gitea, Evidence MCP, configuration, workspaces utiles et
