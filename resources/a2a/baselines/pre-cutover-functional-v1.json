@@ -1,0 +1,134 @@
+{
+  "schema_version": "1",
+  "baseline_id": "a2a-pre-cutover-functional-v1",
+  "frozen_at": "2026-09-06T13:38:00+02:00",
+  "source_commit": "156b4c485a19850afabd5c84fd6ad04c8cf9a34f",
+  "purpose": "Reference fonctionnelle avant remplacement des invocations directes par A2A",
+  "corpora": [
+    {
+      "name": "short-path",
+      "path": "resources/multiagents/evaluations/short-path-cases-v1.json",
+      "sha256": "aa047f8e9f3f6077ff773781e48cfa2f8cf2835835ae06a0fdc0a808fa25e2ca",
+      "cases": 8,
+      "expected_verdicts": {
+        "SHORT_CODE_PATH": 8
+      },
+      "delegation_order": [
+        "supervisor",
+        "developer",
+        "independent-reviewer"
+      ],
+      "forbidden_roles": [
+        "architecture-agent",
+        "security-agent"
+      ]
+    },
+    {
+      "name": "multi-domain",
+      "path": "resources/multiagents/evaluations/multi-domain-cases-v1.json",
+      "sha256": "24f8f9b3a8a163370a46d8b88843788de5a68eaf85a3b4ef6ee61d54a9c51006",
+      "cases": 12,
+      "expected_verdicts": {
+        "HIERARCHICAL_PATH": 10,
+        "HUMAN_TRIAGE": 2
+      },
+      "delegation_order": [
+        "architecture-agent",
+        "code-agent",
+        "test-agent",
+        "security-agent",
+        "independent-reviewer"
+      ]
+    },
+    {
+      "name": "adversarial",
+      "path": "resources/multiagents/evaluations/adversarial-cases-v1.json",
+      "sha256": "c3208806402826781c9df90d90c9510202bf08068adabdd19fecda583ebe1390",
+      "cases": 8,
+      "expected_verdicts": {
+        "DENY": 7,
+        "SERIALIZE_OR_REPLAN": 1
+      },
+      "external_effects": 0
+    },
+    {
+      "name": "recovery",
+      "path": "resources/multiagents/evaluations/recovery-cases-v1.json",
+      "sha256": "fdf16945914b1f840a42399c63338624d4fb3e863664313d9b4f345c34705737",
+      "cases": 8,
+      "expected_verdicts": {
+        "RECOVERED_WITHOUT_DUPLICATE_EFFECT": 8
+      },
+      "failure_sequence": [
+        "LLM_WORKER_RESTART",
+        "TEMPORAL_UNAVAILABLE",
+        "MCP_NETWORK_PARTITION",
+        "SANDBOX_WORKER_RESTART",
+        "EVIDENCE_SERVER_RESTART",
+        "ORCHESTRATOR_RESTART",
+        "LATE_ACTIVITY_RESPONSE",
+        "DELIVERY_ACK_LOSS"
+      ]
+    }
+  ],
+  "artifacts": {
+    "output_contract": {
+      "path": "resources/multiagents/baselines/pipeline-v1-output-contract.yaml",
+      "sha256": "8f217bfaa5d9703b049cecf5b401dfcd1e262270dfe45869f63e985a0081f143",
+      "required_paths": [
+        ".ai-factory/run-metadata.json",
+        ".ai-factory/sbom.cdx.json",
+        ".ai-factory/test.txt",
+        ".ai-plan.md",
+        ".ai-review.md",
+        "changes.patch"
+      ]
+    },
+    "reference_campaign": {
+      "path": "docs/evidence/mcp/baselines/MCP-agent-ab-20260902-01-baseline.jsonl",
+      "sha256": "47ea3ebd6220f18fc5570f936da89631765b0b27457ea847bfde600e743d3237"
+    }
+  },
+  "chronology": {
+    "pipeline_manifest": {
+      "path": "resources/multiagents/baselines/pipeline-v1.yaml",
+      "sha256": "3974f63c20a19156dba556371ecd2a6da91c0461ba9f6110d194fc1eaf322d0b"
+    },
+    "terminal_contract": "WAITING_APPROVAL",
+    "ordered_transitions": [
+      "CLONING",
+      "PLANNING",
+      "GENERATING_PATCH",
+      "APPLYING_PATCH",
+      "TESTING",
+      "QUALITY_SCANNING",
+      "SECURITY_SCANNING",
+      "REVIEWING",
+      "WAITING_APPROVAL"
+    ]
+  },
+  "consumption": {
+    "metrics": {
+      "path": "resources/multiagents/baselines/pipeline-v1-metrics.json",
+      "sha256": "e438422ef9e1d7922c1a6caae14b07d589598579f138970deb49f4eb11c7e52d"
+    },
+    "sample_cases": 20,
+    "tokens_total": 134365,
+    "tokens_average": 6718.25,
+    "duration_millis_total": 543041,
+    "duration_millis_average": 27152.05,
+    "cost_interpretation": "UNAVAILABLE_NOT_ZERO"
+  },
+  "qualification": {
+    "pipeline_verifier": "ruby scripts/verify-pipeline-baseline.rb",
+    "a2a_baseline_verifier": "ruby scripts/verify-a2a-functional-baseline.rb",
+    "targeted_test_count": 43,
+    "targeted_test_failures": 0,
+    "targeted_test_errors": 0
+  },
+  "reproducibility": {
+    "semantic_results_only": true,
+    "llm_output_bitwise_reproducible": false,
+    "note": "Les corpus, verdicts, ordres, contrats, preuves et agrégats sont figés par digest ; les textes LLM ne sont pas comparés bit à bit."
+  }
+}

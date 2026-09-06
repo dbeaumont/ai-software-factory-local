@@ -170,8 +170,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   un autre agent, son contrat d'entrée/sortie, son timeout, ses erreurs et sa couverture de tests. _(Inventaire
   actif, latent et test-only, mappings A2A, timeouts, erreurs et points de suppression consignés dans
   `docs/qualification/a2a/A2A-DIRECT-CALL-INVENTORY.md`.)_
-- [ ] **A2A-021 — Geler une baseline fonctionnelle.** Capturer les verdicts, artefacts, ordres de délégation,
+- [x] **A2A-021 — Geler une baseline fonctionnelle.** Capturer les verdicts, artefacts, ordres de délégation,
   consommations et chronologies des fixtures `short-path`, `multi-domain`, `adversarial` et `recovery`.
+  _(Manifeste digesté de 36 cas, artefacts, chronologie et consommations ajouté sous `resources/a2a/baselines` ;
+  preuve et commandes reproductibles dans `docs/evidence/a2a/A2A-021-FUNCTIONAL-BASELINE.md`, avec 43 tests verts.)_
 - [ ] **A2A-022 — Inventorier les états Temporal.** Associer chaque child workflow et activité d'agent actuel à
   la future interaction A2A sans modifier les règles métier.
 - [ ] **A2A-023 — Inventorier les contrats.** Recenser les schémas `delegation-plan-v1`, `specialist-task-v1`,
