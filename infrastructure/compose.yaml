@@ -247,7 +247,7 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
-    networks: [mcp-internal]
+    networks: [mcp-internal, mcp-context-internal]
 
   # Unprivileged controller dispatching fixed profiles to static local runners; it never controls Docker.
   sandbox-execution-mcp:
@@ -515,7 +515,7 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
-    networks: [mcp-internal]
+    networks: [mcp-internal, mcp-evidence-internal]
 
   # The only component shared by untrusted jobs and an egress-capable network.
   # Squid denies every destination not listed in its immutable configuration.
@@ -689,7 +689,7 @@ services:
         condition: service_healthy
       orchestrator-db:
         condition: service_healthy
-    networks: [factory, mcp-internal, workflow-internal, a2a-internal]
+    networks: [factory, mcp-internal, mcp-context-internal, mcp-evidence-internal, workflow-internal, a2a-internal]
 
   # Local cutover job: makes the fully registered worker Build ID current only after readiness succeeds.
   temporal-worker-activation:
@@ -866,7 +866,7 @@ services:
         limits: { cpus: "1.0", memory: 512m }
         reservations: { cpus: "0.10", memory: 128m }
     restart: unless-stopped
-    networks: [factory, mcp-internal, workflow-internal, ai-factory-signoz-network]
+    networks: [factory, mcp-internal, mcp-context-internal, mcp-evidence-internal, workflow-internal, ai-factory-signoz-network]
 
   # Local-only destination proving that alert rules are routed without contacting an external system.
   alert-sink:
@@ -932,6 +932,14 @@ networks:
   # MCP read services have no direct external egress; only the orchestrator and observability join this segment.
   mcp-internal:
     name: ai-factory-mcp-internal
+    internal: true
+  # Agents with context tools join only this server-specific segment.
+  mcp-context-internal:
+    name: ai-factory-mcp-context-internal
+    internal: true
+  # Agents with Evidence read tools join only this server-specific segment.
+  mcp-evidence-internal:
+    name: ai-factory-mcp-evidence-internal
     internal: true
   # Local sandbox control channel; runners expose no host ports and cannot reach the public network through it.
   sandbox-control:

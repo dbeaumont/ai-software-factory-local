@@ -566,8 +566,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : le réseau Compose `ai-factory-a2a-internal` est déclaré `internal` et ne compte que l'orchestrateur et
     les quatorze runtimes ; aucun service agent ne déclare de port hôte. `verify-a2a-compose-network.rb` contrôle
     ces invariants sur le modèle Compose entièrement résolu.
-- [ ] **A2A-122 — Conserver les réseaux MCP minimaux.** Chaque agent rejoint seulement les réseaux des MCP qu'il
+- [x] **A2A-122 — Conserver les réseaux MCP minimaux.** Chaque agent rejoint seulement les réseaux des MCP qu'il
   peut utiliser ; l'orchestrateur conserve les capacités à effet qui lui appartiennent.
+  - Preuve : Compose sépare `mcp-context-internal` et `mcp-evidence-internal` ; chaque rôle rejoint exactement les
+    segments correspondant aux namespaces d'outils de son catalogue, tandis que les MCP à effet restent sur le
+    segment réservé à l'orchestrateur. `verify-a2a-mcp-networks.rb` contrôle la matrice complète.
 - [ ] **A2A-123 — Ajouter le stockage local durable.** Fournir la base/projection de tâches A2A et ses migrations,
   healthchecks et volumes nommés compatibles Docker Desktop.
 - [ ] **A2A-124 — Générer les certificats locaux.** Fournir une cible d'initialisation idempotente, des fichiers
