@@ -150,8 +150,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   une activité Temporal ; `SendStreamingMessage` et `SubscribeToTask` restent désactivés tant qu'un besoin et des
   tests de reprise ne les justifient pas. _(Les ports n'exposent aucune opération de streaming et une carte qui
   tenterait de l'annoncer est rejetée par le contrat interne.)_
-- [ ] **A2A-016 — Définir les types de média.** Utiliser `application/json` pour les contrats métier structurés,
-  `text/plain` uniquement pour les messages humains et des références Evidence pour les fichiers.
+- [x] **A2A-016 — Définir les types de média.** Utiliser `application/json` pour les contrats métier structurés,
+  `text/plain` uniquement pour les messages humains et des références Evidence pour les fichiers. _(Allow-list
+  fermée dans `A2aMediaTypes`; `A2aContracts.Part` contrôle la cohérence entre media type et contenu.)_
 - [ ] **A2A-017 — Définir une extension de corrélation.** Versionner une extension A2A
   `https://ai-factory.local/extensions/execution-context/v1` portant uniquement les identifiants et digests
   nécessaires, sans secret ni contenu métier volumineux.

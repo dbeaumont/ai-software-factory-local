@@ -64,6 +64,15 @@ class A2aPortsTest {
         assertThrows(IllegalArgumentException.class,
                 () -> new A2aContracts.Part("application/json", null, Map.of(), null));
         assertThrows(IllegalArgumentException.class,
+                () -> new A2aContracts.Part("application/octet-stream", "raw", Map.of(), null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new A2aContracts.Part("text/plain", "text", Map.of("unexpected", true), null));
+        assertEquals(Map.of("contract", "plan-v1"), new A2aContracts.Part(
+                A2aMediaTypes.EVIDENCE_REFERENCE,
+                null,
+                Map.of("contract", "plan-v1"),
+                URI.create("evidence://task-1/attempt-1/plan/abc")).data());
+        assertThrows(IllegalArgumentException.class,
                 () -> new A2aContracts.SendCommand("supervisor", "plan", "message-1",
                         null, null, List.of(), Map.of(), true));
         assertThrows(IllegalArgumentException.class,
@@ -86,6 +95,14 @@ class A2aPortsTest {
                 URI.create("https://agent.example/a2a"),
                 "JSONRPC", "1.0", "sha256:abc", List.of("plan"), true, true));
         assertEquals(A2aContracts.TaskState.SUBMITTED, snapshot.state());
+    }
+
+    @Test
+    void initialMediaTypeSetIsExplicitAndClosed() {
+        assertTrue(A2aMediaTypes.isSupported("text/plain"));
+        assertTrue(A2aMediaTypes.isSupported("application/json"));
+        assertTrue(A2aMediaTypes.isSupported("application/vnd.ai-factory.evidence-reference+json"));
+        assertTrue(!A2aMediaTypes.isSupported("application/octet-stream"));
     }
 
     private static Stream<Class<?>> signatureTypes(Method method) {

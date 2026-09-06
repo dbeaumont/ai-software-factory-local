@@ -23,6 +23,19 @@ public final class A2aContracts {
             if (text == null && data.isEmpty() && uri == null) {
                 throw new IllegalArgumentException("An A2A part requires text, data or uri");
             }
+            if (!A2aMediaTypes.isSupported(mediaType)) {
+                throw new IllegalArgumentException("Unsupported A2A media type: " + mediaType);
+            }
+            if (A2aMediaTypes.TEXT.equals(mediaType) && (text == null || !data.isEmpty() || uri != null)) {
+                throw new IllegalArgumentException("text/plain parts require text only");
+            }
+            if (A2aMediaTypes.JSON.equals(mediaType) && (text != null || data.isEmpty() || uri != null)) {
+                throw new IllegalArgumentException("application/json parts require structured data only");
+            }
+            if (A2aMediaTypes.EVIDENCE_REFERENCE.equals(mediaType)
+                    && (text != null || data.isEmpty() || uri == null)) {
+                throw new IllegalArgumentException("Evidence reference parts require metadata and a URI");
+            }
         }
     }
 
