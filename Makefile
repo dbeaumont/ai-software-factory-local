@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state a2a-up-role a2a-up-full build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -34,6 +34,8 @@ help:
 	@echo -e "  $(CYAN)make a2a-smoke$(NC) - require healthy services and valid Agent Cards"
 	@echo -e "  $(CYAN)make a2a-logs$(NC) - follow A2A database and runtime logs"
 	@echo -e "  $(CYAN)make a2a-reset-state CONFIRM_A2A_RESET=DELETE_A2A_LOCAL_STATE$(NC) - delete local A2A task state"
+	@echo -e "  $(CYAN)make a2a-up-role A2A_ROLE=developer$(NC) - start one role test profile"
+	@echo -e "  $(CYAN)make a2a-up-full$(NC) - start the complete A2A test profile"
 	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
 	@echo -e "  $(CYAN)make up$(NC)         - start the complete local factory stack"
 	@echo -e "  $(CYAN)make all$(NC)        - reset data and start a fully bootstrapped local factory"
@@ -131,6 +133,15 @@ a2a-reset-state:
 	$(log-target)
 	@./scripts/reset-a2a-local-state.sh
 
+a2a-up-role:
+	$(log-target)
+	@test -n "$(A2A_ROLE)" || (echo "A2A_ROLE is required" >&2; exit 2)
+	@A2A_ROLE="$(A2A_ROLE)" ./scripts/start-a2a-profile.sh role
+
+a2a-up-full:
+	$(log-target)
+	@./scripts/start-a2a-profile.sh full
+
 build: temporal-replay
 	$(log-target)
 	@echo -e "$(BLUE)Building sandbox and orchestrator images...$(NC)"
@@ -151,7 +162,7 @@ build: temporal-replay
 up: init build
 	$(log-target)
 	@echo -e "$(BLUE)Starting local factory stack...$(NC)"
-	$(COMPOSE) up -d --remove-orphans
+	$(COMPOSE) --profile a2a-full up -d --remove-orphans
 	@./scripts/wait-compose-job.sh signoz-bootstrap 120
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls
@@ -204,6 +215,7 @@ test:
 	ruby ./scripts/verify-a2a-compose-network.rb
 	ruby ./scripts/verify-a2a-mcp-networks.rb
 	./scripts/verify-env-structure.sh
+	./scripts/test-a2a-compose-profiles.sh
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; fi
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/repository-context-server/pom.xml clean test
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/sandbox-execution-server/pom.xml clean test

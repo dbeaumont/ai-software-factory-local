@@ -35,6 +35,9 @@ services.each do |name, service|
     service.fetch("depends_on").fetch("a2a-task-db").fetch("condition") == "service_healthy"
   abort "#{name} must join the private A2A network" unless service.fetch("networks").include?("a2a-internal")
   abort "#{name} must not publish a host port" if service.key?("ports")
+  role_profile = "a2a-#{role}"
+  abort "#{name} must expose full and role test profiles" unless
+    service.fetch("profiles").sort == ["a2a-full", role_profile].sort
 end
 
 database = all_services.fetch("a2a-task-db")

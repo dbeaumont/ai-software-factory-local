@@ -79,6 +79,7 @@ services:
 
   a2a-supervisor:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-supervisor]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: supervisor
@@ -91,6 +92,7 @@ services:
 
   a2a-architecture-agent:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-architecture-agent]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: architecture-agent
@@ -103,6 +105,7 @@ services:
 
   a2a-impact-analysis:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-impact-analysis]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: impact-analysis
@@ -115,6 +118,7 @@ services:
 
   a2a-dependencies-contracts:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-dependencies-contracts]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: dependencies-contracts
@@ -127,6 +131,7 @@ services:
 
   a2a-code-agent:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-code-agent]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: code-agent
@@ -139,6 +144,7 @@ services:
 
   a2a-developer:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-developer]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: developer
@@ -151,6 +157,7 @@ services:
 
   a2a-patch-repair:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-patch-repair]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: patch-repair
@@ -163,6 +170,7 @@ services:
 
   a2a-test-agent:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-test-agent]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: test-agent
@@ -175,6 +183,7 @@ services:
 
   a2a-test-design:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-test-design]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: test-design
@@ -187,6 +196,7 @@ services:
 
   a2a-test-evidence:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-test-evidence]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: test-evidence
@@ -199,6 +209,7 @@ services:
 
   a2a-security-agent:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-security-agent]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: security-agent
@@ -211,6 +222,7 @@ services:
 
   a2a-threat-model:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-threat-model]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: threat-model
@@ -223,6 +235,7 @@ services:
 
   a2a-security-findings:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-security-findings]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: security-findings
@@ -235,6 +248,7 @@ services:
 
   a2a-independent-reviewer:
     <<: *a2a-agent-runtime
+    profiles: [a2a-full, a2a-independent-reviewer]
     environment:
       <<: *a2a-agent-environment
       AI_FACTORY_AGENT_ROLE: independent-reviewer

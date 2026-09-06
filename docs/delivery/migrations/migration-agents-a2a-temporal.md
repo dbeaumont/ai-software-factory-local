@@ -592,8 +592,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : les six cibles pilotent le modèle Compose canonique ; cards valide rôle et signature par mTLS, smoke
     exige conteneurs healthy et cartes valides, et reset refuse toute action sans la confirmation exacte
     `CONFIRM_A2A_RESET=DELETE_A2A_LOCAL_STATE` avant de résoudre un unique volume étiqueté.
-- [ ] **A2A-127 — Ajouter des profils de test.** Permettre de lancer une topologie minimale pour un rôle et la
+- [x] **A2A-127 — Ajouter des profils de test.** Permettre de lancer une topologie minimale pour un rôle et la
   topologie complète pour l'E2E, sans modifier le chemin de production.
+  - Preuve : chaque runtime déclare `a2a-<role>` et `a2a-full` ; `make a2a-up-role A2A_ROLE=...` démarre et teste
+    un seul rôle, `make a2a-up-full` les quatorze, et le chemin normal `make up` sélectionne explicitement le profil
+    complet. `test-a2a-compose-profiles.sh` vérifie l'isolation et l'exhaustivité sans altérer le code runtime.
 - [ ] **A2A-128 — Dimensionner macOS.** Documenter CPU, mémoire, disque, temps de démarrage et réglages Docker
   Desktop ; regrouper uniquement les processus si l'isolation de rôle et les permissions restent prouvées.
 - [ ] **A2A-129 — Préparer les manifests GKE.** Déployer un workload/service par rôle, NetworkPolicies,

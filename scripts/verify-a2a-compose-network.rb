@@ -5,7 +5,8 @@ require "open3"
 require "yaml"
 
 stdout, stderr, status = Open3.capture3(
-  "docker", "compose", "--env-file", ".env", "-f", "infrastructure/compose.yaml", "config"
+  "docker", "compose", "--env-file", ".env", "-f", "infrastructure/compose.yaml",
+  "--profile", "a2a-full", "config"
 )
 abort stderr unless status.success?
 compose = YAML.safe_load(stdout, aliases: true)
