@@ -174,8 +174,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   consommations et chronologies des fixtures `short-path`, `multi-domain`, `adversarial` et `recovery`.
   _(Manifeste digesté de 36 cas, artefacts, chronologie et consommations ajouté sous `resources/a2a/baselines` ;
   preuve et commandes reproductibles dans `docs/evidence/a2a/A2A-021-FUNCTIONAL-BASELINE.md`, avec 43 tests verts.)_
-- [ ] **A2A-022 — Inventorier les états Temporal.** Associer chaque child workflow et activité d'agent actuel à
-  la future interaction A2A sans modifier les règles métier.
+- [x] **A2A-022 — Inventorier les états Temporal.** Associer chaque child workflow et activité d'agent actuel à
+  la future interaction A2A sans modifier les règles métier. _(Workflows, activités enregistrées ou latentes,
+  queues, états d'attente et correspondances `resolve/dispatch/get/cancel/validate` consignés dans
+  `docs/qualification/a2a/A2A-TEMPORAL-STATE-INVENTORY.md`.)_
 - [ ] **A2A-023 — Inventorier les contrats.** Recenser les schémas `delegation-plan-v1`, `specialist-task-v1`,
   `supervisor-decision-v1`, les contrats par domaine et les références Evidence attendues.
 - [ ] **A2A-024 — Inventorier les dépendances runtime.** Relever les accès LLM, MCP, base, filesystem, horloge,
