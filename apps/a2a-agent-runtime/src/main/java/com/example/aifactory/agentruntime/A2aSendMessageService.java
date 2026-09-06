@@ -135,7 +135,7 @@ public final class A2aSendMessageService {
         }
         List<HistoryItem> history = historyLength == 0 ? List.of()
                 : store.history(taskId, historyLength).stream().map(A2aSendMessageService::history).toList();
-        return new TaskView(submission, task.state(), history,
+        return new TaskView(submission, task.state(), task.version(), history,
                 store.artifacts(taskId, caller.tenantId(), caller.subject()));
     }
 
@@ -203,7 +203,7 @@ public final class A2aSendMessageService {
         }
         int total = store.count(caller.tenantId(), caller.subject(), contextId, stateFilter);
         List<TaskView> tasks = store.list(caller.tenantId(), caller.subject(), contextId, stateFilter, offset, pageSize)
-                .stream().map(task -> new TaskView(submission(task), task.state(), List.of(),
+                .stream().map(task -> new TaskView(submission(task), task.state(), task.version(), List.of(),
                         store.artifacts(task.taskId(), caller.tenantId(), caller.subject()))).toList();
         int end = offset + tasks.size();
         String next = null;
@@ -215,7 +215,7 @@ public final class A2aSendMessageService {
     }
 
     private TaskView view(A2aTaskStore.StoredTask task, int historyLength, Caller caller) {
-        return new TaskView(submission(task), task.state(),
+        return new TaskView(submission(task), task.state(), task.version(),
                 store.history(task.taskId(), historyLength).stream().map(A2aSendMessageService::history).toList(),
                 store.artifacts(task.taskId(), caller.tenantId(), caller.subject()));
     }
@@ -226,7 +226,7 @@ public final class A2aSendMessageService {
     }
 
     private static HistoryItem history(A2aTaskStore.HistoryRecord history) {
-        return new HistoryItem(history.messageId(), history.event(), history.occurredAt());
+        return new HistoryItem(history.messageId(), history.event(), history.occurredAt(), history.taskVersion());
     }
 
     private void validateExecutionContext(JsonNode execution, String role) {
@@ -310,10 +310,11 @@ public final class A2aSendMessageService {
             String delegationId,
             Instant submittedAt) {}
 
-    public record HistoryItem(String messageId, String event, Instant occurredAt) {}
+    public record HistoryItem(String messageId, String event, Instant occurredAt, long sequence) {}
 
     public record TaskView(
-            Submission submission, TaskState state, List<HistoryItem> history, List<Map<String, Object>> artifacts) {
+            Submission submission, TaskState state, long sequence,
+            List<HistoryItem> history, List<Map<String, Object>> artifacts) {
         public TaskView {
             history = List.copyOf(history);
             artifacts = List.copyOf(artifacts);

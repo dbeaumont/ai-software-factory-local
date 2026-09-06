@@ -32,7 +32,11 @@ public interface A2aTaskStore {
             String delegationId, Instant submittedAt, A2aSendMessageService.TaskState state, long version,
             String envelopeJson, String workflowId, String workflowRunId) {}
 
-    record HistoryRecord(String messageId, String event, Instant occurredAt) {}
+    record HistoryRecord(String messageId, String event, Instant occurredAt, long taskVersion) {
+        public HistoryRecord(String messageId, String event, Instant occurredAt) {
+            this(messageId, event, occurredAt, -1);
+        }
+    }
 
     record CreateResult(StoredTask task, boolean created) {}
 

@@ -39,7 +39,8 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                         candidate.messageDigest(), candidate.role(), candidate.skill(), candidate.callerSubject(),
                         candidate.tenantId(), candidate.delegationId(), Timestamp.from(candidate.submittedAt()),
                         candidate.state().name(), candidate.version(), candidate.envelopeJson());
-                insertHistory(candidate.taskId(), accepted);
+                insertHistory(candidate.taskId(), new HistoryRecord(
+                        accepted.messageId(), accepted.event(), accepted.occurredAt(), candidate.version()));
                 return new CreateResult(candidate, true);
             });
         } catch (DuplicateKeyException duplicate) {
@@ -94,10 +95,11 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
     @Override
     public List<HistoryRecord> history(String taskId, int limit) {
         List<HistoryRecord> descending = jdbc.query("""
-                        SELECT message_id, event_type, occurred_at FROM a2a_agent_task_history
+                        SELECT message_id, event_type, occurred_at, task_version FROM a2a_agent_task_history
                         WHERE task_id = ? ORDER BY sequence_id DESC FETCH FIRST ? ROWS ONLY
                         """, (rs, row) -> new HistoryRecord(rs.getString("message_id"),
-                        rs.getString("event_type"), rs.getTimestamp("occurred_at").toInstant()), taskId, limit);
+                        rs.getString("event_type"), rs.getTimestamp("occurred_at").toInstant(),
+                        rs.getLong("task_version")), taskId, limit);
         java.util.Collections.reverse(descending);
         return List.copyOf(descending);
     }
@@ -120,7 +122,8 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                     WHERE task_id = ? AND version = ?
                     """, next.name(), taskId, expectedVersion);
             if (updated == 0) return Optional.empty();
-            insertHistory(taskId, event);
+            insertHistory(taskId, new HistoryRecord(
+                    event.messageId(), event.event(), event.occurredAt(), expectedVersion + 1));
             return find(taskId);
         });
     }
@@ -215,9 +218,10 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
 
     private void insertHistory(String taskId, HistoryRecord history) {
         jdbc.update("""
-                INSERT INTO a2a_agent_task_history (task_id, message_id, event_type, occurred_at)
-                VALUES (?, ?, ?, ?)
-                """, taskId, history.messageId(), history.event(), Timestamp.from(history.occurredAt()));
+                INSERT INTO a2a_agent_task_history (task_id, message_id, event_type, occurred_at, task_version)
+                VALUES (?, ?, ?, ?, ?)
+                """, taskId, history.messageId(), history.event(), Timestamp.from(history.occurredAt()),
+                history.taskVersion());
     }
 
     @SuppressWarnings("unchecked")

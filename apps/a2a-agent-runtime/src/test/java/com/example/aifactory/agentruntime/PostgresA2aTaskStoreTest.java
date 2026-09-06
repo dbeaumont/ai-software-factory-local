@@ -26,7 +26,8 @@ class PostgresA2aTaskStoreTest {
                 "jdbc:h2:mem:a2a-" + java.util.UUID.randomUUID() + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "sa", "");
         new ResourceDatabasePopulator(new ClassPathResource(
                 "db/a2a-task-migration/V001__create_a2a_task_projection.sql"), new ClassPathResource(
-                "db/a2a-task-migration/V002__add_a2a_recovery_state.sql")).execute(dataSource);
+                "db/a2a-task-migration/V002__add_a2a_recovery_state.sql"), new ClassPathResource(
+                "db/a2a-task-migration/V003__sequence_a2a_task_history.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         store = new PostgresA2aTaskStore(jdbc,
                 new TransactionTemplate(new DataSourceTransactionManager(dataSource)), new ObjectMapper());

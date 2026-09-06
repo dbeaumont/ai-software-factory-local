@@ -21,7 +21,8 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
         if (existingId != null) return new CreateResult(byTask.get(existingId), false);
         byTask.put(candidate.taskId(), candidate);
         taskByMessage.put(candidate.messageId(), candidate.taskId());
-        histories.put(candidate.taskId(), new ArrayList<>(List.of(accepted)));
+        histories.put(candidate.taskId(), new ArrayList<>(List.of(new HistoryRecord(
+                accepted.messageId(), accepted.event(), accepted.occurredAt(), candidate.version()))));
         return new CreateResult(candidate, true);
     }
 
@@ -72,7 +73,8 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
                 current.delegationId(), current.submittedAt(), next, expectedVersion + 1,
                 current.envelopeJson(), current.workflowId(), current.workflowRunId());
         byTask.put(taskId, updated);
-        histories.get(taskId).add(event);
+        histories.get(taskId).add(new HistoryRecord(
+                event.messageId(), event.event(), event.occurredAt(), expectedVersion + 1));
         return Optional.of(updated);
     }
 

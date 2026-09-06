@@ -433,8 +433,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   `block()`, `blockFirst()` ou `blockLast()` ne doit être exécuté sur un thread Reactor. _(`A2aTaskAwaiter` tamponne
   les signaux ordonnés et utilise uniquement `Workflow.await(interval, condition)` ; le callback WebFlux compose
   son `CompletionStage` sans blocage.)_
-- [ ] **A2A-085 — Gérer les notifications perdues.** À expiration du timer, appeler `GetTask`, appliquer les
-  transitions manquantes dans l'ordre puis réarmer une attente bornée.
+- [x] **A2A-085 — Gérer les notifications perdues.** À expiration du timer, appeler `GetTask`, appliquer les
+  transitions manquantes dans l'ordre puis réarmer une attente bornée. _(`awaitUntilTerminal` interroge `GetTask`
+  au timeout, refuse tout trou de séquence, rejoue les transitions ordonnées puis réarme le même intervalle tant
+  que la tâche n'est pas terminale ; le serveur expose sa version de projection.)_
 - [ ] **A2A-086 — Propager l'annulation.** Envoyer `CancelTask`, attendre une confirmation bornée et préserver les
   preuves ; si l'agent est injoignable, conserver un état de réconciliation explicite.
 - [ ] **A2A-087 — Reprendre les demandes de complément.** Mapper `INPUT_REQUIRED` vers un signal ou une gate

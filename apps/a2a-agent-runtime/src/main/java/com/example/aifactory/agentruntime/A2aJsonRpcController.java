@@ -64,25 +64,28 @@ final class A2aJsonRpcController {
             return switch (request.path("method").asText()) {
                 case "message/send" -> response(requestId,
                         task(service.send(request.path("params"), caller(authentication)),
-                                A2aSendMessageService.TaskState.SUBMITTED, List.of(), List.of()));
+                                A2aSendMessageService.TaskState.SUBMITTED, 0, List.of(), List.of()));
                 case "tasks/get" -> {
                     A2aSendMessageService.TaskView view = service.getTask(
                             request.path("params"), caller(authentication));
-                    yield response(requestId, task(view.submission(), view.state(), view.history(), view.artifacts()));
+                    yield response(requestId, task(view.submission(), view.state(), view.sequence(),
+                            view.history(), view.artifacts()));
                 }
                 case "tasks/list" -> {
                     A2aSendMessageService.TaskPage page = service.listTasks(
                             request.path("params"), caller(authentication));
                     Map<String, Object> result = new LinkedHashMap<>();
                     result.put("tasks", page.tasks().stream()
-                            .map(view -> task(view.submission(), view.state(), view.history(), view.artifacts())).toList());
+                            .map(view -> task(view.submission(), view.state(), view.sequence(),
+                                    view.history(), view.artifacts())).toList());
                     if (page.nextPageToken() != null) result.put("nextPageToken", page.nextPageToken());
                     yield response(requestId, Map.copyOf(result));
                 }
                 case "tasks/cancel" -> {
                     A2aSendMessageService.TaskView view = service.cancelTask(
                             request.path("params"), caller(authentication));
-                    yield response(requestId, task(view.submission(), view.state(), view.history(), view.artifacts()));
+                    yield response(requestId, task(view.submission(), view.state(), view.sequence(),
+                            view.history(), view.artifacts()));
                 }
                 default -> throw new RpcFailure(A2AErrorCodes.METHOD_NOT_FOUND, "A2A method is not available");
             };
@@ -143,6 +146,7 @@ final class A2aJsonRpcController {
     private static Map<String, Object> task(
             A2aSendMessageService.Submission submission,
             A2aSendMessageService.TaskState state,
+            long sequence,
             List<A2aSendMessageService.HistoryItem> history,
             List<Map<String, Object>> artifacts) {
         Map<String, Object> task = new LinkedHashMap<>();
@@ -156,12 +160,13 @@ final class A2aJsonRpcController {
                 "role", "ROLE_USER",
                 "messageId", item.messageId(),
                 "parts", List.of(Map.of("kind", "text", "text", item.event())),
-                "metadata", Map.of("occurredAt", item.occurredAt().toString()))).toList());
+                "metadata", Map.of("occurredAt", item.occurredAt().toString(), "sequence", item.sequence()))).toList());
         task.put("metadata", Map.of(
                 "messageId", submission.messageId(),
                 "delegationId", submission.delegationId(),
                 "agentRole", submission.role(),
-                "skillId", submission.skill()));
+                "skillId", submission.skill(),
+                "sequence", sequence));
         return Map.copyOf(task);
     }
 

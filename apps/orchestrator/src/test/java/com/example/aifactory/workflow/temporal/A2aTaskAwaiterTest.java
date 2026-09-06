@@ -46,6 +46,21 @@ class A2aTaskAwaiterTest {
                 .isInstanceOf(SecurityException.class);
     }
 
+    @Test
+    void timerFetchesAndAppliesEveryMissingTransitionInSequenceOrder() {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("a2a-reconcile-test");
+            worker.registerWorkflowImplementationTypes(ReconcileHarnessImpl.class);
+            worker.registerActivitiesImplementations((A2aActivities.GetTask) query -> completedSnapshot());
+            environment.start();
+            ReconcileHarness workflow = environment.getWorkflowClient().newWorkflowStub(ReconcileHarness.class,
+                    WorkflowOptions.newBuilder().setWorkflowId("a2a-reconcile-1")
+                            .setTaskQueue("a2a-reconcile-test").build());
+
+            assertThat(workflow.run()).isEqualTo("COMPLETED:2");
+        }
+    }
+
     private static A2aContracts.Notification notification(long sequence, A2aContracts.TaskState state) {
         return new A2aContracts.Notification("developer", "agent-task-1", "context-1", sequence, state,
                 Instant.parse("2026-09-06T12:00:00Z"), List.of(), Map.of());
@@ -65,5 +80,37 @@ class A2aTaskAwaiterTest {
                     + ':' + result.notification().sequence();
         }
         @Override public void update(A2aContracts.Notification notification) { awaiter.accept(notification); }
+    }
+
+    @WorkflowInterface
+    public interface ReconcileHarness {
+        @WorkflowMethod String run();
+    }
+
+    public static final class ReconcileHarnessImpl implements ReconcileHarness {
+        @Override public String run() {
+            A2aActivities.GetTask getTask = io.temporal.workflow.Workflow.newActivityStub(
+                    A2aActivities.GetTask.class,
+                    TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_GET));
+            A2aContracts.Notification terminal = new A2aTaskAwaiter().awaitUntilTerminal(
+                    "developer", submittedSnapshot(), Duration.ofSeconds(5), getTask);
+            return terminal.state().name() + ':' + terminal.sequence();
+        }
+    }
+
+    private static A2aContracts.TaskSnapshot submittedSnapshot() {
+        return new A2aContracts.TaskSnapshot("agent-task-1", "context-1", A2aContracts.TaskState.SUBMITTED,
+                Instant.parse("2026-09-06T12:00:00Z"), List.of(), Map.of("sequence", 0));
+    }
+
+    private static A2aContracts.TaskSnapshot completedSnapshot() {
+        List<Map<String, Object>> transitions = List.of(
+                Map.of("sequence", 1, "state", "TASK_STATE_WORKING",
+                        "occurredAt", "2026-09-06T12:00:01Z"),
+                Map.of("sequence", 2, "state", "TASK_STATE_COMPLETED",
+                        "occurredAt", "2026-09-06T12:00:02Z"));
+        return new A2aContracts.TaskSnapshot("agent-task-1", "context-1", A2aContracts.TaskState.COMPLETED,
+                Instant.parse("2026-09-06T12:00:02Z"), List.of(),
+                Map.of("sequence", 2, "transitions", transitions));
     }
 }
