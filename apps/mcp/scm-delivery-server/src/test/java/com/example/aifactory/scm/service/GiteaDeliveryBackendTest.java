@@ -4,6 +4,8 @@ import com.example.aifactory.scm.config.ScmDeliveryProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.web.reactive.function.client.WebClient;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,9 +14,45 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class GiteaDeliveryBackendTest {
+    @Test
+    void selectsOnlyThePullRequestBoundToTheExactRepositoryAndBranches() throws Exception {
+        ScmDeliveryBackend.DeliveryCommand command = command("ai-factory/task-2-pipeline-1");
+        JsonNode response = new ObjectMapper().readTree("""
+                [
+                  {"id":1,"head":{"ref":"ai-factory/other","repo":{"full_name":"aiadmin/customer-api"}},
+                   "base":{"ref":"main"}},
+                  {"id":2,"head":{"ref":"ai-factory/task-2-pipeline-1","repo":{"full_name":"fork/customer-api"}},
+                   "base":{"ref":"main"}},
+                  {"id":3,"head":{"ref":"ai-factory/task-2-pipeline-1","repo":{"full_name":"aiadmin/customer-api"}},
+                   "base":{"ref":"main"}}
+                ]
+                """);
+
+        assertEquals(3, GiteaDeliveryBackend.selectExactPullRequest(response, command).path("id").asInt());
+        assertNull(GiteaDeliveryBackend.selectExactPullRequest(
+                new ObjectMapper().readTree("[]"), command));
+    }
+
+    @Test
+    void rejectsAmbiguousPullRequestsForTheSameDeliveryBranch() throws Exception {
+        ScmDeliveryBackend.DeliveryCommand command = command("ai-factory/task-2-pipeline-1");
+        JsonNode response = new ObjectMapper().readTree("""
+                [
+                  {"id":1,"head":{"ref":"ai-factory/task-2-pipeline-1","repo":{"full_name":"aiadmin/customer-api"}},
+                   "base":{"ref":"main"}},
+                  {"id":2,"head":{"ref":"ai-factory/task-2-pipeline-1","repo":{"full_name":"aiadmin/customer-api"}},
+                   "base":{"ref":"main"}}
+                ]
+                """);
+
+        assertThrows(IllegalStateException.class,
+                () -> GiteaDeliveryBackend.selectExactPullRequest(response, command));
+    }
+
     @Test
     void commitExplicitlyExcludesFactoryArtifacts(@TempDir Path root) throws Exception {
         Path workspace = root.resolve("task-1");
@@ -142,5 +180,12 @@ class GiteaDeliveryBackendTest {
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (process.waitFor() != 0) throw new IllegalStateException(output);
         return output;
+    }
+
+    private static ScmDeliveryBackend.DeliveryCommand command(String branch) {
+        RepositoryRegistry.RepositoryDefinition repository = new RepositoryRegistry.RepositoryDefinition(
+                "customer-api", "aiadmin", "customer-api", "/aiadmin/customer-api.git", java.util.List.of("main"));
+        return new ScmDeliveryBackend.DeliveryCommand(repository, Path.of("."), "task-2", "a".repeat(40),
+                "main", branch, "title");
     }
 }

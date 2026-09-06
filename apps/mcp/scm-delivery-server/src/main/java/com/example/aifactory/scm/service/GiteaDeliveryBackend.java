@@ -36,10 +36,10 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
                         .build(command.repository().owner(), command.repository().name()))
                 .header("Authorization", "token " + credentials.giteaToken())
                 .retrieve().bodyToMono(JsonNode.class).block(Duration.ofSeconds(20));
-        if (response == null || !response.isArray() || response.isEmpty()) {
+        JsonNode pullRequest = selectExactPullRequest(response, command);
+        if (pullRequest == null) {
             return null;
         }
-        JsonNode pullRequest = response.get(0);
         if (!pullRequest.path("draft").asBoolean(false)) {
             throw new IllegalStateException("existing SCM pull request is not a draft");
         }
@@ -50,6 +50,24 @@ public class GiteaDeliveryBackend implements ScmDeliveryBackend {
         return new DeliveryResult(command.repository().repositoryId(), command.branch(), commit,
                 pullRequest.path("id").asLong(), publicUrl(pullRequest.path("html_url").asText()),
                 true);
+    }
+
+    static JsonNode selectExactPullRequest(JsonNode response, DeliveryCommand command) {
+        if (response == null || !response.isArray() || response.isEmpty()) return null;
+        JsonNode match = null;
+        String expectedRepository = command.repository().owner() + "/" + command.repository().name();
+        for (JsonNode candidate : response) {
+            if (!command.branch().equals(candidate.path("head").path("ref").asText())
+                    || !command.baseBranch().equals(candidate.path("base").path("ref").asText())
+                    || !expectedRepository.equals(candidate.path("head").path("repo").path("full_name").asText())) {
+                continue;
+            }
+            if (match != null) {
+                throw new IllegalStateException("multiple SCM pull requests match the delivery branch");
+            }
+            match = candidate;
+        }
+        return match;
     }
 
     @Override
