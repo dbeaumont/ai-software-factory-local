@@ -33,8 +33,11 @@ public final class A2aCatalogCoherenceGate {
         Set<String> roles = catalog.roles().values().stream()
                 .filter(role -> "agent".equals(role.kind()) || "sub-agent".equals(role.kind()))
                 .map(AgentCatalog.Role::name).collect(Collectors.toSet());
-        AllowListedAgentRegistry compose = new AllowListedAgentRegistry(mapper, catalog, "compose");
-        AllowListedAgentRegistry gke = new AllowListedAgentRegistry(mapper, catalog, "gke");
+        SecureUriPolicy.Resolver syntaxOnlyResolver = host ->
+                List.of(java.net.InetAddress.getByName("192.0.2.10"));
+        AllowListedAgentRegistry compose = new AllowListedAgentRegistry(
+                mapper, catalog, "compose", syntaxOnlyResolver);
+        AllowListedAgentRegistry gke = new AllowListedAgentRegistry(mapper, catalog, "gke", syntaxOnlyResolver);
         requireExact("Compose registry roles", roles, compose.entries().keySet());
         requireExact("GKE registry roles", roles, gke.entries().keySet());
 
@@ -63,7 +66,7 @@ public final class A2aCatalogCoherenceGate {
     }
 
     private void requireAddress(String role, AllowListedAgentRegistry.Entry entry, boolean gke) {
-        String expectedHost = "a2a-" + role + (gke ? ".agents.svc.cluster.local" : "");
+        String expectedHost = "a2a-" + role + (gke ? ".ai-factory-agents.svc.cluster.local" : "");
         requireEqual(role + " registry host", expectedHost, entry.endpoint().getHost());
         requireEqual(role + " registry endpoint path", "/a2a", entry.endpoint().getPath());
         requireEqual(role + " card path", "/.well-known/agent-card.json", entry.cardUri().getPath());

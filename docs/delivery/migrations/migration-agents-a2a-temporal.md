@@ -608,8 +608,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
     PDB, HPA pilotés par backlog Temporal et SecretProviderClass GCP. Les probes sont mTLS, les images sont
     remplaçables uniquement par digest et les NetworkPolicies default-deny n'autorisent que contrôle, données,
     télémétrie et MCP permis ; génération déterministe et invariants sont testés avant livraison.
-- [ ] **A2A-130 — Ajouter la découverte GKE.** Utiliser des DNS de service stables dans le registre allow-listé ;
+- [x] **A2A-130 — Ajouter la découverte GKE.** Utiliser des DNS de service stables dans le registre allow-listé ;
   ne pas dépendre des IP de pods ni d'un registre public.
+  - Preuve : le profil `gke` du registre référence exactement les quatorze DNS
+    `a2a-<role>.ai-factory-agents.svc.cluster.local`; un ConfigMap sélectionne ce profil fermé côté orchestrateur.
+    `verify-a2a-gke-discovery.rb` compare le registre aux Services rendus et refuse IP, HTTP, port ou domaine public.
 - [ ] **A2A-131 — Protéger l'entrée.** Garder les endpoints A2A privés au cluster ; si une exposition externe est
   ultérieurement requise, la traiter dans une ADR et une threat model dédiées.
 

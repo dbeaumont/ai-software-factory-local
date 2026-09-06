@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: a2a-orchestrator-discovery
+  namespace: ai-factory-control
+data:
+  AI_FACTORY_A2A_REGISTRY_PROFILE: gke
+  AI_FACTORY_A2A_CARD_CACHE_MAX_TTL: 5m
+  AI_FACTORY_A2A_CARD_CACHE_STALE_ON_OUTAGE: 2m
+  AI_FACTORY_A2A_REGISTRY_RESOURCE: classpath:a2a/agent-registry-v1.json

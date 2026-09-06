@@ -22,7 +22,7 @@ class AllowListedAgentRegistryTest {
         assertThat(compose.require("developer").cardUri().toString())
                 .isEqualTo("https://a2a-developer:8090/.well-known/agent-card.json");
         assertThat(gke.require("developer").endpoint().toString())
-                .isEqualTo("https://a2a-developer.agents.svc.cluster.local:8090/a2a");
+                .isEqualTo("https://a2a-developer.ai-factory-agents.svc.cluster.local:8090/a2a");
     }
 
     @Test

@@ -18,20 +18,20 @@
       "independent-reviewer": "https://a2a-independent-reviewer:8090"
     },
     "gke": {
-      "supervisor": "https://a2a-supervisor.agents.svc.cluster.local:8090",
-      "architecture-agent": "https://a2a-architecture-agent.agents.svc.cluster.local:8090",
-      "impact-analysis": "https://a2a-impact-analysis.agents.svc.cluster.local:8090",
-      "dependencies-contracts": "https://a2a-dependencies-contracts.agents.svc.cluster.local:8090",
-      "code-agent": "https://a2a-code-agent.agents.svc.cluster.local:8090",
-      "developer": "https://a2a-developer.agents.svc.cluster.local:8090",
-      "patch-repair": "https://a2a-patch-repair.agents.svc.cluster.local:8090",
-      "test-agent": "https://a2a-test-agent.agents.svc.cluster.local:8090",
-      "test-design": "https://a2a-test-design.agents.svc.cluster.local:8090",
-      "test-evidence": "https://a2a-test-evidence.agents.svc.cluster.local:8090",
-      "security-agent": "https://a2a-security-agent.agents.svc.cluster.local:8090",
-      "threat-model": "https://a2a-threat-model.agents.svc.cluster.local:8090",
-      "security-findings": "https://a2a-security-findings.agents.svc.cluster.local:8090",
-      "independent-reviewer": "https://a2a-independent-reviewer.agents.svc.cluster.local:8090"
+      "supervisor": "https://a2a-supervisor.ai-factory-agents.svc.cluster.local:8090",
+      "architecture-agent": "https://a2a-architecture-agent.ai-factory-agents.svc.cluster.local:8090",
+      "impact-analysis": "https://a2a-impact-analysis.ai-factory-agents.svc.cluster.local:8090",
+      "dependencies-contracts": "https://a2a-dependencies-contracts.ai-factory-agents.svc.cluster.local:8090",
+      "code-agent": "https://a2a-code-agent.ai-factory-agents.svc.cluster.local:8090",
+      "developer": "https://a2a-developer.ai-factory-agents.svc.cluster.local:8090",
+      "patch-repair": "https://a2a-patch-repair.ai-factory-agents.svc.cluster.local:8090",
+      "test-agent": "https://a2a-test-agent.ai-factory-agents.svc.cluster.local:8090",
+      "test-design": "https://a2a-test-design.ai-factory-agents.svc.cluster.local:8090",
+      "test-evidence": "https://a2a-test-evidence.ai-factory-agents.svc.cluster.local:8090",
+      "security-agent": "https://a2a-security-agent.ai-factory-agents.svc.cluster.local:8090",
+      "threat-model": "https://a2a-threat-model.ai-factory-agents.svc.cluster.local:8090",
+      "security-findings": "https://a2a-security-findings.ai-factory-agents.svc.cluster.local:8090",
+      "independent-reviewer": "https://a2a-independent-reviewer.ai-factory-agents.svc.cluster.local:8090"
     }
   }
 }
