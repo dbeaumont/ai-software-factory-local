@@ -48,3 +48,9 @@ kubectl apply --dry-run=server -k infrastructure/gke/observability
 Le déploiement réel, les liaisons IAM, les certificats, les dashboards Cloud Monitoring, les notification channels
 et les tests de zone/quota exigent un projet GCP de validation et une approbation plateforme. Ils ne possèdent pas
 de valeur locale implicite.
+
+## Flotte d'agents A2A
+
+Les manifests privés des quatorze runtimes sont sous `a2a/`. Leur déploiement, scaling, rotation, diagnostic,
+drainage Temporal et rollback sont décrits dans le runbook
+[`docs/operations/A2A-GKE.md`](../../docs/operations/A2A-GKE.md).
