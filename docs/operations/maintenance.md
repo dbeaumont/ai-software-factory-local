@@ -218,7 +218,6 @@ utilise `OPENAI_API_KEY`; cette forme est donc la référence à privilégier.
 ### 5.3 Baseline sûre
 
 ```dotenv
-AI_FACTORY_A2A_ENABLED=true
 AI_FACTORY_MCP_ENABLED=true
 AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE=MCP_ACTIVE
 AI_FACTORY_MCP_SANDBOX_MODE=MCP_ACTIVE

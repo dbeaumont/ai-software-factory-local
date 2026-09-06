@@ -5,7 +5,6 @@ import com.example.aifactory.model.TaskState;
 import com.example.aifactory.workflow.temporal.TemporalCommandConflictException;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -24,7 +23,6 @@ public final class A2aRetryReconciler {
             WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_TERMINATED,
             WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_TIMED_OUT);
 
-    private final boolean enabled;
     private final A2aTaskAssociationStore associations;
     private final A2aClient client;
     private final A2aAgentWorkflowProbe workflows;
@@ -33,13 +31,12 @@ public final class A2aRetryReconciler {
 
     @Autowired
     public A2aRetryReconciler(A2aFleetProperties fleet, A2aTaskAssociationStore associations,
-                              ObjectProvider<A2aClient> clients, A2aAgentWorkflowProbe workflows) {
-        this(fleet.enabled(), associations, clients.getIfAvailable(), workflows, fleet.readinessTimeout());
+                              A2aClient client, A2aAgentWorkflowProbe workflows) {
+        this(associations, client, workflows, fleet.readinessTimeout());
     }
 
-    A2aRetryReconciler(boolean enabled, A2aTaskAssociationStore associations, A2aClient client,
+    A2aRetryReconciler(A2aTaskAssociationStore associations, A2aClient client,
                        A2aAgentWorkflowProbe workflows, Duration timeout) {
-        this.enabled = enabled;
         this.associations = associations;
         this.client = client;
         this.workflows = workflows;
@@ -47,7 +44,6 @@ public final class A2aRetryReconciler {
     }
 
     public void requireSafeRetry(TaskState task, String delegationId) {
-        if (!enabled) return;
         A2aTaskAssociationStore.Association association = associations.findByDelegation(delegationId)
                 .orElseThrow(() -> conflict("A2A retry requires a persisted task association"));
         if (!task.id.equals(association.taskId()) || !task.workflowAttemptId.equals(association.attemptId())) {

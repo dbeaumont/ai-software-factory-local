@@ -140,7 +140,6 @@ management:
 ai-factory:
   a2a:
     fleet:
-      enabled: ${AI_FACTORY_A2A_ENABLED:false}
       readiness-timeout: ${AI_FACTORY_A2A_READINESS_TIMEOUT:3s}
     notifications:
       enabled: ${AI_FACTORY_A2A_PUSH_RECEIVER_ENABLED:false}

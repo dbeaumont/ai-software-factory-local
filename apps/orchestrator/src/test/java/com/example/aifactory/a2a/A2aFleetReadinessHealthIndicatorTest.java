@@ -24,7 +24,7 @@ class A2aFleetReadinessHealthIndicatorTest {
                         : new A2aFleetReadinessHealthIndicator.RoleStatus("READY", "READY", 2, 2);
             }
         };
-        var indicator = new A2aFleetReadinessHealthIndicator(true, Set.of("developer", "reviewer"), probe, meters);
+        var indicator = new A2aFleetReadinessHealthIndicator(Set.of("developer", "reviewer"), probe, meters);
 
         var health = indicator.health();
 
@@ -46,18 +46,9 @@ class A2aFleetReadinessHealthIndicatorTest {
             }
         };
         var health = new A2aFleetReadinessHealthIndicator(
-                true, Set.of("developer"), probe, new SimpleMeterRegistry()).health();
+                Set.of("developer"), probe, new SimpleMeterRegistry()).health();
 
         assertThat(health.getStatus()).isEqualTo(Status.UP);
         assertThat(health.getDetails()).containsEntry("admissions", "OPEN");
-    }
-
-    @Test
-    void reportsExplicitDisabledStateBeforeCutover() {
-        var health = new A2aFleetReadinessHealthIndicator(false, Set.of("developer"), null,
-                new SimpleMeterRegistry()).health();
-
-        assertThat(health.getStatus()).isEqualTo(Status.UP);
-        assertThat(health.getDetails()).containsEntry("admissions", "A2A_DISABLED");
     }
 }

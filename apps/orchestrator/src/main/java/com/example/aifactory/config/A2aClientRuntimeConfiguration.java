@@ -13,7 +13,6 @@ import com.example.aifactory.a2a.AllowListedAgentRegistry;
 import com.example.aifactory.a2a.CachingAgentCardResolver;
 import com.example.aifactory.service.AgentCatalog;
 import com.example.aifactory.workflow.temporal.A2aActivitiesImpl;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.JsonNode;
@@ -43,7 +42,6 @@ import java.util.concurrent.CompletionStage;
 
 /** Complete fail-closed production graph used by Temporal A2A activities. */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnProperty(name = "ai-factory.a2a.fleet.enabled", havingValue = "true")
 public class A2aClientRuntimeConfiguration {
     @Bean
     AllowListedAgentRegistry a2aAgentRegistry(ObjectMapper mapper, AgentCatalog catalog,

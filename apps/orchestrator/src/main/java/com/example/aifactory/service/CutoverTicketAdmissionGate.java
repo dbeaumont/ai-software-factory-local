@@ -1,7 +1,6 @@
 package com.example.aifactory.service;
 
 import com.example.aifactory.a2a.A2aFleetReadinessHealthIndicator;
-import com.example.aifactory.config.A2aFleetProperties;
 import com.example.aifactory.workflow.temporal.TemporalAdmissionUnavailableException;
 import com.example.aifactory.workflow.temporal.TemporalTicketAdmissionGate;
 import org.springframework.boot.health.contributor.Status;
@@ -17,14 +16,12 @@ public final class CutoverTicketAdmissionGate implements TicketAdmissionGate {
     private final AdmissionControl admissionControl;
     private final TemporalTicketAdmissionGate temporal;
     private final A2aFleetReadinessHealthIndicator a2aFleet;
-    private final A2aFleetProperties a2a;
 
     public CutoverTicketAdmissionGate(AdmissionControl admissionControl, TemporalTicketAdmissionGate temporal,
-                                      A2aFleetReadinessHealthIndicator a2aFleet, A2aFleetProperties a2a) {
+                                      A2aFleetReadinessHealthIndicator a2aFleet) {
         this.admissionControl = admissionControl;
         this.temporal = temporal;
         this.a2aFleet = a2aFleet;
-        this.a2a = a2a;
     }
 
     @Override
@@ -42,7 +39,6 @@ public final class CutoverTicketAdmissionGate implements TicketAdmissionGate {
     }
 
     private Mono<Void> requireA2aFleet() {
-        if (!a2a.enabled()) return Mono.empty();
         return Mono.fromCallable(a2aFleet::health)
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(health -> Status.UP.equals(health.getStatus())

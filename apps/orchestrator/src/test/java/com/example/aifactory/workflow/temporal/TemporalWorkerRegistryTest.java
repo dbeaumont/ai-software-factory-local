@@ -68,7 +68,8 @@ class TemporalWorkerRegistryTest {
         PatchIntegrationActivities patch = mock(PatchIntegrationActivities.class);
         SourceResolutionActivities source = mock(SourceResolutionActivities.class);
         PipelineExecutionActivities pipeline = mock(PipelineExecutionActivities.class);
-        TemporalActivityAdapters adapters = new TemporalActivityAdapters(patch, source, pipeline);
+        A2aActivitiesImpl a2a = mock(A2aActivitiesImpl.class);
+        TemporalActivityAdapters adapters = new TemporalActivityAdapters(patch, source, pipeline, a2a);
 
         assertThat(adapters.forWorker("context")).hasSize(2)
                 .anyMatch(SourceResolutionActivities.class::isInstance);
@@ -83,15 +84,7 @@ class TemporalWorkerRegistryTest {
         assertThat(adapters.forWorker("scm")).hasSize(1)
                 .anyMatch(PipelineExecutionActivities.class::isInstance);
         assertThat(adapters.forWorker("llm")).noneMatch(DurableExecutionActivities.class::isInstance);
-        assertThat(adapters.forWorker("workflow")).isEmpty();
-
-        org.springframework.beans.factory.support.StaticListableBeanFactory beans =
-                new org.springframework.beans.factory.support.StaticListableBeanFactory();
-        A2aActivitiesImpl a2a = mock(A2aActivitiesImpl.class);
-        beans.addBean("a2aActivities", a2a);
-        TemporalActivityAdapters withA2a = new TemporalActivityAdapters(
-                patch, source, pipeline, beans.getBeanProvider(A2aActivitiesImpl.class));
-        assertThat(withA2a.forWorker("workflow")).containsExactly(a2a);
+        assertThat(adapters.forWorker("workflow")).containsExactly(a2a);
     }
 
     @Test

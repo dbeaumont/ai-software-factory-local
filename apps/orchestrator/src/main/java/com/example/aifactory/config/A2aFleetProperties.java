@@ -6,7 +6,7 @@ import java.time.Duration;
 
 /** Fail-closed activation and bounded timeout for global A2A fleet readiness. */
 @ConfigurationProperties("ai-factory.a2a.fleet")
-public record A2aFleetProperties(boolean enabled, Duration readinessTimeout) {
+public record A2aFleetProperties(Duration readinessTimeout) {
     public A2aFleetProperties {
         readinessTimeout = readinessTimeout == null ? Duration.ofSeconds(3) : readinessTimeout;
         if (readinessTimeout.isZero() || readinessTimeout.isNegative()

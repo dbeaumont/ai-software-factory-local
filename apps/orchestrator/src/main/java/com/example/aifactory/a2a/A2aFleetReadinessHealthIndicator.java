@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** Sanitized, explainable admission readiness across every mandatory A2A role and dependency. */
 @Component("a2aFleet")
 public final class A2aFleetReadinessHealthIndicator implements HealthIndicator {
-    private final boolean enabled;
     private final List<String> roles;
     private final Probe probe;
     private final AtomicInteger ready = new AtomicInteger();
@@ -51,12 +50,11 @@ public final class A2aFleetReadinessHealthIndicator implements HealthIndicator {
             A2aOAuth2ClientProperties oauth2,
             A2aNotificationProperties notifications,
             MeterRegistry meters) {
-        this(fleet.enabled(), agentRoles(catalog), new LiveProbe(cards.getIfAvailable(), clients.getIfAvailable(),
+        this(agentRoles(catalog), new LiveProbe(cards.getIfAvailable(), clients.getIfAvailable(),
                 temporal, temporalProperties.namespace(), fleet.readinessTimeout(), oauth2, notifications), meters);
     }
 
-    A2aFleetReadinessHealthIndicator(boolean enabled, Set<String> roles, Probe probe, MeterRegistry meters) {
-        this.enabled = enabled;
+    A2aFleetReadinessHealthIndicator(Set<String> roles, Probe probe, MeterRegistry meters) {
         this.roles = roles.stream().sorted().toList();
         this.probe = probe;
         if (meters != null) {
@@ -69,13 +67,6 @@ public final class A2aFleetReadinessHealthIndicator implements HealthIndicator {
 
     @Override
     public Health health() {
-        if (!enabled) {
-            ready.set(1);
-            blockedRoles.set(0);
-            blockedDependencies.set(0);
-            return Health.up().withDetail("admissions", "A2A_DISABLED")
-                    .withDetail("requiredRoles", roles).withDetail("blockers", List.of()).build();
-        }
         Map<String, String> dependencies = probe.dependencies();
         Map<String, RoleStatus> roleStatuses = new LinkedHashMap<>();
         List<Map<String, String>> blockers = new ArrayList<>();

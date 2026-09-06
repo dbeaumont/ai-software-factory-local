@@ -29,19 +29,10 @@ class A2aRetryReconcilerTest {
     private final A2aAgentWorkflowProbe workflows = mock(A2aAgentWorkflowProbe.class);
 
     @Test
-    void bypassesA2aReconciliationBeforeCutover() {
-        A2aRetryReconciler reconciler = reconciler(false);
-
-        assertThatCode(() -> reconciler.requireSafeRetry(task(), "code-1")).doesNotThrowAnyException();
-
-        verify(associations, never()).findByDelegation("code-1");
-    }
-
-    @Test
     void failsClosedWhenTheAssociationIsMissing() {
         when(associations.findByDelegation("code-1")).thenReturn(Optional.empty());
 
-        assertReconciliationRequired(() -> reconciler(true).requireSafeRetry(task(), "code-1"),
+        assertReconciliationRequired(() -> reconciler().requireSafeRetry(task(), "code-1"),
                 "persisted task association");
     }
 
@@ -51,7 +42,7 @@ class A2aRetryReconcilerTest {
         when(workflows.status("developer", "a2a-task-1", Duration.ofSeconds(2)))
                 .thenReturn(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED);
 
-        assertReconciliationRequired(() -> reconciler(true).requireSafeRetry(task(), "code-1"),
+        assertReconciliationRequired(() -> reconciler().requireSafeRetry(task(), "code-1"),
                 "still active");
     }
 
@@ -61,7 +52,7 @@ class A2aRetryReconcilerTest {
         when(workflows.status("developer", "a2a-task-1", Duration.ofSeconds(2)))
                 .thenReturn(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED);
 
-        assertReconciliationRequired(() -> reconciler(true).requireSafeRetry(task(), "code-1"),
+        assertReconciliationRequired(() -> reconciler().requireSafeRetry(task(), "code-1"),
                 "already completed");
     }
 
@@ -74,7 +65,7 @@ class A2aRetryReconcilerTest {
         arrange(A2aContracts.TaskState.FAILED,
                 List.of(new A2aContracts.Artifact("artifact-1", "output", List.of(unbound), Map.of())));
 
-        assertReconciliationRequired(() -> reconciler(true).requireSafeRetry(task(), "code-1"),
+        assertReconciliationRequired(() -> reconciler().requireSafeRetry(task(), "code-1"),
                 "artifacts could not be reconciled");
         verify(workflows, never()).status("developer", "a2a-task-1", Duration.ofSeconds(2));
     }
@@ -85,7 +76,7 @@ class A2aRetryReconcilerTest {
         when(workflows.status("developer", "a2a-task-1", Duration.ofSeconds(2)))
                 .thenReturn(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING);
 
-        assertReconciliationRequired(() -> reconciler(true).requireSafeRetry(task(), "code-1"),
+        assertReconciliationRequired(() -> reconciler().requireSafeRetry(task(), "code-1"),
                 "workflow is not closed");
     }
 
@@ -95,7 +86,7 @@ class A2aRetryReconcilerTest {
         when(workflows.status("developer", "a2a-task-1", Duration.ofSeconds(2)))
                 .thenReturn(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED);
 
-        assertThatCode(() -> reconciler(true).requireSafeRetry(task(), "code-1")).doesNotThrowAnyException();
+        assertThatCode(() -> reconciler().requireSafeRetry(task(), "code-1")).doesNotThrowAnyException();
     }
 
     private void arrange(A2aContracts.TaskState state, List<A2aContracts.Artifact> artifacts) {
@@ -114,8 +105,8 @@ class A2aRetryReconcilerTest {
         return new A2aContracts.Artifact("artifact-1", "output", List.of(part), Map.of());
     }
 
-    private A2aRetryReconciler reconciler(boolean enabled) {
-        return new A2aRetryReconciler(enabled, associations, client, workflows, Duration.ofSeconds(2));
+    private A2aRetryReconciler reconciler() {
+        return new A2aRetryReconciler(associations, client, workflows, Duration.ofSeconds(2));
     }
 
     private static A2aTaskAssociationStore.Association association() {

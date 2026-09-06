@@ -818,8 +818,8 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   non drainé et ne permet le retrait qu'après le statut Temporal `drained`, archivage et approbation ;
   `make a2a-worker-drainage BUILD_ID=...`.)_
 - [x] **A2A-202 — Geler plutôt que contourner.** Si la flotte A2A est indisponible, suspendre les admissions et
-  laisser Temporal attendre/réconcilier au lieu d'exécuter localement. _(Quand `AI_FACTORY_A2A_ENABLED=true`,
-  la gate primaire contrôle `a2aFleet` avant Temporal et refuse toute nouvelle admission si une carte, une queue
+  laisser Temporal attendre/réconcilier au lieu d'exécuter localement. _(La gate primaire contrôle toujours
+  `a2aFleet` avant Temporal et refuse toute nouvelle admission si une carte, une queue
   ou une dépendance est indisponible ; le message public reste sanitizé et aucun chemin local n'est sélectionné.)_
 - [x] **A2A-203 — Réconcilier avant retry.** Examiner la tâche A2A, son workflow d'agent et ses artefacts avant
   toute relance après incident. _(Le retry opérateur valide désormais, sans mutation préalable, l'association
@@ -858,8 +858,11 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   runtime, wrappers de rôles, boucle d'outils, prompts, propriétés et API de complétion de l'orchestrateur retirés ;
   548 tests passent et deux gardes source empêchent leur retour ; preuve :
   `docs/evidence/a2a/A2A-220-DIRECT-RUNTIME-REMOVAL.md`.)_
-- [ ] **A2A-221 — Supprimer les flags temporaires de qualification.** Aucun sélecteur `DIRECT/A2A`, shadow ou
-  fallback ne subsiste dans la configuration de release.
+- [x] **A2A-221 — Supprimer les flags temporaires de qualification.** Aucun sélecteur `DIRECT/A2A`, shadow ou
+  fallback ne subsiste dans la configuration de release. _(Terminé le 2026-09-07 : le flag
+  `AI_FACTORY_A2A_ENABLED`, ses bypass et la condition Spring ont été supprimés ; readiness, réconciliation et
+  activités A2A sont obligatoires, 547 tests passent ; preuve :
+  `docs/evidence/a2a/A2A-221-NO-TRANSPORT-FLAGS.md`.)_
 - [x] **A2A-222 — Mettre à jour les schémas d'architecture.** Montrer services d'agents, réseau A2A, Temporal,
   MCP, Evidence et frontières de confiance. _(La vue Mermaid et les tableaux de frontières dans
   `docs/architecture/a2a/README.md` couvrent les deux workflows corrélés, les réseaux Compose/GKE, la
