@@ -3,6 +3,13 @@
 
 require "yaml"
 
+forbidden_selectors = %w[AI_FACTORY_A2A_ENABLED a2a.fleet.enabled A2A_DISABLED]
+%w[.env.example infrastructure/compose.yaml apps/orchestrator/src/main/resources/application.yml].each do |file|
+  content = File.read(file)
+  present = forbidden_selectors.select { |selector| content.include?(selector) }
+  abort "#{file} retains A2A transport selector(s): #{present.join(', ')}" unless present.empty?
+end
+
 path = ARGV.fetch(0, "infrastructure/a2a/compose-agents.yaml")
 document = YAML.safe_load(File.read(path), aliases: true)
 all_services = document.fetch("services")
