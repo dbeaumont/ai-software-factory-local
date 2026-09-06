@@ -781,8 +781,10 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   qualification au vert, les sept digests d'images, les SBOM et les preuves ; elle reste `CLOSED` jusqu'au
   rollback qualifié, au candidat final et aux quatre approbations :
   `docs/qualification/a2a/GATE-A2A-180-CUTOVER.md`.)_
-- [ ] **A2A-181 — Geler les admissions.** Suspendre les nouveaux tickets avant le déploiement de coupure et laisser
-  terminer ou annuler proprement les exécutions incompatibles.
+- [x] **A2A-181 — Geler les admissions.** Suspendre les nouveaux tickets avant le déploiement de coupure et laisser
+  terminer ou annuler proprement les exécutions incompatibles. _(Terminé le 2026-09-06 : commutateur durable
+  fermé à la révision 6 et aucun workflow Temporal actif dans `ai-factory-local` ; les projections historiques
+  restent intactes pour la sauvegarde ; preuve : `docs/evidence/a2a/A2A-181-ADMISSIONS-FREEZE.md`.)_
 - [ ] **A2A-182 — Sauvegarder les états.** Sauvegarder projections, corrélations, preuves de qualification,
   configuration signée et versions de workers sans accéder aux tables internes Temporal.
 - [ ] **A2A-183 — Déployer les agents A2A.** Démarrer stockage, runtimes, Agent Cards, workers et notifications,
