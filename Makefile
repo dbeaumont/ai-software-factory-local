@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init a2a-pki a2a-secrets build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init a2a-pki a2a-secrets a2a-supply-chain build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -26,6 +26,7 @@ help:
 	@echo -e "  $(CYAN)make init$(NC)       - create .env and .vault from their examples"
 	@echo -e "  $(CYAN)make a2a-pki$(NC)    - verify the generated local A2A mTLS material"
 	@echo -e "  $(CYAN)make a2a-secrets$(NC) - verify owner-only, role-isolated local A2A secrets"
+	@echo -e "  $(CYAN)make a2a-supply-chain A2A_RUNTIME_IMAGE=...@sha256:...$(NC) - qualify the signed runtime image"
 	@echo -e "  $(CYAN)make build$(NC)      - build orchestrator + sandbox images"
 	@echo -e "  $(CYAN)make up$(NC)         - start the complete local factory stack"
 	@echo -e "  $(CYAN)make all$(NC)        - reset data and start a fully bootstrapped local factory"
@@ -89,6 +90,11 @@ a2a-secrets:
 	$(log-target)
 	@test -d .local/a2a-secrets || ./scripts/generate-a2a-local-secrets.sh .local/a2a-secrets
 	@./scripts/verify-a2a-secrets.sh .local/a2a-secrets
+
+a2a-supply-chain:
+	$(log-target)
+	@test -n "$(A2A_RUNTIME_IMAGE)" || (echo "A2A_RUNTIME_IMAGE digest is required" >&2; exit 1)
+	@./scripts/qualify-a2a-runtime-image.sh "$(A2A_RUNTIME_IMAGE)"
 
 build: temporal-replay
 	$(log-target)
@@ -157,6 +163,7 @@ test:
 	./scripts/test-a2a-pki.sh
 	./scripts/test-a2a-secret-rotation.sh
 	./scripts/verify-a2a-threat-model.rb
+	./scripts/test-a2a-supply-chain-policy.sh
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; fi
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/repository-context-server/pom.xml clean test
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/sandbox-execution-server/pom.xml clean test

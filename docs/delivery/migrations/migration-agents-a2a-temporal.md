@@ -540,8 +540,13 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `docs/architecture/a2a/A2A-110-threat-model.md` décrit actifs, adversaires, neuf frontières, STRIDE,
     cotation, huit scénarios, abus composés, contrôles, détection, réponse, tests et gouvernance ; le vérificateur
     relie automatiquement chaque scénario à ses preuves et aux vingt risques du registre A2A.
-- [ ] **A2A-111 — Ajouter les scans de supply chain.** SBOM, licences, signatures, provenance, Trivy et politique
+- [x] **A2A-111 — Ajouter les scans de supply chain.** SBOM, licences, signatures, provenance, Trivy et politique
   de vulnérabilités pour le SDK A2A et l'image runtime.
+  - Preuve : `supply-chain-policy-v1.json` épingle le SDK, les licences, deux formats SBOM, les bases par digest,
+    Trivy, Cosign keyless et une provenance SLSA. `qualify-a2a-runtime-image.sh` bloque toute référence mutable et
+    produit les sept preuves avec manifeste SHA-256 ; les fixtures négatives refusent licence GPL et dérive SDK.
+    La construction JDK 25 de l'image non-root passe les 63 tests et est consignée dans
+    `docs/qualification/a2a/A2A-111-SUPPLY-CHAIN.md`.
 
 ### Critères de sortie du lot 6
 

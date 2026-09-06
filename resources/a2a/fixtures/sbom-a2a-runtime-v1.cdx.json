@@ -1,0 +1,24 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {"component": {"type": "application", "name": "ai-factory-a2a-agent-runtime", "version": "0.1.0"}},
+  "components": [
+    {
+      "type": "library",
+      "group": "org.a2aproject.sdk",
+      "name": "a2a-java-sdk-server-common",
+      "version": "1.1.0.Final",
+      "licenses": [{"license": {"id": "Apache-2.0"}}],
+      "hashes": [{"alg": "SHA-256", "content": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]
+    },
+    {
+      "type": "library",
+      "group": "org.a2aproject.sdk",
+      "name": "a2a-java-sdk-transport-jsonrpc",
+      "version": "1.1.0.Final",
+      "licenses": [{"license": {"id": "Apache-2.0"}}],
+      "hashes": [{"alg": "SHA-256", "content": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]
+    }
+  ]
+}

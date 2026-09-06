@@ -1,6 +1,7 @@
 package com.example.aifactory.agentruntime;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -10,6 +11,7 @@ import java.time.Duration;
 public record AgentMcpProperties(boolean enabled, Duration requestTimeout,
                                  URI repositoryContextUrl, URI evidenceUrl,
                                  boolean securityEnabled, String clientId, Path accessTokenFile) {
+    @ConstructorBinding
     public AgentMcpProperties {
         if (requestTimeout == null || requestTimeout.isZero() || requestTimeout.isNegative()) {
             throw new IllegalArgumentException("MCP request timeout must be positive");

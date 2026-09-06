@@ -1,5 +1,6 @@
 package com.example.aifactory.agentruntime;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -13,6 +14,7 @@ public final class A2aIdentityRateLimiter {
     private final Clock clock;
     private final Map<Key, Bucket> buckets = new HashMap<>();
 
+    @Autowired
     public A2aIdentityRateLimiter(A2aRateLimitProperties limits) {
         this(limits, Clock.systemUTC());
     }

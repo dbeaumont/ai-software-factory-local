@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0.0",
+  "component": "ai-factory-a2a-agent-runtime",
+  "sdk": {
+    "groupId": "org.a2aproject.sdk",
+    "requiredVersion": "1.1.0.Final",
+    "requiredArtifacts": [
+      "a2a-java-sdk-server-common",
+      "a2a-java-sdk-transport-jsonrpc"
+    ],
+    "requiredLicense": "Apache-2.0"
+  },
+  "sbom": {
+    "requiredFormats": ["cyclonedx-json", "spdx-json"],
+    "minimumCycloneDxSpecVersion": "1.5",
+    "requireLicenses": true,
+    "requireHashes": true
+  },
+  "licenses": {
+    "allowed": [
+      "0BSD", "Apache-1.1", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0",
+      "CDDL-1.0", "CDDL-1.1", "EPL-1.0", "EPL-2.0", "ISC", "MIT", "MPL-2.0"
+    ],
+    "denied": ["AGPL-1.0", "AGPL-3.0", "GPL-2.0", "GPL-3.0", "SSPL-1.0"],
+    "unknownIsFailure": true
+  },
+  "vulnerabilities": {
+    "scanner": "trivy",
+    "scanners": ["vuln", "secret"],
+    "failSeverities": ["HIGH", "CRITICAL"],
+    "ignoreUnfixed": false,
+    "exceptionsRequireRssiApproval": true
+  },
+  "image": {
+    "baseImagesRequireDigest": true,
+    "runtimeReferenceRequiresDigest": true,
+    "runAsNonRoot": true,
+    "signature": {
+      "tool": "cosign",
+      "required": true,
+      "keyless": true,
+      "certificateOidcIssuer": "https://token.actions.githubusercontent.com",
+      "certificateIdentityRegexp": "^https://github.com/.+/.github/workflows/.+@refs/(heads/main|tags/.+)$"
+    }
+  },
+  "provenance": {
+    "format": "https://slsa.dev/provenance/v1",
+    "attestationType": "slsaprovenance",
+    "required": true,
+    "requiredFields": ["builder.id", "buildDefinition.externalParameters", "runDetails.metadata", "subject.digest.sha256"]
+  },
+  "artifacts": [
+    "sbom.cdx.json",
+    "sbom.spdx.json",
+    "trivy.json",
+    "license-report.json",
+    "signature-verification.json",
+    "provenance-verification.json",
+    "manifest.sha256"
+  ]
+}
