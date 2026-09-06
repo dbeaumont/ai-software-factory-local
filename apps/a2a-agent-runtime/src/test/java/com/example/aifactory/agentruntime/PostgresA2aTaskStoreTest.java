@@ -71,12 +71,11 @@ class PostgresA2aTaskStoreTest {
         store.acknowledgeNotification(pending.notificationId(), now.plusSeconds(2));
         assertThat(store.pendingNotifications("developer", 10)).isEmpty();
 
-        jdbc.update("""
-                INSERT INTO a2a_agent_task_artifact
-                  (artifact_id, task_id, tenant_id, acl_subject, artifact_digest, artifact_json, version)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, "artifact-1", "task-1", "tenant-a", "orchestrator", "b".repeat(64),
-                "{\"artifactId\":\"artifact-1\"}", 0);
+        A2aTaskStore.ArtifactRecord artifact = new A2aTaskStore.ArtifactRecord(
+                "artifact-1", "task-1", "tenant-a", "orchestrator", "b".repeat(64),
+                Map.of("artifactId", "artifact-1"));
+        store.putArtifact(artifact);
+        store.putArtifact(artifact);
         assertThat(store.artifacts("task-1", "tenant-a", "orchestrator"))
                 .containsExactly(Map.of("artifactId", "artifact-1"));
         assertThat(store.artifacts("task-1", "tenant-b", "orchestrator")).isEmpty();

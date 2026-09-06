@@ -36,4 +36,11 @@ class AgentCoreConfiguration {
                                                      McpToolPort mcp) {
         return new AgentExecutionWorker(role, llm, mcp);
     }
+
+    @Bean EvidenceArtifactPublisher evidenceArtifactPublisher(
+            RoleScopedAgentContext role, A2aTaskStore store, AgentMcpProperties properties,
+            WebClient.Builder builder, ObjectMapper mapper) {
+        return new EvidenceArtifactPublisher(role, store, properties,
+                new McpSdkSessionFactory(builder, mapper), mapper);
+    }
 }

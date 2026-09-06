@@ -14,6 +14,7 @@ public class EvidencePolicy {
             Map.entry("plan", new Rule("INTERNAL", 90)), Map.entry("patch", new Rule("INTERNAL", 90)),
             Map.entry("patch-candidate", new Rule("INTERNAL", 90)),
             Map.entry("patch-validation-error", new Rule("INTERNAL", 90)),
+            Map.entry("agent-result", new Rule("INTERNAL", 180)),
             Map.entry("code-patch", new Rule("INTERNAL", 90)),
             Map.entry("evaluation", new Rule("INTERNAL", 180)), Map.entry("integration", new Rule("INTERNAL", 90)),
             Map.entry("metadata", new Rule("INTERNAL", 180)), Map.entry("tests", new Rule("INTERNAL", 90)),

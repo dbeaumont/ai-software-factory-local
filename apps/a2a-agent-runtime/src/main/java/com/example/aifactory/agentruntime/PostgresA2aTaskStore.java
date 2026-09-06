@@ -173,6 +173,23 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                 """, Timestamp.from(acknowledgedAt), notificationId);
     }
 
+    @Override
+    public void putArtifact(ArtifactRecord artifact) {
+        try {
+            jdbc.update("""
+                    INSERT INTO a2a_agent_task_artifact
+                      (artifact_id, task_id, tenant_id, acl_subject, artifact_digest, artifact_json, version)
+                    VALUES (?, ?, ?, ?, ?, ?, 0)
+                    """, artifact.artifactId(), artifact.taskId(), artifact.tenantId(), artifact.aclSubject(),
+                    artifact.digest(), writeArtifact(artifact.document()));
+        } catch (DuplicateKeyException replay) {
+            Map<String, Object> existing = jdbc.queryForObject("""
+                    SELECT artifact_json FROM a2a_agent_task_artifact WHERE artifact_id = ?
+                    """, (rs, row) -> readArtifact(rs.getString("artifact_json")), artifact.artifactId());
+            if (!artifact.document().equals(existing)) throw new IllegalStateException("Immutable A2A artifact conflict");
+        }
+    }
+
     private void insertHistory(String taskId, HistoryRecord history) {
         jdbc.update("""
                 INSERT INTO a2a_agent_task_history (task_id, message_id, event_type, occurred_at)
@@ -186,6 +203,14 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
             return mapper.readValue(json, Map.class);
         } catch (Exception exception) {
             throw new IllegalStateException("Stored A2A artifact is invalid", exception);
+        }
+    }
+
+    private String writeArtifact(Map<String, Object> artifact) {
+        try {
+            return mapper.writeValueAsString(artifact);
+        } catch (Exception exception) {
+            throw new IllegalArgumentException("A2A artifact is not serializable", exception);
         }
     }
 

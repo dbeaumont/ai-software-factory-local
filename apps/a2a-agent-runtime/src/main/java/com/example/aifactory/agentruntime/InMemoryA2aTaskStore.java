@@ -13,6 +13,7 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
     private final Map<String, String> taskByMessage = new ConcurrentHashMap<>();
     private final Map<String, List<HistoryRecord>> histories = new ConcurrentHashMap<>();
     private final Map<String, PendingNotification> notifications = new ConcurrentHashMap<>();
+    private final Map<String, ArtifactRecord> artifactRecords = new ConcurrentHashMap<>();
 
     @Override
     public synchronized CreateResult createOrGet(StoredTask candidate, HistoryRecord accepted) {
@@ -50,7 +51,10 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
 
     @Override
     public List<Map<String, Object>> artifacts(String taskId, String tenantId, String callerSubject) {
-        return List.of();
+        return artifactRecords.values().stream()
+                .filter(artifact -> artifact.taskId().equals(taskId) && artifact.tenantId().equals(tenantId)
+                        && artifact.aclSubject().equals(callerSubject))
+                .sorted(Comparator.comparing(ArtifactRecord::artifactId)).map(ArtifactRecord::document).toList();
     }
 
     @Override
@@ -103,5 +107,14 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
     @Override
     public void acknowledgeNotification(String notificationId, java.time.Instant acknowledgedAt) {
         notifications.remove(notificationId);
+    }
+
+    @Override
+    public void putArtifact(ArtifactRecord artifact) {
+        ArtifactRecord existing = artifactRecords.putIfAbsent(artifact.artifactId(), artifact);
+        if (existing != null && (!existing.digest().equals(artifact.digest())
+                || !existing.document().equals(artifact.document()))) {
+            throw new IllegalStateException("Immutable A2A artifact conflict");
+        }
     }
 }

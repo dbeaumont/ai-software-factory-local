@@ -23,6 +23,7 @@ class AgentTaskWorkflowV1Test {
             Worker worker = environment.newWorker(queue);
             worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
             worker.registerActivitiesImplementations(new RecordingProjection());
+            worker.registerActivitiesImplementations(new RecordingArtifacts());
             environment.start();
             TemporalAgentTaskWorkflowGateway gateway = new TemporalAgentTaskWorkflowGateway(
                     environment.getWorkflowClient(), properties, "developer");
@@ -38,7 +39,8 @@ class AgentTaskWorkflowV1Test {
             AgentTaskWorkflowV1 workflow = environment.getWorkflowClient()
                     .newWorkflowStub(AgentTaskWorkflowV1.class, first.workflowId());
             assertThat(workflow.state()).isEqualTo("WORKING");
-            workflow.complete(new AgentTaskWorkflowV1.Outcome("COMPLETED", "a".repeat(64), "validated"));
+            workflow.complete(new AgentTaskWorkflowV1.Outcome("COMPLETED", "a".repeat(64), "validated",
+                    "attempt-1", "patch-proposal-v1", java.util.Set.of(), "e30="));
             assertThat(WorkflowStub.fromTyped(workflow).getResult(AgentTaskWorkflowV1.Outcome.class).state())
                     .isEqualTo("COMPLETED");
 
@@ -57,6 +59,7 @@ class AgentTaskWorkflowV1Test {
             Worker worker = environment.newWorker(queue);
             worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
             worker.registerActivitiesImplementations(new RecordingProjection());
+            worker.registerActivitiesImplementations(new RecordingArtifacts());
             environment.start();
             AgentTaskWorkflowV1 workflow = environment.getWorkflowClient().newWorkflowStub(
                     AgentTaskWorkflowV1.class, io.temporal.client.WorkflowOptions.newBuilder()
@@ -74,5 +77,13 @@ class AgentTaskWorkflowV1Test {
 
     public static final class RecordingProjection implements AgentTaskProjectionActivities {
         @Override public void project(Projection projection) { }
+    }
+
+    public static final class RecordingArtifacts implements AgentArtifactActivities {
+        @Override
+        public ArtifactReference publish(PublishCommand command) {
+            return new ArtifactReference("artifact-1", "evidence://task-1/attempt-1/agent-result/" + command.digest(),
+                    command.digest());
+        }
     }
 }

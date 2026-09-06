@@ -387,8 +387,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   non acquittées sans relancer le LLM ni les outils déjà confirmés. _(L'enveloppe et la corrélation Temporal sont
   durables ; `A2aRecoveryCoordinator` réutilise l'ID déterministe avec `USE_EXISTING` et draine un outbox de
   notifications idempotent, dont l'acquittement est persisté.)_
-- [ ] **A2A-069 — Publier les artefacts finaux.** Valider le contrat métier, stocker le contenu dans Evidence MCP,
-  publier la référence A2A puis passer à `COMPLETED` dans une séquence réconciliable.
+- [x] **A2A-069 — Publier les artefacts finaux.** Valider le contrat métier, stocker le contenu dans Evidence MCP,
+  publier la référence A2A puis passer à `COMPLETED` dans une séquence réconciliable. _(L'activité idempotente
+  `AgentArtifactActivities` valide contrat et digest, appelle `evidence.store`, persiste exclusivement la référence
+  A2A liée au tenant, puis autorise la projection terminale du workflow.)_
 - [ ] **A2A-070 — Classer les erreurs.** Mapper erreurs de contrat, auth, quota, dépendance, timeout et métier vers
   les erreurs A2A et états appropriés, avec `google.rpc.Status/ErrorInfo` dans les détails.
 - [ ] **A2A-071 — Ajouter readiness et liveness.** La readiness exige carte valide, stockage, Temporal, task queue,

@@ -21,6 +21,7 @@ public interface A2aTaskStore {
     void enqueueNotification(PendingNotification notification);
     List<PendingNotification> pendingNotifications(String role, int limit);
     void acknowledgeNotification(String notificationId, Instant acknowledgedAt);
+    void putArtifact(ArtifactRecord artifact);
 
     record StoredTask(
             String taskId, String contextId, String messageId, String messageDigest,
@@ -35,4 +36,8 @@ public interface A2aTaskStore {
     record PendingNotification(
             String notificationId, String taskId, String contextId, String role, long sequence,
             A2aSendMessageService.TaskState state, Instant occurredAt) {}
+
+    record ArtifactRecord(
+            String artifactId, String taskId, String tenantId, String aclSubject,
+            String digest, Map<String, Object> document) {}
 }

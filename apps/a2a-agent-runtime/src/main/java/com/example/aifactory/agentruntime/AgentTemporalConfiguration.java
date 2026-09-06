@@ -40,7 +40,7 @@ class AgentTemporalConfiguration {
     @Bean
     @ConditionalOnProperty(name = "ai-factory.agent-runtime.temporal.enabled", havingValue = "true")
     Worker agentTaskWorker(WorkerFactory factory, AgentTemporalProperties properties, AgentRuntimeProperties runtime,
-                           A2aTaskStore taskStore) {
+                           A2aTaskStore taskStore, EvidenceArtifactPublisher artifactPublisher) {
         WorkerDeploymentOptions deployment = WorkerDeploymentOptions.newBuilder()
                 .setUseVersioning(true)
                 .setVersion(new WorkerDeploymentVersion(properties.deploymentName(), properties.buildId()))
@@ -50,6 +50,7 @@ class AgentTemporalConfiguration {
                 .setDeploymentOptions(deployment).build());
         worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
         worker.registerActivitiesImplementations(new AgentTaskProjectionActivitiesImpl(taskStore));
+        worker.registerActivitiesImplementations(new AgentArtifactActivitiesImpl(artifactPublisher));
         return worker;
     }
 

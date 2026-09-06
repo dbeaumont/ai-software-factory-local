@@ -16,6 +16,10 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
             AgentTaskProjectionActivities.class,
             ActivityOptions.newBuilder().setStartToCloseTimeout(java.time.Duration.ofSeconds(30))
                     .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(10).build()).build());
+    private final AgentArtifactActivities artifacts = Workflow.newActivityStub(
+            AgentArtifactActivities.class,
+            ActivityOptions.newBuilder().setStartToCloseTimeout(java.time.Duration.ofMinutes(2))
+                    .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(10).build()).build());
 
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
@@ -26,6 +30,14 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
                 input.taskId(), currentState, input.taskId() + ":working"));
         Workflow.await(() -> outcome != null || canceled);
         Outcome terminal = canceled ? new Outcome("CANCELED", null, cancellationReason) : outcome;
+        if ("COMPLETED".equals(terminal.state())) {
+            AgentArtifactActivities.ArtifactReference artifact = artifacts.publish(
+                    new AgentArtifactActivities.PublishCommand(input.taskId(), terminal.attemptId(), input.role(),
+                            terminal.outputContract(), terminal.allowedReferenceIds(), terminal.artifactContentBase64(),
+                            terminal.artifactDigest()));
+            terminal = new Outcome(terminal.state(), artifact.digest(), artifact.uri(), terminal.attemptId(),
+                    terminal.outputContract(), terminal.allowedReferenceIds(), null);
+        }
         currentState = terminal.state();
         projections.project(new AgentTaskProjectionActivities.Projection(
                 input.taskId(), currentState, input.taskId() + ":terminal:" + currentState));
@@ -63,6 +75,13 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
         if (outcome == null || outcome.state() == null
                 || !java.util.Set.of("COMPLETED", "REJECTED", "FAILED").contains(outcome.state())) {
             throw new IllegalArgumentException("Agent task workflow outcome is incomplete");
+        }
+        if ("COMPLETED".equals(outcome.state())
+                && (outcome.artifactDigest() == null || !outcome.artifactDigest().matches("[0-9a-f]{64}")
+                || outcome.attemptId() == null || outcome.attemptId().isBlank()
+                || outcome.outputContract() == null || outcome.outputContract().isBlank()
+                || outcome.artifactContentBase64() == null || outcome.artifactContentBase64().isBlank())) {
+            throw new IllegalArgumentException("Completed agent task lacks its validated artifact");
         }
         return outcome;
     }
