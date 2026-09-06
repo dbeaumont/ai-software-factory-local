@@ -515,7 +515,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 - [x] Tester les limites globales et par task queue. _(La cible `make test-temporal-capacity-limits` vérifie les
   bornes de configuration, l'application uniforme des limites de concurrence et de débit aux sept task queues,
   les métriques de saturation, ainsi que les quotas globaux et par tâche du sandbox. Les 28 tests ciblés passent.)_
-- [ ] Tester une attente humaine supérieure à un redémarrage et à une rotation de worker.
+- [x] Tester une attente humaine supérieure à un redémarrage et à une rotation de worker. _(La cible
+  `make test-temporal-human-wait-rotation` maintient un ticket en `WAITING_APPROVAL`, redémarre l'orchestrateur,
+  enregistre et rend courante une nouvelle version sur les sept files sans retirer l'ancienne version épinglée,
+  puis approuve et restaure la version nominale. Validation réelle : tâche `4d111f8d`, run
+  `01a07481-a706-7031-845b-f14d3623c8f7`, attente 35 s, livraison `PR_CREATED` sur le même Run ID.)_
 - [ ] Tester rétention, purge et reconstruction sur un jeu représentatif.
 
 ## 13. Lot 8 — bascule franche et complète
