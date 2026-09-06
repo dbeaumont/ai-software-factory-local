@@ -18,6 +18,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** Sanitized, explainable admission readiness across every mandatory A2A role and dependency. */
 @Component("a2aFleet")
 public final class A2aFleetReadinessHealthIndicator implements HealthIndicator {
+    private static final Logger LOGGER = LoggerFactory.getLogger(A2aFleetReadinessHealthIndicator.class);
     private final List<String> roles;
     private final Probe probe;
     private final AtomicInteger ready = new AtomicInteger();
@@ -173,6 +176,10 @@ public final class A2aFleetReadinessHealthIndicator implements HealthIndicator {
                         .get(timeout.toMillis(), TimeUnit.MILLISECONDS);
                 return role.equals(card.agentRole()) && !card.skillIds().isEmpty();
             } catch (Exception unavailable) {
+                Throwable cause = unavailable;
+                while (cause.getCause() != null) cause = cause.getCause();
+                LOGGER.warn("A2A card readiness failed role={} cause={} message={}", role,
+                        cause.getClass().getSimpleName(), cause.getMessage());
                 return false;
             }
         }
