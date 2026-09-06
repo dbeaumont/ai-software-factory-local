@@ -29,12 +29,14 @@ public final class A2aSendMessageService {
     private final AgentTaskWorkflowControl workflowControl;
     private final AgentTaskWorkflowStarter workflowStarter;
     private final A2aTaskStore store;
+    private final A2aAdmissionController admission;
     private final Map<String, Cursor> cursors = new ConcurrentHashMap<>();
 
     @Autowired
     public A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
                                  ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
-                                 AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store) {
+                                 AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store,
+                                 A2aAdmissionController admission) {
         this.activeRole = runtime.role();
         AgentCardCatalogGenerator.GeneratedAgentCard card = cards.generate().get(activeRole);
         if (card == null) throw new IllegalStateException("No Agent Card source for active role");
@@ -44,6 +46,15 @@ public final class A2aSendMessageService {
         this.workflowControl = workflowControl;
         this.workflowStarter = workflowStarter;
         this.store = store;
+        this.admission = admission;
+    }
+
+    A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
+                          ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
+                          AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store) {
+        this(runtime, cards, mapper, workflowControl, workflowStarter, store,
+                new A2aAdmissionController(store, new AgentConcurrencyProperties(
+                        2, 2, 32, 16, 64, 1_000, java.time.Duration.ofSeconds(30))));
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards, ObjectMapper mapper) {
@@ -89,8 +100,9 @@ public final class A2aSendMessageService {
                 UUID.randomUUID().toString(), UUID.randomUUID().toString(), messageId, digest,
                 role, skill, caller.subject(), caller.tenantId(), requiredText(execution, "delegationId"),
                 now, TaskState.SUBMITTED, 0, envelope.toString(), null, null);
-        A2aTaskStore.CreateResult result = store.createOrGet(candidate,
-                new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_ACCEPTED", now));
+        A2aTaskStore.CreateResult result = admission.admit(messageId, role, caller.tenantId(), () ->
+                store.createOrGet(candidate,
+                        new A2aTaskStore.HistoryRecord(messageId, "MESSAGE_ACCEPTED", now)));
         if (!result.task().messageDigest().equals(digest)) {
             throw new SubmissionRejected("messageId collision with a different payload");
         }

@@ -56,6 +56,12 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
     }
 
     @Override
+    public Optional<StoredTask> findByMessageId(String messageId) {
+        return jdbc.query("SELECT * FROM a2a_agent_task WHERE message_id = ?", TASK_MAPPER, messageId)
+                .stream().findFirst();
+    }
+
+    @Override
     public List<StoredTask> list(String tenantId, String callerSubject, String contextId,
                                  A2aSendMessageService.TaskState state, int offset, int limit) {
         StringBuilder sql = new StringBuilder("""
@@ -194,6 +200,17 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
     public void checkHealth() {
         Integer value = jdbc.queryForObject("SELECT 1", Integer.class);
         if (!Integer.valueOf(1).equals(value)) throw new IllegalStateException("A2A task store health check failed");
+    }
+
+    @Override
+    public int activeCount(String role, String tenantId) {
+        String sql = """
+                SELECT COUNT(*) FROM a2a_agent_task
+                WHERE agent_role = ? AND task_state NOT IN ('COMPLETED', 'REJECTED', 'FAILED', 'CANCELED')
+                """ + (tenantId == null ? "" : " AND tenant_id = ?");
+        Integer count = tenantId == null ? jdbc.queryForObject(sql, Integer.class, role)
+                : jdbc.queryForObject(sql, Integer.class, role, tenantId);
+        return count == null ? 0 : count;
     }
 
     private void insertHistory(String taskId, HistoryRecord history) {

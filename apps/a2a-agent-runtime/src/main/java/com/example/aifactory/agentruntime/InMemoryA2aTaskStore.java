@@ -28,6 +28,11 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
     @Override public Optional<StoredTask> find(String taskId) { return Optional.ofNullable(byTask.get(taskId)); }
 
     @Override
+    public Optional<StoredTask> findByMessageId(String messageId) {
+        return Optional.ofNullable(taskByMessage.get(messageId)).map(byTask::get);
+    }
+
+    @Override
     public List<StoredTask> list(String tenantId, String callerSubject, String contextId,
                                  A2aSendMessageService.TaskState state, int offset, int limit) {
         return byTask.values().stream()
@@ -119,4 +124,10 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
     }
 
     @Override public void checkHealth() { }
+
+    @Override
+    public int activeCount(String role, String tenantId) {
+        return (int) byTask.values().stream().filter(task -> task.role().equals(role) && !task.state().terminal())
+                .filter(task -> tenantId == null || task.tenantId().equals(tenantId)).count();
+    }
 }

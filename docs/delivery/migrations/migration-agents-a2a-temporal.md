@@ -399,8 +399,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   LLM et MCP obligatoires pour le rôle ; la liveness ne dépend pas des services aval. _(`agentRuntimeDependencies`
   agrège six contrôles stricts et sans secret ; le groupe liveness reste limité à `livenessState` et ne sonde aucun
   service aval.)_
-- [ ] **A2A-072 — Borner la concurrence.** Configurer file, pollers, exécutions par rôle, quotas par tenant,
-  backpressure et graceful shutdown.
+- [x] **A2A-072 — Borner la concurrence.** Configurer file, pollers, exécutions par rôle, quotas par tenant,
+  backpressure et graceful shutdown. _(`AgentConcurrencyProperties` borne pollers/exécutions, admission tenant et
+  file durable ; les replays contournent correctement le quota, et l'arrêt suspend le polling avant d'attendre le
+  délai gracieux configuré.)_
 
 ### Critères de sortie du lot 4
 

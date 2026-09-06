@@ -102,9 +102,12 @@ final class A2aJsonRpcController {
                 case QUOTA -> new FailureInfo(8, "QUOTA_EXCEEDED", "QUOTA", true, "FAILED");
                 case DEPENDENCY -> new FailureInfo(14, "DEPENDENCY_UNAVAILABLE", "DEPENDENCY", true, "FAILED");
             };
-            return error(requestId, A2AErrorCodes.INTERNAL,
-                    failure.category() == A2aOperationalException.Category.TIMEOUT
-                            ? "A2A dependency timed out" : "A2A dependency is temporarily unavailable", info);
+            String message = switch (failure.category()) {
+                case TIMEOUT -> "A2A dependency timed out";
+                case QUOTA -> "A2A quota exceeded";
+                case DEPENDENCY -> "A2A dependency is temporarily unavailable";
+            };
+            return error(requestId, A2AErrorCodes.INTERNAL, message, info);
         } catch (org.springframework.dao.TransientDataAccessException
                  | A2aPushNotificationSender.NotificationDeliveryException failure) {
             return error(requestId, A2AErrorCodes.INTERNAL, "A2A dependency is temporarily unavailable",

@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface A2aTaskStore {
     CreateResult createOrGet(StoredTask candidate, HistoryRecord accepted);
     Optional<StoredTask> find(String taskId);
+    Optional<StoredTask> findByMessageId(String messageId);
     List<StoredTask> list(String tenantId, String callerSubject, String contextId,
                           A2aSendMessageService.TaskState state, int offset, int limit);
     int count(String tenantId, String callerSubject, String contextId, A2aSendMessageService.TaskState state);
@@ -23,6 +24,7 @@ public interface A2aTaskStore {
     void acknowledgeNotification(String notificationId, Instant acknowledgedAt);
     void putArtifact(ArtifactRecord artifact);
     void checkHealth();
+    int activeCount(String role, String tenantId);
 
     record StoredTask(
             String taskId, String contextId, String messageId, String messageDigest,

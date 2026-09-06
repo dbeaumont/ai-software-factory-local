@@ -3,9 +3,12 @@ spring:
     name: ai-factory-a2a-agent-runtime
   main:
     banner-mode: "off"
+  lifecycle:
+    timeout-per-shutdown-phase: ${AI_FACTORY_AGENT_SHUTDOWN_GRACE:30s}
 
 server:
   port: ${AI_FACTORY_AGENT_PORT:8090}
+  shutdown: graceful
 
 management:
   endpoints:
@@ -58,6 +61,14 @@ ai-factory:
       namespace: ${AI_FACTORY_TEMPORAL_NAMESPACE:ai-factory}
       deployment-name: ${AI_FACTORY_A2A_TEMPORAL_DEPLOYMENT:ai-factory-a2a-agents}
       build-id: ${AI_FACTORY_A2A_TEMPORAL_BUILD_ID:dev}
+    concurrency:
+      workflow-pollers: ${AI_FACTORY_A2A_WORKFLOW_POLLERS:2}
+      activity-pollers: ${AI_FACTORY_A2A_ACTIVITY_POLLERS:2}
+      max-workflow-executions: ${AI_FACTORY_A2A_MAX_WORKFLOWS:32}
+      max-activity-executions: ${AI_FACTORY_A2A_MAX_ACTIVITIES:16}
+      max-active-tasks-per-tenant: ${AI_FACTORY_A2A_MAX_TASKS_PER_TENANT:64}
+      max-queued-tasks: ${AI_FACTORY_A2A_MAX_QUEUED_TASKS:1000}
+      shutdown-grace: ${AI_FACTORY_AGENT_SHUTDOWN_GRACE:30s}
     llm:
       base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
       api-key: ${AI_FACTORY_LLM_API_KEY:}

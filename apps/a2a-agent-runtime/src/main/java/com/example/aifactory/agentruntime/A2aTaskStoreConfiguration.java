@@ -47,4 +47,9 @@ class A2aTaskStoreConfiguration {
     @Bean
     @ConditionalOnMissingBean(A2aTaskStore.class)
     A2aTaskStore inMemoryA2aTaskStore() { return new InMemoryA2aTaskStore(); }
+
+    @Bean
+    A2aAdmissionController a2aAdmissionController(A2aTaskStore store, AgentConcurrencyProperties limits) {
+        return new A2aAdmissionController(store, limits);
+    }
 }
