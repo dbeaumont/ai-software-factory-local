@@ -28,7 +28,7 @@ class A2aIndependentReviewWorkflowTest {
                             URI.create("https://a2a-independent-reviewer/.well-known/agent-card.json"),
                             URI.create("https://a2a-independent-reviewer/a2a"), "JSONRPC", "1.0", "a".repeat(64),
                             List.of("independent-reviewer.integration-result-v1"), false, true));
-            worker.registerActivitiesImplementations((A2aActivities.DispatchTask) request -> {
+            worker.registerActivitiesImplementations((A2aActivities.ReconcileDispatch) request -> {
                 sent.set(request.command());
                 return completed();
             });

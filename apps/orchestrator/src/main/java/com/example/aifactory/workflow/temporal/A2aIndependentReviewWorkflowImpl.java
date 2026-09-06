@@ -46,10 +46,10 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
                 "reviewBundleDigest", TemporalIds.sha256(String.join("\n", digests)));
         A2aContracts.SendCommand command = new A2aContracts.SendCommand(ROLE, SKILL, messageId, null, null,
                 references, metadata, true);
-        A2aContracts.TaskSnapshot submitted = activities.dispatchTask().dispatchTask(
+        A2aContracts.TaskSnapshot submitted = activities.reconcileDispatch().reconcileDispatch(
                 new A2aActivities.DispatchRequest(execution, card.cardDigest(), command));
         A2aContracts.Notification terminal = tasks.awaitUntilTerminal(ROLE, submitted, Duration.ofSeconds(30),
-                activities.getTask());
+                activities.getTask(), () -> A2aWorkflowHistoryGuard.independentReview(request));
         if (terminal.state() != A2aContracts.TaskState.COMPLETED) {
             return new Result(request.reviewId(), ROLE,
                     terminal.state() == A2aContracts.TaskState.CANCELED ? "CANCELLED" : "FAILED");

@@ -27,7 +27,7 @@ class A2aDelegationWorkflowTest {
                             URI.create("https://a2a-developer/.well-known/agent-card.json"),
                             URI.create("https://a2a-developer/a2a"), "JSONRPC", "1.0", "b".repeat(64),
                             List.of("developer.code-task-v1"), false, true));
-            worker.registerActivitiesImplementations((A2aActivities.DispatchTask) request -> {
+            worker.registerActivitiesImplementations((A2aActivities.ReconcileDispatch) request -> {
                 dispatch.set(request);
                 return completed();
             });

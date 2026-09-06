@@ -39,10 +39,17 @@ final class A2aTaskAwaiter {
 
     A2aContracts.Notification awaitUntilTerminal(String agentRole, A2aContracts.TaskSnapshot initial,
                                                   Duration reconciliationInterval, A2aActivities.GetTask getTask) {
+        return awaitUntilTerminal(agentRole, initial, reconciliationInterval, getTask, () -> { });
+    }
+
+    A2aContracts.Notification awaitUntilTerminal(String agentRole, A2aContracts.TaskSnapshot initial,
+                                                  Duration reconciliationInterval, A2aActivities.GetTask getTask,
+                                                  Runnable historyGuard) {
         seed(agentRole, initial);
         long sequence = latest.get(initial.taskId()).sequence();
         if (terminal(latest.get(initial.taskId()).state())) return latest.get(initial.taskId());
         while (true) {
+            historyGuard.run();
             WaitResult wait = awaitNext(initial.taskId(), sequence, reconciliationInterval);
             if (wait.reconciliationDue()) {
                 A2aContracts.TaskSnapshot observed = getTask.getTask(

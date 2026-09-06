@@ -44,10 +44,10 @@ public final class A2aDelegationWorkflowImpl implements DelegationWorkflow {
         A2aContracts.SendCommand command = new A2aContracts.SendCommand(request.role(), skill, messageId,
                 null, null, List.of(new A2aContracts.Part(A2aMediaTypes.JSON, null, instruction, null)),
                 metadata, true);
-        A2aContracts.TaskSnapshot submitted = activities.dispatchTask().dispatchTask(
+        A2aContracts.TaskSnapshot submitted = activities.reconcileDispatch().reconcileDispatch(
                 new A2aActivities.DispatchRequest(execution, card.cardDigest(), command));
         A2aContracts.Notification terminal = tasks.awaitUntilTerminal(request.role(), submitted,
-                Duration.ofSeconds(30), activities.getTask());
+                Duration.ofSeconds(30), activities.getTask(), () -> A2aWorkflowHistoryGuard.delegation(request));
         if (terminal.state() == A2aContracts.TaskState.COMPLETED) {
             A2aContracts.TaskSnapshot completed = new A2aContracts.TaskSnapshot(terminal.taskId(),
                     terminal.contextId(), terminal.state(), terminal.occurredAt(), terminal.artifacts(),

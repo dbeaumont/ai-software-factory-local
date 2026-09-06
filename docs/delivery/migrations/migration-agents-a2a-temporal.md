@@ -466,8 +466,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   A2A sont `PINNED` sur un build immuable ; le nouveau build enregistre exclusivement les implémentations A2A,
   tandis que les anciens pollers drainent leurs historiques sans les rejouer avec le nouveau code. Procédure et
   preuves : `docs/qualification/a2a/A2A-091-WORKER-VERSIONING.md`.)_
-- [ ] **A2A-092 — Borner les historiques.** Ne stocker dans Temporal que IDs, états, digests et références ;
-  déclencher `continue-as-new` selon les seuils existants.
+- [x] **A2A-092 — Borner les historiques.** Ne stocker dans Temporal que IDs, états, digests et références ;
+  déclencher `continue-as-new` selon les seuils existants. _(Les child workflows A2A contrôlent 250 événements,
+  1 MiB et la recommandation serveur avant chaque attente ; un nouveau run reprend par `reconcileDispatch` avec
+  la même identité logique et ne transporte que la requête compacte, les états et références digestées.)_
 
 ### Critères de sortie du lot 5
 
