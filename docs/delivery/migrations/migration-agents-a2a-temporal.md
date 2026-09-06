@@ -785,8 +785,11 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   terminer ou annuler proprement les exécutions incompatibles. _(Terminé le 2026-09-06 : commutateur durable
   fermé à la révision 6 et aucun workflow Temporal actif dans `ai-factory-local` ; les projections historiques
   restent intactes pour la sauvegarde ; preuve : `docs/evidence/a2a/A2A-181-ADMISSIONS-FREEZE.md`.)_
-- [ ] **A2A-182 — Sauvegarder les états.** Sauvegarder projections, corrélations, preuves de qualification,
-  configuration signée et versions de workers sans accéder aux tables internes Temporal.
+- [x] **A2A-182 — Sauvegarder les états.** Sauvegarder projections, corrélations, preuves de qualification,
+  configuration signée et versions de workers sans accéder aux tables internes Temporal. _(Terminé le
+  2026-09-06 : snapshot cohérent de 22 Mio, manifeste SHA-256 vérifié et restauration isolée réussie, incluant
+  désormais les 6 tables A2A, les identités signées et les 15 images de workers ; preuve :
+  `docs/evidence/a2a/A2A-182-CUTOVER-BACKUP.md`.)_
 - [ ] **A2A-183 — Déployer les agents A2A.** Démarrer stockage, runtimes, Agent Cards, workers et notifications,
   puis vérifier toutes les readyness et task queues.
 - [ ] **A2A-184 — Activer la version Temporal A2A.** Déployer le nouveau type/build de workflow et vérifier la

@@ -21,7 +21,7 @@ else
   (cd "$backup_directory" && shasum -a 256 -c manifest.sha256)
 fi
 
-for count_file in gitea-table-count.txt gitea-file-count.txt workspace-file-count.txt configuration-entry-count.txt; do
+for count_file in a2a-task-table-count.txt gitea-table-count.txt gitea-file-count.txt workspace-file-count.txt configuration-entry-count.txt; do
   count=$(tr -d '\r\n ' < "$backup_directory/$count_file")
   [[ "$count" =~ ^[0-9]+$ ]] || { echo "Invalid count in $count_file" >&2; exit 2; }
 done
@@ -32,23 +32,25 @@ core_prefix="ai-factory-temporal-restore-${prefix#ai-factory-cutover-restore-}-c
 postgres_image='postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2'
 busybox_image='busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0'
 gitea_db_volume="$prefix-gitea-db-data"
+a2a_db_volume="$prefix-a2a-task-db-data"
 gitea_data_volume="$prefix-gitea-data"
 workspace_volume="$prefix-factory-workspace"
 gitea_db_container="$prefix-gitea-db"
+a2a_db_container="$prefix-a2a-task-db"
 projection_container="$prefix-projection-db"
 configuration_directory=$(mktemp -d /private/tmp/ai-factory-cutover-config-restore-XXXXXX)
 
 cleanup_containers() {
-  docker rm -f "$gitea_db_container" "$projection_container" >/dev/null 2>&1 || true
+  docker rm -f "$gitea_db_container" "$a2a_db_container" "$projection_container" >/dev/null 2>&1 || true
 }
 cleanup_on_error() {
   cleanup_containers
-  docker volume rm "$gitea_db_volume" "$gitea_data_volume" "$workspace_volume" >/dev/null 2>&1 || true
+  docker volume rm "$gitea_db_volume" "$a2a_db_volume" "$gitea_data_volume" "$workspace_volume" >/dev/null 2>&1 || true
   rm -rf "$configuration_directory"
 }
 trap cleanup_on_error ERR
 
-for volume in "$gitea_db_volume" "$gitea_data_volume" "$workspace_volume"; do
+for volume in "$gitea_db_volume" "$a2a_db_volume" "$gitea_data_volume" "$workspace_volume"; do
   docker volume inspect "$volume" >/dev/null 2>&1 && {
     echo "Target volume already exists: $volume" >&2
     exit 2
@@ -74,11 +76,26 @@ for attempt in $(seq 1 60); do
 done
 docker exec "$gitea_db_container" pg_restore --exit-on-error --no-owner -U gitea -d gitea /backup/gitea.dump
 
+docker run -d --name "$a2a_db_container" --network none \
+  -e POSTGRES_USER=ai_factory_a2a -e POSTGRES_PASSWORD=restore-only -e POSTGRES_DB=ai_factory_a2a \
+  -v "$a2a_db_volume:/var/lib/postgresql/data" -v "$backup_directory:/backup:ro" \
+  "$postgres_image" >/dev/null
+for attempt in $(seq 1 60); do
+  docker exec "$a2a_db_container" pg_isready -U ai_factory_a2a >/dev/null 2>&1 && break
+  [ "$attempt" -lt 60 ] || { echo "A2A restore database did not become ready" >&2; exit 1; }
+  sleep 1
+done
+docker exec "$a2a_db_container" pg_restore --exit-on-error --no-owner \
+  -U ai_factory_a2a -d ai_factory_a2a /backup/a2a-task.dump
+
 expected_gitea_tables=$(tr -d '\r\n ' < "$backup_directory/gitea-table-count.txt")
+expected_a2a_tables=$(tr -d '\r\n ' < "$backup_directory/a2a-task-table-count.txt")
 expected_gitea_files=$(tr -d '\r\n ' < "$backup_directory/gitea-file-count.txt")
 expected_workspace_files=$(tr -d '\r\n ' < "$backup_directory/workspace-file-count.txt")
 expected_configuration_entries=$(tr -d '\r\n ' < "$backup_directory/configuration-entry-count.txt")
 gitea_tables=$(docker exec "$gitea_db_container" psql -U gitea -d gitea -Atc \
+  "select count(*) from pg_catalog.pg_tables where schemaname not in ('pg_catalog','information_schema')")
+a2a_tables=$(docker exec "$a2a_db_container" psql -U ai_factory_a2a -d ai_factory_a2a -Atc \
   "select count(*) from pg_catalog.pg_tables where schemaname not in ('pg_catalog','information_schema')")
 gitea_files=$(docker run --rm --network none -v "$gitea_data_volume:/target:ro" "$busybox_image" \
   sh -c 'find /target -type f | wc -l')
@@ -87,13 +104,18 @@ workspace_files=$(docker run --rm --network none -v "$workspace_volume:/target:r
 configuration_entries=$(tar -tzf "$backup_directory/configuration.tgz" | wc -l | tr -d ' ')
 
 [ "$gitea_tables" = "$expected_gitea_tables" ] \
+  && [ "$a2a_tables" = "$expected_a2a_tables" ] \
   && [ "$gitea_files" = "$expected_gitea_files" ] \
   && [ "$workspace_files" = "$expected_workspace_files" ] \
   && [ "$configuration_entries" = "$expected_configuration_entries" ] || {
   echo "Restored cutover authority counts differ from the source snapshot" >&2
   exit 1
 }
-[ -f "$configuration_directory/.env" ] && [ -f "$configuration_directory/infrastructure/compose.yaml" ] || {
+[ -f "$configuration_directory/.env" ] \
+  && [ -f "$configuration_directory/infrastructure/compose.yaml" ] \
+  && [ -d "$configuration_directory/resources/a2a" ] \
+  && [ -d "$configuration_directory/.local/a2a-pki" ] \
+  && [ -d "$configuration_directory/.local/a2a-secrets" ] || {
   echo "Restored configuration is incomplete" >&2
   exit 1
 }
@@ -120,6 +142,7 @@ rm -rf "$configuration_directory"
 trap - ERR
 printf '%s\n' \
   "Gitea restored: $gitea_db_volume ($gitea_tables tables), $gitea_data_volume ($gitea_files files)" \
+  "A2A task state restored: $a2a_db_volume ($a2a_tables tables)" \
   "Workspaces restored: $workspace_volume ($workspace_files files)" \
   "Configuration restored and validated in an isolated temporary directory ($configuration_entries entries)" \
   "Core authorities restored by $core_prefix; admission state: $admission_state" \

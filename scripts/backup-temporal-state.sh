@@ -24,6 +24,7 @@ compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
 writers=(orchestrator temporal evidence-mcp scm-delivery-mcp)
 
 restart_writers() {
+  [ "${AI_FACTORY_BACKUP_RESTART_WRITERS:-true}" = true ] || return 0
   "${compose[@]}" up -d --wait --wait-timeout 180 \
     evidence-mcp scm-delivery-mcp temporal orchestrator >/dev/null 2>&1 || true
 }
