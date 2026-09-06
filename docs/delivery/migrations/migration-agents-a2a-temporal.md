@@ -597,8 +597,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : chaque runtime déclare `a2a-<role>` et `a2a-full` ; `make a2a-up-role A2A_ROLE=...` démarre et teste
     un seul rôle, `make a2a-up-full` les quatorze, et le chemin normal `make up` sélectionne explicitement le profil
     complet. `test-a2a-compose-profiles.sh` vérifie l'isolation et l'exhaustivité sans altérer le code runtime.
-- [ ] **A2A-128 — Dimensionner macOS.** Documenter CPU, mémoire, disque, temps de démarrage et réglages Docker
+- [x] **A2A-128 — Dimensionner macOS.** Documenter CPU, mémoire, disque, temps de démarrage et réglages Docker
   Desktop ; regrouper uniquement les processus si l'isolation de rôle et les permissions restent prouvées.
+  - Preuve : `docs/development/a2a-macos.md` consigne mesures Apple Silicon, budgets minimum/recommandé, disque,
+    démarrage et réglages Docker Desktop. Chaque JVM reste isolée, bornée à 0,75 CPU/768 Mio et attendue healthy
+    avant smoke ; aucune mutualisation de processus ne compromet les identités ou permissions par rôle.
 - [ ] **A2A-129 — Préparer les manifests GKE.** Déployer un workload/service par rôle, NetworkPolicies,
   PodDisruptionBudgets, probes, autoscaling par files et secrets via le mécanisme de plateforme.
 - [ ] **A2A-130 — Ajouter la découverte GKE.** Utiliser des DNS de service stables dans le registre allow-listé ;

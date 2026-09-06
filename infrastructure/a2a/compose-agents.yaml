@@ -17,10 +17,15 @@ x-a2a-agent-runtime: &a2a-agent-runtime
   security_opt: ["no-new-privileges:true"]
   tmpfs:
     - /tmp:size=64m,mode=1777
+  deploy:
+    resources:
+      limits: {cpus: "0.75", memory: 768m}
+      reservations: {cpus: "0.10", memory: 384m}
   environment: &a2a-agent-environment
     OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
     AI_FACTORY_AGENT_PORT: "8090"
     AI_FACTORY_AGENT_SHUTDOWN_GRACE: ${AI_FACTORY_AGENT_SHUTDOWN_GRACE:-30s}
+    JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=15
     AI_FACTORY_LLM_BASE_URL: "${AI_FACTORY_LLM_BASE_URL:-http://litellm:4000/v1}"
     AI_FACTORY_LLM_API_KEY: ${LITELLM_MASTER_KEY:-}
     AI_FACTORY_LLM_MODEL: ${AI_FACTORY_CLOUD_MODEL:-factory-code-cloud}

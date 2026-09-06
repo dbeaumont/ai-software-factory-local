@@ -29,6 +29,8 @@ services.each do |name, service|
   abort "#{name} must enforce mTLS" unless environment.fetch("AI_FACTORY_A2A_MTLS_REQUIRED") == "true"
   abort "#{name} must mount role PKI and card keys" unless service.fetch("volumes").length == 2
   abort "#{name} must run as UID 10001" unless service.fetch("user") == "10001:10001"
+  limits = service.fetch("deploy").fetch("resources").fetch("limits")
+  abort "#{name} must have bounded CPU and memory" unless limits.key?("cpus") && limits.key?("memory")
   abort "#{name} must use the durable task store" unless
     environment.fetch("AI_FACTORY_A2A_TASK_STORE_ENABLED") == "true"
   abort "#{name} must wait for the A2A database" unless
