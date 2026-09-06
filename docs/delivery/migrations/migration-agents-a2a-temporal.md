@@ -693,8 +693,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-160 — Tests unitaires.** Couvrir mapping, limites, états, erreurs, ACL, idempotence, cache de cartes,
   signature, corrélation et redaction. _(La barrière d'image JDK 25 exécute toute la suite A2A et ses composants
   connexes ; preuve : `docs/evidence/a2a/A2A-160-UNIT-TESTS.md`.)_
-- [ ] **A2A-161 — Tests de contrats.** Valider toutes les Agent Cards, enveloppes, artefacts et extensions contre
-  leurs schémas et fixtures dorées.
+- [x] **A2A-161 — Tests de contrats.** Valider toutes les Agent Cards, enveloppes, artefacts et extensions contre
+  leurs schémas et fixtures dorées. _(Les 14 rôles, 33 mappings, 18 contrats métier, enveloppes, artefacts et
+  extension de corrélation sont couverts positivement et négativement ; preuve :
+  `docs/evidence/a2a/A2A-161-CONTRACT-TESTS.md`.)_
 - [ ] **A2A-162 — Exécuter le TCK A2A officiel.** Tester chaque opération et capacité déclarée avec la version
   épinglée du protocole et archiver le rapport.
 - [ ] **A2A-163 — Tester l'interopérabilité.** Appeler au moins un serveur de référence depuis le client du projet
