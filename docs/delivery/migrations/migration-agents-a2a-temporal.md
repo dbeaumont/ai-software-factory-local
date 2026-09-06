@@ -846,8 +846,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   devenus inutiles, après preuve qu'ils ne servent plus de chemin de production.
 - [ ] **A2A-221 — Supprimer les flags temporaires de qualification.** Aucun sélecteur `DIRECT/A2A`, shadow ou
   fallback ne subsiste dans la configuration de release.
-- [ ] **A2A-222 — Mettre à jour les schémas d'architecture.** Montrer services d'agents, réseau A2A, Temporal,
-  MCP, Evidence et frontières de confiance.
+- [x] **A2A-222 — Mettre à jour les schémas d'architecture.** Montrer services d'agents, réseau A2A, Temporal,
+  MCP, Evidence et frontières de confiance. _(La vue Mermaid et les tableaux de frontières dans
+  `docs/architecture/a2a/README.md` couvrent les deux workflows corrélés, les réseaux Compose/GKE, la
+  réconciliation, les effets MCP/Evidence et la chaîne OTLP/SigNoz.)_
 - [ ] **A2A-223 — Mettre à jour le README.** Expliquer que les agents sont désormais adressables par A2A et ne
   résident plus comme rôles directement invoqués dans la JVM de l'orchestrateur.
 - [ ] **A2A-224 — Documenter l'ajout d'un agent.** Catalogue, contrat, Agent Card, identité, task queue, service,
