@@ -589,8 +589,11 @@ est immédiatement l'unique moteur de toutes les admissions.
   La PR est fermée, sa branche et son workspace sont supprimés ; projection, historique et 8 preuves restent
   conservés. Le verrou est refermé à la révision `4`. Preuve :
   `docs/evidence/temporal/TEMP-109-cutover-smoke-2026-09-06.md`.)_
-- [ ] **TEMP-110 — Ouvrir toutes les admissions.** Autoriser simultanément tous les dépôts et toutes les catégories
-  de tickets sur Temporal, sans pourcentage, allow-list transitoire ou double exécution.
+- [x] **TEMP-110 — Ouvrir toutes les admissions.** Autoriser simultanément tous les dépôts et toutes les catégories
+  de tickets sur Temporal, sans pourcentage, allow-list transitoire ou double exécution. _(Le verrou global durable
+  est ouvert avec le motif `normal_operation` à la révision `5` ; l'API confirme `admissionsOpen=true`, la readiness
+  est verte et l'image active reste celle approuvée. Aucun mécanisme de routage partiel ou moteur local n'existe.
+  Preuve : `docs/evidence/temporal/TEMP-110-admissions-open-2026-09-06.md`.)_
 - [ ] **TEMP-111 — Surveiller la fenêtre renforcée.** Maintenir l'équipe de rollback disponible et appliquer les
   seuils d'arrêt globaux, sans router une partie du trafic vers l'ancien moteur.
 
