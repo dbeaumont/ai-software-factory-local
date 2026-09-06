@@ -1,5 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.a2a.A2aRetryReconciler;
 import com.example.aifactory.config.ScmDeliveryClientProperties;
 import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.model.LlmMode;
@@ -28,8 +29,10 @@ import static org.mockito.Mockito.when;
 class TemporalWorkflowCoordinatorTest {
     private final TemporalWorkflowCommands commands = mock(TemporalWorkflowCommands.class);
     private final TemporalProperties properties = properties();
+    private final A2aRetryReconciler retryReconciler = mock(A2aRetryReconciler.class);
     private final TemporalWorkflowCoordinator coordinator = new TemporalWorkflowCoordinator(commands, properties,
-            new ScmDeliveryClientProperties(true, "scm-delivery-mcp", "operator@example.test", "x".repeat(32)));
+            new ScmDeliveryClientProperties(true, "scm-delivery-mcp", "operator@example.test", "x".repeat(32)),
+            retryReconciler);
 
     @Test
     void startsV1OnTheWorkflowQueueAndProjectsItsRunIdentity() {
@@ -164,6 +167,7 @@ class TemporalWorkflowCoordinatorTest {
 
         coordinator.retry(task, "code-1", new OperatorActionRequest("worker restarted", "operator"));
 
+        verify(retryReconciler).requireSafeRetry(task, "code-1");
         verify(commands).start(any(), request.capture());
         assertThat(request.getValue().attemptId()).isEqualTo("pipeline-2");
         assertThat(request.getValue().attemptLineage().previousAttemptId()).isEqualTo("pipeline-1");

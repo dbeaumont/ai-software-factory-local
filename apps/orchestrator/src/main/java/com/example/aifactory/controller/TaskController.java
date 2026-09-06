@@ -94,8 +94,8 @@ public class TaskController {
 
     @PostMapping("/{id}/delegations/{delegationId}/retry")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public TaskView retryDelegation(@PathVariable String id, @PathVariable String delegationId,
-                                    @RequestBody OperatorActionRequest request) {
+    public Mono<TaskView> retryDelegation(@PathVariable String id, @PathVariable String delegationId,
+                                         @RequestBody OperatorActionRequest request) {
         return tasks.retryDelegation(id, delegationId, request);
     }
 

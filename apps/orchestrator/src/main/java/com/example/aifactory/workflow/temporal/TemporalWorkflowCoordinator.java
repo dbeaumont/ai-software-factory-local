@@ -1,5 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.a2a.A2aRetryReconciler;
 import com.example.aifactory.config.ScmDeliveryClientProperties;
 import com.example.aifactory.config.TemporalProperties;
 import com.example.aifactory.model.TaskState;
@@ -26,12 +27,14 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
     private final TemporalWorkflowCommands commands;
     private final TemporalProperties properties;
     private final ScmDeliveryClientProperties scm;
+    private final A2aRetryReconciler retryReconciler;
 
     TemporalWorkflowCoordinator(TemporalWorkflowCommands commands, TemporalProperties properties,
-                                ScmDeliveryClientProperties scm) {
+                                ScmDeliveryClientProperties scm, A2aRetryReconciler retryReconciler) {
         this.commands = commands;
         this.properties = properties;
         this.scm = scm;
+        this.retryReconciler = retryReconciler;
     }
 
     @Override
@@ -118,6 +121,8 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
     public void retry(TaskState task, String delegationId, OperatorActionRequest request) {
         requireTask(task);
         if (request == null) throw new IllegalArgumentException("Operator action request is required");
+        task.requireDelegationRetry(delegationId, request.reason(), request.actor());
+        retryReconciler.requireSafeRetry(task, delegationId);
         TaskState.RetryAttempt retry = task.prepareTemporalRetry(
                 delegationId, request.reason(), request.actor());
         SoftwareFactoryWorkflow.AttemptLineage lineage = new SoftwareFactoryWorkflow.AttemptLineage(

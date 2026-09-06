@@ -806,8 +806,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   laisser Temporal attendre/réconcilier au lieu d'exécuter localement. _(Quand `AI_FACTORY_A2A_ENABLED=true`,
   la gate primaire contrôle `a2aFleet` avant Temporal et refuse toute nouvelle admission si une carte, une queue
   ou une dépendance est indisponible ; le message public reste sanitizé et aucun chemin local n'est sélectionné.)_
-- [ ] **A2A-203 — Réconcilier avant retry.** Examiner la tâche A2A, son workflow d'agent et ses artefacts avant
-  toute relance après incident.
+- [x] **A2A-203 — Réconcilier avant retry.** Examiner la tâche A2A, son workflow d'agent et ses artefacts avant
+  toute relance après incident. _(Le retry opérateur valide désormais, sans mutation préalable, l'association
+  persistée, l'identité et l'état obtenus par `tasks/get`, toutes les références Evidence et le statut fermé du
+  workflow Temporal `a2a-agent-task-v1/<rôle>/<task>` ; états actifs, inconnus, rejetés, déjà complétés, timeout et
+  dépendances indisponibles échouent fermés avec `RECONCILIATION_REQUIRED`. L'endpoint exécute cette lecture
+  bornée sur `boundedElastic` ; validé le 2026-09-06 par 7 tests dédiés et les 646 tests de l'orchestrateur.)_
 - [ ] **A2A-204 — Tester le rollback sous charge.** Couvrir tâches `SUBMITTED`, `WORKING`, `INPUT_REQUIRED`,
   `COMPLETED` non notifiées et annulation en cours.
 - [ ] **A2A-205 — Documenter les limites irréversibles.** Identifier migrations de données expand/contract,

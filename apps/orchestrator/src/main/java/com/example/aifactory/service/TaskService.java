@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.UUID;
@@ -178,12 +179,14 @@ public class TaskService {
         return state.view();
     }
 
-    public TaskView retryDelegation(String id, String delegationId, OperatorActionRequest request) {
+    public Mono<TaskView> retryDelegation(String id, String delegationId, OperatorActionRequest request) {
         if (request == null) throw new IllegalArgumentException("Operator action request is required");
-        TaskState state = requireTask(id);
-        auditCommand(state, request.actor(), "RETRY", delegationId,
-                () -> coordinator.retry(state, delegationId, request));
-        return state.view();
+        return Mono.fromCallable(() -> {
+            TaskState state = requireTask(id);
+            auditCommand(state, request.actor(), "RETRY", delegationId,
+                    () -> coordinator.retry(state, delegationId, request));
+            return state.view();
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
     private void auditCommand(TaskState state, String actor, String operation, String object, Runnable command) {

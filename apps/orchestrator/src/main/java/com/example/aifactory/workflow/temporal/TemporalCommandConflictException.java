@@ -23,6 +23,7 @@ public final class TemporalCommandConflictException extends IllegalStateExceptio
         WORKFLOW_TERMINATED,
         APPROVAL_EXPIRED,
         STALE_DIGEST,
-        PROJECTION_LAG
+        PROJECTION_LAG,
+        RECONCILIATION_REQUIRED
     }
 }
