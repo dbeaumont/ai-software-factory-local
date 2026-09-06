@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/a2a/schemas/a2a-envelope-v1.schema.json",
+  "title": "AI Factory A2A instruction envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "target_role",
+    "skill_id",
+    "input_references",
+    "constraints",
+    "budget"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "target_role": {
+      "type": "string",
+      "enum": [
+        "supervisor", "architecture-agent", "impact-analysis", "dependencies-contracts",
+        "code-agent", "developer", "patch-repair", "test-agent", "test-design", "test-evidence",
+        "security-agent", "threat-model", "security-findings", "independent-reviewer"
+      ]
+    },
+    "skill_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$"
+    },
+    "input_references": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/inputReference" }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_output_contract", "allowed_reference_ids", "max_input_bytes"],
+      "properties": {
+        "expected_output_contract": { "$ref": "#/$defs/versionedId" },
+        "allowed_reference_ids": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/boundedId" }
+        },
+        "max_input_bytes": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+        "deadline": { "type": "string", "format": "date-time" }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_turns", "max_tokens", "max_cost_micros", "timeout_seconds", "max_tool_calls"],
+      "properties": {
+        "max_turns": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "max_tokens": { "type": "integer", "minimum": 1, "maximum": 200000 },
+        "max_cost_micros": { "type": "integer", "minimum": 0, "maximum": 1000000000 },
+        "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+        "max_tool_calls": { "type": "integer", "minimum": 0, "maximum": 256 }
+      }
+    }
+  },
+  "$defs": {
+    "inputReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_id", "uri", "digest", "media_type", "contract"],
+      "properties": {
+        "reference_id": { "$ref": "#/$defs/boundedId" },
+        "uri": { "type": "string", "pattern": "^evidence://[A-Za-z0-9._~:/-]{1,1000}$" },
+        "digest": { "$ref": "#/$defs/sha256" },
+        "media_type": {
+          "type": "string",
+          "enum": ["application/json", "text/plain", "text/x-diff"]
+        },
+        "contract": { "$ref": "#/$defs/versionedId" }
+      }
+    },
+    "boundedId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "versionedId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$"
+    },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

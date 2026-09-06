@@ -249,8 +249,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 9. Lot 2 — définir la correspondance entre contrats métier et A2A
 
-- [ ] **A2A-040 — Créer `a2a-envelope-v1`.** Définir un schéma interne pour l'instruction structurée placée dans
-  une `Part`, comprenant version, rôle cible, skill, références d'entrée, contraintes et budget.
+- [x] **A2A-040 — Créer `a2a-envelope-v1`.** Définir un schéma interne pour l'instruction structurée placée dans
+  une `Part`, comprenant version, rôle cible, skill, références d'entrée, contraintes et budget. _(Schéma Draft
+  2020-12 fermé et borné dans `resources/a2a/schemas`, fixture valide et cas négatifs automatisés.)_
 - [ ] **A2A-041 — Créer `a2a-artifact-reference-v1`.** Définir URI Evidence, SHA-256, taille, media type,
   classification, contrat métier et version.
 - [ ] **A2A-042 — Mapper chaque contrat d'entrée.** Associer les contrats actuels à un `AgentSkill.id`, une version
