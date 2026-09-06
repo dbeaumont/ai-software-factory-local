@@ -45,9 +45,14 @@ LABEL org.opencontainers.image.title="AI Factory A2A Agent Runtime" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.base.name="eclipse-temurin:25-jre" \
       org.opencontainers.image.base.digest="sha256:f9e65324a37f28209ce7dd0e5149a7aa954520ed936fb87813cf6ded2400a112"
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 RUN useradd --system --uid 10001 --create-home agent-runtime
 WORKDIR /app
 COPY --from=build /src/apps/a2a-agent-runtime/target/a2a-agent-runtime.jar /app/app.jar
 USER 10001
 EXPOSE 8090
+HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=12 \
+  CMD curl --fail --silent http://127.0.0.1:8090/actuator/health/liveness >/dev/null || exit 1
 ENTRYPOINT ["java", "-jar", "/app/app.jar", "--spring.profiles.active=agent-runtime"]

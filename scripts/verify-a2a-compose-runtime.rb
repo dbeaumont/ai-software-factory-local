@@ -5,7 +5,8 @@ require "yaml"
 
 path = ARGV.fetch(0, "infrastructure/a2a/compose-agents.yaml")
 document = YAML.safe_load(File.read(path), aliases: true)
-services = document.fetch("services")
+all_services = document.fetch("services")
+services = all_services.select { |name, _service| name.start_with?("a2a-") && name != "a2a-task-db" }
 roles = %w[
   supervisor architecture-agent impact-analysis dependencies-contracts code-agent developer patch-repair
   test-agent test-design test-evidence security-agent threat-model security-findings independent-reviewer
@@ -25,8 +26,18 @@ services.each do |name, service|
   abort "#{name} role mismatch" unless environment.fetch("AI_FACTORY_AGENT_ROLE") == role
   abort "#{name} endpoint mismatch" unless environment.fetch("AI_FACTORY_AGENT_ENDPOINT").include?(name)
   abort "#{name} must run as UID 10001" unless service.fetch("user") == "10001:10001"
+  abort "#{name} must use the durable task store" unless
+    environment.fetch("AI_FACTORY_A2A_TASK_STORE_ENABLED") == "true"
+  abort "#{name} must wait for the A2A database" unless
+    service.fetch("depends_on").fetch("a2a-task-db").fetch("condition") == "service_healthy"
   abort "#{name} must join the private A2A network" unless service.fetch("networks").include?("a2a-internal")
   abort "#{name} must not publish a host port" if service.key?("ports")
 end
+
+database = all_services.fetch("a2a-task-db")
+abort "A2A task database must be persistent" unless database.fetch("volumes").any? do |mount|
+  mount.start_with?("a2a-task-db-data:")
+end
+abort "A2A task database must have a healthcheck" unless database.key?("healthcheck")
 
 puts "A2A Compose runtime verified: #{services.length} explicit roles share #{images.first}."

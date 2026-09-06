@@ -27,11 +27,38 @@ x-a2a-agent-runtime: &a2a-agent-runtime
     AI_FACTORY_TEMPORAL_TARGET: "${AI_FACTORY_TEMPORAL_TARGET:-temporal:7233}"
     AI_FACTORY_TEMPORAL_NAMESPACE: ${AI_FACTORY_TEMPORAL_NAMESPACE:-ai-factory-local}
     AI_FACTORY_A2A_TEMPORAL_ENABLED: "false"
-    AI_FACTORY_A2A_TASK_STORE_ENABLED: "false"
+    AI_FACTORY_A2A_TASK_STORE_ENABLED: "true"
+    AI_FACTORY_A2A_TASK_JDBC_URL: jdbc:postgresql://a2a-task-db:5432/ai_factory_a2a
+    AI_FACTORY_A2A_TASK_DB_USERNAME: ai_factory_a2a
+    AI_FACTORY_A2A_TASK_DB_PASSWORD: ${ORCHESTRATOR_DB_PASSWORD}
+    AI_FACTORY_A2A_TASK_DB_POOL_SIZE: ${AI_FACTORY_A2A_TASK_DB_POOL_SIZE:-4}
     AI_FACTORY_MCP_ENABLED: "false"
   networks: [a2a-internal, workflow-internal]
+  depends_on:
+    a2a-task-db:
+      condition: service_healthy
 
 services:
+  a2a-task-db:
+    image: postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2
+    environment:
+      POSTGRES_DB: ai_factory_a2a
+      POSTGRES_USER: ai_factory_a2a
+      POSTGRES_PASSWORD: ${ORCHESTRATOR_DB_PASSWORD}
+    volumes:
+      - a2a-task-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_factory_a2a -d ai_factory_a2a"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 1g}
+        reservations: {cpus: "0.10", memory: 128m}
+    networks: [a2a-internal]
+
   a2a-supervisor:
     <<: *a2a-agent-runtime
     environment:
@@ -143,3 +170,6 @@ services:
       AI_FACTORY_AGENT_ROLE: independent-reviewer
       AI_FACTORY_AGENT_ENDPOINT: http://a2a-independent-reviewer:8090/a2a
     networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
+
+volumes:
+  a2a-task-db-data:

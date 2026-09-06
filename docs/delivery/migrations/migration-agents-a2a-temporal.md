@@ -571,8 +571,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : Compose sépare `mcp-context-internal` et `mcp-evidence-internal` ; chaque rôle rejoint exactement les
     segments correspondant aux namespaces d'outils de son catalogue, tandis que les MCP à effet restent sur le
     segment réservé à l'orchestrateur. `verify-a2a-mcp-networks.rb` contrôle la matrice complète.
-- [ ] **A2A-123 — Ajouter le stockage local durable.** Fournir la base/projection de tâches A2A et ses migrations,
+- [x] **A2A-123 — Ajouter le stockage local durable.** Fournir la base/projection de tâches A2A et ses migrations,
   healthchecks et volumes nommés compatibles Docker Desktop.
+  - Preuve : `a2a-task-db` persiste sur le volume nommé `a2a-task-db-data`, possède un healthcheck PostgreSQL et
+    conditionne les quatorze runtimes. Ceux-ci activent `PostgresA2aTaskStore`, dont Flyway applique V001 à V004 au
+    démarrage, et l'image expose un healthcheck HTTP de liveness sans port hôte.
 - [ ] **A2A-124 — Générer les certificats locaux.** Fournir une cible d'initialisation idempotente, des fichiers
   hors Git, une rotation simple et des valeurs `.env.example` sans secret réel.
 - [ ] **A2A-125 — Aligner `.env` et `.env.example`.** Regrouper URLs, version, timeouts, limites, certificats,
