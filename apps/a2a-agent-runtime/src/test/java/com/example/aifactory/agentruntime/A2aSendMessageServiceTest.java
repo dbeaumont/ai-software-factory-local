@@ -99,6 +99,64 @@ class A2aSendMessageServiceTest {
     }
 
     @Test
+    void resumesAuthRequiredOnlyWithDedicatedScopeAndNeverAcceptsCredentialMaterial() throws Exception {
+        AgentRuntimeProperties runtime = new AgentRuntimeProperties(
+                "developer", URI.create("http://localhost:8090/a2a"));
+        InMemoryA2aTaskStore store = new InMemoryA2aTaskStore();
+        java.util.concurrent.atomic.AtomicInteger signals = new java.util.concurrent.atomic.AtomicInteger();
+        AgentTaskWorkflowControl control = new AgentTaskWorkflowControl() {
+            @Override public void requestCancellation(String taskId, String contextId, String reason) { }
+            @Override public void requestContinuation(String taskId, String contextId, String messageId,
+                                                      String envelopeJson) { signals.incrementAndGet(); }
+        };
+        A2aSendMessageService resumable = new A2aSendMessageService(runtime,
+                new AgentCardCatalogGenerator(new com.example.aifactory.agentcore.AgentCatalog(), mapper), mapper,
+                control, (submission, envelope) -> new AgentTaskWorkflowStarter.Execution("workflow", "run"), store);
+        Set<String> baseScopes = Set.of("a2a.invoke", "a2a.role.developer",
+                "a2a.skill.developer.code-task-v1");
+        A2aSendMessageService.Caller initialCaller = new A2aSendMessageService.Caller("orchestrator", baseScopes);
+        A2aSendMessageService.Submission initial = resumable.send(
+                request("auth-initial", "developer", "a".repeat(64)).path("params"), initialCaller);
+        resumable.projectState(initial.taskId(), A2aSendMessageService.TaskState.AUTH_REQUIRED);
+
+        tools.jackson.databind.node.ObjectNode continuation = continuation(
+                "auth-continuation", initial, "b".repeat(64));
+        ((tools.jackson.databind.node.ObjectNode) continuation.path("params").path("message").path("metadata"))
+                .put("authGrantId", "grant-1");
+        assertThatThrownBy(() -> resumable.send(continuation.path("params"), initialCaller))
+                .isInstanceOf(A2aSendMessageService.SubmissionRejected.class).hasMessageContaining("scope");
+
+        A2aSendMessageService.Caller authCaller = new A2aSendMessageService.Caller("orchestrator",
+                Set.of("a2a.invoke", "a2a.role.developer", "a2a.skill.developer.code-task-v1", "a2a.auth-resume"));
+        tools.jackson.databind.node.ObjectNode leaked = continuation(
+                "auth-leaked", initial, "c".repeat(64));
+        tools.jackson.databind.node.ObjectNode leakedMetadata = (tools.jackson.databind.node.ObjectNode)
+                leaked.path("params").path("message").path("metadata");
+        leakedMetadata.put("authGrantId", "grant-1");
+        leakedMetadata.put("access_token", "must-never-be-persisted");
+        assertThatThrownBy(() -> resumable.send(leaked.path("params"), authCaller))
+                .isInstanceOf(A2aSendMessageService.SubmissionRejected.class).hasMessageContaining("Credential");
+
+        A2aSendMessageService.Submission resumed = resumable.send(continuation.path("params"), authCaller);
+        assertThat(resumed.taskId()).isEqualTo(initial.taskId());
+        assertThat(store.find(initial.taskId()).orElseThrow().state())
+                .isEqualTo(A2aSendMessageService.TaskState.WORKING);
+        assertThat(store.history(initial.taskId(), 10).toString()).doesNotContain("must-never-be-persisted");
+        assertThat(signals).hasValue(1);
+    }
+
+    private tools.jackson.databind.node.ObjectNode continuation(
+            String messageId, A2aSendMessageService.Submission initial, String digest) throws Exception {
+        tools.jackson.databind.node.ObjectNode request = (tools.jackson.databind.node.ObjectNode)
+                request(messageId, "developer", digest).deepCopy();
+        tools.jackson.databind.node.ObjectNode message = (tools.jackson.databind.node.ObjectNode)
+                request.path("params").path("message");
+        message.put("taskId", initial.taskId());
+        message.put("contextId", initial.contextId());
+        return request;
+    }
+
+    @Test
     void returnsImmediatelyAndRefusesProtocolDowngrade() throws Exception {
         A2aJsonRpcController controller = new A2aJsonRpcController(mapper, service, unsecured);
         byte[] body = mapper.writeValueAsBytes(request("message-2", "developer", "a".repeat(64)));

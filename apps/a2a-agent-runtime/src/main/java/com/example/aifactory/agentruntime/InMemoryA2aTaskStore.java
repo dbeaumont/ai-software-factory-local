@@ -44,8 +44,9 @@ public final class InMemoryA2aTaskStore implements A2aTaskStore {
         if (current == null || !current.contextId().equals(contextId)) {
             throw new IllegalStateException("Continuation task correlation is invalid");
         }
-        if (current.state() != A2aSendMessageService.TaskState.INPUT_REQUIRED) {
-            throw new IllegalStateException("Only INPUT_REQUIRED tasks can be continued");
+        if (current.state() != A2aSendMessageService.TaskState.INPUT_REQUIRED
+                && current.state() != A2aSendMessageService.TaskState.AUTH_REQUIRED) {
+            throw new IllegalStateException("Only INPUT_REQUIRED or AUTH_REQUIRED tasks can be continued");
         }
         StoredTask updated = new StoredTask(current.taskId(), current.contextId(), current.messageId(),
                 current.messageDigest(), current.role(), current.skill(), current.callerSubject(), current.tenantId(),

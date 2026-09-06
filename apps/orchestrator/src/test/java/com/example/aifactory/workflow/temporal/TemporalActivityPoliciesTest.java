@@ -25,6 +25,8 @@ class TemporalActivityPoliciesTest {
                 Duration.ofSeconds(1), Duration.ofSeconds(10));
         assertProfile(TemporalActivityPolicies.Kind.A2A_CONTINUE, Duration.ofSeconds(45),
                 Duration.ofSeconds(30), 1, Duration.ofMillis(250), Duration.ofMillis(250));
+        assertProfile(TemporalActivityPolicies.Kind.A2A_AUTH, Duration.ofSeconds(50),
+                Duration.ofSeconds(30), 1, Duration.ofMillis(250), Duration.ofMillis(250));
         assertThat(TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.SANDBOX).getHeartbeatTimeout())
                 .isEqualTo(Duration.ofSeconds(30));
         assertThat(Arrays.stream(TemporalActivityPolicies.Kind.values())

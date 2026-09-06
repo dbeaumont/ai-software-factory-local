@@ -446,8 +446,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   référencée dans Evidence produit un `messageId` déterministe ; l'activité contrôle l'association durable et le
   runtime accepte atomiquement le message uniquement sur la tâche `INPUT_REQUIRED`, le déduplique puis signale le
   workflow Temporal existant sans changer `taskId/contextId`.)_
-- [ ] **A2A-088 — Gérer `AUTH_REQUIRED`.** Ne jamais transmettre de secret dans l'historique ; obtenir la décision
-  ou le jeton hors bande, avec portée liée à l'opération, puis reprendre par un message contrôlé.
+- [x] **A2A-088 — Gérer `AUTH_REQUIRED`.** Ne jamais transmettre de secret dans l'historique ; obtenir la décision
+  ou le jeton hors bande, avec portée liée à l'opération, puis reprendre par un message contrôlé. _(Temporal ne
+  sérialise qu'un grant non secret lié au rôle, à l'opération, à la tâche, au contexte, à l'expiration et à un
+  digest ; l'activité consomme le jeton hors bande, l'efface après l'appel, et le runtime exige le scope
+  `a2a.auth-resume` tout en refusant tout credential dans le message ou son historique.)_
 - [ ] **A2A-089 — Remplacer les child workflows d'agents.** Conserver les child workflows de contrôle nécessaires
   au DAG, mais remplacer leur exécution Java directe par les activités A2A.
 - [ ] **A2A-090 — Maintenir la revue indépendante.** Adresser `independent-reviewer` par A2A avec les mêmes digests

@@ -102,7 +102,7 @@ public final class A2aSendMessageService {
             if (requestedTaskId == null || requestedContextId == null) {
                 throw new SubmissionRejected("A2A continuation requires both taskId and contextId");
             }
-            return continueTask(requestedTaskId, requestedContextId, messageId, digest, envelope,
+            return continueTask(requestedTaskId, requestedContextId, messageId, digest, envelope, metadata,
                     role, skill, caller, execution, now);
         }
         A2aTaskStore.StoredTask candidate = new A2aTaskStore.StoredTask(
@@ -124,7 +124,7 @@ public final class A2aSendMessageService {
     }
 
     private Submission continueTask(String taskId, String contextId, String messageId, String digest,
-                                    JsonNode envelope, String role, String skill, Caller caller,
+                                    JsonNode envelope, JsonNode metadata, String role, String skill, Caller caller,
                                     JsonNode execution, Instant now) {
         A2aTaskStore.StoredTask current = store.find(taskId)
                 .orElseThrow(() -> new TaskLookupRejected("Task not found"));
@@ -133,6 +133,11 @@ public final class A2aSendMessageService {
                 || !current.skill().equals(skill)
                 || !current.delegationId().equals(requiredText(execution, "delegationId"))) {
             throw new TaskLookupRejected("Task not found");
+        }
+        if (current.state() == TaskState.AUTH_REQUIRED) {
+            requireScopes(caller.scopes(), Set.of("a2a.auth-resume"));
+            requiredText(metadata, "authGrantId");
+            rejectCredentialMaterial(metadata);
         }
         A2aTaskStore.ContinueResult result;
         try {
@@ -145,6 +150,17 @@ public final class A2aSendMessageService {
             workflowControl.requestContinuation(taskId, contextId, messageId, envelope.toString());
         }
         return submission(result.task());
+    }
+
+    private static void rejectCredentialMaterial(JsonNode node) {
+        node.properties().forEach(entry -> {
+            String name = entry.getKey().toLowerCase(java.util.Locale.ROOT);
+            if (Set.of("token", "bearertoken", "accesstoken", "refreshtoken", "clientsecret",
+                    "password", "credential").contains(name.replace("_", "").replace("-", ""))) {
+                throw new SubmissionRejected("Credential material is forbidden in A2A task history");
+            }
+            if (entry.getValue().isObject()) rejectCredentialMaterial(entry.getValue());
+        });
     }
 
     public TaskView getTask(JsonNode params, Caller caller) {

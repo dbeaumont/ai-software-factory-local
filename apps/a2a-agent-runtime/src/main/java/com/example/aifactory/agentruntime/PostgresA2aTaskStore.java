@@ -76,8 +76,9 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                 if (!current.contextId().equals(contextId)) {
                     throw new IllegalStateException("Continuation task correlation is invalid");
                 }
-                if (current.state() != A2aSendMessageService.TaskState.INPUT_REQUIRED) {
-                    throw new IllegalStateException("Only INPUT_REQUIRED tasks can be continued");
+                if (current.state() != A2aSendMessageService.TaskState.INPUT_REQUIRED
+                        && current.state() != A2aSendMessageService.TaskState.AUTH_REQUIRED) {
+                    throw new IllegalStateException("Only INPUT_REQUIRED or AUTH_REQUIRED tasks can be continued");
                 }
                 jdbc.update("""
                         INSERT INTO a2a_agent_task_message
@@ -86,7 +87,8 @@ public final class PostgresA2aTaskStore implements A2aTaskStore {
                         """, messageId, taskId, messageDigest, envelopeJson, Timestamp.from(accepted.occurredAt()));
                 int updated = jdbc.update("""
                         UPDATE a2a_agent_task SET task_state = 'WORKING', version = version + 1
-                        WHERE task_id = ? AND context_id = ? AND version = ? AND task_state = 'INPUT_REQUIRED'
+                        WHERE task_id = ? AND context_id = ? AND version = ?
+                          AND task_state IN ('INPUT_REQUIRED', 'AUTH_REQUIRED')
                         """, taskId, contextId, current.version());
                 if (updated != 1) throw new IllegalStateException("Concurrent A2A continuation conflict");
                 insertHistory(taskId, new HistoryRecord(messageId, accepted.event(), accepted.occurredAt(),
