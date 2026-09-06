@@ -132,9 +132,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-010 — Figer A2A 1.0.** Envoyer `A2A-Version: 1.0`, refuser le downgrade implicite vers `0.3` et
   tester `VersionNotSupportedError`. _(Version et règle de négociation sans downgrade fixées dans
   `ADR-A2A-001`; le test protocolaire sera livré avec le serveur au ticket A2A-060.)_
-- [ ] **A2A-011 — Qualifier le SDK Java.** Évaluer puis épingler une version finale du SDK officiel, avec
+- [x] **A2A-011 — Qualifier le SDK Java.** Évaluer puis épingler une version finale du SDK officiel, avec
   `1.1.0.Final` comme version candidate, après vérification JDK 25, Spring Boot 4.1, Netty/Reactor, licences, SBOM
-  et vulnérabilités.
+  et vulnérabilités. _(Version épinglée dans le POM ; résolution et arbre Maven, suite complète et scan Trivy
+  validés. Matrice : `docs/qualification/a2a/A2A-JAVA-SDK-1.1.0.md`.)_
 - [ ] **A2A-012 — Choisir un binding unique pour la coupure.** Utiliser JSON-RPC 2.0 sur HTTPS comme interface
   A2A préférée initiale ; ne déclarer REST ou gRPC dans les Agent Cards qu'après tests d'équivalence.
 - [ ] **A2A-013 — Encapsuler le SDK.** Créer des ports applicatifs `A2aClient`, `A2aTaskServer`,
