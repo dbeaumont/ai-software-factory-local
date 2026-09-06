@@ -681,9 +681,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ### Critères de sortie du lot 8
 
-- [ ] Une exécution est navigable de l'API à l'artefact Evidence en passant par Temporal et A2A.
-- [ ] Les dashboards n'utilisent aucun label non borné.
-- [ ] Chaque alerte possède un seuil, une durée, un propriétaire et un runbook testé.
+- [x] Une exécution est navigable de l'API à l'artefact Evidence en passant par Temporal et A2A.
+  _(Vue de corrélation API testée et preuve : `docs/evidence/a2a/LOT-8-OBSERVABILITY-GATE.md`.)_
+- [x] Les dashboards n'utilisent aucun label non borné. _(15 panneaux, 22 requêtes et 5 SLO contrôlés par
+  validateurs statiques ; 104 requêtes validées contre SigNoz.)_
+- [x] Chaque alerte possède un seuil, une durée, un propriétaire et un runbook testé. _(Huit procédures,
+  neuf liens et campagne OTLP 24/24 déclenchement-rétablissement.)_
 
 ## 16. Lot 9 — stratégie de tests et qualification
 

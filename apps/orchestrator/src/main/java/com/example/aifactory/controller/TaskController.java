@@ -1,5 +1,6 @@
 package com.example.aifactory.controller;
 
+import com.example.aifactory.a2a.A2aTaskAssociationStore;
 import com.example.aifactory.model.TaskRequest;
 import com.example.aifactory.model.TaskCancellationRequest;
 import com.example.aifactory.model.HumanDecisionResponse;
@@ -16,8 +17,12 @@ import java.util.List;
 @RequestMapping("/api/tasks")
 public class TaskController {
     private final TaskService tasks;
+    private final A2aTaskAssociationStore a2aAssociations;
 
-    public TaskController(TaskService tasks) { this.tasks = tasks; }
+    public TaskController(TaskService tasks, A2aTaskAssociationStore a2aAssociations) {
+        this.tasks = tasks;
+        this.a2aAssociations = a2aAssociations;
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
@@ -43,6 +48,26 @@ public class TaskController {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown evidence artifact " + artifactId));
     }
+
+    @GetMapping("/{id}/delegations/{delegationId}/a2a")
+    public A2aExecutionTraceView a2aExecutionTrace(@PathVariable String id, @PathVariable String delegationId) {
+        TaskView task = tasks.get(id);
+        boolean knownDelegation = task.delegations().stream()
+                .anyMatch(delegation -> delegation.delegationId().equals(delegationId));
+        if (!knownDelegation) throw new IllegalArgumentException("Unknown delegation " + delegationId);
+        A2aTaskAssociationStore.Association association = a2aAssociations.findByDelegation(delegationId)
+                .filter(candidate -> candidate.taskId().equals(id))
+                .orElseThrow(() -> new IllegalArgumentException("No A2A execution for delegation " + delegationId));
+        return new A2aExecutionTraceView(association.taskId(), association.attemptId(), association.workflowId(),
+                association.workflowRunId(), association.delegationId(), association.agentRole(),
+                association.messageId(), association.a2aTaskId(), association.a2aContextId(),
+                association.agentCardDigest(), association.sourceCommit(), task.artifacts());
+    }
+
+    public record A2aExecutionTraceView(String taskId, String attemptId, String workflowId, String workflowRunId,
+                                        String delegationId, String agentRole, String messageId, String a2aTaskId,
+                                        String a2aContextId, String agentCardDigest, String sourceCommit,
+                                        List<TaskView.ArtifactView> evidence) {}
 
     @PostMapping("/{id}/approve")
     @ResponseStatus(HttpStatus.ACCEPTED)
