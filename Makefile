@@ -173,6 +173,7 @@ test:
 	ruby ./scripts/verify-a2a-compose-runtime.rb
 	ruby ./scripts/verify-a2a-compose-network.rb
 	ruby ./scripts/verify-a2a-mcp-networks.rb
+	./scripts/verify-env-structure.sh
 	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; fi
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/repository-context-server/pom.xml clean test
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/sandbox-execution-server/pom.xml clean test

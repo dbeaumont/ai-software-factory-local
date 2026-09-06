@@ -141,6 +141,18 @@ ai-factory:
       enabled: ${AI_FACTORY_A2A_PUSH_RECEIVER_ENABLED:false}
       hmac-secret-file: ${AI_FACTORY_A2A_PUSH_HMAC_SECRET_FILE:}
       max-body-bytes: ${AI_FACTORY_A2A_PUSH_MAX_BODY_BYTES:1048576}
+    cards:
+      registry-profile: ${AI_FACTORY_A2A_REGISTRY_PROFILE:compose}
+      maximum-ttl: ${AI_FACTORY_A2A_CARD_CACHE_MAX_TTL:5m}
+      stale-on-outage: ${AI_FACTORY_A2A_CARD_CACHE_STALE_ON_OUTAGE:2m}
+    oauth2:
+      enabled: ${AI_FACTORY_A2A_OAUTH2_ENABLED:false}
+      token-url: ${AI_FACTORY_A2A_OAUTH2_TOKEN_URL:}
+      client-id: ${AI_FACTORY_A2A_OAUTH2_CLIENT_ID:}
+      client-secret-file: ${AI_FACTORY_A2A_OAUTH2_CLIENT_SECRET_FILE:}
+      audience: ${AI_FACTORY_A2A_OAUTH2_AUDIENCE:ai-factory-a2a}
+      maximum-token-lifetime: ${AI_FACTORY_A2A_OAUTH2_MAX_TOKEN_LIFETIME:5m}
+      request-timeout: ${AI_FACTORY_A2A_OAUTH2_REQUEST_TIMEOUT:10s}
   observability:
     content:
       prompts: ${AI_FACTORY_OBSERVABILITY_CAPTURE_PROMPTS:false}
@@ -151,15 +163,6 @@ ai-factory:
   delegation:
     max-depth: ${AI_FACTORY_DELEGATION_MAX_DEPTH:2}
     max-fan-out: ${AI_FACTORY_DELEGATION_MAX_FAN_OUT:4}
-  a2a:
-    oauth2:
-      enabled: ${AI_FACTORY_A2A_OAUTH2_ENABLED:false}
-      token-url: ${AI_FACTORY_A2A_OAUTH2_TOKEN_URL:}
-      client-id: ${AI_FACTORY_A2A_OAUTH2_CLIENT_ID:}
-      client-secret-file: ${AI_FACTORY_A2A_OAUTH2_CLIENT_SECRET_FILE:}
-      audience: ${AI_FACTORY_A2A_OAUTH2_AUDIENCE:ai-factory-a2a}
-      maximum-token-lifetime: ${AI_FACTORY_A2A_OAUTH2_MAX_TOKEN_LIFETIME:5m}
-      request-timeout: ${AI_FACTORY_A2A_OAUTH2_REQUEST_TIMEOUT:10s}
   temporal:
     projection-stale-after: ${AI_FACTORY_TEMPORAL_PROJECTION_STALE_AFTER:30s}
     target: ${AI_FACTORY_TEMPORAL_TARGET:temporal:7233}

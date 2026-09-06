@@ -582,8 +582,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
     vérifie un nouveau jeu avant échange atomique, conserve le précédent pour récupération et restaure sur échec.
     Chaque service monte uniquement son certificat, sa clé, la CA/CRL et sa clé de signature de carte, active
     TLS 1.3/mTLS et publie désormais son endpoint HTTPS.
-- [ ] **A2A-125 — Aligner `.env` et `.env.example`.** Regrouper URLs, version, timeouts, limites, certificats,
+- [x] **A2A-125 — Aligner `.env` et `.env.example`.** Regrouper URLs, version, timeouts, limites, certificats,
   cache de cartes et notifications dans le même ordre.
+  - Preuve : les deux fichiers partagent un bloc A2A complet et strictement ordonné couvrant runtime, découverte,
+    cache borné, persistance, Temporal, concurrence, notifications, TLS, OAuth2, signatures et rate limiting.
+    `verify-env-structure.sh` compare la séquence exacte des variables sans lire ni comparer leurs valeurs privées.
 - [ ] **A2A-126 — Ajouter les cibles Make.** Fournir `a2a-config`, `a2a-status`, `a2a-cards`, `a2a-smoke`,
   `a2a-logs` et `a2a-reset-state` avec garde explicite sur la suppression locale.
 - [ ] **A2A-127 — Ajouter des profils de test.** Permettre de lancer une topologie minimale pour un rôle et la
