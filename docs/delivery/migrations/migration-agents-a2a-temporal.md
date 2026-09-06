@@ -267,9 +267,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   indépendamment de la validation du modèle protocolaire A2A. _(`A2aBusinessContractGuard` vérifie mapping puis
   schéma métier et corrélation avant envoi et après réception ; un message protocolairement valide ne peut pas
   contourner les 18 schémas existants.)_
-- [ ] **A2A-045 — Définir la corrélation.** Transporter `taskId`, `attemptId`, `workflowId`, `workflowRunId`,
+- [x] **A2A-045 — Définir la corrélation.** Transporter `taskId`, `attemptId`, `workflowId`, `workflowRunId`,
   `sourceCommit`, `repositoryId`, `delegationId`, `parentDelegationId`, `agentRole` et digests dans l'extension de
-  corrélation.
+  corrélation. _(`A2aExecutionContext` sérialise et relit ces champs sous l'identifiant officiel, avec bornes,
+  rôles fermés, SHA de commit complet et 1 à 32 digests SHA-256 uniques.)_
 - [ ] **A2A-046 — Respecter les identifiants A2A.** Laisser le serveur générer `Task.id` et `contextId`; persister
   leur association avec les identifiants métier et ne jamais utiliser l'ID A2A comme clé métier principale.
 - [ ] **A2A-047 — Rendre `messageId` idempotent.** Dériver un UUID stable de l'identité d'exécution, du rôle, du
