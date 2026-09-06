@@ -164,6 +164,7 @@ up: init build
 	@echo -e "$(BLUE)Starting local factory stack...$(NC)"
 	$(COMPOSE) --profile a2a-full up -d --remove-orphans
 	@./scripts/wait-compose-job.sh signoz-bootstrap 120
+	@$(MAKE) a2a-smoke
 	@echo -e "$(GREEN)Stack started!$(NC)"
 	@$(MAKE) urls
 
@@ -216,6 +217,7 @@ test:
 	ruby ./scripts/verify-a2a-mcp-networks.rb
 	./scripts/verify-env-structure.sh
 	./scripts/test-a2a-compose-profiles.sh
+	./scripts/test-a2a-compose-persistence.sh
 	./scripts/generate-a2a-gke-manifests.rb infrastructure/gke/a2a/agents.generated.yaml --check
 	ruby ./scripts/verify-a2a-gke-manifests.rb
 	ruby ./scripts/verify-a2a-gke-discovery.rb

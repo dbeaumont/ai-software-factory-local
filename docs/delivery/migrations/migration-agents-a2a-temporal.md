@@ -621,10 +621,17 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ### Critères de sortie du lot 7
 
-- [ ] `make all` démarre la topologie A2A complète sur macOS et termine ses smoke tests.
-- [ ] Les quatorze Agent Cards sont récupérables depuis l'orchestrateur mais pas depuis l'hôte par défaut.
-- [ ] Une instance peut redémarrer sans perte de tâche ni création de doublon.
-- [ ] Les règles réseau GKE reproduisent les frontières de capacité validées sous Compose.
+- [x] `make all` démarre la topologie A2A complète sur macOS et termine ses smoke tests.
+  - Preuve : `make up`, appelé par `make all`, active `a2a-full`, attend le bootstrap puis exécute `a2a-smoke`.
+- [x] Les quatorze Agent Cards sont récupérables depuis l'orchestrateur mais pas depuis l'hôte par défaut.
+  - Preuve : l'orchestrateur monte son identité mTLS et `a2a-cards` l'utilise comme appelant lorsqu'il est démarré ;
+    les quatorze Services n'ont aucun `ports` Compose et restent injoignables depuis l'hôte.
+- [x] Une instance peut redémarrer sans perte de tâche ni création de doublon.
+  - Preuve : `test-a2a-compose-persistence.sh` redémarre base et runtime avec une tâche `WORKING`, vérifie sa
+    persistance puis rejoue le même `message_id` et exige une seule ligne.
+- [x] Les règles réseau GKE reproduisent les frontières de capacité validées sous Compose.
+  - Preuve : `verify-a2a-gke-manifests.rb` compare, pour chaque rôle, les seuls endpoints context/evidence rendus à
+    la matrice déjà vérifiée sous Compose.
 
 ## 15. Lot 8 — observabilité OpenTelemetry et exploitation
 

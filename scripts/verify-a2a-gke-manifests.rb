@@ -25,6 +25,17 @@ roles.each do |role|
     .any? { |volume| volume.dig("csi", "driver") == "secrets-store.csi.k8s.io" }
   hpa = documents.find { |document| document["kind"] == "HorizontalPodAutoscaler" && document.dig("metadata", "name") == name }
   abort "#{role} HPA is not queue-based" unless hpa.to_s.include?("temporal_task_queue_backlog")
+  policy = documents.find do |document|
+    document["kind"] == "NetworkPolicy" && document.dig("metadata", "name") == "#{name}-mcp"
+  end
+  expected_servers = []
+  expected_servers << "repository-context-mcp" unless %w[test-evidence security-findings].include?(role)
+  expected_servers << "evidence-mcp" if
+    %w[supervisor test-agent test-evidence security-agent security-findings independent-reviewer].include?(role)
+  actual_servers = policy.fetch("spec").fetch("egress").map do |egress|
+    egress.dig("to", 0, "podSelector", "matchLabels", "app.kubernetes.io/name")
+  end
+  abort "#{role} GKE MCP boundary differs from Compose" unless actual_servers.sort == expected_servers.sort
 end
 
 deny = documents.find { |document| document.dig("metadata", "name") == "a2a-agents-default-deny" }

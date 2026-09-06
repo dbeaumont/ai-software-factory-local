@@ -15,18 +15,29 @@ services() {
 }
 
 cards() {
-  local role service payload
+  local role service payload orchestrator caller
+  orchestrator=$("${compose[@]}" ps -q orchestrator)
+  caller=self
+  if test -n "$orchestrator" && test "$(docker inspect --format '{{.State.Running}}' "$orchestrator")" = true; then
+    caller=orchestrator
+  fi
   for role in "${roles[@]}"; do
     service="a2a-$role"
-    payload=$("${compose[@]}" exec -T "$service" curl --fail --silent --show-error --insecure \
-      --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key \
-      https://127.0.0.1:8090/.well-known/agent-card.json)
+    if test "$caller" = orchestrator; then
+      payload=$("${compose[@]}" exec -T orchestrator curl --fail --silent --show-error \
+        --cacert /var/run/ai-factory/a2a/ca.crt --cert /var/run/ai-factory/a2a/tls.crt \
+        --key /var/run/ai-factory/a2a/tls.key "https://$service:8090/.well-known/agent-card.json")
+    else
+      payload=$("${compose[@]}" exec -T "$service" curl --fail --silent --show-error --insecure \
+        --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key \
+        https://127.0.0.1:8090/.well-known/agent-card.json)
+    fi
     ROLE="$role" ruby -rjson -e '
       card = JSON.parse(STDIN.read)
       abort "Agent Card role mismatch" unless card.dig("metadata", "role") == ENV.fetch("ROLE")
       abort "Agent Card is unsigned" unless card.fetch("signatures", []).any?
     ' <<< "$payload"
-    printf '%-28s %s\n' "$service" "card=VALID"
+    printf '%-28s %s\n' "$service" "card=VALID caller=$caller"
   done
 }
 

@@ -654,12 +654,29 @@ services:
       AI_FACTORY_TEMPORAL_PRIVATE_KEY_PATH: ${AI_FACTORY_TEMPORAL_PRIVATE_KEY_PATH:-}
       AI_FACTORY_TEMPORAL_SERVER_NAME: ${AI_FACTORY_TEMPORAL_SERVER_NAME:-}
       AI_FACTORY_TEMPORAL_API_KEY_FILE: ${AI_FACTORY_TEMPORAL_API_KEY_FILE:-}
+      AI_FACTORY_A2A_REGISTRY_PROFILE: ${AI_FACTORY_A2A_REGISTRY_PROFILE:-compose}
+      AI_FACTORY_A2A_CARD_CACHE_MAX_TTL: ${AI_FACTORY_A2A_CARD_CACHE_MAX_TTL:-5m}
+      AI_FACTORY_A2A_CARD_CACHE_STALE_ON_OUTAGE: ${AI_FACTORY_A2A_CARD_CACHE_STALE_ON_OUTAGE:-2m}
+      AI_FACTORY_A2A_OAUTH2_ENABLED: ${AI_FACTORY_A2A_OAUTH2_ENABLED:-true}
+      AI_FACTORY_A2A_OAUTH2_TOKEN_URL: ${AI_FACTORY_A2A_OAUTH2_TOKEN_URL}
+      AI_FACTORY_A2A_OAUTH2_CLIENT_ID: ${AI_FACTORY_A2A_OAUTH2_CLIENT_ID:-ai-factory-orchestrator}
+      AI_FACTORY_A2A_OAUTH2_CLIENT_SECRET_FILE: /run/secrets/a2a-orchestrator/oauth2-client-secret
+      AI_FACTORY_A2A_OAUTH2_AUDIENCE: ${AI_FACTORY_A2A_OAUTH2_AUDIENCE:-ai-factory-a2a}
+      AI_FACTORY_A2A_OAUTH2_MAX_TOKEN_LIFETIME: ${AI_FACTORY_A2A_OAUTH2_MAX_TOKEN_LIFETIME:-5m}
+      AI_FACTORY_A2A_OAUTH2_REQUEST_TIMEOUT: ${AI_FACTORY_A2A_OAUTH2_REQUEST_TIMEOUT:-10s}
+      AI_FACTORY_A2A_PUSH_RECEIVER_ENABLED: ${AI_FACTORY_A2A_PUSH_RECEIVER_ENABLED:-true}
+      AI_FACTORY_A2A_PUSH_HMAC_SECRET_FILE: /run/secrets/a2a-orchestrator/push-hmac-key
+      AI_FACTORY_A2A_TLS_CERTIFICATE: /var/run/ai-factory/a2a/tls.crt
+      AI_FACTORY_A2A_TLS_PRIVATE_KEY: /var/run/ai-factory/a2a/tls.key
+      AI_FACTORY_A2A_TLS_TRUST_CERTIFICATE: /var/run/ai-factory/a2a/ca.crt
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
     ports:
       - "${ORCHESTRATOR_PORT}:8080"
     volumes:
       - factory-workspace:/workspace/tasks
       - ../resources/prompts:/opt/ai-factory/resources/prompts:ro
+      - ../.local/a2a-pki/workloads/orchestrator:/var/run/ai-factory/a2a:ro
+      - ../.local/a2a-secrets/orchestrator:/run/secrets/a2a-orchestrator:ro
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
       interval: 10s
