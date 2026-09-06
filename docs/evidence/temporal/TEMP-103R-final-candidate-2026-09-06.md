@@ -2,7 +2,7 @@
 
 > Résultat technique : `PASS`
 >
-> Décision : `PENDING`
+> Décision : `APPROVED` par David Beaumont le `2026-09-06`
 >
 > Source applicative : `a589f5c4c93088650bc7f46a13655cf10b92bf94`
 >
@@ -43,4 +43,10 @@ L'instance active n'a pas été remplacée : TEMP-106 attend une nouvelle décis
 Le candidat est conservé localement sous les tags
 `ai-software-factory-orchestrator:temporal-cutover-a589f5c` et
 `ai-software-factory-factory-web:temporal-cutover-a589f5c`. Les admissions restent fermées avec le motif
-`temporal_cutover` jusqu'à la décision et aux contrôles TEMP-106 à TEMP-110.
+`temporal_cutover` jusqu'à la réussite des contrôles TEMP-106 à TEMP-109.
+
+## Décision
+
+David Beaumont, autorité unique Produit, Architecture, Sécurité et Exploitation pour ce POC local, a approuvé
+explicitement le candidat final et ses deux images le 2026-09-06. Cette décision autorise TEMP-106 à TEMP-111 ; elle
+n'est pas transposable à un environnement partagé ou de production.

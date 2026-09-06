@@ -1,6 +1,6 @@
 # Gate TEMP-103 — Autorisation de coupure Temporal
 
-> Statut : `REAPPROVAL_REQUIRED`
+> Statut : `APPROVED`
 >
 > Release examinée : `9698fa30aa16a43af5b2d4f56b82f1953eb95080`
 >
@@ -81,10 +81,10 @@ Preuve du delta :
 
 | Rôle | Identité | Décision | Date UTC | Commit examiné | Conditions / commentaire |
 |---|---|---|---|---|---|
-| Produit |  | `PENDING` |  | `a589f5c4c93088650bc7f46a13655cf10b92bf94` |  |
-| Architecture |  | `PENDING` |  | `a589f5c4c93088650bc7f46a13655cf10b92bf94` |  |
-| Sécurité |  | `PENDING` |  | `a589f5c4c93088650bc7f46a13655cf10b92bf94` |  |
-| Exploitation |  | `PENDING` |  | `a589f5c4c93088650bc7f46a13655cf10b92bf94` |  |
+| Produit | David Beaumont | `APPROVED` | 2026-09-06 | `a589f5c4c93088650bc7f46a13655cf10b92bf94` | Réautorisation explicite du candidat final du POC local. |
+| Architecture | David Beaumont | `APPROVED` | 2026-09-06 | `a589f5c4c93088650bc7f46a13655cf10b92bf94` | Réautorisation explicite de la bascule franche sans moteur local. |
+| Sécurité | David Beaumont | `APPROVED` | 2026-09-06 | `a589f5c4c93088650bc7f46a13655cf10b92bf94` | Réautorisation explicite du delta et des images finales. |
+| Exploitation | David Beaumont | `APPROVED` | 2026-09-06 | `a589f5c4c93088650bc7f46a13655cf10b92bf94` | Autorisation explicite d'exécuter TEMP-106 à TEMP-111. |
 
-Les quatre décisions de réautorisation doivent être `APPROVED` sur le commit et les deux images finales ci-dessus
-avant de cocher TEMP-103R et d'exécuter TEMP-106.
+Les quatre décisions de réautorisation sont `APPROVED` sur le commit et les deux images finales ci-dessus. TEMP-106
+peut être exécuté sans modifier ces artefacts.
