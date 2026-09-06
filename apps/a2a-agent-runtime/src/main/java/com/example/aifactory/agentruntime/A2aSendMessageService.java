@@ -27,13 +27,14 @@ public final class A2aSendMessageService {
     private final Set<String> allowedSkills;
     private final ObjectMapper mapper;
     private final AgentTaskWorkflowControl workflowControl;
+    private final AgentTaskWorkflowStarter workflowStarter;
     private final A2aTaskStore store;
     private final Map<String, Cursor> cursors = new ConcurrentHashMap<>();
 
     @Autowired
     public A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards,
                                  ObjectMapper mapper, AgentTaskWorkflowControl workflowControl,
-                                 A2aTaskStore store) {
+                                 AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store) {
         this.activeRole = runtime.role();
         AgentCardCatalogGenerator.GeneratedAgentCard card = cards.generate().get(activeRole);
         if (card == null) throw new IllegalStateException("No Agent Card source for active role");
@@ -41,16 +42,21 @@ public final class A2aSendMessageService {
                 .map(AgentCardCatalogGenerator.GeneratedSkill::id).collect(java.util.stream.Collectors.toUnmodifiableSet());
         this.mapper = mapper;
         this.workflowControl = workflowControl;
+        this.workflowStarter = workflowStarter;
         this.store = store;
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards, ObjectMapper mapper) {
-        this(runtime, cards, mapper, (taskId, contextId, reason) -> { }, new InMemoryA2aTaskStore());
+        this(runtime, cards, mapper, (taskId, contextId, reason) -> { },
+                (submission, envelope) -> new AgentTaskWorkflowStarter.Execution("test", "test"),
+                new InMemoryA2aTaskStore());
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards, ObjectMapper mapper,
                           AgentTaskWorkflowControl workflowControl) {
-        this(runtime, cards, mapper, workflowControl, new InMemoryA2aTaskStore());
+        this(runtime, cards, mapper, workflowControl,
+                (submission, envelope) -> new AgentTaskWorkflowStarter.Execution("test", "test"),
+                new InMemoryA2aTaskStore());
     }
 
     public Submission send(JsonNode params, Caller caller) {
@@ -88,7 +94,9 @@ public final class A2aSendMessageService {
         if (!result.task().messageDigest().equals(digest)) {
             throw new SubmissionRejected("messageId collision with a different payload");
         }
-        return submission(result.task());
+        Submission submission = submission(result.task());
+        if (result.created()) workflowStarter.start(submission, envelope.toString());
+        return submission;
     }
 
     public TaskView getTask(JsonNode params, Caller caller) {

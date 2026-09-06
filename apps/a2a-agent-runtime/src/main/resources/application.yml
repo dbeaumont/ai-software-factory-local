@@ -50,6 +50,12 @@ ai-factory:
       username: ${AI_FACTORY_A2A_TASK_DB_USERNAME:}
       password: ${AI_FACTORY_A2A_TASK_DB_PASSWORD:}
       maximum-pool-size: ${AI_FACTORY_A2A_TASK_DB_POOL_SIZE:4}
+    temporal:
+      enabled: ${AI_FACTORY_A2A_TEMPORAL_ENABLED:false}
+      target: ${AI_FACTORY_TEMPORAL_TARGET:temporal:7233}
+      namespace: ${AI_FACTORY_TEMPORAL_NAMESPACE:ai-factory}
+      deployment-name: ${AI_FACTORY_A2A_TEMPORAL_DEPLOYMENT:ai-factory-a2a-agents}
+      build-id: ${AI_FACTORY_A2A_TEMPORAL_BUILD_ID:dev}
     llm:
       base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
       api-key: ${AI_FACTORY_LLM_API_KEY:}

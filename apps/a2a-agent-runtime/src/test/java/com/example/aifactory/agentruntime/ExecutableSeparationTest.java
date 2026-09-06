@@ -10,14 +10,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExecutableSeparationTest {
     @Test
-    void agentExecutableCarriesServerSdkAndExecutionWorkerWithoutTemporalOrControlPlane() throws Exception {
+    void agentExecutableCarriesServerSdkExecutionWorkerAndItsOwnTemporalWorkflowWithoutControlPlane() throws Exception {
         String runtimePom = Files.readString(Path.of("pom.xml"));
         String orchestratorPom = Files.readString(Path.of("../orchestrator/pom.xml"));
 
         assertTrue(runtimePom.contains("a2a-java-sdk-server-common"));
         assertTrue(runtimePom.contains("a2a-java-sdk-transport-jsonrpc"));
         assertFalse(runtimePom.contains("a2a-java-sdk-client</artifactId>"));
-        assertTrue(runtimePom.contains("<exclude>io.temporal:*</exclude>"));
+        assertTrue(runtimePom.contains("temporal-sdk"));
         assertTrue(runtimePom.contains("spring-boot-starter-jdbc"));
         assertTrue(runtimePom.contains("flyway-database-postgresql"));
         assertTrue(orchestratorPom.contains("a2a-java-sdk-client"));

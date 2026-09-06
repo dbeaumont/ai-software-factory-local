@@ -375,8 +375,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   artefacts, ACL, digests, message idempotent et version avec verrouillage optimiste. _(Le schéma Flyway dédié et
   `PostgresA2aTaskStore` persistent projection, identité idempotente unique, historique, artefacts digestés/ACL et
   version CAS ; le service utilise exclusivement ce port et le fallback mémoire reste limité au profil désactivé.)_
-- [ ] **A2A-066 — Créer `AgentTaskWorkflowV1`.** Une tâche A2A démarre un workflow Temporal déterministe dédié,
-  sur une task queue liée au rôle et à une version de worker épinglée.
+- [x] **A2A-066 — Créer `AgentTaskWorkflowV1`.** Une tâche A2A démarre un workflow Temporal déterministe dédié,
+  sur une task queue liée au rôle et à une version de worker épinglée. _(`AgentTaskWorkflowV1` est déterministe et
+  `PINNED`; une insertion A2A nouvelle démarre idempotemment `a2a-agent-task-v1/<rôle>/<task>` sur
+  `a2a-agent-<rôle>-v1`, dont le worker porte le deployment/build ID configuré.)_
 - [ ] **A2A-067 — Projeter l'état du workflow.** Mettre à jour la tâche A2A via des activités idempotentes ; ne
   jamais lire les tables internes de Temporal depuis le serveur A2A.
 - [ ] **A2A-068 — Reprendre après redémarrage.** Réconcilier tâches non terminales, workflow IDs et notifications

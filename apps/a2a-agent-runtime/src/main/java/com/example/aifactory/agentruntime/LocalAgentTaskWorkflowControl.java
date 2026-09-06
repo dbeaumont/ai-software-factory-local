@@ -1,12 +1,9 @@
 package com.example.aifactory.agentruntime;
 
-import org.springframework.stereotype.Component;
-
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Local signal projection, replaced by the Temporal workflow gateway in A2A-066. */
-@Component
 final class LocalAgentTaskWorkflowControl implements AgentTaskWorkflowControl {
     private final Set<String> cancellations = ConcurrentHashMap.newKeySet();
 
