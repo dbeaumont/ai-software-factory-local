@@ -1,11 +1,11 @@
 schemaVersion: "1"
 freezeId: temporal-cutover-v1
-baselineCommit: f999dee
+baselineCommit: 9698fa30aa16a43af5b2d4f56b82f1953eb95080
 policy: No workflow, activity, contract, prompt, model configuration or infrastructure drift is allowed.
 frozenObjects:
   temporalWorkflows:
     path: apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal
-    object: 50a6e38b75dfb65ef8e3e55c9696ed2ad1ceb350
+    object: 6dcafa991d688d1ceedfec3380cb41731ae5a8e1
   pipelineContracts:
     path: apps/orchestrator/src/main/java/com/example/aifactory/service/PipelineStepContracts.java
     object: 1378a7e22ce9f49de5e4968ad1f010ef3ff827ec
@@ -14,7 +14,7 @@ frozenObjects:
     object: f4f327d71493215a4ed733111230cc58c57bc275
   applicationConfiguration:
     path: apps/orchestrator/src/main/resources/application.yml
-    object: 00c1d7b348642c9b882c47d23dce0cf96e11b2a2
+    object: b3e590c10db4de83821eab03a75beca44050d036
   dependencyModel:
     path: apps/orchestrator/pom.xml
     object: 9832ad3fc430ae307ba4a9c190e432c3ff21ba9d

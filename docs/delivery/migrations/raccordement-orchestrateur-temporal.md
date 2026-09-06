@@ -542,8 +542,13 @@ est immédiatement l'unique moteur de toutes les admissions.
   `resources/temporal/cutover-freeze-v1.yaml` fige onze objets Git au commit `f999dee`. La cible
   `make temporal-cutover-freeze` refuse toute modification suivie ou tout ajout non suivi dans ces chemins ; le
   contrôle passe sur le périmètre qualifié.)_
-- [ ] **TEMP-102 — Qualifier la release complète hors trafic.** Exécuter tests fonctionnels, replay, charge,
+- [x] **TEMP-102 — Qualifier la release complète hors trafic.** Exécuter tests fonctionnels, replay, charge,
   redémarrages, partitions réseau, sauvegarde, restauration et rollback sur l'artefact exact à déployer.
+  _(La barrière `make qualify-temporal-cutover` a validé 16/16 étapes en 1 386 s sur le commit gelé `9698fa3`
+  et l'image immuable `sha256:ef7b416e…604e`. Tests propres, replay, sept pollers, backpressure, partition,
+  huit phases de redémarrage, heartbeat, stockage, dépendances, sauvegarde/restauration, livraison exactement une
+  fois observable, rotation de worker et cycle Compose sont verts. Preuve :
+  `docs/evidence/temporal/TEMP-102-qualification-release-2026-09-06.md`.)_
 - [ ] **TEMP-103 — Obtenir l'autorisation de coupure.** Exiger les validations produit, architecture, sécurité et
   exploitation sur la matrice de preuves complète.
 - [ ] **TEMP-104 — Fermer toutes les admissions.** Refuser temporairement `POST /api/tasks`, afficher la maintenance

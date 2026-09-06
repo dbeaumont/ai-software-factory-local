@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -35,6 +35,7 @@ help:
 	@echo -e "  $(CYAN)make temporal-replay$(NC) - replay versioned histories before worker image build"
 	@echo -e "  $(CYAN)make temporal-cutover-baseline$(NC) - verify the frozen pre-cutover pipeline baseline"
 	@echo -e "  $(CYAN)make temporal-cutover-freeze$(NC) - reject drift in the qualified cutover scope"
+	@echo -e "  $(CYAN)make qualify-temporal-cutover$(NC) - run the complete cutover qualification barrier"
 	@echo -e "  $(CYAN)make test-temporal-compose$(NC) - verify local namespace, UI, readiness and all pollers"
 	@echo -e "  $(CYAN)make test-temporal-ticket-ui$(NC) - submit a real ticket and verify its Temporal UI identity"
 	@echo -e "  $(CYAN)make test-temporal-orchestrator-restarts$(NC) - recreate the orchestrator across critical phases"
@@ -135,12 +136,12 @@ test:
 	$(log-target)
 	@echo -e "$(BLUE)Running orchestrator and MCP server tests...$(NC)"
 	./scripts/check-no-docker-socket.sh
-	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw -f apps/orchestrator/pom.xml test; else mvn -f apps/orchestrator/pom.xml test; fi
-	mvn -f apps/mcp/repository-context-server/pom.xml test
-	mvn -f apps/mcp/sandbox-execution-server/pom.xml test
-	mvn -f apps/mcp/scm-delivery-server/pom.xml test
-	mvn -f apps/mcp/assurance-server/pom.xml test
-	mvn -f apps/mcp/evidence-server/pom.xml test
+	if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml clean test; fi
+	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/repository-context-server/pom.xml clean test
+	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/sandbox-execution-server/pom.xml clean test
+	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/scm-delivery-server/pom.xml clean test
+	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/assurance-server/pom.xml clean test
+	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/evidence-server/pom.xml clean test
 
 temporal-replay:
 	$(log-target)
@@ -155,6 +156,10 @@ temporal-cutover-baseline:
 temporal-cutover-freeze:
 	$(log-target)
 	@ruby scripts/verify-temporal-cutover-freeze.rb
+
+qualify-temporal-cutover:
+	$(log-target)
+	@./scripts/qualify-temporal-cutover.sh
 
 test-temporal-compose:
 	$(log-target)
@@ -206,6 +211,10 @@ test-temporal-retention-rebuild:
 	@./scripts/test-temporal-retention.sh 7
 	@if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=ProjectionRebuilderTest,ProjectionRebuildCommandTest,ArtifactLifecyclePolicyTest; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=ProjectionRebuilderTest,ProjectionRebuildCommandTest,ArtifactLifecyclePolicyTest; fi
 	mvn $(MAVEN_HOST_SETTINGS) -f apps/mcp/evidence-server/pom.xml test -Dtest=EvidenceStoreTest
+
+test-temporal-network-partition:
+	$(log-target)
+	@./scripts/test-temporal-network-partition.sh
 
 test-sandbox-runtime:
 	$(log-target)
