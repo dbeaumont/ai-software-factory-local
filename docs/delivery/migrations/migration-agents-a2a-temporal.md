@@ -322,8 +322,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   d'autorisation par skill. _(Le profil sécurisé installe le resource server OAuth2 et refuse de démarrer sans
   HTTPS/mTLS `client-auth=need`; la carte annonce alors seulement ces mécanismes et génère les scopes de rôle,
   d'opération et de skill depuis le catalogue.)_
-- [ ] **A2A-054 — Signer les cartes.** Canonicaliser selon RFC 8785, signer en JWS, publier `kid` et chaîne de
-  confiance, et permettre une rotation avec chevauchement de clés.
+- [x] **A2A-054 — Signer les cartes.** Canonicaliser selon RFC 8785, signer en JWS, publier `kid` et chaîne de
+  confiance, et permettre une rotation avec chevauchement de clés. _(`A2aAgentCardSigner` canonicalise via JCS,
+  produit des JWS RS256 détachés et publie `kid`/JWK public/`x5c`; un JWK Set monté peut signer simultanément avec
+  la clé active et les précédentes pendant la rotation, et le mode sécurisé exige une chaîne `x5c`.)_
 - [ ] **A2A-055 — Vérifier les cartes côté client.** Contrôler signature, issuer/provider, rôle attendu, URL,
   version, binding, skills, expiration et empreinte avant la première invocation.
 - [ ] **A2A-056 — Créer un registre interne allow-listé.** Associer rôle à URL de carte attendue ; interdire la

@@ -16,12 +16,14 @@ final class AgentCardController {
     private final AgentRuntimeProperties properties;
     private final A2aSecurityProperties security;
     private final AgentCardCatalogGenerator generator;
+    private final A2aAgentCardSigner signer;
 
     AgentCardController(AgentRuntimeProperties properties, A2aSecurityProperties security,
-                        AgentCardCatalogGenerator generator) {
+                        AgentCardCatalogGenerator generator, A2aAgentCardSigner signer) {
         this.properties = properties;
         this.security = security;
         this.generator = generator;
+        this.signer = signer;
     }
 
     @GetMapping(path = WELL_KNOWN_PATH, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -71,6 +73,7 @@ final class AgentCardController {
                         "inputSchema", skill.schemaUri(),
                         "outputContract", source.outputContract())))
                 .toList());
+        card.put("signatures", signer.sign(card));
         return Map.copyOf(card);
     }
 

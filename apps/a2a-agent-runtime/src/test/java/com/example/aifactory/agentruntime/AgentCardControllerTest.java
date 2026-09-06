@@ -29,7 +29,10 @@ class AgentCardControllerTest {
                 .jsonPath("$.additionalInterfaces[0].url").isEqualTo("http://agent-developer:8090/a2a")
                 .jsonPath("$.capabilities.streaming").isEqualTo(false)
                 .jsonPath("$.capabilities.pushNotifications").isEqualTo(false)
-                .jsonPath("$.skills[0].id").isEqualTo("developer.code-task-v1");
+                .jsonPath("$.skills[0].id").isEqualTo("developer.code-task-v1")
+                .jsonPath("$.signatures[0].protected").isNotEmpty()
+                .jsonPath("$.signatures[0].signature").isNotEmpty()
+                .jsonPath("$.signatures[0].header.jwk.kid").isNotEmpty();
 
         client.get().uri("/.well-known/agent-card-extended.json")
                 .exchange()

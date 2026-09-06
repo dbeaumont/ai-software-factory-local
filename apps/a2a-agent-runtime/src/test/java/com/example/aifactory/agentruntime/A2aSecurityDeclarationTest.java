@@ -44,7 +44,7 @@ class A2aSecurityDeclarationTest {
                 URI.create("https://identity.internal/issuer"),
                 URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a");
         AgentCardController controller = new AgentCardController(runtime, security,
-                new AgentCardCatalogGenerator(new tools.jackson.databind.ObjectMapper()));
+                new AgentCardCatalogGenerator(new tools.jackson.databind.ObjectMapper()), testSigner());
 
         Map<String, Object> card = controller.publicCard();
         assertThatCode(() -> ((Map<String, Object>) card.get("securitySchemes")).get("mutualTLS"))
@@ -54,5 +54,19 @@ class A2aSecurityDeclarationTest {
                 (List<Map<String, List<String>>>) skills.getFirst().get("security");
         org.assertj.core.api.Assertions.assertThat(requirements.getFirst().get("oauth2"))
                 .containsExactly("a2a.invoke", "a2a.skill.developer.code-task-v1");
+    }
+
+    private static A2aAgentCardSigner testSigner() {
+        try {
+            java.security.KeyPairGenerator generator = java.security.KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            java.security.KeyPair pair = generator.generateKeyPair();
+            return new A2aAgentCardSigner(new tools.jackson.databind.ObjectMapper(), List.of(
+                    new com.nimbusds.jose.jwk.RSAKey.Builder(
+                            (java.security.interfaces.RSAPublicKey) pair.getPublic())
+                            .privateKey(pair.getPrivate()).keyID("test-kid").build()));
+        } catch (Exception exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 }
