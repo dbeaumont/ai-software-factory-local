@@ -670,8 +670,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   versionne les cinq objectifs sur 28 jours ; le dashboard SigNoz expose leurs SLI, dont les nouveaux
   histogrammes de prise en charge et l'invariant de non-duplication. Preuve :
   `docs/evidence/a2a/A2A-147-SLO.md`.)_
-- [ ] **A2A-148 — Ajouter des runbooks.** Documenter carte invalide, agent indisponible, task stuck, callback
-  perdu, divergence, certificat expiré, saturation et rollback.
+- [x] **A2A-148 — Ajouter des runbooks.** Documenter carte invalide, agent indisponible, task stuck, callback
+  perdu, divergence, certificat expiré, saturation et rollback. _(Huit procédures fail-closed couvrent diagnostic,
+  confinement, rétablissement, vérification et escalade ; chaque alerte A2A pointe vers une procédure locale
+  contrôlée automatiquement. Preuve : `docs/evidence/a2a/A2A-148-RUNBOOKS.md`.)_
 - [ ] **A2A-149 — Rendre la readiness globale explicable.** Exposer quels rôles, cartes, task queues ou
   dépendances empêchent les nouvelles admissions.
 

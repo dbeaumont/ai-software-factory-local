@@ -21,6 +21,14 @@
 | Télémétrie absente, retardée ou rejetée | localiser la rupture du pipeline OTLP | [Télémétrie absente](TELEMETRIE-ABSENTE.md) |
 | Cardinalité, volume ou coût anormal | réduire le signal à la source sans masquer un incident | [Coût d'observabilité](COUT-OBSERVABILITE.md) |
 | Régression de la chaîne d'observabilité | revenir atomiquement à la dernière version qualifiée | [Rollback observabilité](ROLLBACK-OBSERVABILITE.md) |
+| Carte A2A invalide | geler le rôle et vérifier signature, version et ACL | [Carte A2A invalide](A2A-CARTE-INVALIDE.md) |
+| Agent A2A indisponible | suspendre les admissions du rôle | [Agent A2A indisponible](A2A-AGENT-INDISPONIBLE.md) |
+| Tâche A2A bloquée | réconcilier avant toute relance | [Tâche A2A bloquée](A2A-TACHE-BLOQUEE.md) |
+| Callback A2A perdu | conserver le polling borné et réparer la notification | [Callback A2A perdu](A2A-CALLBACK-PERDU.md) |
+| Divergence ou collision A2A | geler les effets et comparer les autorités | [Divergence A2A](A2A-DIVERGENCE-ETAT.md) |
+| Certificat A2A expiré | isoler le certificat et effectuer une rotation contrôlée | [Certificat A2A expiré](A2A-CERTIFICAT-EXPIRE.md) |
+| Saturation A2A | couper les nouvelles admissions du rôle saturé | [Saturation A2A](A2A-SATURATION.md) |
+| Régression A2A | redéployer le dernier runtime A2A qualifié | [Rollback A2A](ROLLBACK-A2A.md) |
 
 Tous les runbooks sont fail-closed : ils ne permettent ni de contourner un gate, ni de répéter un effet dont
 l'issue est inconnue, ni de supprimer une preuve pour rétablir le service.

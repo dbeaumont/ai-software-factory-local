@@ -1536,7 +1536,7 @@
     "annotations": {
       "summary": "An A2A agent Temporal queue has no poller",
       "description": "No poller serves at least one required A2A agent task queue.",
-      "runbook_url": "/docs/operations/runbooks/TEMPORAL-INDISPONIBLE.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-AGENT-INDISPONIBLE.md"
     }
   },
   {
@@ -1606,7 +1606,7 @@
     "annotations": {
       "summary": "An A2A agent is not ready",
       "description": "At least one agent runtime reports a failed mandatory readiness dependency or no readiness signal.",
-      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-AGENT-INDISPONIBLE.md"
     }
   },
   {
@@ -1676,7 +1676,7 @@
     "annotations": {
       "summary": "An A2A Agent Card was rejected",
       "description": "The orchestrator rejected an expired, forged, incompatible or unauthorized Agent Card.",
-      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-CARTE-INVALIDE.md"
     }
   },
   {
@@ -1746,7 +1746,7 @@
     "annotations": {
       "summary": "A2A task failure rate exceeds five percent",
       "description": "Terminal A2A failures or rejections exceed five percent of task transitions.",
-      "runbook_url": "/docs/operations/runbooks/AGENT-DEFAILLANT.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-AGENT-INDISPONIBLE.md"
     }
   },
   {
@@ -1816,7 +1816,7 @@
     "annotations": {
       "summary": "A2A backlog is sustained",
       "description": "At least one agent runtime has more than twenty submitted tasks for ten minutes.",
-      "runbook_url": "/docs/operations/runbooks/SATURATION.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-SATURATION.md"
     }
   },
   {
@@ -1886,7 +1886,7 @@
     "annotations": {
       "summary": "An A2A task is stuck",
       "description": "The oldest non-terminal A2A task has remained active for more than five minutes.",
-      "runbook_url": "/docs/operations/runbooks/SATURATION.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-TACHE-BLOQUEE.md"
     }
   },
   {
@@ -1956,7 +1956,7 @@
     "annotations": {
       "summary": "An A2A notification is late",
       "description": "Push notification delivery age exceeds sixty seconds.",
-      "runbook_url": "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-CALLBACK-PERDU.md"
     }
   },
   {
@@ -2026,7 +2026,7 @@
     "annotations": {
       "summary": "An A2A idempotency collision was rejected",
       "description": "A reused message ID carried a different payload or continuation.",
-      "runbook_url": "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-DIVERGENCE-ETAT.md"
     }
   },
   {
@@ -2096,7 +2096,7 @@
     "annotations": {
       "summary": "Temporal and A2A state diverged",
       "description": "The orchestrator rejected a task association, continuation or remote response that changed durable correlation.",
-      "runbook_url": "/docs/operations/runbooks/PROJECTION-INCOHERENTE.md"
+      "runbook_url": "/docs/operations/runbooks/A2A-DIVERGENCE-ETAT.md"
     }
   }
 ]
