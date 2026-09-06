@@ -28,7 +28,7 @@ public final class AllowListedAgentRegistry {
         this.entries = load(mapper, catalog, profile);
         Set<URI> allowed = entries.values().stream().flatMap(entry ->
                 java.util.stream.Stream.of(entry.cardUri(), entry.endpoint())).collect(Collectors.toSet());
-        this.urlPolicy = new SecureUriPolicy(allowed, resolver);
+        this.urlPolicy = new SecureUriPolicy(allowed, resolver, Set.of("compose", "gke").contains(profile));
     }
 
     public Entry require(String role) {

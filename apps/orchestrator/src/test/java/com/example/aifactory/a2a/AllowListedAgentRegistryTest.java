@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
+import java.net.InetAddress;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,6 +44,19 @@ class AllowListedAgentRegistryTest {
                 "developer", URI.create("https://attacker.invalid/card.json"), 0))
                 .isInstanceOf(AllowListedAgentRegistry.RegistryViolation.class)
                 .hasMessageContaining("unexpected origin");
+    }
+
+    @Test
+    void permitsOnlyPinnedPrivateAddressesForClosedInternalProfiles() throws Exception {
+        AtomicReference<String> address = new AtomicReference<>("172.20.0.10");
+        AllowListedAgentRegistry registry = new AllowListedAgentRegistry(
+                new ObjectMapper(), new AgentCatalog(), "compose",
+                host -> List.of(InetAddress.getByName(address.get())));
+
+        assertThat(registry.require("developer").endpoint().getHost()).isEqualTo("a2a-developer");
+        address.set("172.20.0.11");
+        assertThatThrownBy(() -> registry.require("developer"))
+                .isInstanceOf(SecurityException.class).hasMessageContaining("changed after pinning");
     }
 
     private static AllowListedAgentRegistry registry(AgentCatalog catalog, String profile) {

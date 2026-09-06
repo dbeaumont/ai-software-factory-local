@@ -17,13 +17,19 @@ public final class SecureUriPolicy {
             "metadata.google", "instance-data", "instance-data.ec2.internal");
     private final Set<URI> allowed;
     private final Resolver resolver;
+    private final boolean allowPrivateAddresses;
     private final Map<String, Set<String>> pins = new ConcurrentHashMap<>();
 
     public SecureUriPolicy(Set<URI> allowed, Resolver resolver) {
+        this(allowed, resolver, false);
+    }
+
+    SecureUriPolicy(Set<URI> allowed, Resolver resolver, boolean allowPrivateAddresses) {
         if (allowed == null || allowed.isEmpty()) throw new IllegalArgumentException("URI allow-list is empty");
         this.allowed = allowed.stream().map(SecureUriPolicy::normalized).collect(Collectors.toUnmodifiableSet());
         this.allowed.forEach(SecureUriPolicy::validateNetworkTargetSyntax);
         this.resolver = Objects.requireNonNull(resolver, "resolver");
+        this.allowPrivateAddresses = allowPrivateAddresses;
     }
 
     public static SecureUriPolicy system(Set<URI> allowed) {
@@ -36,7 +42,9 @@ public final class SecureUriPolicy {
         Set<String> current;
         try {
             current = resolver.resolve(value.getHost()).stream().map(address -> {
-                if (forbidden(address)) throw new SecurityException("Outbound URI resolves to a forbidden address");
+                if (forbidden(address, allowPrivateAddresses)) {
+                    throw new SecurityException("Outbound URI resolves to a forbidden address");
+                }
                 return address.getHostAddress();
             }).collect(Collectors.toUnmodifiableSet());
         } catch (SecurityException failure) {
@@ -60,7 +68,7 @@ public final class SecureUriPolicy {
             throw new SecurityException("Outbound network target is forbidden");
         }
         try {
-            if ((host.matches("[0-9.]+") || host.contains(":")) && forbidden(InetAddress.getByName(host))) {
+            if ((host.matches("[0-9.]+") || host.contains(":")) && forbidden(InetAddress.getByName(host), false)) {
                 throw new SecurityException("Outbound network target is forbidden");
             }
         } catch (SecurityException failure) {
@@ -70,9 +78,10 @@ public final class SecureUriPolicy {
         }
     }
 
-    private static boolean forbidden(InetAddress address) {
+    private static boolean forbidden(InetAddress address, boolean allowPrivateAddresses) {
         return address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
-                || address.isSiteLocalAddress() || address.isMulticastAddress() || uniqueLocalIpv6(address);
+                || address.isMulticastAddress()
+                || (!allowPrivateAddresses && (address.isSiteLocalAddress() || uniqueLocalIpv6(address)));
     }
 
     private static boolean uniqueLocalIpv6(InetAddress address) {
