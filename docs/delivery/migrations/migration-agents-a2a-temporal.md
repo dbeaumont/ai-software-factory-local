@@ -33,9 +33,10 @@ La migration doit préserver :
 - [x] **A2A-002 — Conserver Temporal comme autorité d'orchestration.** Seul le workflow Temporal décide quels
   agents sont exécutés, dans quel ordre, avec quels délais, budgets, retries et règles d'annulation. _(Autorité,
   frontière de décision et topologie normatives fixées dans `ADR-A2A-001`, en cohérence avec `ADR-TEMP-001`.)_
-- [ ] **A2A-003 — Interdire la délégation réseau autonome.** Un agent peut retourner une intention de délégation,
+- [x] **A2A-003 — Interdire la délégation réseau autonome.** Un agent peut retourner une intention de délégation,
   mais il ne peut pas contacter directement un autre agent pour contourner le DAG, les budgets ou les gates ; le
-  workflow valide l'intention puis crée la prochaine interaction A2A.
+  workflow valide l'intention puis crée la prochaine interaction A2A. _(La frontière de décision et l'alternative
+  « délégations A2A directes » rejetée sont consignées dans `ADR-A2A-001`.)_
 - [ ] **A2A-004 — Supprimer les invocations d'agents en mémoire.** Après la coupure, aucun workflow, activité ou
   service de coordination ne doit appeler directement `SupervisorAgent`, `ArchitectureAgents`, `CodeAgent`,
   `TestAgents`, `SecurityAgents`, `IndependentReviewerAgent` ou leurs sous-agents.
