@@ -91,6 +91,16 @@
       <version>${a2a-java-sdk.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.github.erdtman</groupId>
+      <artifactId>java-json-canonicalization</artifactId>
+      <version>1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.nimbusds</groupId>
+      <artifactId>nimbus-jose-jwt</artifactId>
+      <version>10.9.1</version>
+    </dependency>
+    <dependency>
       <groupId>io.temporal</groupId>
       <artifactId>temporal-testing</artifactId>
       <version>${temporal.version}</version>

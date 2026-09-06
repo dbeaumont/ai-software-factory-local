@@ -33,6 +33,11 @@ ai-factory:
     card-signing:
       jwk-set-path: ${AI_FACTORY_A2A_CARD_JWK_SET_PATH:}
       active-key-id: ${AI_FACTORY_A2A_CARD_ACTIVE_KID:}
+    card-identity:
+      issuer: ${AI_FACTORY_A2A_CARD_ISSUER:ai-factory-local}
+      provider-name: ${AI_FACTORY_A2A_CARD_PROVIDER_NAME:AI Software Factory}
+      provider-url: ${AI_FACTORY_A2A_CARD_PROVIDER_URL:https://ai-factory.local}
+      validity: ${AI_FACTORY_A2A_CARD_VALIDITY:15m}
     llm:
       base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
       api-key: ${AI_FACTORY_LLM_API_KEY:}

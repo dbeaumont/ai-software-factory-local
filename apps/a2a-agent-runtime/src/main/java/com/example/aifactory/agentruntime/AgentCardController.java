@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
 
 /** Publishes the public card of the only role admitted in this runtime process. */
 @RestController
@@ -15,13 +16,16 @@ final class AgentCardController {
 
     private final AgentRuntimeProperties properties;
     private final A2aSecurityProperties security;
+    private final A2aCardIdentityProperties identity;
     private final AgentCardCatalogGenerator generator;
     private final A2aAgentCardSigner signer;
 
     AgentCardController(AgentRuntimeProperties properties, A2aSecurityProperties security,
+                        A2aCardIdentityProperties identity,
                         AgentCardCatalogGenerator generator, A2aAgentCardSigner signer) {
         this.properties = properties;
         this.security = security;
+        this.identity = identity;
         this.generator = generator;
         this.signer = signer;
     }
@@ -36,6 +40,9 @@ final class AgentCardController {
         card.put("protocolVersion", "1.0");
         card.put("name", "AI Factory " + source.role());
         card.put("description", "Role " + source.role() + " owned by " + source.owner());
+        card.put("provider", Map.of(
+                "organization", identity.providerName(),
+                "url", identity.providerUrl().toString()));
         card.put("url", properties.endpoint().toString());
         card.put("preferredTransport", "JSONRPC");
         card.put("additionalInterfaces", List.of(Map.of(
@@ -58,6 +65,10 @@ final class AgentCardController {
         card.put("defaultInputModes", source.skills().stream()
                 .flatMap(skill -> skill.acceptedMediaTypes().stream()).distinct().sorted().toList());
         card.put("defaultOutputModes", List.of("application/json", "application/vnd.ai-factory.evidence-reference+json"));
+        card.put("metadata", Map.of(
+                "issuer", identity.issuer(),
+                "role", source.role(),
+                "expiresAt", Instant.now().plus(identity.validity()).toString()));
         card.put("skills", source.skills().stream().map(skill -> Map.of(
                 "id", skill.id(),
                 "name", skill.inputContract(),

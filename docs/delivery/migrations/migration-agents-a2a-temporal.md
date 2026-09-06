@@ -326,8 +326,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   confiance, et permettre une rotation avec chevauchement de clés. _(`A2aAgentCardSigner` canonicalise via JCS,
   produit des JWS RS256 détachés et publie `kid`/JWK public/`x5c`; un JWK Set monté peut signer simultanément avec
   la clé active et les précédentes pendant la rotation, et le mode sécurisé exige une chaîne `x5c`.)_
-- [ ] **A2A-055 — Vérifier les cartes côté client.** Contrôler signature, issuer/provider, rôle attendu, URL,
-  version, binding, skills, expiration et empreinte avant la première invocation.
+- [x] **A2A-055 — Vérifier les cartes côté client.** Contrôler signature, issuer/provider, rôle attendu, URL,
+  version, binding, skills, expiration et empreinte avant la première invocation. _(`A2aAgentCardVerifier`
+  canonicalise la carte, exige une signature issue d'un `kid`/fingerprint allow-listé et contrôle tous les champs
+  d'identité, d'interface, de capacité et de catalogue avant de produire le descripteur applicatif.)_
 - [ ] **A2A-056 — Créer un registre interne allow-listé.** Associer rôle à URL de carte attendue ; interdire la
   découverte Internet dynamique et les redirections vers une origine non autorisée.
 - [ ] **A2A-057 — Gérer le cache.** Respecter ETag/cache headers, borner la durée, revalider après rotation et
