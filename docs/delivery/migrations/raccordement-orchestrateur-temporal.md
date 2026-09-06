@@ -583,8 +583,12 @@ est immédiatement l'unique moteur de toutes les admissions.
   présents, le Build ID est courant, les sept queues ont un poller, la readiness, Evidence MCP et les interfaces
   répondent, la projection expose 120 tâches et SigNoz contient 784 métriques, 7 dashboards et 15 alertes. Preuve :
   `docs/evidence/temporal/TEMP-108-pre-reopening-verification-2026-09-06.md`.)_
-- [ ] **TEMP-109 — Exécuter un smoke test de coupure.** Soumettre un ticket synthétique pendant la maintenance,
-  vérifier le parcours complet et supprimer uniquement ses artefacts explicitement jetables.
+- [x] **TEMP-109 — Exécuter un smoke test de coupure.** Soumettre un ticket synthétique pendant la maintenance,
+  vérifier le parcours complet et supprimer uniquement ses artefacts explicitement jetables. _(Le ticket
+  `badf822f` / `AF-0125` a terminé son workflow, passé les quatre gates et créé une unique PR liée au manifeste.
+  La PR est fermée, sa branche et son workspace sont supprimés ; projection, historique et 8 preuves restent
+  conservés. Le verrou est refermé à la révision `4`. Preuve :
+  `docs/evidence/temporal/TEMP-109-cutover-smoke-2026-09-06.md`.)_
 - [ ] **TEMP-110 — Ouvrir toutes les admissions.** Autoriser simultanément tous les dépôts et toutes les catégories
   de tickets sur Temporal, sans pourcentage, allow-list transitoire ou double exécution.
 - [ ] **TEMP-111 — Surveiller la fenêtre renforcée.** Maintenir l'équipe de rollback disponible et appliquer les

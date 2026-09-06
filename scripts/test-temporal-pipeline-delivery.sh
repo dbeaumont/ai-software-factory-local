@@ -15,13 +15,53 @@ repository_url=${TEMPORAL_TEST_REPOSITORY_URL:-http://gitea:3000/${gitea_owner}/
 requirement=${TEMPORAL_DELIVERY_TEST_REQUIREMENT:-Temporal full delivery verification: add one concise comment to the customer not-found test without changing behavior.}
 timeout=${TEMPORAL_DELIVERY_TEST_TIMEOUT_SECONDS:-1200}
 qualification_attempts=${TEMPORAL_DELIVERY_TEST_ATTEMPTS:-3}
+cutover_smoke=${TEMPORAL_CUTOVER_SMOKE:-false}
+workspace_volume=${AI_FACTORY_WORKSPACE_VOLUME:-factory-workspace}
 
 : "${GITEA_TOKEN:?GITEA_TOKEN is required for the end-to-end delivery assertion}"
+
+case "$cutover_smoke" in
+  true|false) ;;
+  *) echo "TEMPORAL_CUTOVER_SMOKE must be true or false" >&2; exit 2 ;;
+esac
 
 response_file=$(mktemp)
 task_file=$(mktemp)
 pulls_file=$(mktemp)
-trap 'rm -f "$response_file" "$task_file" "$pulls_file"' EXIT
+admissions_temporarily_open=false
+cleanup() {
+  if [ "$admissions_temporarily_open" = true ]; then
+    ./scripts/set-admissions.sh close >/dev/null || true
+  fi
+  rm -f "$response_file" "$task_file" "$pulls_file"
+}
+trap cleanup EXIT
+
+cleanup_workspace() {
+  disposable_task_id=$1
+  [[ "$disposable_task_id" =~ ^[0-9a-f]{8}$ ]] || {
+    echo "Refusing to clean an invalid task workspace: $disposable_task_id" >&2
+    return 1
+  }
+  docker run --rm --network none -v "${workspace_volume}:/workspace" \
+    busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 \
+    sh -eu -c 'target="/workspace/tasks/$1"; rm -rf -- "$target"; [ ! -e "$target" ]' _ "$disposable_task_id"
+}
+
+admit_cutover_smoke() {
+  admission_state=$("${compose[@]}" exec -T orchestrator-db psql -U "$database_user" -d "$database_name" -Atc \
+    "SELECT admissions_open FROM factory_admission_control WHERE control_key = 'global'" | tr -d '[:space:]')
+  [ "$admission_state" = f ] || {
+    echo "Cutover smoke requires globally closed admissions" >&2
+    return 1
+  }
+  admissions_temporarily_open=true
+  ./scripts/set-admissions.sh open >/dev/null
+  curl -fsS --max-time 30 -X POST "http://127.0.0.1:${orchestrator_port}/api/tasks" \
+    -H 'Content-Type: application/json' --data "$payload" >"$response_file"
+  ./scripts/set-admissions.sh close >/dev/null
+  admissions_temporarily_open=false
+}
 
 gitea_pulls() {
   curl -fsS --max-time 30 \
@@ -64,8 +104,12 @@ waiting_reached=false
 for qualification_attempt in $(seq 1 "$qualification_attempts"); do
   payload=$(jq -cn --arg repositoryUrl "$repository_url" --arg requirement "$requirement Attempt: $qualification_attempt." \
     '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement}')
-  curl -fsS --max-time 30 -X POST "http://127.0.0.1:${orchestrator_port}/api/tasks" \
-    -H 'Content-Type: application/json' --data "$payload" >"$response_file"
+  if [ "$cutover_smoke" = true ]; then
+    admit_cutover_smoke
+  else
+    curl -fsS --max-time 30 -X POST "http://127.0.0.1:${orchestrator_port}/api/tasks" \
+      -H 'Content-Type: application/json' --data "$payload" >"$response_file"
+  fi
   task_id=$(jq -er '.id' "$response_file")
   attempt_id=$(jq -er '.workflowAttemptId' "$response_file")
   run_id=$(jq -er '.workflowRunId' "$response_file")
@@ -77,6 +121,7 @@ for qualification_attempt in $(seq 1 "$qualification_attempts"); do
     if [ "$result" -ne 10 ] || [ "$qualification_attempt" -eq "$qualification_attempts" ]; then
       exit "$result"
     fi
+    [ "$cutover_smoke" = false ] || cleanup_workspace "$task_id"
     echo "Retrying full pipeline after functional gate rejection ($qualification_attempt/$qualification_attempts)..."
   fi
 done
@@ -140,4 +185,20 @@ gitea_pulls >"$pulls_file"
   exit 1
 }
 
-echo "Full Temporal delivery verified: task=$task_id run=$run_id manifest=$manifest_id pr=$pull_request_url unique_pr=1"
+cleanup_result=retained
+if [ "$cutover_smoke" = true ]; then
+  pull_number=$(jq -er --arg url "$pull_request_url" '.[] | select(.html_url == $url) | .number' "$pulls_file")
+  head_branch=$(jq -er --arg url "$pull_request_url" '.[] | select(.html_url == $url) | .head.ref' "$pulls_file")
+  curl -fsS --max-time 30 -X PATCH \
+    -H "Authorization: token ${GITEA_TOKEN}" -H 'Content-Type: application/json' \
+    --data '{"state":"closed"}' \
+    "http://127.0.0.1:${gitea_port}/api/v1/repos/${gitea_owner}/${gitea_repository}/pulls/${pull_number}" \
+    | jq -e '.state == "closed"' >/dev/null
+  encoded_branch=$(jq -rn --arg branch "$head_branch" '$branch | @uri')
+  curl -fsS --max-time 30 -X DELETE -H "Authorization: token ${GITEA_TOKEN}" \
+    "http://127.0.0.1:${gitea_port}/api/v1/repos/${gitea_owner}/${gitea_repository}/branches/${encoded_branch}"
+  cleanup_workspace "$task_id"
+  cleanup_result="pr_closed,branch_deleted,workspace_deleted,evidence_retained"
+fi
+
+echo "Full Temporal delivery verified: task=$task_id run=$run_id manifest=$manifest_id pr=$pull_request_url unique_pr=1 cleanup=$cleanup_result"
