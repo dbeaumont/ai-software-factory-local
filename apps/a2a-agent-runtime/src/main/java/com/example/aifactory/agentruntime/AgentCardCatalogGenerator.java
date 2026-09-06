@@ -1,6 +1,7 @@
 package com.example.aifactory.agentruntime;
 
 import com.example.aifactory.agentcore.AgentCatalog;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -20,7 +21,12 @@ public final class AgentCardCatalogGenerator {
     private final AgentCatalog catalog;
     private final ObjectMapper objectMapper;
 
-    public AgentCardCatalogGenerator(AgentCatalog catalog, ObjectMapper objectMapper) {
+    @Autowired
+    public AgentCardCatalogGenerator(ObjectMapper objectMapper) {
+        this(new AgentCatalog(), objectMapper);
+    }
+
+    AgentCardCatalogGenerator(AgentCatalog catalog, ObjectMapper objectMapper) {
         this.catalog = catalog;
         this.objectMapper = objectMapper;
     }

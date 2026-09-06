@@ -2,6 +2,8 @@ package com.example.aifactory.agentruntime;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** Process identity; stricter admission validation is added by A2A-032. */
+import java.net.URI;
+
+/** Immutable process identity and externally advertised A2A endpoint. */
 @ConfigurationProperties("ai-factory.agent-runtime")
-public record AgentRuntimeProperties(String role) {}
+public record AgentRuntimeProperties(String role, URI endpoint) {}

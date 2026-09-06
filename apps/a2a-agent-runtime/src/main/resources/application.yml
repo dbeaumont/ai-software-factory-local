@@ -23,6 +23,7 @@ management:
 ai-factory:
   agent-runtime:
     role: ${AI_FACTORY_AGENT_ROLE:}
+    endpoint: ${AI_FACTORY_AGENT_ENDPOINT:http://localhost:${AI_FACTORY_AGENT_PORT:8090}/a2a}
     llm:
       base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
       api-key: ${AI_FACTORY_LLM_API_KEY:}
