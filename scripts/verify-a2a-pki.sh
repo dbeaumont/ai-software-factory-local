@@ -8,8 +8,16 @@ ca="$pki/authority/ca.crt"
 crl="$pki/authority/ca.crl"
 minimum_seconds=${AI_FACTORY_A2A_TLS_MINIMUM_VALIDITY_SECONDS:-86400}
 
+mode_of() {
+  stat -f '%Lp' "$1" 2>/dev/null || stat -c '%a' "$1"
+}
+
 test -s "$ca" || { echo "Missing A2A trust anchor: $ca" >&2; exit 1; }
 test -s "$crl" || { echo "Missing A2A certificate revocation list: $crl" >&2; exit 1; }
+test ! -L "$pki/authority/ca.key" && test "$(mode_of "$pki/authority/ca.key")" = "600" || {
+  echo "A2A CA private key must be a mode 0600 regular file" >&2
+  exit 1
+}
 openssl verify -CAfile "$ca" "$ca" >/dev/null
 openssl crl -in "$crl" -noout -nextupdate >/dev/null
 
@@ -22,6 +30,10 @@ verify_identity() {
 
   test -s "$certificate" || { echo "Missing certificate for $identity" >&2; exit 1; }
   test -s "$private_key" || { echo "Missing private key for $identity" >&2; exit 1; }
+  test ! -L "$private_key" && test "$(mode_of "$private_key")" = "600" || {
+    echo "A2A private key must be a mode 0600 regular file: $private_key" >&2
+    exit 1
+  }
   openssl x509 -checkend "$minimum_seconds" -noout -in "$certificate" >/dev/null
   openssl verify -CAfile "$ca" -CRLfile "$crl" -crl_check \
     -purpose sslclient "$certificate" >/dev/null

@@ -527,8 +527,14 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
     refus, délégation, annulation, collision, changement et invalidation de carte. Toutes les valeurs fournies sont
     remplacées par leur SHA-256 avant émission ; les tests vérifient le routage des événements et l'absence des
     identifiants, jetons, retours à la ligne et ETag d'origine.
-- [ ] **A2A-109 — Gérer les secrets.** Monter les secrets en fichiers, vérifier permissions, rotation et absence
+- [x] **A2A-109 — Gérer les secrets.** Monter les secrets en fichiers, vérifier permissions, rotation et absence
   dans l'environnement sérialisé, les dumps, traces, tâches A2A et historiques Temporal.
+  - Preuve : `secret-policy-v1.json` inventorie les secrets, leurs seuls chemins de montage, leurs rotations et les
+    sinks interdits. `SecretFilePolicy` et `A2aSecretFilePolicy` refusent liens, permissions non propriétaires et
+    tailles anormales ; OAuth2, MCP et HMAC effacent leurs buffers et relisent le fichier à l'usage. Les scripts
+    génèrent 14 jeux isolés en mode `0600`, vérifient PKI/JWK et testent remplacement atomique, rotation, révocation
+    et refus des permissions faibles. Les tests de transport prouvent aussi l'absence de secret dans erreurs,
+    décisions, métadonnées A2A et historiques.
 - [ ] **A2A-110 — Produire l'analyse de menaces.** Couvrir spoofing de carte, confused deputy, rejeu, SSRF,
   élévation de privilège, poisoning d'artefact, cross-tenant et déni de service.
 - [ ] **A2A-111 — Ajouter les scans de supply chain.** SBOM, licences, signatures, provenance, Trivy et politique

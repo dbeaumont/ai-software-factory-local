@@ -20,11 +20,18 @@ class McpRoleTokenProviderTest {
     void loadsOnlyTheTokenWhoseClientIdentityMatchesTheActiveRole() throws Exception {
         Path tokenFile = temporary.resolve("token");
         Files.writeString(tokenFile, "role-bound-access-token-value\n");
+        Files.setPosixFilePermissions(tokenFile,
+                java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
         RoleScopedAgentContext role = RoleScopedAgentContext.load("developer", new ObjectMapper());
 
         AgentMcpProperties correct = properties("ai-factory-agent-developer", tokenFile);
         assertThat(new McpRoleTokenProvider(role, correct).acquire())
                 .containsExactly("role-bound-access-token-value".toCharArray());
+        Files.writeString(tokenFile, "rotated-role-bound-access-token\n");
+        Files.setPosixFilePermissions(tokenFile,
+                java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
+        assertThat(new McpRoleTokenProvider(role, correct).acquire())
+                .containsExactly("rotated-role-bound-access-token".toCharArray());
         assertThatThrownBy(() -> new McpRoleTokenProvider(
                 role, properties("ai-factory-agent-test-design", tokenFile)).acquire())
                 .isInstanceOf(SecurityException.class).hasMessageContaining("active agent role");

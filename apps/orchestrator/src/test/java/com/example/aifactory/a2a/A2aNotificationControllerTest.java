@@ -2,6 +2,7 @@ package com.example.aifactory.a2a;
 
 import com.example.aifactory.config.A2aNotificationProperties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.crypto.Mac;
@@ -14,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class A2aNotificationControllerTest {
+    @TempDir java.nio.file.Path temporary;
 
     @Test
     void authenticatesTheRawBodyBeforePassingTheNotification() throws Exception {
@@ -36,6 +38,36 @@ class A2aNotificationControllerTest {
         assertThat(accepted.get().state()).isEqualTo(A2aContracts.TaskState.COMPLETED);
         assertThatThrownBy(() -> controller.receive("sha256=" + "0".repeat(64), body).block())
                 .isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void observesAnAtomicallyRotatedFileWithoutRestart() throws Exception {
+        byte[] first = "0123456789abcdef0123456789abcdef".getBytes(StandardCharsets.UTF_8);
+        byte[] second = "fedcba9876543210fedcba9876543210".getBytes(StandardCharsets.UTF_8);
+        java.nio.file.Path secretFile = temporary.resolve("notification-hmac");
+        writeSecret(secretFile, first);
+        byte[] body = """
+                {"agentRole":"developer","taskId":"agent-task-1","contextId":"context-1","sequence":2,
+                 "state":"TASK_STATE_COMPLETED","occurredAt":"2026-09-06T12:00:00Z","artifacts":[]}
+                """.getBytes(StandardCharsets.UTF_8);
+        A2aNotificationController controller = new A2aNotificationController(
+                new A2aNotificationProperties(true, secretFile.toString(), 4096),
+                notification -> java.util.concurrent.CompletableFuture.completedFuture(null), new ObjectMapper());
+
+        assertThat(controller.receive("sha256=" + hmac(first, body), body).block()).isNotNull();
+        writeSecret(secretFile, second);
+        assertThat(controller.receive("sha256=" + hmac(second, body), body).block()).isNotNull();
+        assertThatThrownBy(() -> controller.receive("sha256=" + hmac(first, body), body).block())
+                .isInstanceOf(SecurityException.class);
+    }
+
+    private static void writeSecret(java.nio.file.Path path, byte[] value) throws Exception {
+        java.nio.file.Path staged = path.resolveSibling(path.getFileName() + ".new");
+        java.nio.file.Files.write(staged, value);
+        java.nio.file.Files.setPosixFilePermissions(staged,
+                java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
+        java.nio.file.Files.move(staged, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE);
     }
 
     private static String hmac(byte[] secret, byte[] body) throws Exception {

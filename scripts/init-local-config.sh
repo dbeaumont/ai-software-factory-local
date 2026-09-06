@@ -152,4 +152,9 @@ if [ ! -d .local/a2a-pki ]; then
 fi
 ./scripts/verify-a2a-pki.sh .local/a2a-pki
 
+if [ ! -d .local/a2a-secrets ]; then
+  ./scripts/generate-a2a-local-secrets.sh .local/a2a-secrets
+fi
+./scripts/verify-a2a-secrets.sh .local/a2a-secrets
+
 chmod 600 "$ENV_FILE" "$VAULT_FILE"

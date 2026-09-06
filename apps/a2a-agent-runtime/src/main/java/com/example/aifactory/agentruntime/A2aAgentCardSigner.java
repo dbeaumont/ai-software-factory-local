@@ -1,5 +1,6 @@
 package com.example.aifactory.agentruntime;
 
+import com.example.aifactory.agentcore.SecretFilePolicy;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSObject;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -110,7 +110,13 @@ public final class A2aAgentCardSigner {
             return List.of(generateEphemeralDevelopmentKey());
         }
         try {
-            JWKSet set = JWKSet.parse(Files.readString(Path.of(path), StandardCharsets.UTF_8));
+            byte[] encoded = SecretFilePolicy.read(Path.of(path), 1_048_576);
+            JWKSet set;
+            try {
+                set = JWKSet.parse(new String(encoded, StandardCharsets.UTF_8));
+            } finally {
+                java.util.Arrays.fill(encoded, (byte) 0);
+            }
             List<RSAKey> loaded = new ArrayList<>();
             for (JWK key : set.getKeys()) {
                 if (!(key instanceof RSAKey rsa) || rsa.isPrivate() == false || rsa.getKeyID() == null) {

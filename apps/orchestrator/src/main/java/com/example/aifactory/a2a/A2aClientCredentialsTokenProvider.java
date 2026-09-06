@@ -10,7 +10,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,7 +40,7 @@ public final class A2aClientCredentialsTokenProvider implements A2aAccessTokenPr
         validateScopes(agentRole, scopes);
         byte[] secret;
         try {
-            secret = Files.readAllBytes(properties.clientSecretFile());
+            secret = A2aSecretFilePolicy.read(properties.clientSecretFile(), 65_536);
         } catch (Exception failure) {
             return CompletableFuture.failedStage(new SecurityException("A2A client credential is unavailable"));
         }

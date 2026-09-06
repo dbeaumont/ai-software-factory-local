@@ -1,9 +1,9 @@
 package com.example.aifactory.agentruntime;
 
 import com.example.aifactory.agentcore.RoleScopedAgentContext;
+import com.example.aifactory.agentcore.SecretFilePolicy;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 /** Reads the externally rotated, role-specific MCP bearer token only when a connection is opened. */
 final class McpRoleTokenProvider {
@@ -22,7 +22,7 @@ final class McpRoleTokenProvider {
             throw new SecurityException("MCP client identity is not bound to the active agent role");
         }
         try {
-            byte[] bytes = Files.readAllBytes(properties.accessTokenFile());
+            byte[] bytes = SecretFilePolicy.read(properties.accessTokenFile(), 65_536);
             try {
                 char[] token = new String(bytes, StandardCharsets.UTF_8).trim().toCharArray();
                 if (token.length < 16) throw new SecurityException("MCP role token is unavailable");

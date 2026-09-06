@@ -14,7 +14,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -29,21 +28,31 @@ public final class A2aNotificationController {
     private final A2aNotificationProperties properties;
     private final A2aNotificationReceiver receiver;
     private final ObjectMapper mapper;
-    private final byte[] secret;
+    private final SecretProvider secretProvider;
 
     public A2aNotificationController(A2aNotificationProperties properties,
                                      A2aNotificationReceiver receiver, ObjectMapper mapper) {
-        this(properties, receiver, mapper, loadSecret(properties));
+        this(properties, receiver, mapper, () -> loadSecret(properties));
     }
 
     A2aNotificationController(A2aNotificationProperties properties, A2aNotificationReceiver receiver,
                               ObjectMapper mapper, byte[] secret) {
+        this(properties, receiver, mapper, () -> secret.clone());
+    }
+
+    private A2aNotificationController(A2aNotificationProperties properties, A2aNotificationReceiver receiver,
+                                      ObjectMapper mapper, SecretProvider secretProvider) {
         this.properties = properties;
         this.receiver = receiver;
         this.mapper = mapper;
-        this.secret = secret.clone();
-        if (properties.enabled() && secret.length < 32) {
-            throw new IllegalArgumentException("A2A notification HMAC secret must contain at least 32 bytes");
+        this.secretProvider = secretProvider;
+        if (properties.enabled()) {
+            byte[] probe = secretProvider.acquire();
+            try {
+                requireSecret(probe);
+            } finally {
+                java.util.Arrays.fill(probe, (byte) 0);
+            }
         }
     }
 
@@ -93,17 +102,32 @@ public final class A2aNotificationController {
     }
 
     private byte[] hmac(byte[] body) throws Exception {
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(secret, "HmacSHA256"));
-        return mac.doFinal(body);
+        byte[] secret = secretProvider.acquire();
+        try {
+            requireSecret(secret);
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secret, "HmacSHA256"));
+            return mac.doFinal(body);
+        } finally {
+            java.util.Arrays.fill(secret, (byte) 0);
+        }
     }
 
     private static byte[] loadSecret(A2aNotificationProperties properties) {
         if (!properties.enabled()) return "disabled-not-used-secret-material".getBytes(StandardCharsets.UTF_8);
         try {
-            return Files.readAllBytes(Path.of(properties.hmacSecretFile()));
+            return A2aSecretFilePolicy.read(Path.of(properties.hmacSecretFile()), 65_536);
         } catch (Exception failure) {
             throw new IllegalStateException("Cannot load A2A notification HMAC secret", failure);
         }
     }
+
+    private static void requireSecret(byte[] secret) {
+        if (secret == null || secret.length < 32) {
+            throw new IllegalArgumentException("A2A notification HMAC secret must contain at least 32 bytes");
+        }
+    }
+
+    @FunctionalInterface
+    private interface SecretProvider { byte[] acquire(); }
 }

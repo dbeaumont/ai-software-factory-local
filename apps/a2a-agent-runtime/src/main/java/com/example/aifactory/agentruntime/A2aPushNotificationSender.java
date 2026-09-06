@@ -1,6 +1,7 @@
 package com.example.aifactory.agentruntime;
 
 import com.example.aifactory.agentcore.SecureUriPolicy;
+import com.example.aifactory.agentcore.SecretFilePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -33,14 +33,14 @@ public final class A2aPushNotificationSender {
     private final A2aPushNotificationProperties properties;
     private final ObjectMapper mapper;
     private final NotificationTransport transport;
-    private final byte[] secret;
+    private final SecretProvider secretProvider;
     private final SecureUriPolicy urlPolicy;
     private final A2aIdentityRateLimiter rateLimiter;
 
     @Autowired
     public A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                                      WebClient.Builder webClient, A2aIdentityRateLimiter rateLimiter) {
-        this(properties, mapper, httpTransport(webClient), loadSecret(properties), systemPolicy(properties),
+        this(properties, mapper, httpTransport(webClient), () -> loadSecret(properties), systemPolicy(properties),
                 rateLimiter);
     }
 
@@ -59,13 +59,24 @@ public final class A2aPushNotificationSender {
     A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
                               NotificationTransport transport, byte[] secret, SecureUriPolicy urlPolicy,
                               A2aIdentityRateLimiter rateLimiter) {
+        this(properties, mapper, transport, constantSecret(secret), urlPolicy, rateLimiter);
+    }
+
+    private A2aPushNotificationSender(A2aPushNotificationProperties properties, ObjectMapper mapper,
+                              NotificationTransport transport, SecretProvider secretProvider,
+                              SecureUriPolicy urlPolicy, A2aIdentityRateLimiter rateLimiter) {
         this.properties = properties;
         this.mapper = mapper;
         this.transport = transport;
-        this.secret = secret.clone();
+        this.secretProvider = secretProvider;
         this.urlPolicy = urlPolicy;
         this.rateLimiter = rateLimiter;
-        validate(properties, this.secret);
+        byte[] probe = secretProvider.acquire();
+        try {
+            validate(properties, probe);
+        } finally {
+            java.util.Arrays.fill(probe, (byte) 0);
+        }
     }
 
     public boolean enabled() { return properties.enabled(); }
@@ -124,9 +135,15 @@ public final class A2aPushNotificationSender {
     }
 
     private String signature(byte[] body) throws Exception {
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(secret, "HmacSHA256"));
-        return "sha256=" + java.util.HexFormat.of().formatHex(mac.doFinal(body));
+        byte[] secret = secretProvider.acquire();
+        try {
+            validate(properties, secret);
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secret, "HmacSHA256"));
+            return "sha256=" + java.util.HexFormat.of().formatHex(mac.doFinal(body));
+        } finally {
+            java.util.Arrays.fill(secret, (byte) 0);
+        }
     }
 
     private static NotificationTransport httpTransport(WebClient.Builder builder) {
@@ -146,12 +163,17 @@ public final class A2aPushNotificationSender {
             if (properties.hmacSecretFile() == null || properties.hmacSecretFile().isBlank()) {
                 throw new NotificationDeliveryException("Push HMAC secret file is required");
             }
-            return Files.readAllBytes(Path.of(properties.hmacSecretFile()));
+            return SecretFilePolicy.read(Path.of(properties.hmacSecretFile()), 65_536);
         } catch (NotificationDeliveryException exception) {
             throw exception;
         } catch (Exception exception) {
             throw new NotificationDeliveryException("Cannot read push HMAC secret file", exception);
         }
+    }
+
+    private static SecretProvider constantSecret(byte[] secret) {
+        byte[] retained = secret.clone();
+        return () -> retained.clone();
     }
 
     private static SecureUriPolicy systemPolicy(A2aPushNotificationProperties properties) {
@@ -192,6 +214,9 @@ public final class A2aPushNotificationSender {
     public interface NotificationTransport {
         CompletionStage<Integer> post(URI callback, byte[] body, String signature);
     }
+
+    @FunctionalInterface
+    private interface SecretProvider { byte[] acquire(); }
 
     public record Notification(
             String agentRole, String taskId, String contextId, long sequence, A2aSendMessageService.TaskState state,
