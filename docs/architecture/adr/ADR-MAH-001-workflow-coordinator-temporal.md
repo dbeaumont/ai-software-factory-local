@@ -1,12 +1,12 @@
 # ADR-MAH-001 — Spring Boot et Temporal pour le Workflow Coordinator
 
-- Statut : accepté pour le prototype de migration
+- Statut : supersédé pour le moteur par `ADR-TEMP-001` ; conservé pour l'architecture multi-agent
 - Date : 2026-09-02
 - Portée : architecture multi-agent hiérarchique, modes shadow, canary et actif
 
-> Mise à jour d'implémentation : le pipeline a depuis été extrait de `TaskService` dans
-> `DeterministicWorkflowCoordinator`. Le port `WorkflowCoordinator` est actif, tandis que son chemin Temporal reste
-> disponible mais désactivé par défaut.
+> Mise à jour d'implémentation du 2026-09-06 : `TemporalWorkflowCoordinator` est l'unique implémentation de
+> production du port `WorkflowCoordinator`. Le coordinateur local et son fallback ont été supprimés lors de la
+> bascule franche décrite par `ADR-TEMP-001`.
 
 ## Contexte
 

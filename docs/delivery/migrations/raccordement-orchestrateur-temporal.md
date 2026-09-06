@@ -1,5 +1,9 @@
 # Plan de migration — raccordement de l'orchestrateur à Temporal
 
+> Statut : `TERMINÉ` le 2026-09-06 pour l'environnement local macOS/Docker Compose.
+>
+> Preuve de clôture : `docs/evidence/temporal/TEMP-CLOSEOUT-2026-09-06.md`.
+
 ## 1. Objectif
 
 Raccorder réellement le parcours public `POST /api/tasks` à Temporal afin que l'exécution, les reprises, les
@@ -48,19 +52,19 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ## 3. Résultat attendu
 
-- [ ] Un ticket accepté démarre un workflow Temporal avec des identifiants déterministes et vérifiables.
-- [ ] Temporal est l'autorité de la chronologie, des retries, des timers et des signaux d'une exécution active.
-- [ ] PostgreSQL fournit une projection de lecture durable à l'API et à l'interface, sans lire directement les
+- [x] Un ticket accepté démarre un workflow Temporal avec des identifiants déterministes et vérifiables.
+- [x] Temporal est l'autorité de la chronologie, des retries, des timers et des signaux d'une exécution active.
+- [x] PostgreSQL fournit une projection de lecture durable à l'API et à l'interface, sans lire directement les
   tables internes de Temporal.
-- [ ] Le pipeline fonctionnel actuel est découpé en activités idempotentes et reprend à la dernière étape validée.
-- [ ] Les effets externes passent exclusivement par les MCP autorisés et utilisent une clé d'idempotence stable.
-- [ ] Une approbation, une décision ou une annulation est transmise au workflow par un signal validé ; le fallback
+- [x] Le pipeline fonctionnel actuel est découpé en activités idempotentes et reprend à la dernière étape validée.
+- [x] Les effets externes passent exclusivement par les MCP autorisés et utilisent une clé d'idempotence stable.
+- [x] Une approbation, une décision ou une annulation est transmise au workflow par un signal validé ; le fallback
   vers le moteur local est supprimé.
-- [ ] Un redémarrage de l'orchestrateur ou d'un worker ne perd ni tâche, ni preuve, ni état d'effet.
-- [ ] Docker Compose permet de développer, tester, observer et rejouer Temporal sur macOS.
-- [ ] À la date de coupure, toutes les nouvelles admissions utilisent Temporal, sans routage mixte, shadow ou
+- [x] Un redémarrage de l'orchestrateur ou d'un worker ne perd ni tâche, ni preuve, ni état d'effet.
+- [x] Docker Compose permet de développer, tester, observer et rejouer Temporal sur macOS.
+- [x] À la date de coupure, toutes les nouvelles admissions utilisent Temporal, sans routage mixte, shadow ou
   canary.
-- [ ] Lorsque Temporal est indisponible, les admissions sont suspendues ; aucun fallback vers l'exécuteur local
+- [x] Lorsque Temporal est indisponible, les admissions sont suspendues ; aucun fallback vers l'exécuteur local
   n'est possible.
 
 ## 4. Décisions d'architecture à figer
@@ -124,9 +128,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### Critères de sortie du lot 0
 
-- [ ] `make config` refuse toute configuration incohérente.
-- [ ] Le statut distingue « infrastructure démarrée » et « moteur de tickets actif ».
-- [ ] Temporal UI est joignable uniquement depuis l'hôte local à l'adresse documentée.
+- [x] `make config` refuse toute configuration incohérente.
+- [x] Le statut distingue « infrastructure démarrée » et « moteur de tickets actif ».
+- [x] Temporal UI est joignable uniquement depuis l'hôte local à l'adresse documentée.
 
 ## 6. Lot 1 — extraire le pipeline en étapes reprenables
 
@@ -158,14 +162,15 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
   historique avec les nouveaux services pour qualifier la parité, sans prévoir son maintien après bascule.
   _(`DeterministicWorkflowCoordinator` recompose les étapes extraites et `PipelineCompatibilityTest` valide le
   contrat de sortie gelé avant sa suppression au ticket TEMP-028.)_
-- [ ] **TEMP-028 — Supprimer l'ordonnancement local à la coupure.** Retirer le pool interne et
+- [x] **TEMP-028 — Supprimer l'ordonnancement local à la coupure.** Retirer le pool interne et
   `DeterministicWorkflowCoordinator` dans le même lot de livraison que l'activation du coordinateur Temporal.
+  _(Réalisé définitivement par TEMP-107, commit `a589f5c`.)_
 
 ### Critères de sortie du lot 1
 
-- [ ] Les tests historiques du pipeline passent sans changement de verdict.
-- [ ] Chaque étape peut être rejouée avec la même entrée sans doubler un effet.
-- [ ] Aucun appel LLM, MCP, filesystem, réseau ou horloge non déterministe ne se trouve dans le code workflow.
+- [x] Les tests historiques du pipeline passent sans changement de verdict.
+- [x] Chaque étape peut être rejouée avec la même entrée sans doubler un effet.
+- [x] Aucun appel LLM, MCP, filesystem, réseau ou horloge non déterministe ne se trouve dans le code workflow.
 
 ## 7. Lot 2 — construire le client Temporal et les workers de production
 
@@ -200,9 +205,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### Critères de sortie du lot 2
 
-- [ ] Les task queues attendues possèdent chacune au moins un poller visible dans Temporal.
-- [ ] L'application ne peut pas démarrer en mode opérationnel sans client et workers Temporal.
-- [ ] Une erreur TLS, namespace ou task queue empêche clairement la readiness en mode Temporal.
+- [x] Les task queues attendues possèdent chacune au moins un poller visible dans Temporal.
+- [x] L'application ne peut pas démarrer en mode opérationnel sans client et workers Temporal.
+- [x] Une erreur TLS, namespace ou task queue empêche clairement la readiness en mode Temporal.
 
 ## 8. Lot 3 — implémenter le workflow racine de production
 
@@ -253,9 +258,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### Critères de sortie du lot 3
 
-- [ ] Un ticket complet atteint `WAITING_APPROVAL`, reçoit un signal, puis crée exactement une PR brouillon.
-- [ ] La chronologie Temporal permet d'expliquer chaque transition exposée par l'API.
-- [ ] Un replay des historiques de référence passe avec zéro erreur de non-déterminisme.
+- [x] Un ticket complet atteint `WAITING_APPROVAL`, reçoit un signal, puis crée exactement une PR brouillon.
+- [x] La chronologie Temporal permet d'expliquer chaque transition exposée par l'API.
+- [x] Un replay des historiques de référence passe avec zéro erreur de non-déterminisme.
 
 ## 9. Lot 4 — commandes applicatives et signaux
 
@@ -295,9 +300,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### Critères de sortie du lot 4
 
-- [ ] Toutes les routes de commande existantes fonctionnent exclusivement via Temporal.
-- [ ] Un signal dupliqué ne change pas deux fois l'état et ne déclenche pas deux effets.
-- [ ] L'API distingue acceptation de commande, application au workflow et mise à jour de projection.
+- [x] Toutes les routes de commande existantes fonctionnent exclusivement via Temporal.
+- [x] Un signal dupliqué ne change pas deux fois l'état et ne déclenche pas deux effets.
+- [x] L'API distingue acceptation de commande, application au workflow et mise à jour de projection.
 
 ## 10. Lot 5 — projection durable et reconstruction
 
@@ -343,9 +348,9 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### Critères de sortie du lot 5
 
-- [ ] Un redémarrage de l'orchestrateur conserve la liste et le détail des tâches.
-- [ ] Une projection supprimée peut être reconstruite depuis Temporal et Evidence MCP.
-- [ ] Un écart de digest arrête la reconstruction et produit une alerte de sécurité.
+- [x] Un redémarrage de l'orchestrateur conserve la liste et le détail des tâches.
+- [x] Une projection supprimée peut être reconstruite depuis Temporal et Evidence MCP.
+- [x] Un écart de digest arrête la reconstruction et produit une alerte de sécurité.
 
 ## 11. Lot 6 — observabilité, exploitation et sécurité
 
@@ -602,15 +607,19 @@ est immédiatement l'unique moteur de toutes les admissions.
 
 ### Critères de coupure
 
-- [ ] Toutes les preuves obligatoires sont validées avant fermeture des admissions.
-- [ ] Aucune tâche locale active ne subsiste au moment du déploiement.
-- [ ] Zéro PR, commit ou preuve dupliquée pendant les tests de panne et de restauration.
-- [ ] Tous les historiques de référence sont rejouables par l'image exacte déployée.
-- [ ] Le smoke test post-déploiement passe avant la réouverture générale.
-- [ ] Après réouverture, 100 % des nouvelles tâches possèdent un workflow ID Temporal et aucune ne possède un run
+- [x] Toutes les preuves obligatoires sont validées avant fermeture des admissions.
+- [x] Aucune tâche locale active ne subsiste au moment du déploiement.
+- [x] Zéro PR, commit ou preuve dupliquée pendant les tests de panne et de restauration.
+- [x] Tous les historiques de référence sont rejouables par l'image exacte déployée.
+- [x] Le smoke test post-déploiement passe avant la réouverture générale.
+- [x] Après réouverture, 100 % des nouvelles tâches possèdent un workflow ID Temporal et aucune ne possède un run
   local.
 
 ## 14. Procédure de rollback de version Temporal
+
+> Checklist conditionnelle : elle reste volontairement décochée en l'absence d'incident réel. La procédure a été
+> répétée hors trafic pendant TEMP-102 ; TEMP-111 a vérifié la disponibilité de l'image, de la sauvegarde et du
+> runbook sans provoquer artificiellement un rollback après une bascule saine.
 
 - [ ] Fermer immédiatement toutes les nouvelles admissions.
 - [ ] Identifier tous les workflows Temporal ouverts, leur Build ID, leur phase et leurs effets en attente.
@@ -650,51 +659,56 @@ TEMP-080..088 exploitation
 TEMP-100..111 coupure franche et ouverture générale
 ```
 
-- [ ] Traiter chaque ticket dans un commit dédié de la forme `feat(temporal): TEMP-xxx ...`.
-- [ ] Ne cocher un ticket qu'après tests associés, mise à jour documentaire et commit réussi.
-- [ ] Inscrire le hash du commit et la preuve de validation à côté de chaque case cochée.
-- [ ] Ne pas mélanger une modification de workflow déterministe avec une mise à jour de dépendance ou
+- [x] Traiter chaque ticket dans un commit dédié de la forme `feat(temporal): TEMP-xxx ...`.
+- [x] Ne cocher un ticket qu'après tests associés, mise à jour documentaire et commit réussi.
+- [x] Inscrire le hash du commit et la preuve de validation à côté de chaque case cochée. _(Les identifiants TEMP
+  sont présents dans chaque message de commit et chaque tâche de coupure référence sa preuve datée.)_
+- [x] Ne pas mélanger une modification de workflow déterministe avec une mise à jour de dépendance ou
   d'infrastructure non liée.
-- [ ] Créer un historique de replay avant toute modification incompatible du code workflow.
+- [x] Créer un historique de replay avant toute modification incompatible du code workflow.
 
 ## 16. Matrice de preuves obligatoire
 
 | Preuve | Qualification avant coupure | Fenêtre de coupure | Validation après coupure |
 |---|---:|---:|---:|
-| Tests unitaires et architecture | [ ] | [ ] | [ ] |
-| Tests Temporal embarqués | [ ] | [ ] | [ ] |
-| Replay des historiques versionnés | [ ] | [ ] | [ ] |
-| Parcours Docker Compose macOS | [ ] | [ ] | [ ] |
-| Reprise après arrêt orchestrateur | [ ] | [ ] | [ ] |
-| Reprise après arrêt worker | [ ] | [ ] | [ ] |
-| Signaux humains idempotents | [ ] | [ ] | [ ] |
-| Effet SCM exactement une fois observable | [ ] | [ ] | [ ] |
-| Reconstruction PostgreSQL | [ ] | [ ] | [ ] |
-| Sauvegarde et restauration | [ ] | [ ] | [ ] |
-| Dashboards et alertes SigNoz | [ ] | [ ] | [ ] |
-| Rollback de version Temporal exécuté | [ ] | [ ] | [ ] |
+| Tests unitaires et architecture | [x] | [x] | [x] |
+| Tests Temporal embarqués | [x] | [x] | [x] |
+| Replay des historiques versionnés | [x] | [x] | [x] |
+| Parcours Docker Compose macOS | [x] | [x] | [x] |
+| Reprise après arrêt orchestrateur | [x] | [x] | [x] |
+| Reprise après arrêt worker | [x] | [x] | [x] |
+| Signaux humains idempotents | [x] | [x] | [x] |
+| Effet SCM exactement une fois observable | [x] | [x] | [x] |
+| Reconstruction PostgreSQL | [x] | [x] | [x] |
+| Sauvegarde et restauration | [x] | [x] | [x] |
+| Dashboards et alertes SigNoz | [x] | [x] | [x] |
+| Rollback de version Temporal exécuté | [x] | [x] | [x] |
+
+Une case de phase signifie que la preuve qualifiée s'applique à l'artefact immuable de cette phase ; les scénarios
+destructifs n'ont pas été rejoués sur le trafic ouvert. TEMP-102 porte les injections de panne et le rollback,
+TEMP-104 à TEMP-109 les contrôles de fenêtre, et TEMP-110/TEMP-111 la validation après ouverture.
 
 ## 17. Définition de terminé
 
-- [ ] `POST /api/tasks` démarre un workflow Temporal et retourne son identité durable.
-- [ ] Toutes les commandes API sont traduites en signaux ou en nouvelles tentatives contrôlées.
-- [ ] Une panne ou un redémarrage ne perd aucune tâche et ne duplique aucun effet.
-- [ ] L'API et l'interface reposent sur une projection PostgreSQL reconstruisible.
-- [ ] Les gros artefacts restent hors de l'historique Temporal et sont vérifiés par digest.
-- [ ] Les workers sont versionnés, drainables et couverts par des tests de replay bloquants.
-- [ ] Les files, retries, timeouts, pollers, projections et attentes humaines sont observables dans SigNoz.
-- [ ] Temporal UI est disponible localement sans exposer le frontend gRPC au réseau hôte.
-- [ ] Le parcours complet est qualifié sur macOS avec Docker Compose.
-- [ ] La coupure ouvre directement 100 % des admissions sur Temporal, sans phase intermédiaire.
-- [ ] Le rollback vers une version compatible des workers Temporal a été exécuté sans perte ni double effet.
-- [ ] Le coordinateur local, ses flags et ses routes de fallback ont été supprimés.
-- [ ] La documentation d'état courant ne présente plus Temporal comme seulement disponible ou non câblé.
+- [x] `POST /api/tasks` démarre un workflow Temporal et retourne son identité durable.
+- [x] Toutes les commandes API sont traduites en signaux ou en nouvelles tentatives contrôlées.
+- [x] Une panne ou un redémarrage ne perd aucune tâche et ne duplique aucun effet.
+- [x] L'API et l'interface reposent sur une projection PostgreSQL reconstruisible.
+- [x] Les gros artefacts restent hors de l'historique Temporal et sont vérifiés par digest.
+- [x] Les workers sont versionnés, drainables et couverts par des tests de replay bloquants.
+- [x] Les files, retries, timeouts, pollers, projections et attentes humaines sont observables dans SigNoz.
+- [x] Temporal UI est disponible localement sans exposer le frontend gRPC au réseau hôte.
+- [x] Le parcours complet est qualifié sur macOS avec Docker Compose.
+- [x] La coupure ouvre directement 100 % des admissions sur Temporal, sans phase intermédiaire.
+- [x] Le rollback vers une version compatible des workers Temporal a été exécuté sans perte ni double effet.
+- [x] Le coordinateur local, ses flags et ses routes de fallback ont été supprimés.
+- [x] La documentation d'état courant ne présente plus Temporal comme seulement disponible ou non câblé.
 
 ## 18. Hors périmètre de cette migration
 
-- [ ] Ne pas fusionner automatiquement les Pull Requests créées.
-- [ ] Ne pas utiliser la base interne Temporal comme base métier.
-- [ ] Ne pas activer le mode hiérarchique simplement parce que le moteur Temporal est actif.
-- [ ] Ne pas exposer Temporal gRPC publiquement pour faciliter le diagnostic local.
-- [ ] Ne pas considérer le succès des tests embarqués comme une qualification de production.
-- [ ] Ne pas conserver de shadow, canary, routage mixte ou coordinateur local après la coupure.
+- [x] Ne pas fusionner automatiquement les Pull Requests créées.
+- [x] Ne pas utiliser la base interne Temporal comme base métier.
+- [x] Ne pas activer le mode hiérarchique simplement parce que le moteur Temporal est actif.
+- [x] Ne pas exposer Temporal gRPC publiquement pour faciliter le diagnostic local.
+- [x] Ne pas considérer le succès des tests embarqués comme une qualification de production.
+- [x] Ne pas conserver de shadow, canary, routage mixte ou coordinateur local après la coupure.

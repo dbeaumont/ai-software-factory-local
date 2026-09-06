@@ -2,7 +2,7 @@
 
 Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. La version 1.2.0 introduit une
 architecture **multi-agent hiérarchique gouvernée** tout en conservant le pipeline déterministe 1.1.0 comme
-baseline et chemin de repli.
+baseline fonctionnelle. Temporal est l'unique moteur de workflow ; aucun moteur local de repli n'est conservé.
 
 Le mode `PIPELINE` reste le mode opérationnel de référence tant que la qualification et les approbations de
 bascule ne sont pas acquises. L'activation des modes `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY` et
@@ -52,7 +52,7 @@ La stack actuelle contient :
 | Orchestration | Spring Boot 4.1 / Spring AI 2.0 / Java 25 (`orchestrator`) |
 | Workflow | Temporal obligatoire ; workflow V1 et workers spécialisés actifs |
 | Hiérarchie en qualification | Supervisor, agents Architecture, Code, Tests, Sécurité et Independent Reviewer |
-| Mémoire de tâche | Adaptateur en mémoire actif ; schémas PostgreSQL et projections Temporal préparés pour la cible durable |
+| Mémoire de tâche | Projection PostgreSQL active, reconstruisible depuis Temporal et Evidence MCP |
 | Contexte MCP | Serveur MCP stateless en lecture seule (`repository-context-mcp`) |
 | Exécution MCP | Contrôleur de jobs à profils immuables (`sandbox-execution-mcp`) |
 | Passerelle LLM | LiteLLM (port 4000 interne) |
@@ -71,7 +71,7 @@ La stack actuelle contient :
 ```mermaid
 flowchart LR
   U[Utilisateur] --> W[Workflow Coordinator]
-  W -. cible durable .-> TP[Temporal]
+  W --> TP[Temporal]
   W --> S[Supervisor]
   S --> A[Architecture]
   S --> C[Code]
@@ -113,7 +113,8 @@ flowchart TB
     API --> Assurance[Assurance MCP]
     API --> Evidence[Evidence MCP]
     API --> SCM[SCM Delivery MCP]
-    API -. option désactivée par défaut .-> Temporal[Temporal]
+    API --> Temporal[Temporal obligatoire]
+    Temporal --> Projection[(Projection PostgreSQL)]
   end
 
   subgraph Execution[Plan d'exécution non fiable]
@@ -138,16 +139,16 @@ livraison SCM. Les endpoints MCP ne sont pas publiés sur l'hôte. Le réseau Co
 le trafic applicatif (`factory`), MCP (`mcp-internal`), workflow (`workflow-internal`) et les deux niveaux d'accès
 des sandboxes (`sandbox-egress` et `sandbox-quality`).
 
-> **État du prototype.** `TemporalWorkflowCoordinator` et `InMemoryTaskMemory` sont les adaptateurs actifs de la
-> configuration locale. Temporal est obligatoire pour toute nouvelle tâche et aucun sélecteur de moteur local
-> n'existe. Les migrations SQL et les projections préparent encore le remplacement de la mémoire JVM.
+> **État du prototype.** `TemporalWorkflowCoordinator` et `PostgresTaskMemory` sont les adaptateurs actifs de la
+> configuration locale. Temporal est obligatoire pour toute nouvelle tâche, aucun sélecteur de moteur local
+> n'existe et la projection PostgreSQL survit aux redémarrages.
 
 ### Repères dans l'implémentation
 
 | Responsabilité | Point d'entrée principal |
 |---|---|
 | API de tâches et commandes opérateur | [`TaskController`](apps/orchestrator/src/main/java/com/example/aifactory/controller/TaskController.java) |
-| Admission et mémoire des tâches | [`TaskService`](apps/orchestrator/src/main/java/com/example/aifactory/service/TaskService.java), [`InMemoryTaskMemory`](apps/orchestrator/src/main/java/com/example/aifactory/service/InMemoryTaskMemory.java) |
+| Admission et mémoire des tâches | [`TaskService`](apps/orchestrator/src/main/java/com/example/aifactory/service/TaskService.java), [`PostgresTaskMemory`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/projection/PostgresTaskMemory.java) |
 | Commandes de workflow | [`TemporalWorkflowCoordinator`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/TemporalWorkflowCoordinator.java) |
 | Runtime et permissions des agents | [`AgentRuntime`](apps/orchestrator/src/main/java/com/example/aifactory/service/AgentRuntime.java), [`ToolPermissionMatrix`](apps/orchestrator/src/main/java/com/example/aifactory/service/ToolPermissionMatrix.java) |
 | Workflow durable actif | [`SoftwareFactoryExecutionWorkflowV1Impl`](apps/orchestrator/src/main/java/com/example/aifactory/workflow/temporal/SoftwareFactoryExecutionWorkflowV1Impl.java) |
@@ -172,7 +173,8 @@ Une activation hiérarchique non qualifiée, un rôle non promu ou une télémé
 refusé. Le pipeline de référence est alors conservé sans contourner les gates.
 
 1. L'utilisateur soumet un ticket depuis l'interface web (`factory-web`) ou via l'API REST `POST /api/tasks`.
-2. L'orchestrateur attribue une référence unique (`AF-0001`, etc.) et clone le dépôt cible de manière asynchrone.
+2. L'orchestrateur attribue une référence durable (`AF-0001`, etc.), démarre le workflow Temporal puis clone le
+   dépôt cible dans une activité spécialisée.
 3. Le service de contexte extrait la structure et le contenu du projet.
 4. L'agent `Planner` produit une feuille de route (`.ai-plan.md`).
 5. L'agent `Developer` génère un patch `unified diff`.

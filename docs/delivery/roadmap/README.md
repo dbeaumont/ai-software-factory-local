@@ -1,7 +1,7 @@
 # Backlog et pistes d'évolution
 
-> État revu le 5 septembre 2026. Les éléments « faits » attestent une présence dans le dépôt ; ils ne valent pas
-> qualification de production. Voir la [rétrodocumentation](../overview/current-state.md) pour la matrice actif/disponible/cible.
+> État revu le 6 septembre 2026. Les éléments « faits » attestent une présence dans le dépôt ; ils ne valent pas
+> qualification de production. Voir la [rétrodocumentation](../../overview/current-state.md) pour la matrice actif/disponible/cible.
 
 ## Fait
 
@@ -13,14 +13,15 @@
 - [x] Cinq serveurs MCP séparant contexte, sandbox, SCM, assurance et preuves.
 - [x] Métriques, traces et logs OpenTelemetry, sept dashboards SigNoz et règles d'alerte métier/techniques.
 - [x] Diagrammes d'architecture du pipeline, des agents, des données, de la confiance et de la cible GCP.
-- [x] Implémentations Temporal, DAG multi-agent, contrats et politiques de qualification disponibles dans le code.
+- [x] Temporal obligatoire raccordé au parcours public, projection PostgreSQL durable et workers spécialisés actifs.
+- [x] DAG multi-agent, contrats et politiques de qualification disponibles dans le code.
 
 ## Prochaines étapes produit et plateforme
 
 - [ ] Formaliser les contrats de tickets avec OpenAPI et, si retenu, OpenSpec/SpecKit.
 - [ ] Intégrer Keycloak ou un fournisseur OpenID Connect pour l'authentification et le RBAC.
 - [ ] Ajouter un déclenchement par GitHub Actions/GitLab CI sans le confondre avec le backend d'exécution sandbox.
-- [ ] Persister les tâches et journaux d'audit dans un stockage de contrôle durable.
+- [x] Persister les tâches et journaux d'audit dans un stockage de contrôle durable.
 - [x] Retirer l'accès du contrôleur sandbox à `/var/run/docker.sock` avec des runners Compose statiques en local
   et des Jobs GKE isolés en environnement partagé ; suivre le
   [plan détaillé de migration](../migrations/retrait-docker-socket.md).
@@ -28,8 +29,9 @@
 - [ ] Compléter les écrans de supervision fonctionnelle, technique et FinOps.
 - [ ] Ajouter une commande opérateur et une vue IHM pour le kill switch.
 - [x] Instrumenter Assurance, Evidence et SCM MCP et exporter leurs trois signaux en OTLP.
-- [ ] Qualifier puis activer progressivement Temporal et le mode hiérarchique.
-- [ ] Valider sauvegarde, restauration, rétention et purge de bout en bout.
+- [x] Qualifier puis activer franchement Temporal comme moteur unique de toutes les admissions.
+- [ ] Qualifier puis activer progressivement le mode hiérarchique, indépendamment du moteur Temporal.
+- [x] Valider sauvegarde, restauration, rétention et purge de bout en bout.
 
 ## Écarts de l'interface d'exploitation
 
@@ -53,16 +55,17 @@ L'API de création ne permet pas de sélectionner directement un mode hiérarchi
 [`TaskRequest.java`](../../apps/orchestrator/src/main/java/com/example/aifactory/model/TaskRequest.java) force aujourd'hui
 le mode LLM cloud et ne porte pas de mode d'exécution multi-agent.
 
-### P1 — Temporal est démarré et son raccordement reste à terminer
+### P1 corrigé — Temporal est raccordé comme moteur unique
 
-`make up` démarre Temporal et sa base. Cependant :
+`make up` démarre Temporal, sa base et les workers obligatoires. Désormais :
 
-- le sélecteur historique `AI_FACTORY_TEMPORAL_ENABLED` a été retiré afin d'imposer un moteur unique ;
-- le démarrage de l'orchestrateur en mode pipeline ne dépend volontairement pas de la readiness Temporal ;
-- [`DeterministicWorkflowCoordinator`](../../apps/orchestrator/src/main/java/com/example/aifactory/service/DeterministicWorkflowCoordinator.java)
-  reste l'implémentation active de `WorkflowCoordinator`.
+- `TemporalWorkflowCoordinator` est l'unique implémentation de production de `WorkflowCoordinator` ;
+- le coordinateur local, son pool et ses routes de fallback sont supprimés ;
+- la readiness et l'admission échouent fermées si Temporal ou les workers requis sont indisponibles ;
+- `PostgresTaskMemory` fournit la projection durable utilisée par l'API et l'interface.
 
-Le démarrage de la stack ne signifie donc pas que le chemin public utilise Temporal.
+La preuve de bascule est archivée dans le
+[plan de raccordement](../migrations/raccordement-orchestrateur-temporal.md).
 
 ### P1 — kill switch non raccordé au déploiement local
 
@@ -82,11 +85,10 @@ donc pas reconstruite par cette cible.
 `make mcp-agent-ab-campaign`, mais aucune cible Make de ce nom n'existe. La documentation utilise désormais le
 script réel `./scripts/mcp-agent-ab-campaign.sh` ; une cible Make dédiée reste souhaitable pour l'ergonomie.
 
-### P3 — commandes opérateur centrées sur le pipeline
+### P3 — commandes opérateur à compléter
 
 - `make restart` et `make logs` ne ciblent que l'orchestrateur ;
-- `make urls` n'affiche pas Temporal UI ;
-- les routes `approve-manifest`, annulation, décisions, retry et fallback ne sont pas présentées ;
+- les routes `approve-manifest`, annulation, décisions et retry ne sont pas toutes présentées dans l'aide ;
 - l'aide de `make build` ne cite pas tous les composants effectivement construits.
 
 ## Contrôles de cohérence

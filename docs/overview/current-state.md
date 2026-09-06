@@ -1,6 +1,6 @@
 # Rétrodocumentation de l'AI Software Factory locale
 
-> État observé dans le dépôt au 3 septembre 2026. Cette documentation décrit le comportement réellement câblé,
+> État observé dans le dépôt au 6 septembre 2026. Cette documentation décrit le comportement réellement câblé,
 > puis le distingue des composants disponibles mais désactivés et des cibles d'architecture.
 
 ## Sommaire
@@ -57,8 +57,8 @@ Cette distinction est indispensable pour lire le dépôt sans confondre code pr�
 
 | Niveau | Signification | Exemples |
 |---|---|---|
-| **Actif** | Câblé dans le parcours lancé par `POST /api/tasks` avec la configuration Compose par défaut | Temporal, MCP contexte/sandbox/assurance/SCM, mémoire en RAM |
-| **Disponible** | Implémenté et testé en partie, mais non généralisé ou non relié de bout en bout | DAG multi-agent, projections SQL |
+| **Actif** | Câblé dans le parcours lancé par `POST /api/tasks` avec la configuration Compose par défaut | Temporal, MCP contexte/sandbox/assurance/SCM, projection PostgreSQL |
+| **Disponible** | Implémenté et testé en partie, mais non généralisé ou non relié de bout en bout | DAG multi-agent |
 | **Cible** | Contrat, port ou conception préparatoire sans adaptateur de production complet | jobs GKE, stockage GCS immuable, déploiement distribué des agents |
 
 ### 1.4 Matrice de vérité d'exécution
@@ -66,13 +66,13 @@ Cette distinction est indispensable pour lire le dépôt sans confondre code pr�
 | Capacité | État | Observation |
 |---|---|---|
 | Workflow Temporal V1 | Actif | `TemporalWorkflowCoordinator` démarre chaque tâche sur la file workflow dédiée |
-| État des tâches | Actif, volatile | `InMemoryTaskMemory` repose sur un `ConcurrentHashMap` |
+| État des tâches | Actif, durable | `PostgresTaskMemory` projette les tâches et leurs événements dans `orchestrator-db` |
 | Appels LLM | Actif, cloud uniquement | `TaskRequest.effectiveLlmMode()` force le mode `CLOUD`, via LiteLLM |
 | Serveurs MCP | Actifs | Contexte, sandbox, SCM, assurance et evidence sont démarrés par Compose |
 | Temporal | Actif et obligatoire | services Compose, workflow V1 et workers spécialisés ; aucun moteur local sélectionnable |
 | Agents hiérarchiques | Disponible, non qualifié | rôles vides et verdict `INCOMPLETE` par défaut |
-| Evidence durable de bout en bout | Partiel | le serveur existe ; le pipeline de référence garde surtout fichiers et état en mémoire |
-| Projection PostgreSQL métier | Disponible, non câblée | migrations présentes, aucun adaptateur `TaskMemory` PostgreSQL actif |
+| Evidence durable de bout en bout | Actif | contenus immuables chiffrés dans Evidence MCP ; URI et digests projetés |
+| Projection PostgreSQL métier | Active | `PostgresTaskMemory`, snapshots et événements idempotents sont utilisés par l'API et l'interface |
 | Sandbox Compose | Active | quatre runners statiques non-root exécutent des profils fermés sans accès au daemon Docker |
 | Sandbox GKE | Disponible, non qualifiée | contrôleur Kubernetes et politiques présents ; cluster, stockage et identités cibles à valider |
 | GCS/KMS | Cible | génération de descripteurs immuables seulement, sans client Cloud Storage |
@@ -487,8 +487,8 @@ et leur propre cycle de construction.
 
 `TemporalWorkflowCoordinator` est l'unique implémentation Spring de `WorkflowCoordinator`. Il démarre le workflow
 V1 avec un identifiant déterministe et transforme les commandes humaines en signaux Temporal. Les activités
-spécialisées appellent les services métier sur leurs files dédiées. `InMemoryTaskMemory` sauvegarde encore chaque
-`TaskState` dans le processus jusqu'au raccordement de la projection PostgreSQL.
+spécialisées appellent les services métier sur leurs files dédiées. `PostgresTaskMemory` conserve la projection de
+lecture ; ses snapshots complets sont vérifiés par digest et stockés dans Evidence MCP.
 
 ### 4.3 Capacités MCP
 
