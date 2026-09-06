@@ -7,6 +7,7 @@ import com.example.aifactory.a2a.A2aMediaTypes;
 import com.example.aifactory.a2a.A2aTaskAssociationStore;
 import com.example.aifactory.a2a.A2aW3cTraceContext;
 import com.example.aifactory.a2a.A2aTelemetryCorrelation;
+import com.example.aifactory.a2a.A2aClientMetrics;
 import com.example.aifactory.a2a.AgentCardResolver;
 import com.example.aifactory.a2a.A2aEvidenceUriPolicy;
 
@@ -24,18 +25,33 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     private final A2aClient client;
     private final A2aContractMapping contracts;
     private final A2aTaskAssociationStore associations;
+    private final A2aClientMetrics metrics;
 
     public A2aActivitiesImpl(AgentCardResolver cards, A2aClient client, A2aContractMapping contracts,
                              A2aTaskAssociationStore associations) {
+        this(cards, client, contracts, associations, A2aClientMetrics.disabled());
+    }
+
+    public A2aActivitiesImpl(AgentCardResolver cards, A2aClient client, A2aContractMapping contracts,
+                             A2aTaskAssociationStore associations, A2aClientMetrics metrics) {
         this.cards = cards;
         this.client = client;
         this.contracts = contracts;
         this.associations = associations;
+        this.metrics = metrics;
     }
 
     @Override
     public A2aContracts.AgentCardDescriptor resolveAgent(String agentRole) {
-        return await(cards.resolve(agentRole), Duration.ofSeconds(20));
+        try {
+            A2aContracts.AgentCardDescriptor card = metrics.call(agentRole, "none", "card",
+                    () -> await(cards.resolve(agentRole), Duration.ofSeconds(20)));
+            metrics.cardValidation(agentRole, "accepted");
+            return card;
+        } catch (RuntimeException failure) {
+            metrics.cardValidation(agentRole, "rejected");
+            throw failure;
+        }
     }
 
     @Override
@@ -44,7 +60,10 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
         try (A2aTelemetryCorrelation ignored = A2aTelemetryCorrelation.open(
                 request.execution(), request.command().messageId())) {
             A2aContracts.SendCommand command = withCurrentTrace(request.command());
-            A2aContracts.TaskSnapshot task = await(client.send(command), Duration.ofSeconds(45));
+            metrics.payload(command.agentRole(), command.skillId(), command.toString()
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+            A2aContracts.TaskSnapshot task = metrics.call(command.agentRole(), command.skillId(), "send",
+                    () -> await(client.send(command), Duration.ofSeconds(45)));
             associations.record(request.execution(), request.command().messageId(), request.agentCardDigest(),
                     task.taskId(), task.contextId());
             return task;
@@ -53,12 +72,14 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
 
     @Override
     public A2aContracts.TaskSnapshot getTask(A2aContracts.TaskQuery query) {
-        return await(client.getTask(query), Duration.ofSeconds(20));
+        return metrics.call(query.agentRole(), "none", "get",
+                () -> await(client.getTask(query), Duration.ofSeconds(20)));
     }
 
     @Override
     public A2aContracts.TaskSnapshot cancelTask(A2aContracts.TaskQuery query) {
-        return await(client.cancelTask(query), Duration.ofSeconds(30));
+        return metrics.call(query.agentRole(), "none", "cancel",
+                () -> await(client.cancelTask(query), Duration.ofSeconds(30)));
     }
 
     @Override
@@ -67,6 +88,8 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
         java.util.Optional<A2aTaskAssociationStore.Association> persisted = associations
                 .findByDelegation(request.execution().delegationId());
         if (persisted.isPresent()) {
+            metrics.retry(request.command().agentRole(), request.command().skillId());
+            metrics.reconciliation(request.command().agentRole(), "association");
             A2aTaskAssociationStore.Association value = persisted.get();
             if (!value.messageId().equals(request.command().messageId())
                     || !value.agentCardDigest().equals(request.agentCardDigest())
@@ -78,11 +101,14 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
         java.util.Optional<A2aContracts.TaskSnapshot> discovered = await(client.findTaskByMessageId(
                 request.command().agentRole(), request.command().messageId()), Duration.ofSeconds(30));
         if (discovered.isPresent()) {
+            metrics.retry(request.command().agentRole(), request.command().skillId());
+            metrics.reconciliation(request.command().agentRole(), "remote_task");
             A2aContracts.TaskSnapshot task = discovered.get();
             associations.record(request.execution(), request.command().messageId(), request.agentCardDigest(),
                     task.taskId(), task.contextId());
             return task;
         }
+        metrics.reconciliation(request.command().agentRole(), "dispatch");
         return dispatchTask(request);
     }
 
@@ -103,7 +129,11 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
         A2aContracts.TaskSnapshot result;
         try (A2aTelemetryCorrelation ignored = A2aTelemetryCorrelation.open(
                 request.execution(), request.command().messageId())) {
-            result = await(client.send(withCurrentTrace(request.command())), Duration.ofSeconds(45));
+            A2aContracts.SendCommand traced = withCurrentTrace(request.command());
+            metrics.payload(traced.agentRole(), traced.skillId(), traced.toString()
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+            result = metrics.call(traced.agentRole(), traced.skillId(), "continue",
+                    () -> await(client.send(traced), Duration.ofSeconds(45)));
         }
         if (!association.a2aTaskId().equals(result.taskId())
                 || !association.a2aContextId().equals(result.contextId())) {

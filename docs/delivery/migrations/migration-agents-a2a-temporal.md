@@ -643,8 +643,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   jamais comme labels de métriques ; utiliser rôle, skill, opération, version et état comme dimensions bornées.
   _(`A2aTelemetryCorrelation` borne la durée de vie des IDs dans spans/MDC ; `A2aMetricDimensions` n'expose que
   cinq dimensions bornées. Preuve : `docs/evidence/a2a/A2A-141-CARDINALITY.md`.)_
-- [ ] **A2A-142 — Instrumenter le client.** Mesurer durée, résultat, retry, timeout, réconciliation, validation de
-  carte, taille de payload et âge de notification.
+- [x] **A2A-142 — Instrumenter le client.** Mesurer durée, résultat, retry, timeout, réconciliation, validation de
+  carte, taille de payload et âge de notification. _(Sept instruments Micrometer/OTLP couvrent les opérations des
+  activités et le récepteur de notifications, avec tests anti-cardinalité ; preuve :
+  `docs/evidence/a2a/A2A-142-CLIENT-METRICS.md`.)_
 - [ ] **A2A-143 — Instrumenter le serveur.** Mesurer admission, refus auth, déduplication, durée de tâche,
   transitions, tâches actives, backlog, polling et notifications.
 - [ ] **A2A-144 — Tracer les liens Temporal/A2A.** Ajouter des span links entre workflow racine, activité d'envoi,

@@ -18,13 +18,21 @@ public final class TemporalA2aNotificationReceiver implements A2aNotificationRec
     private final A2aNotificationInbox inbox;
     private final WorkflowClient temporal;
     private final ObjectMapper mapper;
+    private final A2aClientMetrics metrics;
 
     public TemporalA2aNotificationReceiver(A2aTaskAssociationStore associations, A2aNotificationInbox inbox,
                                            WorkflowClient temporal, ObjectMapper mapper) {
+        this(associations, inbox, temporal, mapper, A2aClientMetrics.disabled());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public TemporalA2aNotificationReceiver(A2aTaskAssociationStore associations, A2aNotificationInbox inbox,
+                                           WorkflowClient temporal, ObjectMapper mapper, A2aClientMetrics metrics) {
         this.associations = associations;
         this.inbox = inbox;
         this.temporal = temporal;
         this.mapper = mapper;
+        this.metrics = metrics;
     }
 
     @Override
@@ -34,6 +42,7 @@ public final class TemporalA2aNotificationReceiver implements A2aNotificationRec
                             notification.agentRole(), notification.taskId())
                     .orElseThrow(() -> new SecurityException("Unknown A2A notification task"));
             validate(association, notification);
+            metrics.notificationAge(notification.agentRole(), notification.occurredAt(), Instant.now());
             byte[] canonical = new JsonCanonicalizer(mapper.writeValueAsBytes(notification)).getEncodedUTF8();
             String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(canonical));
             String payload = mapper.writeValueAsString(notification);
