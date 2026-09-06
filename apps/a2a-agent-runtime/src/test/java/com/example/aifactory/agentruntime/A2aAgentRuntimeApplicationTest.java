@@ -31,8 +31,10 @@ class A2aAgentRuntimeApplicationTest {
         assertEquals("developer", properties.role());
         RoleScopedAgentContext scope = context.getBean(RoleScopedAgentContext.class);
         assertEquals("developer", scope.identity().role());
-        assertEquals(java.util.Set.of("code-task-v1"), scope.acceptedInputContracts());
-        assertEquals(java.util.Set.of("patch-proposal-v1"), scope.producedOutputContracts());
+        assertEquals(java.util.Set.of("code-task-v1", "pipeline-agent-task-v1"),
+                scope.acceptedInputContracts());
+        assertEquals(java.util.Set.of("patch-proposal-v1", "pipeline-agent-result-v1"),
+                scope.producedOutputContracts());
         assertThrows(SecurityException.class, () -> scope.requireActiveRole("patch-repair"));
         assertThrows(SecurityException.class, () -> scope.requireTool("scm.create_commit"));
         assertNotNull(scope.systemPrompt());

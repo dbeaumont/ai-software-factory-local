@@ -189,7 +189,7 @@ test-a2a-rollback-gate:
 
 build: temporal-replay
 	$(log-target)
-	@echo -e "$(BLUE)Building sandbox and orchestrator images...$(NC)"
+	@echo -e "$(BLUE)Building sandbox, A2A runtime and application images...$(NC)"
 	@test -n "$(SYFT_VERSION)" || (echo "SYFT_VERSION must be defined in .env" >&2; exit 1)
 	@test -n "$(TRIVY_VERSION)" || (echo "TRIVY_VERSION must be defined in .env" >&2; exit 1)
 	@test -n "$(TRIVY_PRELOAD_DB)" || (echo "TRIVY_PRELOAD_DB must be defined in .env" >&2; exit 1)
@@ -201,7 +201,7 @@ build: temporal-replay
 		--build-arg TRIVY_PRELOAD_DB="$(TRIVY_PRELOAD_DB)" \
 		-t ai-factory-sandbox:local ./infrastructure/sandbox
 	./scripts/pin-sandbox-image.sh .env ai-factory-sandbox:local
-	$(COMPOSE) build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp scm-delivery-mcp assurance-mcp evidence-mcp orchestrator factory-web signoz-clickhouse-init signoz-bootstrap
+	$(COMPOSE) --profile a2a-full build sandbox-egress-proxy repository-context-mcp sandbox-execution-mcp scm-delivery-mcp assurance-mcp evidence-mcp a2a-supervisor orchestrator factory-web signoz-clickhouse-init signoz-bootstrap
 	@echo -e "$(GREEN)Build complete!$(NC)"
 
 up: init build

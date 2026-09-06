@@ -23,15 +23,25 @@ x-a2a-agent-runtime: &a2a-agent-runtime
       reservations: {cpus: "0.10", memory: 384m}
   environment: &a2a-agent-environment
     OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://otel-collector:4318/v1/traces}
+    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-http://otel-collector:4318/v1/metrics}
+    OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:-http://otel-collector:4318/v1/logs}
+    MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
     AI_FACTORY_AGENT_PORT: "8090"
     AI_FACTORY_AGENT_SHUTDOWN_GRACE: ${AI_FACTORY_AGENT_SHUTDOWN_GRACE:-30s}
-    JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=15
+    JAVA_TOOL_OPTIONS: >-
+      -XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=15
+      -Djavax.net.ssl.trustStore=/var/run/ai-factory/a2a/truststore.p12
+      -Djavax.net.ssl.trustStorePassword=changeit
+      -Djavax.net.ssl.trustStoreType=PKCS12
     AI_FACTORY_LLM_BASE_URL: "${AI_FACTORY_LLM_BASE_URL:-http://litellm:4000/v1}"
     AI_FACTORY_LLM_API_KEY: ${LITELLM_MASTER_KEY:-}
     AI_FACTORY_LLM_MODEL: ${AI_FACTORY_CLOUD_MODEL:-factory-code-cloud}
     AI_FACTORY_TEMPORAL_TARGET: "${AI_FACTORY_TEMPORAL_TARGET:-temporal:7233}"
     AI_FACTORY_TEMPORAL_NAMESPACE: ${AI_FACTORY_TEMPORAL_NAMESPACE:-ai-factory-local}
-    AI_FACTORY_A2A_TEMPORAL_ENABLED: "false"
+    AI_FACTORY_A2A_TEMPORAL_ENABLED: "true"
+    AI_FACTORY_A2A_TEMPORAL_DEPLOYMENT: ${AI_FACTORY_A2A_TEMPORAL_DEPLOYMENT:-ai-factory-a2a-agents}
+    AI_FACTORY_A2A_TEMPORAL_BUILD_ID: ${AI_FACTORY_A2A_TEMPORAL_BUILD_ID:-0.1.0}
     AI_FACTORY_A2A_TASK_STORE_ENABLED: "true"
     AI_FACTORY_A2A_TASK_JDBC_URL: jdbc:postgresql://a2a-task-db:5432/ai_factory_a2a
     AI_FACTORY_A2A_TASK_DB_USERNAME: ai_factory_a2a
@@ -49,19 +59,58 @@ x-a2a-agent-runtime: &a2a-agent-runtime
     AI_FACTORY_A2A_OAUTH2_TOKEN_URL: https://a2a-identity:8443/oauth2/token
     AI_FACTORY_A2A_OAUTH2_AUDIENCE: ai-factory-a2a
     AI_FACTORY_A2A_CARD_JWK_SET_PATH: /run/secrets/a2a-card-jwks
-    AI_FACTORY_MCP_ENABLED: "false"
+    AI_FACTORY_A2A_PUSH_ENABLED: "true"
+    AI_FACTORY_A2A_PUSH_CALLBACK: https://a2a-identity:8443/internal/a2a/notifications
+    AI_FACTORY_A2A_PUSH_HMAC_SECRET_FILE: /run/secrets/a2a-push-hmac
+    AI_FACTORY_A2A_PUSH_MAX_ATTEMPTS: ${AI_FACTORY_A2A_PUSH_MAX_ATTEMPTS:-4}
+    AI_FACTORY_A2A_PUSH_INITIAL_BACKOFF: ${AI_FACTORY_A2A_PUSH_INITIAL_BACKOFF:-1s}
+    AI_FACTORY_MCP_ENABLED: "true"
+    AI_FACTORY_MCP_ROLE_SECURITY_ENABLED: "false"
+    AI_FACTORY_MCP_REPOSITORY_CONTEXT_URL: http://repository-context-mcp:8091
+    AI_FACTORY_MCP_EVIDENCE_URL: http://evidence-mcp:8095
   networks: [a2a-internal, workflow-internal]
   depends_on:
     a2a-task-db:
       condition: service_healthy
+    a2a-identity:
+      condition: service_healthy
+    temporal-namespace:
+      condition: service_completed_successfully
+    litellm:
+      condition: service_healthy
+    evidence-mcp:
+      condition: service_healthy
   healthcheck:
-    test: ["CMD-SHELL", "curl --fail --silent --insecure --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key https://127.0.0.1:8090/actuator/health/liveness >/dev/null"]
+    test: ["CMD-SHELL", "curl --fail --silent --insecure --cert /var/run/ai-factory/a2a/tls.crt --key /var/run/ai-factory/a2a/tls.key https://127.0.0.1:8090/actuator/health/readiness >/dev/null"]
     interval: 10s
-    timeout: 3s
+    timeout: 15s
     retries: 12
     start_period: 20s
 
 services:
+  a2a-identity:
+    build: ./identity
+    restart: unless-stopped
+    read_only: true
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    environment:
+      A2A_IDENTITY_ISSUER: https://a2a-identity:8443/issuer
+      A2A_IDENTITY_AUDIENCE: ai-factory-a2a
+    volumes:
+      - ../../.local/a2a-pki/workloads/a2a-identity:/var/run/a2a-identity:ro
+      - ../../.local/a2a-secrets/orchestrator/oauth2-client-secret:/run/secrets/a2a-orchestrator-oauth2-client:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import ssl,urllib.request; urllib.request.urlopen('https://127.0.0.1:8443/health', context=ssl._create_unverified_context(), timeout=2).read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    networks: [a2a-internal]
+
   a2a-task-db:
     image: postgres:16-alpine@sha256:4327b9fd295502f326f44153a1045a7170ddbfffed1c3829798328556cfd09e2
     environment:
@@ -93,7 +142,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/supervisor:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/supervisor/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-architecture-agent:
     <<: *a2a-agent-runtime
@@ -106,7 +156,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/architecture-agent:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/architecture-agent/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-impact-analysis:
     <<: *a2a-agent-runtime
@@ -119,7 +170,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/impact-analysis:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/impact-analysis/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-dependencies-contracts:
     <<: *a2a-agent-runtime
@@ -132,7 +184,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/dependencies-contracts:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/dependencies-contracts/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-code-agent:
     <<: *a2a-agent-runtime
@@ -145,7 +198,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/code-agent:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/code-agent/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-developer:
     <<: *a2a-agent-runtime
@@ -158,7 +212,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/developer:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/developer/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-patch-repair:
     <<: *a2a-agent-runtime
@@ -171,7 +226,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/patch-repair:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/patch-repair/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-test-agent:
     <<: *a2a-agent-runtime
@@ -184,7 +240,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/test-agent:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/test-agent/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-test-design:
     <<: *a2a-agent-runtime
@@ -197,7 +254,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/test-design:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/test-design/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-test-evidence:
     <<: *a2a-agent-runtime
@@ -210,7 +268,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/test-evidence:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/test-evidence/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-evidence-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-evidence-internal]
 
   a2a-security-agent:
     <<: *a2a-agent-runtime
@@ -223,7 +282,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/security-agent:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/security-agent/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-threat-model:
     <<: *a2a-agent-runtime
@@ -236,7 +296,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/threat-model:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/threat-model/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
   a2a-security-findings:
     <<: *a2a-agent-runtime
@@ -249,7 +310,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/security-findings:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/security-findings/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-evidence-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-evidence-internal]
 
   a2a-independent-reviewer:
     <<: *a2a-agent-runtime
@@ -262,7 +324,8 @@ services:
     volumes:
       - ../../.local/a2a-pki/workloads/independent-reviewer:/var/run/ai-factory/a2a:ro
       - ../../.local/a2a-secrets/roles/independent-reviewer/card-jwks.json:/run/secrets/a2a-card-jwks:ro
-    networks: [a2a-internal, workflow-internal, mcp-context-internal, mcp-evidence-internal]
+      - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
+    networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
 volumes:
   a2a-task-db-data:

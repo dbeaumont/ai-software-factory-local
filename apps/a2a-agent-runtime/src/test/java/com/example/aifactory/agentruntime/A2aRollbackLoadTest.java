@@ -139,7 +139,7 @@ class A2aRollbackLoadTest {
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 "jdbc:h2:mem:a2a-rollback-" + java.util.UUID.randomUUID()
                         + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "sa", "");
-        new ResourceDatabasePopulator(IntStream.rangeClosed(1, 5)
+        new ResourceDatabasePopulator(IntStream.rangeClosed(1, 6)
                 .mapToObj(version -> new ClassPathResource("db/a2a-task-migration/V%03d__%s.sql".formatted(version,
                         switch (version) {
                             case 1 -> "create_a2a_task_projection";
@@ -147,6 +147,7 @@ class A2aRollbackLoadTest {
                             case 3 -> "sequence_a2a_task_history";
                             case 4 -> "add_a2a_task_messages";
                             case 5 -> "add_a2a_cancellation_outbox";
+                            case 6 -> "add_a2a_business_correlation";
                             default -> throw new IllegalStateException();
                         }))).toArray(org.springframework.core.io.Resource[]::new)).execute(dataSource);
         return dataSource;

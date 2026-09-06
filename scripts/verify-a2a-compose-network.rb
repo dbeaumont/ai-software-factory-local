@@ -16,7 +16,7 @@ abort "a2a-internal must be an internal network" unless network.fetch("internal"
 members = compose.fetch("services").each_with_object([]) do |(name, service), result|
   result << name if service.fetch("networks", {}).key?("a2a-internal")
 end.sort
-expected = (["orchestrator", "a2a-task-db"] + %w[
+expected = (["orchestrator", "a2a-identity", "a2a-task-db"] + %w[
   supervisor architecture-agent impact-analysis dependencies-contracts code-agent developer patch-repair
   test-agent test-design test-evidence security-agent threat-model security-findings independent-reviewer
 ].map { |role| "a2a-#{role}" }).sort
@@ -26,4 +26,4 @@ members.grep(/^a2a-/).each do |name|
   abort "#{name} exposes a host port" if compose.fetch("services").fetch(name).key?("ports")
 end
 
-puts "A2A internal network verified for orchestrator and 14 private agent endpoints."
+puts "A2A internal network verified for orchestrator, identity and 14 private agent endpoints."

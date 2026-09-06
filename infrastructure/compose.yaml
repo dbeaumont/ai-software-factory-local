@@ -214,7 +214,7 @@ services:
       timeout: 10s
       retries: 12
       start_period: 5s
-    networks: [factory]
+    networks: [factory, llm-internal]
 
   # Read-only MCP server that exposes bounded repository context for registered task workspaces.
   repository-context-mcp:
@@ -932,6 +932,10 @@ services:
     networks: [ai-factory-signoz-network]
 
 networks:
+  # Dedicated model-gateway segment used by role runtimes without exposing the rest of the factory network.
+  llm-internal:
+    name: ai-factory-llm-internal
+    internal: true
   # Private agent protocol segment: only the orchestrator and A2A role runtimes join it.
   a2a-internal:
     name: ai-factory-a2a-internal

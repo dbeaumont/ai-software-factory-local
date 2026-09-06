@@ -108,6 +108,8 @@ EOF
 
 issue_certificate orchestrator ai-factory-orchestrator \
   spiffe://ai-factory.local/control/orchestrator orchestrator
+issue_certificate a2a-identity ai-factory-a2a-identity \
+  spiffe://ai-factory.local/control/a2a-identity a2a-identity
 
 roles=(
   supervisor architecture-agent impact-analysis dependencies-contracts code-agent developer patch-repair
@@ -119,12 +121,17 @@ for role in "${roles[@]}"; do
 done
 
 (cd "$stage/authority" && openssl ca -config openssl.cnf -gencrl -out ca.crl) >/dev/null 2>&1
+keytool -importcert -noprompt -storetype PKCS12 -storepass changeit \
+  -alias ai-factory-a2a-ca -file "$stage/authority/ca.crt" \
+  -keystore "$stage/authority/truststore.p12" >/dev/null 2>&1
 for directory in "$stage"/workloads/*; do
   cp "$stage/authority/ca.crl" "$directory/ca.crl"
+  cp "$stage/authority/truststore.p12" "$directory/truststore.p12"
 done
 
 chmod 600 "$stage/authority/ca.key" "$stage"/workloads/*/tls.key
 chmod 644 "$stage/authority/ca.crt" "$stage/authority/ca.crl" "$stage"/workloads/*/*.crt "$stage"/workloads/*/*.crl
+chmod 644 "$stage/authority/truststore.p12" "$stage"/workloads/*/truststore.p12
 mv "$stage" "$output"
 trap - EXIT
 echo "Generated role-isolated local A2A PKI at $output"

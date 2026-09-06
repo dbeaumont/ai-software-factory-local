@@ -51,7 +51,7 @@ case "${1:-}" in
   status)
     selected=()
     for role in "${roles[@]}"; do selected+=("a2a-$role"); done
-    "${compose[@]}" ps a2a-task-db "${selected[@]}"
+    "${compose[@]}" ps a2a-identity a2a-task-db "${selected[@]}"
     ;;
   cards)
     cards
@@ -59,13 +59,14 @@ case "${1:-}" in
   smoke)
     selected=()
     for role in "${roles[@]}"; do selected+=("a2a-$role"); done
-    local_services=(a2a-task-db "${selected[@]}")
+    local_services=(a2a-identity a2a-task-db "${selected[@]}")
     for service in "${local_services[@]}"; do
       container=$("${compose[@]}" ps -q "$service")
       test -n "$container" || { echo "$service is not running" >&2; exit 1; }
       health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container")
       test "$health" = healthy || { echo "$service is not healthy: $health" >&2; exit 1; }
     done
+    "${compose[@]}" exec -T a2a-identity python /opt/a2a-identity/smoke.py
     cards
     echo "A2A local smoke passed for ${#roles[@]} role(s)."
     ;;

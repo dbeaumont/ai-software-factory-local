@@ -27,9 +27,11 @@ verify_identity() {
   local dns_name="$3"
   local certificate="$pki/workloads/$identity/tls.crt"
   local private_key="$pki/workloads/$identity/tls.key"
+  local truststore="$pki/workloads/$identity/truststore.p12"
 
   test -s "$certificate" || { echo "Missing certificate for $identity" >&2; exit 1; }
   test -s "$private_key" || { echo "Missing private key for $identity" >&2; exit 1; }
+  test -s "$truststore" || { echo "Missing truststore for $identity" >&2; exit 1; }
   test ! -L "$private_key" && test "$(mode_of "$private_key")" = "600" || {
     echo "A2A private key must be a mode 0600 regular file: $private_key" >&2
     exit 1
@@ -51,6 +53,7 @@ verify_identity() {
 }
 
 verify_identity orchestrator spiffe://ai-factory.local/control/orchestrator orchestrator
+verify_identity a2a-identity spiffe://ai-factory.local/control/a2a-identity a2a-identity
 roles=(
   supervisor architecture-agent impact-analysis dependencies-contracts code-agent developer patch-repair
   test-agent test-design test-evidence security-agent threat-model security-findings independent-reviewer

@@ -16,14 +16,17 @@ context_roles = %w[
   supervisor architecture-agent impact-analysis dependencies-contracts code-agent developer patch-repair
   test-agent test-design security-agent threat-model independent-reviewer
 ]
-evidence_roles = %w[supervisor test-agent test-evidence security-agent security-findings independent-reviewer]
+evidence_roles = roles = %w[
+  supervisor architecture-agent impact-analysis dependencies-contracts code-agent developer patch-repair
+  test-agent test-design test-evidence security-agent threat-model security-findings independent-reviewer
+]
 
 %w[mcp-context-internal mcp-evidence-internal].each do |name|
   abort "#{name} must be internal" unless compose.fetch("networks").fetch(name).fetch("internal") == true
 end
 
 services.each do |name, service|
-  next unless name.start_with?("a2a-")
+  next unless name.start_with?("a2a-") && roles.include?(name.delete_prefix("a2a-"))
   role = name.delete_prefix("a2a-")
   networks = service.fetch("networks").keys
   expected = []
