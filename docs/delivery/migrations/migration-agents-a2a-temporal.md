@@ -856,8 +856,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   permissions, observabilité, tests TCK et gate. _(La checklist normative
   `docs/architecture/agents/AJOUTER-UN-AGENT-A2A.md` couvre identité, schémas, découverte, Temporal, Compose/GKE,
   secrets, réseau, télémétrie, TCK, sécurité, replay, performance et gate de cutover.)_
-- [ ] **A2A-225 — Documenter l'exploitation locale.** Démarrage, diagnostic, cartes, traces, tâches, certificats,
-  reset contrôlé et ressources Docker Desktop.
+- [x] **A2A-225 — Documenter l'exploitation locale.** Démarrage, diagnostic, cartes, traces, tâches, certificats,
+  reset contrôlé et ressources Docker Desktop. _(`docs/development/a2a-macos.md` décrit les commandes Make,
+  les diagnostics en lecture seule, la corrélation Temporal/SigNoz, la gestion PKI/secrets et la garde irréversible.)_
 - [ ] **A2A-226 — Documenter l'exploitation GKE.** Déploiement, scaling, rotation, NetworkPolicies, incidents,
   drainage et rollback.
 - [ ] **A2A-227 — Archiver les preuves.** Stocker rapports de tests, TCK, sécurité, performance, replay, cutover et
