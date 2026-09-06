@@ -30,8 +30,9 @@ La migration doit préserver :
 - [x] **A2A-001 — Consigner l'architecture dans une ADR.** Décrire A2A comme plan de données des interactions
   d'agents et Temporal comme plan de contrôle de l'exécution. _(Décision consignée dans `ADR-A2A-001` : Temporal
   reste seul ordonnanceur et A2A devient l'unique frontière d'invocation des agents après la coupure.)_
-- [ ] **A2A-002 — Conserver Temporal comme autorité d'orchestration.** Seul le workflow Temporal décide quels
-  agents sont exécutés, dans quel ordre, avec quels délais, budgets, retries et règles d'annulation.
+- [x] **A2A-002 — Conserver Temporal comme autorité d'orchestration.** Seul le workflow Temporal décide quels
+  agents sont exécutés, dans quel ordre, avec quels délais, budgets, retries et règles d'annulation. _(Autorité,
+  frontière de décision et topologie normatives fixées dans `ADR-A2A-001`, en cohérence avec `ADR-TEMP-001`.)_
 - [ ] **A2A-003 — Interdire la délégation réseau autonome.** Un agent peut retourner une intention de délégation,
   mais il ne peut pas contacter directement un autre agent pour contourner le DAG, les budgets ou les gates ; le
   workflow valide l'intention puis crée la prochaine interaction A2A.
