@@ -106,7 +106,7 @@ final class A2aJsonRpcController {
             }
             return switch (method) {
                 case "SendMessage", "message/send" -> response(requestId,
-                        task(service.send(request.path("params"), caller(authentication)),
+                        task(service.send(request.path("params"), caller(authentication, request.path("params"))),
                                 A2aSendMessageService.TaskState.SUBMITTED, 0, List.of(), List.of()));
                 case "GetTask", "tasks/get" -> {
                     A2aSendMessageService.TaskView view = service.getTask(
@@ -196,7 +196,26 @@ final class A2aJsonRpcController {
     }
 
     private A2aSendMessageService.Caller caller(Authentication authentication) {
+        return caller(authentication, null);
+    }
+
+    private A2aSendMessageService.Caller caller(Authentication authentication, JsonNode params) {
         if (authentication == null || !authentication.isAuthenticated()) {
+            if (security.localPrincipalEnabled()) {
+                java.util.LinkedHashSet<String> scopes = new java.util.LinkedHashSet<>(Set.of(
+                        "a2a.invoke", "a2a.read", "a2a.cancel", "a2a.auth-resume"));
+                JsonNode envelope = params == null ? null : params.path("message").path("parts").path(0).path("data");
+                if (envelope != null && envelope.isObject()) {
+                    String role = envelope.path("target_role").asText();
+                    String skill = envelope.path("skill_id").asText();
+                    if (!role.isBlank()) scopes.add("a2a.role." + role);
+                    if (!skill.isBlank()) scopes.add("a2a.skill." + skill);
+                } else {
+                    scopes.add("a2a.role." + service.activeRole());
+                }
+                return new A2aSendMessageService.Caller(
+                        "ai-factory-compose-qualification", "local-compose", "workflow", Set.copyOf(scopes));
+            }
             throw new A2aSendMessageService.SubmissionRejected("Unauthenticated A2A caller");
         }
         Set<String> scopes = authentication.getAuthorities().stream().map(authority -> authority.getAuthority())

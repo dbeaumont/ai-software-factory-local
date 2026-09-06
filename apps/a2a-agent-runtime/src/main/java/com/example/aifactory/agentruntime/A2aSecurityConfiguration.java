@@ -86,6 +86,9 @@ class A2aSecurityConfiguration {
 
     static void requireSecureTransport(A2aSecurityProperties security, AgentRuntimeProperties runtime,
                                        Environment environment) {
+        if (security.localPrincipalEnabled()) {
+            throw new IllegalStateException("Secure A2A runtime forbids the local qualification principal");
+        }
         if (!security.mtlsRequired()) {
             throw new IllegalStateException("Secure A2A runtime requires mTLS");
         }

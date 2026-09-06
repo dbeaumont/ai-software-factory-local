@@ -45,6 +45,7 @@ ai-factory:
       oauth2-token-url: ${AI_FACTORY_A2A_OAUTH2_TOKEN_URL:}
       audience: ${AI_FACTORY_A2A_OAUTH2_AUDIENCE:}
       maximum-token-lifetime: ${AI_FACTORY_A2A_OAUTH2_MAX_TOKEN_LIFETIME:5m}
+      local-principal-enabled: ${AI_FACTORY_A2A_LOCAL_PRINCIPAL_ENABLED:false}
       crl: ${AI_FACTORY_A2A_TLS_CRL:}
     card-signing:
       jwk-set-path: ${AI_FACTORY_A2A_CARD_JWK_SET_PATH:}

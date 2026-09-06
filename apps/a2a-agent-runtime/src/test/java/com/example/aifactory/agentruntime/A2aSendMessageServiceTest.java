@@ -27,7 +27,8 @@ class A2aSendMessageServiceTest {
                 "developer", URI.create("http://localhost:8090/a2a"));
         service = new A2aSendMessageService(runtime,
                 new AgentCardCatalogGenerator(new com.example.aifactory.agentcore.AgentCatalog(), mapper), mapper);
-        unsecured = new A2aSecurityProperties(false, false, null, null, null, java.time.Duration.ofMinutes(5));
+        unsecured = new A2aSecurityProperties(
+                false, false, null, null, null, java.time.Duration.ofMinutes(5), false);
     }
 
     @Test
@@ -211,6 +212,18 @@ class A2aSendMessageServiceTest {
                 .containsEntry("category", "AUTH").containsEntry("retryable", "false");
         assertThat(auditLines).anyMatch(line -> line.contains("type=AUTHENTICATION outcome=DENIED"));
         assertThat(auditLines).allMatch(line -> !line.contains("orchestrator"));
+    }
+
+    @Test
+    void localQualificationPrincipalIsExplicitlyOptIn() throws Exception {
+        A2aSecurityProperties localQualification = new A2aSecurityProperties(
+                false, false, null, null, null, java.time.Duration.ofMinutes(5), true);
+        A2aJsonRpcController controller = new A2aJsonRpcController(mapper, service, localQualification);
+
+        Map<String, Object> accepted = controller.handle("1.0",
+                mapper.writeValueAsBytes(request("local-message", "developer", "a".repeat(64))), null);
+
+        assertThat(accepted).containsKey("result");
     }
 
     @Test

@@ -98,6 +98,10 @@ public final class A2aSendMessageService {
                 new InMemoryA2aTaskStore());
     }
 
+    String activeRole() {
+        return activeRole;
+    }
+
     public Submission send(JsonNode params, Caller caller) {
         if (caller == null || caller.subject() == null || caller.subject().isBlank()) {
             throw new SubmissionRejected("Unauthenticated A2A caller");

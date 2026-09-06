@@ -1,0 +1,36 @@
+# Black-box integration overlay. It keeps the production image, controller and PostgreSQL store,
+# while enabling a synthetic principal that is forbidden whenever secure transport is enabled.
+services:
+  a2a-developer:
+    environment:
+      AI_FACTORY_AGENT_ENDPOINT: http://a2a-developer:8090/a2a
+      AI_FACTORY_A2A_SECURITY_ENABLED: "false"
+      AI_FACTORY_A2A_LOCAL_PRINCIPAL_ENABLED: "true"
+      AI_FACTORY_A2A_MTLS_REQUIRED: "false"
+      AI_FACTORY_A2A_TLS_ENABLED: "false"
+      AI_FACTORY_A2A_TLS_CLIENT_AUTH: none
+      AI_FACTORY_A2A_TEMPORAL_ENABLED: "false"
+      AI_FACTORY_A2A_PUSH_ENABLED: "false"
+      AI_FACTORY_MCP_ENABLED: "false"
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:8090/actuator/health/liveness >/dev/null"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 5s
+
+networks:
+  a2a-internal:
+    name: ${A2A_INTEGRATION_PROJECT:?A2A_INTEGRATION_PROJECT is required}-a2a
+    internal: true
+  workflow-internal:
+    name: ${A2A_INTEGRATION_PROJECT:?A2A_INTEGRATION_PROJECT is required}-workflow
+    internal: true
+  mcp-context-internal:
+    name: ${A2A_INTEGRATION_PROJECT:?A2A_INTEGRATION_PROJECT is required}-mcp-context
+    internal: true
+
+volumes:
+  a2a-task-db-data:
+    name: ${A2A_INTEGRATION_PROJECT:?A2A_INTEGRATION_PROJECT is required}-task-db

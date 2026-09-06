@@ -13,5 +13,6 @@ public record A2aSecurityProperties(
         URI oauth2Issuer,
         URI oauth2TokenUrl,
         String audience,
-        Duration maximumTokenLifetime) {
+        Duration maximumTokenLifetime,
+        boolean localPrincipalEnabled) {
 }

@@ -19,7 +19,7 @@ class A2aSecurityDeclarationTest {
         A2aSecurityProperties security = new A2aSecurityProperties(true, true,
                 URI.create("https://identity.internal/issuer"),
                 URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a",
-                java.time.Duration.ofMinutes(5));
+                java.time.Duration.ofMinutes(5), false);
         AgentRuntimeProperties runtime = new AgentRuntimeProperties(
                 "developer", URI.create("https://agent-developer:8090/a2a"));
         MockEnvironment effectiveTls = effectiveTls();
@@ -38,6 +38,13 @@ class A2aSecurityDeclarationTest {
                 security, runtime, effectiveTls().withProperty("server.ssl.enabled-protocols", "TLSv1.2")))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("TLSv1.3");
+        A2aSecurityProperties localPrincipal = new A2aSecurityProperties(true, true,
+                security.oauth2Issuer(), security.oauth2TokenUrl(), security.audience(),
+                security.maximumTokenLifetime(), true);
+        assertThatThrownBy(() -> A2aSecurityConfiguration.requireSecureTransport(
+                localPrincipal, runtime, effectiveTls))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("local qualification principal");
     }
 
     @Test
@@ -48,7 +55,7 @@ class A2aSecurityDeclarationTest {
         A2aSecurityProperties security = new A2aSecurityProperties(true, true,
                 URI.create("https://identity.internal/issuer"),
                 URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a",
-                java.time.Duration.ofMinutes(5));
+                java.time.Duration.ofMinutes(5), false);
         A2aCardIdentityProperties identity = new A2aCardIdentityProperties(
                 "ai-factory", "AI Software Factory", URI.create("https://ai-factory.local"),
                 java.time.Duration.ofMinutes(15));
@@ -71,7 +78,7 @@ class A2aSecurityDeclarationTest {
         A2aSecurityProperties security = new A2aSecurityProperties(true, true,
                 URI.create("https://identity.internal/issuer"),
                 URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a",
-                java.time.Duration.ofMinutes(5));
+                java.time.Duration.ofMinutes(5), false);
         Instant now = Instant.now();
         org.springframework.security.oauth2.jwt.Jwt valid = token(now, now.plusSeconds(240), "ai-factory-a2a");
         org.springframework.security.oauth2.jwt.Jwt wrongAudience = token(now, now.plusSeconds(240), "other");

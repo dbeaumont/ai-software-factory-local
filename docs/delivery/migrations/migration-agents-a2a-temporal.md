@@ -709,8 +709,12 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   ambigus, `continue-as-new` et replay. _(Barrière d'image : 103 tests réussis ; le scénario de perte d'acquittement
   prouve une seule émission A2A suivie d'une réconciliation durable sur retry ; preuve :
   `docs/evidence/a2a/A2A-164-TEMPORAL-EMBEDDED.md`.)_
-- [ ] **A2A-165 — Tests d'intégration Compose.** Couvrir cartes, envoi, résultat, complément, annulation,
-  redémarrage, perte de callback et réconciliation.
+- [x] **A2A-165 — Tests d'intégration Compose.** Couvrir cartes, envoi, résultat, complément, annulation,
+  redémarrage, perte de callback et réconciliation. _(Validé le 2026-09-06 par
+  `scripts/test-a2a-compose-integration.sh` sur un projet Compose isolé : carte 1.0 signée, envoi
+  idempotent, continuation `INPUT_REQUIRED` → `WORKING`, redémarrage avec projection PostgreSQL durable,
+  résultat et historique réconciliés par `tasks/get` malgré un callback non acquitté, puis annulation ; preuve :
+  `docs/evidence/a2a/A2A-165-COMPOSE-INTEGRATION.log`.)_
 - [ ] **A2A-166 — Tests de panne.** Couper réseau, agent, base, Temporal, LLM, MCP et Evidence aux différents
   instants ; vérifier absence de doublon et reprise contrôlée.
 - [ ] **A2A-167 — Tests de concurrence.** Envoyer simultanément le même `messageId`, annuler pendant la
