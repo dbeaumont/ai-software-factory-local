@@ -720,8 +720,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   Compose réelles de l'agent, de PostgreSQL et du réseau privé, plus injections déterministes Temporal, LLM,
   MCP et Evidence ; reprise sur le même `taskId`, un seul enregistrement durable et un seul artefact immuable ;
   preuve : `docs/evidence/a2a/A2A-166-FAILURE-CAMPAIGN.md`.)_
-- [ ] **A2A-167 — Tests de concurrence.** Envoyer simultanément le même `messageId`, annuler pendant la
-  terminaison, faire tourner les clés et redémarrer les workers.
+- [x] **A2A-167 — Tests de concurrence.** Envoyer simultanément le même `messageId`, annuler pendant la
+  terminaison, faire tourner les clés et redémarrer les workers. _(Terminé le 2026-09-06 : douze admissions
+  simultanées sérialisées sur une tâche, course annulation/terminaison protégée par version optimiste,
+  rotations PKI et secrets validées, puis même run Temporal conservé après redémarrage de l'orchestrateur
+  et rotation complète des sept queues ; preuve : `docs/evidence/a2a/A2A-167-CONCURRENCY.md`.)_
 - [ ] **A2A-168 — Tests de sécurité.** Fuzzing JSON-RPC, payloads malformés, cartes forgées, jetons croisés,
   cross-tenant, SSRF, rejeu, redirections, dépassement de taille et injection.
 - [ ] **A2A-169 — Tests de performance.** Comparer à la baseline latence, débit, mémoire et coût ; valider

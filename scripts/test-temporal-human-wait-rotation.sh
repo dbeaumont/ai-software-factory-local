@@ -2,7 +2,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-[ -f .env ] && set -a && source .env && set +a
+source scripts/load-dotenv.sh
+load_dotenv .env
 
 compose=(docker compose --env-file .env -f infrastructure/compose.yaml)
 orchestrator_port=${ORCHESTRATOR_PORT:-8088}
@@ -123,15 +124,6 @@ docker rm -f "$rotation_container" >/dev/null 2>&1 || true
 "${compose[@]}" run -d --no-deps --name "$rotation_container" \
   -e "AI_FACTORY_TEMPORAL_BUILD_ID=$rotation_build" orchestrator >/dev/null
 
-version=''
-for attempt in $(seq 1 120); do
-  if version=$("${temporal_cli[@]}" worker deployment describe-version --address temporal:7233 \
-      --namespace "$namespace" --deployment-name "$deployment" --build-id "$rotation_build" 2>/dev/null); then
-    break
-  fi
-  sleep 1
-done
-[ -n "$version" ] || { echo "Rotated worker version was not registered." >&2; exit 1; }
 queues=(
   "${AI_FACTORY_TEMPORAL_WORKFLOW_TASK_QUEUE:-ai-factory-workflows}"
   "${AI_FACTORY_TEMPORAL_CONTEXT_TASK_QUEUE:-ai-factory-context}"
@@ -141,12 +133,26 @@ queues=(
   "${AI_FACTORY_TEMPORAL_EVIDENCE_TASK_QUEUE:-ai-factory-evidence}"
   "${AI_FACTORY_TEMPORAL_SCM_TASK_QUEUE:-ai-factory-scm}"
 )
-for queue in "${queues[@]}"; do
-  printf '%s\n' "$version" | grep -Fq "$queue" || {
-    echo "Rotated worker version is missing task queue $queue." >&2
-    exit 1
-  }
+version=''
+version_ready=false
+for attempt in $(seq 1 120); do
+  if version=$("${temporal_cli[@]}" worker deployment describe-version --address temporal:7233 \
+      --namespace "$namespace" --deployment-name "$deployment" --build-id "$rotation_build" 2>/dev/null); then
+    version_ready=true
+    for queue in "${queues[@]}"; do
+      if ! printf '%s\n' "$version" | grep -Fq "$queue"; then
+        version_ready=false
+        break
+      fi
+    done
+    [ "$version_ready" = true ] && break
+  fi
+  sleep 1
 done
+[ "$version_ready" = true ] || {
+  echo "Rotated worker version did not register all seven task queues within 120 seconds." >&2
+  exit 1
+}
 "${temporal_cli[@]}" worker deployment set-current-version --yes --address temporal:7233 \
   --namespace "$namespace" --deployment-name "$deployment" --build-id "$rotation_build" >/dev/null
 rotation_current=true

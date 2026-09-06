@@ -12,7 +12,11 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -97,5 +101,51 @@ class PostgresA2aTaskStoreTest {
         assertThat(store.artifacts("task-1", "tenant-a", "orchestrator"))
                 .containsExactly(Map.of("artifactId", "artifact-1"));
         assertThat(store.artifacts("task-1", "tenant-b", "orchestrator")).isEmpty();
+    }
+
+    @Test
+    void serializesConcurrentAdmissionAndTerminalCancellationRaces() throws Exception {
+        Instant now = Instant.parse("2026-09-06T12:00:00Z");
+        A2aTaskStore.StoredTask task = new A2aTaskStore.StoredTask(
+                "task-race", "context-race", "message-race", "a".repeat(64), "developer",
+                "developer.code-task-v1", "orchestrator", "tenant-a", "delegation-1", now,
+                A2aSendMessageService.TaskState.SUBMITTED, 0, "{}", null, null);
+        A2aTaskStore.HistoryRecord accepted = new A2aTaskStore.HistoryRecord(
+                "message-race", "MESSAGE_ACCEPTED", now);
+        int contenders = 12;
+        CyclicBarrier admissionBarrier = new CyclicBarrier(contenders);
+
+        try (var executor = Executors.newFixedThreadPool(contenders)) {
+            List<Future<A2aTaskStore.CreateResult>> admissions = java.util.stream.IntStream.range(0, contenders)
+                    .mapToObj(ignored -> executor.submit(() -> {
+                        admissionBarrier.await();
+                        return store.createOrGet(task, accepted);
+                    })).toList();
+            List<A2aTaskStore.CreateResult> results = new java.util.ArrayList<>();
+            for (Future<A2aTaskStore.CreateResult> admission : admissions) results.add(admission.get());
+            assertThat(results).filteredOn(A2aTaskStore.CreateResult::created).hasSize(1);
+            assertThat(results).extracting(result -> result.task().taskId()).containsOnly("task-race");
+        }
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM a2a_agent_task WHERE message_id='message-race'", Integer.class)).isEqualTo(1);
+        assertThat(store.history("task-race", 50)).hasSize(1);
+
+        CyclicBarrier terminalBarrier = new CyclicBarrier(2);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Future<java.util.Optional<A2aTaskStore.StoredTask>> canceled = executor.submit(() -> {
+                terminalBarrier.await();
+                return store.transition("task-race", 0, A2aSendMessageService.TaskState.CANCELED,
+                        new A2aTaskStore.HistoryRecord("message-race", "TASK_CANCELED", now.plusSeconds(1)));
+            });
+            Future<java.util.Optional<A2aTaskStore.StoredTask>> completed = executor.submit(() -> {
+                terminalBarrier.await();
+                return store.transition("task-race", 0, A2aSendMessageService.TaskState.COMPLETED,
+                        new A2aTaskStore.HistoryRecord("message-race", "TASK_COMPLETED", now.plusSeconds(1)));
+            });
+            assertThat(List.of(canceled.get(), completed.get())).filteredOn(java.util.Optional::isPresent).hasSize(1);
+        }
+        assertThat(store.find("task-race").orElseThrow().state())
+                .isIn(A2aSendMessageService.TaskState.CANCELED, A2aSendMessageService.TaskState.COMPLETED);
+        assertThat(store.history("task-race", 50)).hasSize(2);
     }
 }
