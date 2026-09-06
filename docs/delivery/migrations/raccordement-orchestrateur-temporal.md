@@ -578,8 +578,11 @@ est immédiatement l'unique moteur de toutes les admissions.
   convergé sans reconstruction vers les deux images approuvées ; l'orchestrateur est sain, Flyway V015 est appliquée,
   l'activation worker et le bootstrap SigNoz sont sortis à `0`, et le verrou est resté fermé. Preuve :
   `docs/evidence/temporal/TEMP-106-atomic-deployment-2026-09-06.md`.)_
-- [ ] **TEMP-108 — Vérifier avant réouverture.** Contrôler schémas, namespace, Build IDs, pollers, task queues,
-  readiness, projection, Evidence MCP, SigNoz et Temporal UI.
+- [x] **TEMP-108 — Vérifier avant réouverture.** Contrôler schémas, namespace, Build IDs, pollers, task queues,
+  readiness, projection, Evidence MCP, SigNoz et Temporal UI. _(Le namespace et ses quatre Search Attributes sont
+  présents, le Build ID est courant, les sept queues ont un poller, la readiness, Evidence MCP et les interfaces
+  répondent, la projection expose 120 tâches et SigNoz contient 784 métriques, 7 dashboards et 15 alertes. Preuve :
+  `docs/evidence/temporal/TEMP-108-pre-reopening-verification-2026-09-06.md`.)_
 - [ ] **TEMP-109 — Exécuter un smoke test de coupure.** Soumettre un ticket synthétique pendant la maintenance,
   vérifier le parcours complet et supprimer uniquement ses artefacts explicitement jetables.
 - [ ] **TEMP-110 — Ouvrir toutes les admissions.** Autoriser simultanément tous les dépôts et toutes les catégories
