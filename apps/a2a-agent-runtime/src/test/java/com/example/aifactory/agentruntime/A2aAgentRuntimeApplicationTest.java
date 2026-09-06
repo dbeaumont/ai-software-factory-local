@@ -3,6 +3,7 @@ package com.example.aifactory.agentruntime;
 import com.example.aifactory.agentcore.AgentCatalog;
 import com.example.aifactory.agentcore.AgentContractValidator;
 import com.example.aifactory.agentcore.AgentManifest;
+import com.example.aifactory.agentcore.LlmCompletionPort;
 import com.example.aifactory.agentcore.PromptRepository;
 import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ class A2aAgentRuntimeApplicationTest {
         assertThrows(SecurityException.class, () -> scope.requireActiveRole("patch-repair"));
         assertThrows(SecurityException.class, () -> scope.requireTool("scm.create_commit"));
         assertNotNull(scope.systemPrompt());
+        assertNotNull(context.getBean(LlmCompletionPort.class));
         assertEquals("developer", context.getBean(AgentManifest.class).role());
         assertThrows(org.springframework.beans.factory.NoSuchBeanDefinitionException.class,
                 () -> context.getBean(AgentCatalog.class));

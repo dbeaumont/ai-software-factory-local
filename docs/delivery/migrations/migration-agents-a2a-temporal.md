@@ -219,8 +219,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   définition du rôle actif ; empêcher l'activation dynamique d'un second rôle. _(`RoleScopedAgentContext` est
   l'unique frontière exposée au runtime : identité et prompt uniques, contrats d'entrée/sortie et outils filtrés ;
   le catalogue, le dépôt de prompts et le registre global ne sont plus des beans, et un second rôle est refusé.)_
-- [ ] **A2A-034 — Extraire les adaptateurs LLM.** Conserver le comportement, les budgets et les formats de réponse
-  existants derrière un port sans couplage à l'orchestrateur.
+- [x] **A2A-034 — Extraire les adaptateurs LLM.** Conserver le comportement, les budgets et les formats de réponse
+  existants derrière un port sans couplage à l'orchestrateur. _(`LlmCompletionPort` et ses erreurs stables résident
+  dans `agent-core` ; l'adaptateur OpenAI-compatible du runtime préserve messages, JSON final, outils, usages,
+  coûts, classifications d'erreur, timeout et plafond historique de 8 192 tokens.)_
 - [ ] **A2A-035 — Extraire les clients MCP.** Construire pour chaque instance uniquement les connexions MCP
   nécessaires au rôle et appliquer la matrice `tools` du catalogue à chaque appel.
 - [ ] **A2A-036 — Retirer les effets interdits des agents.** Aucun runtime d'agent ne reçoit d'accès direct à SCM,

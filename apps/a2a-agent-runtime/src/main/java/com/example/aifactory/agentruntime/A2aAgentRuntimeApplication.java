@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties(AgentRuntimeProperties.class)
+@EnableConfigurationProperties({AgentRuntimeProperties.class, LlmAdapterProperties.class})
 public class A2aAgentRuntimeApplication {
     public static void main(String[] args) {
         SpringApplication.run(A2aAgentRuntimeApplication.class, args);

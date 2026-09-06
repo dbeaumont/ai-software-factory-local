@@ -23,3 +23,9 @@ management:
 ai-factory:
   agent-runtime:
     role: ${AI_FACTORY_AGENT_ROLE:}
+    llm:
+      base-url: ${AI_FACTORY_LLM_BASE_URL:http://litellm:4000/v1}
+      api-key: ${AI_FACTORY_LLM_API_KEY:}
+      model: ${AI_FACTORY_LLM_MODEL:factory-code-cloud}
+      max-output-tokens: ${AI_FACTORY_LLM_MAX_OUTPUT_TOKENS:8192}
+      timeout: ${AI_FACTORY_LLM_TIMEOUT:10m}
