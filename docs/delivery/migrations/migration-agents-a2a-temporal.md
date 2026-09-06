@@ -378,7 +378,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-066 — Créer `AgentTaskWorkflowV1`.** Une tâche A2A démarre un workflow Temporal déterministe dédié,
   sur une task queue liée au rôle et à une version de worker épinglée. _(`AgentTaskWorkflowV1` est déterministe et
   `PINNED`; une insertion A2A nouvelle démarre idempotemment `a2a-agent-task-v1/<rôle>/<task>` sur
-  `a2a-agent-<rôle>-v1`, dont le worker porte le deployment/build ID configuré.)_
+  `a2a-agent-<rôle>-v1`, dont le worker porte le deployment/build ID configuré. Le workflow exécute désormais
+  lui-même une activité de rôle : enveloppe `a2a-envelope-v1` validée, entrée Evidence liée et bornée, contrat
+  métier d'entrée/sortie vérifié, puis résultat transmis à la publication ; aucun signal manuel n'est requis.)_
 - [x] **A2A-067 — Projeter l'état du workflow.** Mettre à jour la tâche A2A via des activités idempotentes ; ne
   jamais lire les tables internes de Temporal depuis le serveur A2A. _(`AgentTaskProjectionActivities` projette
   `WORKING` et l'état terminal par CAS sur `A2aTaskStore`; un retry déjà appliqué est un no-op et l'activité ne

@@ -44,9 +44,18 @@ public final class AgentExecutionWorker {
                 call -> mcp.call(call.name(), call.arguments()),
                 (actor, tool) -> role.allowedTools().contains(tool),
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
-        A2aW3cTraceContext trace = new A2aW3cTraceContext(request.traceparent(), request.baggage());
-        AgentLoop.Result result = trace.call(() -> loop.run(new AgentLoop.Actor(request.taskId(), role.identity().role(),
-                        request.executionMode()), role.systemPrompt(), request.input().toString(), request.budget()));
+        java.util.concurrent.Callable<AgentLoop.Result> invocation = () -> loop.run(
+                new AgentLoop.Actor(request.taskId(), role.identity().role(), request.executionMode()),
+                role.systemPrompt(), request.input().toString(), request.budget());
+        AgentLoop.Result result;
+        try {
+            result = request.traceparent() == null ? invocation.call()
+                    : new A2aW3cTraceContext(request.traceparent(), request.baggage()).call(invocation);
+        } catch (RuntimeException failure) {
+            throw failure;
+        } catch (Exception failure) {
+            throw new IllegalStateException("Agent execution failed", failure);
+        }
         JsonNode document = role.validateOutput(request.outputContract(), result.finalResult(), contractContext);
         return new Result(document, role.promptFingerprint(), result.turns(), result.tokens(), result.costMicros());
     }

@@ -94,7 +94,9 @@ class AgentReadinessConfiguration {
             try (RoleScopedMcpClient.Session session = sessions.connect(
                     server, endpoint.getValue(), properties.requestTimeout())) {
                 if (!session.tools().containsAll(required)
-                        || ("evidence".equals(endpoint.getKey()) && !session.tools().contains("evidence.store"))) {
+                        || ("evidence".equals(endpoint.getKey())
+                        && (!session.tools().contains("evidence.store")
+                        || !session.tools().contains("evidence.read")))) {
                     throw new IllegalStateException("Required MCP tools are unavailable");
                 }
             }

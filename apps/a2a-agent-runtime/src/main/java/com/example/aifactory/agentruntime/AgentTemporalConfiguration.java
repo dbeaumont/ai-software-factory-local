@@ -16,6 +16,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
+import tools.jackson.databind.ObjectMapper;
+
+import com.example.aifactory.agentcore.RoleScopedAgentContext;
 
 @Configuration(proxyBeanMethods = false)
 class AgentTemporalConfiguration {
@@ -47,7 +51,9 @@ class AgentTemporalConfiguration {
     Worker agentTaskWorker(WorkerFactory factory, AgentTemporalProperties properties, AgentRuntimeProperties runtime,
                            A2aTaskStore taskStore, EvidenceArtifactPublisher artifactPublisher,
                            AgentConcurrencyProperties concurrency, A2aSpanLinks spanLinks,
-                           A2aServerMetrics metrics) {
+                           A2aServerMetrics metrics, AgentExecutionWorker executionWorker,
+                           AgentMcpProperties mcp, RoleScopedAgentContext role, ObjectMapper mapper,
+                           WebClient.Builder webClient) {
         WorkerDeploymentOptions deployment = WorkerDeploymentOptions.newBuilder()
                 .setUseVersioning(true)
                 .setVersion(new WorkerDeploymentVersion(properties.deploymentName(), properties.buildId()))
@@ -62,6 +68,10 @@ class AgentTemporalConfiguration {
         worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
         worker.registerActivitiesImplementations(new AgentTaskProjectionActivitiesImpl(taskStore, spanLinks, metrics));
         worker.registerActivitiesImplementations(new AgentArtifactActivitiesImpl(artifactPublisher));
+        RoleScopedMcpClient.SessionFactory evidenceSessions =
+                new McpSdkSessionFactory(webClient, mapper, role, mcp);
+        worker.registerActivitiesImplementations(new AgentExecutionActivitiesImpl(executionWorker,
+                new AgentInputEvidenceReader(runtime.role(), mcp, evidenceSessions, mapper), mapper));
         return worker;
     }
 

@@ -6,7 +6,7 @@ import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
 import io.temporal.workflow.WorkflowVersioningBehavior;
 
-/** Deterministic lifecycle shell; execution/projection activities are attached in subsequent tickets. */
+/** Durable A2A lifecycle: project, execute the admitted role, publish its result and project terminal state. */
 public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
     private Outcome outcome;
     private boolean canceled;
@@ -22,6 +22,10 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
             AgentArtifactActivities.class,
             ActivityOptions.newBuilder().setStartToCloseTimeout(java.time.Duration.ofMinutes(2))
                     .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(10).build()).build());
+    private final AgentExecutionActivities execution = Workflow.newActivityStub(
+            AgentExecutionActivities.class,
+            ActivityOptions.newBuilder().setStartToCloseTimeout(java.time.Duration.ofMinutes(20))
+                    .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build()).build());
 
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
@@ -30,7 +34,20 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
         currentState = "WORKING";
         projections.project(new AgentTaskProjectionActivities.Projection(
                 input.taskId(), currentState, input.taskId() + ":working", input.traceparent()));
-        Workflow.await(() -> outcome != null || canceled);
+        try {
+            AgentExecutionActivities.Result result = execution.execute(new AgentExecutionActivities.Command(
+                    input.taskId(), input.role(), input.skill(), effectiveEnvelope(input),
+                    input.traceparent(), input.baggage()));
+            if (outcome == null && !canceled) {
+                outcome = requireOutcome(new Outcome("COMPLETED", result.artifactDigest(), "validated",
+                        result.attemptId(), result.outputContract(), result.allowedReferenceIds(),
+                        result.artifactContentBase64()));
+            }
+        } catch (io.temporal.failure.ActivityFailure failure) {
+            if (outcome == null && !canceled) {
+                outcome = new Outcome("FAILED", null, "agent execution failed");
+            }
+        }
         Outcome terminal = canceled ? new Outcome("CANCELED", null, cancellationReason) : outcome;
         if ("COMPLETED".equals(terminal.state())) {
             AgentArtifactActivities.ArtifactReference artifact = artifacts.publish(
@@ -72,6 +89,10 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
     @Override
     public String state() {
         return currentState;
+    }
+
+    private String effectiveEnvelope(Input input) {
+        return continuationEnvelope == null ? input.envelopeJson() : continuationEnvelope;
     }
 
     private static void requireInput(Input input) {

@@ -24,6 +24,8 @@ class AgentTaskWorkflowV1Test {
             worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
             worker.registerActivitiesImplementations(new RecordingProjection());
             worker.registerActivitiesImplementations(new RecordingArtifacts());
+            RecordingExecution execution = new RecordingExecution();
+            worker.registerActivitiesImplementations(execution);
             environment.start();
             TemporalAgentTaskWorkflowGateway gateway = new TemporalAgentTaskWorkflowGateway(
                     environment.getWorkflowClient(), properties, "developer");
@@ -38,11 +40,11 @@ class AgentTaskWorkflowV1Test {
 
             AgentTaskWorkflowV1 workflow = environment.getWorkflowClient()
                     .newWorkflowStub(AgentTaskWorkflowV1.class, first.workflowId());
-            assertThat(workflow.state()).isEqualTo("WORKING");
-            workflow.complete(new AgentTaskWorkflowV1.Outcome("COMPLETED", "a".repeat(64), "validated",
-                    "attempt-1", "patch-proposal-v1", java.util.Set.of(), "e30="));
-            assertThat(WorkflowStub.fromTyped(workflow).getResult(AgentTaskWorkflowV1.Outcome.class).state())
-                    .isEqualTo("COMPLETED");
+            AgentTaskWorkflowV1.Outcome outcome = WorkflowStub.fromTyped(workflow)
+                    .getResult(AgentTaskWorkflowV1.Outcome.class);
+            assertThat(outcome.state()).isEqualTo("COMPLETED");
+            assertThat(outcome.attemptId()).isEqualTo("attempt-1");
+            assertThat(execution.invocations).isEqualTo(1);
 
             WorkflowVersioningBehavior behavior = AgentTaskWorkflowV1Impl.class
                     .getMethod("run", AgentTaskWorkflowV1.Input.class)
@@ -60,14 +62,23 @@ class AgentTaskWorkflowV1Test {
             worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
             worker.registerActivitiesImplementations(new RecordingProjection());
             worker.registerActivitiesImplementations(new RecordingArtifacts());
+            BlockingExecution execution = new BlockingExecution();
+            worker.registerActivitiesImplementations(execution);
             environment.start();
             AgentTaskWorkflowV1 workflow = environment.getWorkflowClient().newWorkflowStub(
                     AgentTaskWorkflowV1.class, io.temporal.client.WorkflowOptions.newBuilder()
                             .setWorkflowId("a2a-agent-task-v1/developer/task-2").setTaskQueue(queue).build());
             WorkflowClient.start(workflow::run, new AgentTaskWorkflowV1.Input(
                     "task-2", "context-2", "developer", "developer.code-task-v1", "{}"));
+            try {
+                assertThat(execution.entered.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(interrupted);
+            }
             workflow.cancel("requested");
             workflow.cancel("duplicate");
+            execution.release.countDown();
             AgentTaskWorkflowV1.Outcome outcome = WorkflowStub.fromTyped(workflow)
                     .getResult(AgentTaskWorkflowV1.Outcome.class);
             assertThat(outcome.state()).isEqualTo("CANCELED");
@@ -84,6 +95,31 @@ class AgentTaskWorkflowV1Test {
         public ArtifactReference publish(PublishCommand command) {
             return new ArtifactReference("artifact-1", "evidence://task-1/attempt-1/agent-result/" + command.digest(),
                     command.digest());
+        }
+    }
+
+    public static final class RecordingExecution implements AgentExecutionActivities {
+        volatile int invocations;
+        @Override public Result execute(Command command) {
+            invocations++;
+            return new Result("attempt-1", "patch-proposal-v1", java.util.Set.of(),
+                    "e30=", "a".repeat(64));
+        }
+    }
+
+    public static final class BlockingExecution implements AgentExecutionActivities {
+        final java.util.concurrent.CountDownLatch entered = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        @Override public Result execute(Command command) {
+            entered.countDown();
+            try {
+                if (!release.await(5, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("timeout");
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(interrupted);
+            }
+            return new Result("attempt-2", "patch-proposal-v1", java.util.Set.of(),
+                    "e30=", "a".repeat(64));
         }
     }
 }

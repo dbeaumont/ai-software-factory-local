@@ -34,6 +34,12 @@ class EvidenceStoreTest {
                 "code-patch", "reviewer", "apply-patch-integration:" + "a".repeat(64)));
         assertThrows(SecurityException.class, () -> policy.requireRead(
                 "code-patch", "workflow", "apply-patch-integration:not-a-digest"));
+        assertDoesNotThrow(() -> policy.requireRead(
+                "plan", "developer", "agent-execution-input"));
+        assertThrows(SecurityException.class, () -> policy.requireRead(
+                "plan", "developer", "human-review"));
+        assertThrows(SecurityException.class, () -> policy.requireRead(
+                "approval", "developer", "agent-execution-input"));
     }
 
     @Test
