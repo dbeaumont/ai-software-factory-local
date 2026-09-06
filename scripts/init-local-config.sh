@@ -155,6 +155,7 @@ fi
 if [ ! -d .local/a2a-secrets ]; then
   ./scripts/generate-a2a-local-secrets.sh .local/a2a-secrets
 fi
+./scripts/sync-a2a-card-trust.rb .local/a2a-secrets
 ./scripts/verify-a2a-secrets.sh .local/a2a-secrets
 
 chmod 600 "$ENV_FILE" "$VAULT_FILE"

@@ -108,6 +108,7 @@ a2a-pki-rotate:
 a2a-secrets:
 	$(log-target)
 	@test -d .local/a2a-secrets || ./scripts/generate-a2a-local-secrets.sh .local/a2a-secrets
+	@./scripts/sync-a2a-card-trust.rb .local/a2a-secrets
 	@./scripts/verify-a2a-secrets.sh .local/a2a-secrets
 
 a2a-supply-chain:

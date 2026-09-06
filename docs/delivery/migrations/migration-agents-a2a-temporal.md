@@ -858,7 +858,8 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   secrets, réseau, télémétrie, TCK, sécurité, replay, performance et gate de cutover.)_
 - [x] **A2A-225 — Documenter l'exploitation locale.** Démarrage, diagnostic, cartes, traces, tâches, certificats,
   reset contrôlé et ressources Docker Desktop. _(`docs/development/a2a-macos.md` décrit les commandes Make,
-  les diagnostics en lecture seule, la corrélation Temporal/SigNoz, la gestion PKI/secrets et la garde irréversible.)_
+  les diagnostics en lecture seule, la corrélation Temporal/SigNoz, la gestion PKI/secrets et la garde
+  irréversible ; `sync-a2a-card-trust.rb` met à niveau sans rotation les installations antérieures.)_
 - [x] **A2A-226 — Documenter l'exploitation GKE.** Déploiement, scaling, rotation, NetworkPolicies, incidents,
   drainage et rollback. _(`docs/operations/A2A-GKE.md` fixe prérequis, ordre fail-closed, contrôles kubectl,
   rotation coordonnée, flux autorisés, diagnostic, drainage des Build IDs et rollback exclusivement A2A.)_

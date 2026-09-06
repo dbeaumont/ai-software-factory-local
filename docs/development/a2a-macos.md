@@ -32,8 +32,9 @@ Initialiser une seule fois les fichiers locaux hors Git :
 make init
 ```
 
-Cette commande initialise notamment `.env`, la PKI et les secrets A2A. Avant chaque démarrage, valider le rendu
-Compose, l'isolation réseau et les montages du runtime :
+Cette commande initialise notamment `.env`, la PKI et les secrets A2A. Elle reconstruit aussi atomiquement le
+registre public d'empreintes de cartes à partir des certificats de rôle déjà présents, sans faire tourner leurs
+clés privées. Avant chaque démarrage, valider le rendu Compose, l'isolation réseau et les montages du runtime :
 
 ```shell
 make a2a-config
