@@ -17,6 +17,12 @@ verify_file() {
 
 verify_file "$root/orchestrator/oauth2-client-secret"
 verify_file "$root/orchestrator/push-hmac-key"
+verify_file "$root/orchestrator/card-trust.json"
+jq -e '
+  .version == "1"
+  and (.keys | type == "object" and length == 14)
+  and ([.keys[] | test("^[0-9a-f]{64}$")] | all)
+' "$root/orchestrator/card-trust.json" >/dev/null
 roles=(
   supervisor architecture-agent impact-analysis dependencies-contracts code-agent developer patch-repair
   test-agent test-design test-evidence security-agent threat-model security-findings independent-reviewer

@@ -674,6 +674,9 @@ services:
       AI_FACTORY_A2A_TLS_CERTIFICATE: /var/run/ai-factory/a2a/tls.crt
       AI_FACTORY_A2A_TLS_PRIVATE_KEY: /var/run/ai-factory/a2a/tls.key
       AI_FACTORY_A2A_TLS_TRUST_CERTIFICATE: /var/run/ai-factory/a2a/ca.crt
+      AI_FACTORY_A2A_CARD_TRUST_FILE: /run/secrets/a2a-orchestrator/card-trust.json
+      AI_FACTORY_A2A_CARD_ISSUER: ${AI_FACTORY_A2A_CARD_ISSUER:-ai-factory-local}
+      AI_FACTORY_A2A_CARD_PROVIDER_URL: ${AI_FACTORY_A2A_CARD_PROVIDER_URL:-https://ai-factory.local}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
     ports:
       - "${ORCHESTRATOR_PORT}:8080"

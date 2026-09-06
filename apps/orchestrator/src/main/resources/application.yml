@@ -158,6 +158,13 @@ ai-factory:
       audience: ${AI_FACTORY_A2A_OAUTH2_AUDIENCE:ai-factory-a2a}
       maximum-token-lifetime: ${AI_FACTORY_A2A_OAUTH2_MAX_TOKEN_LIFETIME:5m}
       request-timeout: ${AI_FACTORY_A2A_OAUTH2_REQUEST_TIMEOUT:10s}
+    transport:
+      certificate: ${AI_FACTORY_A2A_TLS_CERTIFICATE:}
+      private-key: ${AI_FACTORY_A2A_TLS_PRIVATE_KEY:}
+      trust-certificate: ${AI_FACTORY_A2A_TLS_TRUST_CERTIFICATE:}
+      card-trust-file: ${AI_FACTORY_A2A_CARD_TRUST_FILE:}
+      card-issuer: ${AI_FACTORY_A2A_CARD_ISSUER:ai-factory-local}
+      card-provider-url: ${AI_FACTORY_A2A_CARD_PROVIDER_URL:https://ai-factory.local}
   observability:
     content:
       prompts: ${AI_FACTORY_OBSERVABILITY_CAPTURE_PROMPTS:false}

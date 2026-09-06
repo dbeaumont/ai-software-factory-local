@@ -71,6 +71,19 @@ for role in "${roles[@]}"; do
   generate_jwks "$role" "$directory/card-jwks.json"
 done
 
+ruby -ropenssl -rjson -rbase64 -rdigest - "$stage" "${roles[@]}" <<'RUBY'
+stage, *roles = ARGV
+keys = roles.to_h do |role|
+  jwks = JSON.parse(File.read(File.join(stage, "roles", role, "card-jwks.json")))
+  jwk = jwks.fetch("keys").first
+  certificate = OpenSSL::X509::Certificate.new(Base64.strict_decode64(jwk.fetch("x5c").first))
+  [jwk.fetch("kid"), Digest::SHA256.hexdigest(certificate.public_key.to_der)]
+end
+File.write(File.join(stage, "orchestrator", "card-trust.json"), JSON.generate(
+  "version" => "1", "keys" => keys.sort.to_h))
+RUBY
+chmod 600 "$stage/orchestrator/card-trust.json"
+
 mkdir -p "$(dirname "$output")"
 mv "$stage" "$output"
 trap - EXIT

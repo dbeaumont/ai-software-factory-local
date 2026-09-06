@@ -418,7 +418,9 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 - [x] **A2A-080 — Créer les activités A2A.** Séparer `resolveAgent`, `dispatchTask`, `getTask`, `cancelTask` et
   `validateArtifacts` avec timeouts et retries spécifiques. _(`A2aActivities` expose cinq interfaces Temporal
   distinctes ; chaque stub utilise sa politique dédiée, et l'envoi n'est jamais rejoué automatiquement afin de
-  laisser les résultats ambigus au mécanisme de réconciliation.)_
+  laisser les résultats ambigus au mécanisme de réconciliation. Quand la flotte est activée, le graphe Spring
+  assemble obligatoirement mTLS, OAuth2, registre fermé, vérification des cartes par empreintes épinglées,
+  transport JSON-RPC et stockage de corrélation avant d'enregistrer ces activités.)_
 - [x] **A2A-081 — Persister la corrélation avant attente.** Enregistrer workflow, tentative, délégation,
   `messageId`, rôle, Agent Card digest, A2A task ID et context ID dans une table dédiée. _(La migration V017
   complète `a2a_task_associations`; `dispatchTask` persiste tous les identifiants et digests de façon idempotente
