@@ -259,8 +259,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   de schéma et une liste de types de média acceptés. _(Les 33 couples rôle/contrat d'entrée sont exhaustivement
   mappés dans `resources/a2a/skill-contract-map-v1.json` ; unicité, schémas existants et media types supportés sont
   vérifiés automatiquement.)_
-- [ ] **A2A-043 — Mapper chaque contrat de sortie.** Publier exactement un artefact final principal conforme au
-  contrat du rôle, plus des références de preuves optionnelles et bornées.
+- [x] **A2A-043 — Mapper chaque contrat de sortie.** Publier exactement un artefact final principal conforme au
+  contrat du rôle, plus des références de preuves optionnelles et bornées. _(Les 15 sorties sont mappées, avec un
+  unique contrat principal par rôle et `delegation-plan-v1` interne ; `a2a-result-v1` impose un seul artefact JSON
+  principal et au plus 32 références Evidence conformes à A2A-041.)_
 - [ ] **A2A-044 — Conserver la validation actuelle.** Valider le JSON métier avant l'envoi A2A et après réception,
   indépendamment de la validation du modèle protocolaire A2A.
 - [ ] **A2A-045 — Définir la corrélation.** Transporter `taskId`, `attemptId`, `workflowId`, `workflowRunId`,

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-factory.local/a2a/schemas/a2a-result-v1.schema.json",
+  "title": "AI Factory A2A final result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "role", "primary_artifact", "evidence_references"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "role": {
+      "type": "string",
+      "enum": [
+        "supervisor", "architecture-agent", "impact-analysis", "dependencies-contracts",
+        "code-agent", "developer", "patch-repair", "test-agent", "test-design", "test-evidence",
+        "security-agent", "threat-model", "security-findings", "independent-reviewer"
+      ]
+    },
+    "primary_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "name", "contract", "contract_version", "media_type", "document"],
+      "properties": {
+        "artifact_id": { "$ref": "#/$defs/boundedId" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "contract": { "$ref": "#/$defs/versionedId" },
+        "contract_version": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "media_type": { "const": "application/json" },
+        "document": { "type": "object", "maxProperties": 128 }
+      }
+    },
+    "evidence_references": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "$ref": "a2a-artifact-reference-v1.schema.json" }
+    }
+  },
+  "$defs": {
+    "boundedId": {
+      "type": "string", "minLength": 1, "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "versionedId": {
+      "type": "string", "minLength": 3, "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9-]*-v[1-9][0-9]*$"
+    }
+  }
+}

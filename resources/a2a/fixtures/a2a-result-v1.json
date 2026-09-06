@@ -1,0 +1,30 @@
+{
+  "schema_version": "1",
+  "role": "developer",
+  "primary_artifact": {
+    "artifact_id": "proposal-1",
+    "name": "developer-patch-proposal",
+    "contract": "patch-proposal-v1",
+    "contract_version": "1",
+    "media_type": "application/json",
+    "document": {
+      "schema_version": "1",
+      "proposal_id": "proposal-1",
+      "task_id": "task-1",
+      "attempt_id": "attempt-1"
+    }
+  },
+  "evidence_references": [
+    {
+      "schema_version": "1",
+      "reference_id": "patch-proof-1",
+      "uri": "evidence://task-1/attempt-1/patch/proposal-1",
+      "digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "size_bytes": 100,
+      "media_type": "text/x-diff",
+      "classification": "INTERNAL",
+      "contract": "patch-proposal-v1",
+      "contract_version": "1"
+    }
+  ]
+}
