@@ -540,6 +540,7 @@ services:
 
   # Spring Boot control plane. Its image pulls build dependencies through Artifactory using a BuildKit secret.
   orchestrator:
+    image: ${AI_FACTORY_ORCHESTRATOR_IMAGE:-ai-software-factory-orchestrator:latest}
     stop_grace_period: 40s
     build:
       context: ../apps/orchestrator

@@ -792,8 +792,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 18. Lot 11 — rollback sans retour aux appels directs
 
-- [ ] **A2A-200 — Définir le rollback de release.** Revenir aux images A2A et workers Temporal précédents,
-  compatibles avec les tâches déjà créées ; ne jamais réactiver les agents en mémoire.
+- [x] **A2A-200 — Définir le rollback de release.** Revenir aux images A2A et workers Temporal précédents,
+  compatibles avec les tâches déjà créées ; ne jamais réactiver les agents en mémoire. _(Le runbook impose deux
+  images digestées et leur Build ID immuable, un redéploiement `--no-build`, la conservation de tous les volumes
+  et un retour uniquement vers une release déjà A2A ; `docs/operations/runbooks/ROLLBACK-A2A.md`.)_
 - [ ] **A2A-201 — Définir le drainage.** Conserver les workers associés aux anciens Build IDs jusqu'à terminaison
   ou migration explicite des workflows épinglés.
 - [ ] **A2A-202 — Geler plutôt que contourner.** Si la flotte A2A est indisponible, suspendre les admissions et
