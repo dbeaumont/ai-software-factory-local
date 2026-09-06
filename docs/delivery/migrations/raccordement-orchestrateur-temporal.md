@@ -507,7 +507,11 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### 12.5 Tests de charge et de durée
 
-- [ ] Soumettre des tickets concurrents au-delà de la capacité worker et mesurer le backpressure.
+- [x] Soumettre des tickets concurrents au-delà de la capacité worker et mesurer le backpressure. _(La cible
+  `make test-temporal-backpressure` recrée temporairement les workers avec capacité 1 et débit 0,1 activité/s,
+  soumet six tickets en parallèle, exige un Run ID pour chacun, mesure le backlog gRPC exposé par Micrometer, puis
+  annule la charge et restaure la capacité nominale. Mesure locale : 6 admissions en 1 920 ms, backlog maximal 7
+  sur `context`.)_
 - [ ] Tester les limites globales et par task queue.
 - [ ] Tester une attente humaine supérieure à un redémarrage et à une rotation de worker.
 - [ ] Tester rétention, purge et reconstruction sur un jeu représentatif.
