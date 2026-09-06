@@ -38,7 +38,7 @@ public final class TemporalActivityPolicies {
                 retry(2, Duration.ofSeconds(2), Duration.ofSeconds(20))));
         options.put(Kind.SANDBOX, activity(Duration.ofMinutes(45), Duration.ofMinutes(30), Duration.ofMinutes(5),
                 Duration.ofSeconds(30),
-                retry(2, Duration.ofSeconds(2), Duration.ofSeconds(30))));
+                retry(3, Duration.ofSeconds(2), Duration.ofSeconds(30))));
         options.put(Kind.ASSURANCE, activity(Duration.ofMinutes(5), Duration.ofSeconds(90), Duration.ofMinutes(1), null,
                 retry(3, Duration.ofMillis(500), Duration.ofSeconds(5))));
         options.put(Kind.EVIDENCE, activity(Duration.ofMinutes(5), Duration.ofMinutes(2), Duration.ofMinutes(1), null,

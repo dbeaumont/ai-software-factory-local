@@ -42,7 +42,7 @@ class TemporalFailureClassifierTest {
     }
 
     @Test
-    void propagatesWorkerShutdownWithoutConsumingAnActivityAttempt() {
+    void propagatesWorkerShutdownWithoutMisclassifyingItAsADependencyFailure() {
         ActivityWorkerShutdownException shutdown = new ActivityWorkerShutdownException();
 
         assertThatThrownBy(() -> TemporalFailureClassifier.toApplicationFailure(shutdown))

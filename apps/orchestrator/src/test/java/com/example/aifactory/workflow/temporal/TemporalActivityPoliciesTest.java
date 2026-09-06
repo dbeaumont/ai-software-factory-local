@@ -15,7 +15,7 @@ class TemporalActivityPoliciesTest {
                 Duration.ofMillis(200), Duration.ofSeconds(2));
         assertProfile(TemporalActivityPolicies.Kind.LLM, Duration.ofMinutes(10), Duration.ofMinutes(2), 2,
                 Duration.ofSeconds(2), Duration.ofSeconds(20));
-        assertProfile(TemporalActivityPolicies.Kind.SANDBOX, Duration.ofMinutes(30), Duration.ofMinutes(5), 2,
+        assertProfile(TemporalActivityPolicies.Kind.SANDBOX, Duration.ofMinutes(30), Duration.ofMinutes(5), 3,
                 Duration.ofSeconds(2), Duration.ofSeconds(30));
         assertProfile(TemporalActivityPolicies.Kind.ASSURANCE, Duration.ofSeconds(90), Duration.ofMinutes(1), 3,
                 Duration.ofMillis(500), Duration.ofSeconds(5));
