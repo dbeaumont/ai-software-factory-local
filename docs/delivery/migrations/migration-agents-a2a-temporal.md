@@ -510,8 +510,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   - Preuve : `SecureUriPolicy` impose HTTPS, destination exacte, filtrage réseau et DNS pinning pour le registre et
     les callbacks ; `A2aEvidenceUriPolicy`/`EvidenceUriPolicy` lient chaque référence au task/attempt/digest, avec
     tests négatifs de redirection, loopback, metadata cloud et rebinding.
-- [ ] **A2A-106 — Protéger les entrées non fiables.** Marquer les contenus de dépôt et messages comme données,
+- [x] **A2A-106 — Protéger les entrées non fiables.** Marquer les contenus de dépôt et messages comme données,
   appliquer les garde-fous d'injection existants et valider toutes les sorties avant utilisation.
+  - Preuve : `UntrustedData` et `AgentLoop.INPUT_DATA_GUARDRAIL` encadrent toute entrée modèle et neutralisent les
+    fermetures de balise injectées ; `AgentExecutionWorkerTest` prouve validation du contrat avant LLM et rejet de
+    toute sortie non conforme avant publication.
 - [ ] **A2A-107 — Ajouter quotas et rate limiting.** Borner requêtes par identité, tâches actives, taille, tokens,
   fréquence de polling, annulations et notifications.
 - [ ] **A2A-108 — Journaliser les décisions.** Tracer authentifications échouées, refus, changement de carte,
