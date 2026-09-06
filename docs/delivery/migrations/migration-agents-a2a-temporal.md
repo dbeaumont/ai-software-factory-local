@@ -43,9 +43,9 @@ La migration doit préserver :
 - [x] **A2A-005 — Maintenir la distinction A2A/MCP.** A2A transporte messages, états et références d'artefacts
   entre agents ; MCP reste le protocole d'accès aux capacités `context`, `sandbox`, `assurance`, `evidence` et
   `scm`. _(Responsabilités et alternative MCP rejetée formalisées dans `ADR-A2A-001`.)_
-- [ ] **A2A-006 — Utiliser des artefacts, pas des messages, pour les résultats.** Les sorties métier validées sont
+- [x] **A2A-006 — Utiliser des artefacts, pas des messages, pour les résultats.** Les sorties métier validées sont
   publiées comme artefacts A2A structurés ; les messages servent aux instructions, statuts et demandes de
-  complément.
+  complément. _(Règle de transport des résultats adoptée dans `ADR-A2A-001`.)_
 - [ ] **A2A-007 — Ne pas placer de contenu volumineux dans A2A ou Temporal.** Patchs, journaux, rapports et SBOM
   restent dans Evidence MCP ; A2A et Temporal ne transportent que des références URI internes, digests, tailles,
   types de média et verdicts.
