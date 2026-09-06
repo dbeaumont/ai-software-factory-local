@@ -1,0 +1,123 @@
+package com.example.aifactory.agentruntime;
+
+import org.a2aproject.sdk.spec.A2AErrorCodes;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
+import java.net.URI;
+import java.util.Map;
+import java.util.Set;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class A2aSendMessageServiceTest {
+    private final ObjectMapper mapper = new ObjectMapper();
+    private A2aSendMessageService service;
+    private A2aSecurityProperties unsecured;
+
+    @BeforeEach
+    void setUp() {
+        AgentRuntimeProperties runtime = new AgentRuntimeProperties(
+                "developer", URI.create("http://localhost:8090/a2a"));
+        service = new A2aSendMessageService(runtime,
+                new AgentCardCatalogGenerator(new com.example.aifactory.agentcore.AgentCatalog(), mapper), mapper);
+        unsecured = new A2aSecurityProperties(false, false, null, null, null);
+    }
+
+    @Test
+    void authenticatesAuthorizesValidatesAndDeduplicatesMessageSend() throws Exception {
+        JsonNode params = request("message-1", "developer", "a".repeat(64)).path("params");
+        A2aSendMessageService.Caller caller = new A2aSendMessageService.Caller("orchestrator", Set.of(
+                "a2a.invoke", "a2a.role.developer", "a2a.skill.developer.code-task-v1"));
+
+        A2aSendMessageService.Submission first = service.send(params, caller);
+        A2aSendMessageService.Submission replay = service.send(params, caller);
+
+        assertThat(first.taskId()).isEqualTo(replay.taskId());
+        assertThat(first.contextId()).isEqualTo(replay.contextId());
+        assertThat(first.role()).isEqualTo("developer");
+        assertThat(first.skill()).isEqualTo("developer.code-task-v1");
+
+        assertThatThrownBy(() -> service.send(
+                request("message-1", "developer", "b".repeat(64)).path("params"), caller))
+                .isInstanceOf(A2aSendMessageService.SubmissionRejected.class)
+                .hasMessageContaining("collision");
+        assertThatThrownBy(() -> service.send(params,
+                new A2aSendMessageService.Caller("orchestrator", Set.of("a2a.invoke"))))
+                .isInstanceOf(A2aSendMessageService.SubmissionRejected.class)
+                .hasMessageContaining("scope");
+    }
+
+    @Test
+    void returnsImmediatelyAndRefusesProtocolDowngrade() throws Exception {
+        A2aJsonRpcController controller = new A2aJsonRpcController(mapper, service, unsecured);
+        byte[] body = mapper.writeValueAsBytes(request("message-2", "developer", "a".repeat(64)));
+
+        UsernamePasswordAuthenticationToken authenticated = new UsernamePasswordAuthenticationToken(
+                "orchestrator", "not-serialized", Set.of(
+                new SimpleGrantedAuthority("SCOPE_a2a.invoke"),
+                new SimpleGrantedAuthority("SCOPE_a2a.role.developer"),
+                new SimpleGrantedAuthority("SCOPE_a2a.skill.developer.code-task-v1")));
+        Map<String, Object> accepted = controller.handle("1.0", body, authenticated);
+        assertThat(accepted).containsKey("result");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = (Map<String, Object>) accepted.get("result");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> status = (Map<String, Object>) result.get("status");
+        assertThat(status.get("state")).isEqualTo("TASK_STATE_SUBMITTED");
+
+        Map<String, Object> rejected = controller.handle("0.3", body, null);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> error = (Map<String, Object>) rejected.get("error");
+        assertThat(error.get("code")).isEqualTo(A2AErrorCodes.VERSION_NOT_SUPPORTED.code());
+
+        Map<String, Object> unauthenticated = controller.handle("1.0", body, null);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> authError = (Map<String, Object>) unauthenticated.get("error");
+        assertThat(authError.get("message")).isEqualTo("Unauthenticated A2A caller");
+    }
+
+    private JsonNode request(String messageId, String role, String digest) throws Exception {
+        String json = """
+                {
+                  "jsonrpc":"2.0",
+                  "id":"request-1",
+                  "method":"message/send",
+                  "params":{
+                    "configuration":{"blocking":false},
+                    "message":{
+                      "role":"ROLE_USER",
+                      "messageId":"%s",
+                      "parts":[{"kind":"data","data":{
+                        "schema_version":"1",
+                        "target_role":"%s",
+                        "skill_id":"developer.code-task-v1",
+                        "input_references":[{"digest":"%s"}]
+                      }}],
+                      "metadata":{
+                        "%s":{
+                          "schemaVersion":"1",
+                          "taskId":"task-1",
+                          "attemptId":"attempt-1",
+                          "workflowId":"workflow-1",
+                          "workflowRunId":"run-1",
+                          "repositoryId":"repository-1",
+                          "sourceCommit":"0123456789abcdef0123456789abcdef01234567",
+                          "delegationId":"delegation-1",
+                          "agentRole":"%s",
+                          "inputDigests":["%s"]
+                        }
+                      }
+                    }
+                  }
+                }
+                """.formatted(messageId, role, digest,
+                A2aSendMessageService.EXECUTION_CONTEXT_EXTENSION, role, digest);
+        return mapper.readTree(json);
+    }
+}

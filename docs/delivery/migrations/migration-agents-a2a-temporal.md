@@ -351,8 +351,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 11. Lot 4 — construire le serveur A2A durable de chaque agent
 
-- [ ] **A2A-060 — Implémenter `SendMessage`.** Authentifier, autoriser, valider version et extension, dédupliquer
-  `messageId`, créer la tâche et retourner immédiatement son état.
+- [x] **A2A-060 — Implémenter `SendMessage`.** Authentifier, autoriser, valider version et extension, dédupliquer
+  `messageId`, créer la tâche et retourner immédiatement son état. _(`A2aJsonRpcController` expose uniquement
+  `message/send` A2A 1.0 ; `A2aSendMessageService` contrôle identité, scopes rôle/skill, extension de corrélation,
+  bornes et idempotence avant de retourner immédiatement une tâche `SUBMITTED` générée côté serveur.)_
 - [ ] **A2A-061 — Implémenter `GetTask`.** Retourner uniquement une tâche visible par l'appelant avec historique
   borné et artefacts autorisés.
 - [ ] **A2A-062 — Implémenter `ListTasks`.** Ajouter filtres, pagination par curseur, isolation par tenant et limite
