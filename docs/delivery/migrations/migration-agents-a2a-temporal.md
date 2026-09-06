@@ -279,8 +279,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   skill, de la séquence et du digest d'entrée ; retourner la même tâche pour un message identique et rejeter une
   collision avec un payload différent. _(`A2aMessageIdentity` produit un UUID v8 déterministe par SHA-256 ; le
   registre atomique déduplique les replays et refuse une collision de digest sans créer une seconde tâche.)_
-- [ ] **A2A-048 — Borner les données.** Fixer limites de taille, nombre de parts, historique, artefacts, références,
+- [x] **A2A-048 — Borner les données.** Fixer limites de taille, nombre de parts, historique, artefacts, références,
   profondeur JSON et durée de conservation ; rejeter avant désérialisation complète les requêtes hors limite.
+  _(`payload-limits-v1.json` et `A2aPayloadLimits` fixent 1 MiB, 16 parts, 50 historiques, 16 artefacts,
+  32 références, profondeur 32 et rétention 30 jours ; la taille brute est refusée avant parsing.)_
 - [ ] **A2A-049 — Mapper les états.** Documenter et tester la correspondance entre états A2A et événements
   Temporal sans confondre panne technique et refus métier.
 

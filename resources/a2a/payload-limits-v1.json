@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "max_request_bytes": 1048576,
+  "max_parts": 16,
+  "max_history_entries": 50,
+  "max_artifacts": 16,
+  "max_evidence_references": 32,
+  "max_json_depth": 32,
+  "max_json_tokens": 100000,
+  "task_retention_days": 30
+}
