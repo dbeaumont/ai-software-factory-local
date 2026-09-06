@@ -5,6 +5,9 @@
 Appliquer ce runbook lors d'une régression A2A confirmée, d'une violation de sécurité, d'un doublon, d'une
 divergence étendue ou d'un dépassement SLO qui ne peut être corrigé en place.
 
+Lire d'abord la [matrice de compatibilité et les limites irréversibles](../A2A-ROLLBACK-COMPATIBILITY.md). Une image
+historique qui ne satisfait pas cette matrice n'est pas une cible de rollback autorisée.
+
 ## Confinement immédiat
 
 Geler toutes les nouvelles admissions A2A et les effets externes inconnus. Temporal reste l'unique orchestrateur :

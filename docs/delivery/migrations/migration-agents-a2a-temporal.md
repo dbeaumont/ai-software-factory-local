@@ -818,8 +818,11 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   des workflows, le rejeu des notifications et la conservation des identités, historiques et Evidence. Une outbox
   transactionnelle V005 ferme la fenêtre de perte entre `CANCELED` et le signal Temporal ; validé le 2026-09-06
   par les 9 tests de campagne et les 74 tests complets du runtime A2A, sans erreur ni échec.)_
-- [ ] **A2A-205 — Documenter les limites irréversibles.** Identifier migrations de données expand/contract,
-  versions de cartes et contrats qui empêchent un retour binaire sans transformation.
+- [x] **A2A-205 — Documenter les limites irréversibles.** Identifier migrations de données expand/contract,
+  versions de cartes et contrats qui empêchent un retour binaire sans transformation. _(La matrice
+  `docs/operations/A2A-ROLLBACK-COMPATIBILITY.md` inventorie le socle versionné, classe les évolutions SQL, états,
+  contrats, cartes, historiques, Evidence et identités, fixe les conditions de blocage et explicite notamment le
+  plancher V005 dès qu'une annulation non acquittée existe ; le runbook impose cette vérification avant action.)_
 - [ ] **A2A-206 — Exiger une gate de rollback.** Lier décision, incident, versions, état des tâches, sauvegardes et
   résultat de réconciliation à une approbation opérateur.
 
