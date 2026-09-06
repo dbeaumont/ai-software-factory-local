@@ -52,6 +52,20 @@ class RoleScopedMcpClientTest {
         assertThrows(IllegalStateException.class, () -> client.call("context.read_file", Map.of("path", "README.md")));
     }
 
+    @Test
+    void injectsTheScopedValidatedTraceContextIntoEveryMcpCall() {
+        RecordingSessions sessions = new RecordingSessions();
+        RoleScopedMcpClient developer = client("developer", sessions, true);
+        A2aW3cTraceContext trace = new A2aW3cTraceContext(
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "task.id=task-1");
+
+        trace.call(() -> developer.call("context.list_tree", Map.of("path", "apps")));
+
+        assertEquals(trace.traceparent(), sessions.lastArguments.get("traceparent"));
+        assertEquals(trace.baggage(), sessions.lastArguments.get("baggage"));
+        assertEquals("developer", sessions.lastArguments.get("actor"));
+    }
+
     private static RoleScopedMcpClient client(String role, RecordingSessions sessions, boolean enabled) {
         return new RoleScopedMcpClient(RoleScopedAgentContext.load(role, new ObjectMapper()),
                 new AgentMcpProperties(enabled, Duration.ofSeconds(20),

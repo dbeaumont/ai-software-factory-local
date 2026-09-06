@@ -24,7 +24,12 @@ public interface AgentTaskWorkflowV1 {
     @QueryMethod
     String state();
 
-    record Input(String taskId, String contextId, String role, String skill, String envelopeJson) {}
+    record Input(String taskId, String contextId, String role, String skill, String envelopeJson,
+                 String traceparent, String baggage) {
+        public Input(String taskId, String contextId, String role, String skill, String envelopeJson) {
+            this(taskId, contextId, role, skill, envelopeJson, null, null);
+        }
+    }
     record Outcome(String state, String artifactDigest, String detail, String attemptId,
                    String outputContract, Set<String> allowedReferenceIds, String artifactContentBase64) {
         public Outcome {

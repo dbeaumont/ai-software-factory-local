@@ -2,6 +2,7 @@ package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.a2a.A2aExecutionContext;
+import com.example.aifactory.a2a.A2aEvidencePartFactory;
 import com.example.aifactory.a2a.A2aExtensions;
 import com.example.aifactory.a2a.A2aMediaTypes;
 import com.example.aifactory.service.IndependentReviewBundle;
@@ -9,7 +10,6 @@ import io.temporal.common.VersioningBehavior;
 import io.temporal.workflow.Workflow;
 import io.temporal.workflow.WorkflowVersioningBehavior;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -79,16 +79,7 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
     }
 
     private static A2aContracts.Part reference(String id, String uri, String digest, String contract) {
-        java.util.LinkedHashMap<String, Object> data = new java.util.LinkedHashMap<>();
-        data.put("schema_version", "1");
-        data.put("reference_id", id);
-        data.put("uri", uri);
-        data.put("digest", digest);
-        data.put("media_type", "application/json");
-        data.put("classification", "INTERNAL");
-        data.put("contract", contract);
-        data.put("contract_version", "1");
-        return new A2aContracts.Part(A2aMediaTypes.EVIDENCE_REFERENCE, null, Map.copyOf(data), URI.create(uri));
+        return A2aEvidencePartFactory.reference(id, uri, digest, contract);
     }
 
     private static void requireRequest(Request request) {

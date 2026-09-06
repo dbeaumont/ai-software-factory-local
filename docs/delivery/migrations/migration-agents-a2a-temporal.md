@@ -635,8 +635,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
 
 ## 15. Lot 8 — observabilité OpenTelemetry et exploitation
 
-- [ ] **A2A-140 — Propager le contexte W3C.** Transmettre `traceparent` et `baggage` validés à travers API,
-  Temporal, activités A2A, serveur d'agent, workflow d'agent et MCP.
+- [x] **A2A-140 — Propager le contexte W3C.** Transmettre `traceparent` et `baggage` validés à travers API,
+  Temporal, activités A2A, serveur d'agent, workflow d'agent et MCP. _(Extension W3C fermée et bornée injectée par
+  les activités, refusée si absente/invalide par le serveur, portée dans `AgentTaskWorkflowV1` puis injectée dans
+  chaque appel MCP ; preuve : `docs/evidence/a2a/A2A-140-W3C-CONTEXT.md`.)_
 - [ ] **A2A-141 — Corréler sans cardinalité excessive.** Placer task/workflow/message IDs dans traces et logs,
   jamais comme labels de métriques ; utiliser rôle, skill, opération, version et état comme dimensions bornées.
 - [ ] **A2A-142 — Instrumenter le client.** Mesurer durée, résultat, retry, timeout, réconciliation, validation de

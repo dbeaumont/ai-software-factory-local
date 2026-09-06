@@ -30,7 +30,7 @@ public final class TemporalAgentTaskWorkflowGateway
         try {
             WorkflowExecution execution = WorkflowClient.start(workflow::run,
                     new AgentTaskWorkflowV1.Input(submission.taskId(), submission.contextId(), role,
-                            submission.skill(), envelopeJson));
+                            submission.skill(), envelopeJson, submission.traceparent(), submission.baggage()));
             return new Execution(execution.getWorkflowId(), execution.getRunId());
         } catch (WorkflowExecutionAlreadyStarted existing) {
             return new Execution(existing.getExecution().getWorkflowId(), existing.getExecution().getRunId());

@@ -31,15 +31,16 @@ public final class AgentExecutionWorker {
                 call -> mcp.call(call.name(), call.arguments()),
                 (actor, tool) -> role.allowedTools().contains(tool),
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
-        AgentLoop.Result result = loop.run(new AgentLoop.Actor(request.taskId(), role.identity().role(),
-                        request.executionMode()), role.systemPrompt(), request.input().toString(), request.budget());
+        A2aW3cTraceContext trace = new A2aW3cTraceContext(request.traceparent(), request.baggage());
+        AgentLoop.Result result = trace.call(() -> loop.run(new AgentLoop.Actor(request.taskId(), role.identity().role(),
+                        request.executionMode()), role.systemPrompt(), request.input().toString(), request.budget()));
         JsonNode document = role.validateOutput(request.outputContract(), result.finalResult(), contractContext);
         return new Result(document, role.promptFingerprint(), result.turns(), result.tokens(), result.costMicros());
     }
 
     public record Request(String taskId, String attemptId, String role, String inputContract, JsonNode input,
                           String outputContract, Set<String> allowedReferenceIds, AgentLoop.Budget budget,
-                          String executionMode) {
+                          String executionMode, String traceparent, String baggage) {
         public Request {
             if (taskId == null || taskId.isBlank() || attemptId == null || attemptId.isBlank()
                     || role == null || role.isBlank() || inputContract == null || inputContract.isBlank()

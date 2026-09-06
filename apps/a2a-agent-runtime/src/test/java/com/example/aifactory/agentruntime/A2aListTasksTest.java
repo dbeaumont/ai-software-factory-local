@@ -66,6 +66,8 @@ class A2aListTasksTest {
                     "sourceCommit":"0123456789abcdef0123456789abcdef01234567",
                     "delegationId":"%s","agentRole":"developer",
                     "inputDigests":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+                  },"https://ai-factory.local/extensions/w3c-trace-context/v1":{
+                    "traceparent":"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
                   }}}
                 }
                 """.formatted(messageId, delegationId));

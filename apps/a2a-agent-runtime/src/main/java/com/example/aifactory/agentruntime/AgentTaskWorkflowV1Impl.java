@@ -81,6 +81,7 @@ public final class AgentTaskWorkflowV1Impl implements AgentTaskWorkflowV1 {
                 || input.envelopeJson() == null || input.envelopeJson().isBlank()) {
             throw new IllegalArgumentException("Agent task workflow input is incomplete");
         }
+        if (input.traceparent() != null) new A2aW3cTraceContext(input.traceparent(), input.baggage());
     }
 
     private static Outcome requireOutcome(Outcome outcome) {

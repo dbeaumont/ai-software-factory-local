@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 @Component
 public final class TemporalTraceContextPropagator implements ContextPropagator {
     private static final Pattern TRACEPARENT = Pattern.compile(
-            "00-(?!0{32})[0-9a-f]{32}-(?!0{16})[0-9a-f]{16}-0[01]");
+            "00-(?!0{32})[0-9a-f]{32}-(?!0{16})[0-9a-f]{16}-[0-9a-f]{2}");
     private static final Pattern BAGGAGE = Pattern.compile("[\\x20-\\x7e]{1,1024}");
     private static final List<String> KEYS = List.of("traceparent", "baggage");
     private static final TextMapSetter<Map<String, String>> SETTER = Map::put;

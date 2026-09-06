@@ -118,6 +118,12 @@ public final class A2aSendMessageService {
         JsonNode metadata = requiredObject(message, "metadata");
         JsonNode execution = requiredObject(metadata, EXECUTION_CONTEXT_EXTENSION);
         validateExecutionContext(execution, role);
+        A2aW3cTraceContext traceContext;
+        try {
+            traceContext = A2aW3cTraceContext.from(metadata);
+        } catch (IllegalArgumentException invalidTrace) {
+            throw new SubmissionRejected(invalidTrace.getMessage(), invalidTrace);
+        }
         if (params.path("configuration").path("blocking").asBoolean(false)) {
             throw new SubmissionRejected("Blocking message/send is disabled");
         }
@@ -145,7 +151,7 @@ public final class A2aSendMessageService {
                     caller.subject(), result.task().taskId(), messageId);
             throw new SubmissionRejected("messageId collision with a different payload");
         }
-        Submission submission = submission(result.task());
+        Submission submission = submission(result.task(), traceContext);
         if (result.created()) {
             AgentTaskWorkflowStarter.Execution executionReference = workflowStarter.start(submission, envelope.toString());
             store.recordWorkflowExecution(submission.taskId(), executionReference.workflowId(), executionReference.runId());
@@ -300,6 +306,12 @@ public final class A2aSendMessageService {
                 task.callerSubject(), task.tenantId(), task.delegationId(), task.submittedAt());
     }
 
+    private static Submission submission(A2aTaskStore.StoredTask task, A2aW3cTraceContext trace) {
+        return new Submission(task.taskId(), task.contextId(), task.messageId(), task.role(), task.skill(),
+                task.callerSubject(), task.tenantId(), task.delegationId(), task.submittedAt(),
+                trace.traceparent(), trace.baggage());
+    }
+
     private static HistoryItem history(A2aTaskStore.HistoryRecord history) {
         return new HistoryItem(history.messageId(), history.event(), history.occurredAt(), history.taskVersion());
     }
@@ -411,7 +423,14 @@ public final class A2aSendMessageService {
             String caller,
             String tenantId,
             String delegationId,
-            Instant submittedAt) {}
+            Instant submittedAt,
+            String traceparent,
+            String baggage) {
+        public Submission(String taskId, String contextId, String messageId, String role, String skill,
+                          String caller, String tenantId, String delegationId, Instant submittedAt) {
+            this(taskId, contextId, messageId, role, skill, caller, tenantId, delegationId, submittedAt, null, null);
+        }
+    }
 
     public record HistoryItem(String messageId, String event, Instant occurredAt, long sequence) {}
 

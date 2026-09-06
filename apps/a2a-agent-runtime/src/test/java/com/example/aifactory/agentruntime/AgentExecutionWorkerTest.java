@@ -92,7 +92,8 @@ class AgentExecutionWorkerTest {
     private static AgentExecutionWorker.Request request(String role, String inputContract, JsonNode input,
                                                         String outputContract) {
         return new AgentExecutionWorker.Request("task-1", "attempt-1", role, inputContract, input, outputContract,
-                Set.of(), new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000), "HIERARCHICAL_ACTIVE");
+                Set.of(), new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000), "HIERARCHICAL_ACTIVE",
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "task.id=task-1");
     }
 
     private JsonNode fixtures() throws Exception {

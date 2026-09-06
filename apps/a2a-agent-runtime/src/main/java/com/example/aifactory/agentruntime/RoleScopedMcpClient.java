@@ -63,6 +63,8 @@ final class RoleScopedMcpClient implements McpToolPort, AutoCloseable {
             throw new SecurityException("MCP actor cannot differ from the active agent role");
         }
         bound.put("actor", role.identity().role());
+        A2aW3cTraceContext trace = A2aW3cTraceContext.current();
+        if (trace != null) bound = new LinkedHashMap<>(trace.addTo(bound));
         return session.call(toolName, Map.copyOf(bound));
     }
 

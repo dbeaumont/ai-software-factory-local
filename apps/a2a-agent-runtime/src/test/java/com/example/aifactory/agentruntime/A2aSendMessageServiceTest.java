@@ -281,13 +281,17 @@ class A2aSendMessageServiceTest {
                           "delegationId":"delegation-1",
                           "agentRole":"%s",
                           "inputDigests":["%s"]
+                        },
+                        "%s":{
+                          "traceparent":"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+                          "baggage":"task.id=task-1,attempt.id=attempt-1"
                         }
                       }
                     }
                   }
                 }
                 """.formatted(messageId, role, digest,
-                A2aSendMessageService.EXECUTION_CONTEXT_EXTENSION, role, digest);
+                A2aSendMessageService.EXECUTION_CONTEXT_EXTENSION, role, digest, A2aW3cTraceContext.EXTENSION);
         return mapper.readTree(json);
     }
 }
