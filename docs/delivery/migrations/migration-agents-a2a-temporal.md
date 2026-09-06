@@ -46,9 +46,9 @@ La migration doit préserver :
 - [x] **A2A-006 — Utiliser des artefacts, pas des messages, pour les résultats.** Les sorties métier validées sont
   publiées comme artefacts A2A structurés ; les messages servent aux instructions, statuts et demandes de
   complément. _(Règle de transport des résultats adoptée dans `ADR-A2A-001`.)_
-- [ ] **A2A-007 — Ne pas placer de contenu volumineux dans A2A ou Temporal.** Patchs, journaux, rapports et SBOM
+- [x] **A2A-007 — Ne pas placer de contenu volumineux dans A2A ou Temporal.** Patchs, journaux, rapports et SBOM
   restent dans Evidence MCP ; A2A et Temporal ne transportent que des références URI internes, digests, tailles,
-  types de média et verdicts.
+  types de média et verdicts. _(Autorités et règle de compacité fixées dans `ADR-A2A-001`.)_
 - [ ] **A2A-008 — Fonctionner en fail-closed.** Une Agent Card invalide, une identité non autorisée, une version
   incompatible ou l'indisponibilité d'un agent suspend ou échoue explicitement le workflow ; aucun fallback local
   n'est permis.
