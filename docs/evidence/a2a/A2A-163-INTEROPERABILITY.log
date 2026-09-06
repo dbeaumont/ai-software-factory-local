@@ -1,0 +1,5 @@
+A2A interoperability qualification
+protocol=1.0
+python-sdk=v1.0.0@24db37ee24c927df936289ad6ffbc8c746a44db8
+A2A-163 OK task=af279af2-130c-4ff5-b34f-41fae75fe6f7 context=337cc8c5-0023-4904-9baf-903eca943653 state=COMPLETED
+A2A-163 OK official-client task=24337eb6-bd90-4b6d-836c-f879445d7007 context=ebdfaa23-4d06-430e-a047-9699ebc39900 state=TASK_STATE_COMPLETED
