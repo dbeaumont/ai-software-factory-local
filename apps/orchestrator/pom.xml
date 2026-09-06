@@ -22,6 +22,7 @@
     <multiagent.schemas.directory>../../resources/multiagents/schemas</multiagent.schemas.directory>
     <agents.directory>../../resources/agents</agents.directory>
     <multiagent.policies.directory>../../resources/multiagents/policies</multiagent.policies.directory>
+    <multiagent.database.directory>../../resources/multiagents/database</multiagent.database.directory>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -52,8 +53,8 @@
       <artifactId>spring-boot-starter-jdbc</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-core</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
     </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
@@ -137,7 +138,7 @@
         <targetPath>multiagents/policies</targetPath>
       </resource>
       <resource>
-        <directory>../../resources/multiagents/database</directory>
+        <directory>${multiagent.database.directory}</directory>
         <targetPath>db/migration</targetPath>
       </resource>
     </resources>

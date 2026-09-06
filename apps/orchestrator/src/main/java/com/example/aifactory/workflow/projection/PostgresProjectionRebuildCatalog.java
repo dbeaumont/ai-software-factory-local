@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public final class PostgresProjectionRebuildCatalog implements ProjectionRebuildCatalog {
+public class PostgresProjectionRebuildCatalog implements ProjectionRebuildCatalog {
     private final JdbcTemplate jdbc;
 
     public PostgresProjectionRebuildCatalog(JdbcTemplate jdbc) {

@@ -5,10 +5,12 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 /** Durable, idempotent import that deliberately creates no Temporal workflow or workflow-run row. */
 @Repository
-public final class PostgresLegacyTaskMigrationTarget implements LegacyTaskMigrationTarget {
+public class PostgresLegacyTaskMigrationTarget implements LegacyTaskMigrationTarget {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transactions;
 
@@ -36,7 +38,7 @@ public final class PostgresLegacyTaskMigrationTarget implements LegacyTaskMigrat
                         + "requirement_digest, status, created_at, updated_at, version) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                 task.taskId(), task.ticketNumber(), task.repositoryId(), task.attemptId(), task.sourceCommit(),
-                task.requirementDigest(), task.targetStatus(), task.createdAt(), task.updatedAt());
+                task.requirementDigest(), task.targetStatus(), sqlTime(task.createdAt()), sqlTime(task.updatedAt()));
         jdbc.update("INSERT INTO legacy_task_imports(task_id, attempt_id, source_commit, source_commit_verified, "
                         + "legacy_status, snapshot_uri, snapshot_digest, snapshot_classification, migrated_at) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
@@ -65,5 +67,9 @@ public final class PostgresLegacyTaskMigrationTarget implements LegacyTaskMigrat
                 || task.snapshotDigest() == null || !task.snapshotDigest().matches("[0-9a-f]{64}")) {
             throw new IllegalArgumentException("Legacy task import metadata is invalid");
         }
+    }
+
+    private static java.time.OffsetDateTime sqlTime(Instant value) {
+        return value == null ? null : value.atOffset(ZoneOffset.UTC);
     }
 }

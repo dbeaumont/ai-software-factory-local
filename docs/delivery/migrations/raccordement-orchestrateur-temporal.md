@@ -465,7 +465,10 @@ Temporal client --> SoftwareFactoryExecutionWorkflow
 
 ### 12.4 Tests d'intégration Docker Compose sur macOS
 
-- [ ] Démarrer une stack neuve et vérifier namespace, pollers, UI et readiness.
+- [x] Démarrer une stack neuve et vérifier namespace, pollers, UI et readiness. _(La stack Compose applique les
+  14 migrations Flyway avant admission, crée le namespace et ses quatre Search Attributes, active explicitement
+  le Build ID local après enregistrement des sept files, puis `make test-temporal-compose` contrôle l'UI
+  loopback, la readiness et les sept pollers. Validation macOS Docker Desktop exécutée avec succès.)_
 - [ ] Soumettre un ticket réel et vérifier son apparition dans Temporal UI.
 - [ ] Tuer puis recréer l'orchestrateur pendant chaque phase critique.
 - [ ] Tuer un worker pendant une activité avec heartbeat et vérifier la reprise.

@@ -14,7 +14,7 @@ CREATE TABLE arbitration_records (
     record_digest     char(64) NOT NULL,
     decided_at        timestamptz NOT NULL,
     FOREIGN KEY (task_id, attempt_id, source_commit)
-        REFERENCES tasks(task_id, attempt_id, source_commit),
+        REFERENCES workflow_runs(task_id, attempt_id, source_commit),
     UNIQUE (task_id, attempt_id, contradiction_id, record_digest)
 );
 

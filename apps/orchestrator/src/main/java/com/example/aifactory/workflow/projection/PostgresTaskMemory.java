@@ -21,13 +21,14 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.Duration;
+import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
 /** Transactional metadata projection whose complete payload is encrypted and retained by Evidence MCP. */
 @Repository
-public final class PostgresTaskMemory implements TaskMemory {
+public class PostgresTaskMemory implements TaskMemory {
     private static final String UNRESOLVED_COMMIT = "0".repeat(40);
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transactions;
@@ -68,8 +69,8 @@ public final class PostgresTaskMemory implements TaskMemory {
             jdbc.update("INSERT INTO task_admission_outbox(task_id, attempt_id, workflow_id, status, "
                             + "next_attempt_at, created_at, updated_at, version) "
                             + "VALUES (?, ?, ?, 'PENDING', ?, ?, ?, 0)",
-                    state.id, state.workflowAttemptId, workflowId(state), Instant.now(), state.createdAt,
-                    state.updatedAt);
+                    state.id, state.workflowAttemptId, workflowId(state), sqlTime(Instant.now()),
+                    sqlTime(state.createdAt), sqlTime(state.updatedAt));
         });
     }
 
@@ -87,11 +88,11 @@ public final class PostgresTaskMemory implements TaskMemory {
                                 + "SELECT ?, ?, ?, task_id, current_attempt_id, source_commit, 'RUNNING', "
                                 + "created_at, ?, 0 FROM tasks WHERE task_id = ? AND current_attempt_id = ?",
                         state.workflowRunId, workflowId(state), java.util.UUID.fromString(state.workflowRunId),
-                        Instant.now(), state.id, state.workflowAttemptId);
+                        sqlTime(Instant.now()), state.id, state.workflowAttemptId);
             }
             int updated = jdbc.update("UPDATE task_admission_outbox SET status = 'STARTED', updated_at = ?, "
                             + "version = version + 1 WHERE task_id = ? AND attempt_id = ? AND status = 'PENDING'",
-                    Instant.now(), state.id, state.workflowAttemptId);
+                    sqlTime(Instant.now()), state.id, state.workflowAttemptId);
             if (updated != 1) throw new IllegalStateException("Task admission intent could not be closed");
         });
     }
@@ -104,7 +105,7 @@ public final class PostgresTaskMemory implements TaskMemory {
                         + "WHERE o.status = 'PENDING' AND o.next_attempt_at <= ? ORDER BY o.created_at LIMIT ?",
                 (row, index) -> restore(row.getString(1), new ProjectionReference(
                         row.getString(2), row.getString(3), row.getString(4), row.getLong(5))),
-                Instant.now(), limit);
+                sqlTime(Instant.now()), limit);
     }
 
     @Override
@@ -121,7 +122,8 @@ public final class PostgresTaskMemory implements TaskMemory {
                             + "next_attempt_at = ?, updated_at = ?, version = version + 1 "
                             + "WHERE task_id = ? AND attempt_id = ? AND status = 'PENDING'",
                     retry, errorCode.substring(0, Math.min(errorCode.length(), 128)),
-                    Instant.now().plusSeconds(delaySeconds), Instant.now(), state.id, state.workflowAttemptId);
+                    sqlTime(Instant.now().plusSeconds(delaySeconds)), sqlTime(Instant.now()), state.id,
+                    state.workflowAttemptId);
         });
     }
 
@@ -135,10 +137,11 @@ public final class PostgresTaskMemory implements TaskMemory {
             jdbc.update("UPDATE workflow_runs SET source_commit = ?, status = ?, updated_at = ?, "
                             + "completed_at = ?, version = version + 1 WHERE workflow_run_id = ?",
                     state.sourceCommit == null ? UNRESOLVED_COMMIT : state.sourceCommit, state.status.name(),
-                    Instant.now(), terminal(state.status) ? Instant.now() : null, state.workflowRunId);
+                    sqlTime(Instant.now()), terminal(state.status) ? sqlTime(Instant.now()) : null,
+                    state.workflowRunId);
             jdbc.update("INSERT INTO task_projection_events(task_id, attempt_id, event_id, snapshot_digest, "
                             + "projected_at) VALUES (?, ?, ?, ?, ?)",
-                    state.id, state.workflowAttemptId, eventId, snapshot.digest(), Instant.now());
+                    state.id, state.workflowAttemptId, eventId, snapshot.digest(), sqlTime(Instant.now()));
             Long position = jdbc.queryForObject("SELECT projection_position FROM task_projection_events "
                             + "WHERE task_id = ? AND attempt_id = ? AND event_id = ?",
                     Long.class, state.id, state.workflowAttemptId, eventId);
@@ -198,10 +201,10 @@ public final class PostgresTaskMemory implements TaskMemory {
                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                         state.id, state.ticketNumber, ScmDeliveryGateway.repositoryId(state.request.repositoryUrl()),
                         state.workflowAttemptId, sourceCommit, requirementDigest, state.status.name(),
-                        state.createdAt, state.updatedAt);
+                        sqlTime(state.createdAt), sqlTime(state.updatedAt));
                 jdbc.update("INSERT INTO task_projection_snapshots(task_id, attempt_id, snapshot_uri, "
                                 + "snapshot_digest, projected_at, version) VALUES (?, ?, ?, ?, ?, 0)",
-                        state.id, state.workflowAttemptId, snapshot.uri(), snapshot.digest(), Instant.now());
+                        state.id, state.workflowAttemptId, snapshot.uri(), snapshot.digest(), sqlTime(Instant.now()));
                 state.projectionVersion = 0;
                 return;
             } catch (DuplicateKeyException concurrentInsert) {
@@ -214,11 +217,12 @@ public final class PostgresTaskMemory implements TaskMemory {
         }
         jdbc.update("UPDATE tasks SET current_attempt_id = ?, source_commit = ?, status = ?, updated_at = ?, "
                         + "version = version + 1 WHERE task_id = ?",
-                state.workflowAttemptId, sourceCommit, state.status.name(), state.updatedAt, state.id);
+                state.workflowAttemptId, sourceCommit, state.status.name(), sqlTime(state.updatedAt), state.id);
         int updated = jdbc.update("UPDATE task_projection_snapshots SET attempt_id = ?, snapshot_uri = ?, "
                         + "snapshot_digest = ?, projected_at = ?, version = version + 1 "
                         + "WHERE task_id = ? AND version = ?",
-                state.workflowAttemptId, snapshot.uri(), snapshot.digest(), Instant.now(), state.id, storedVersion);
+                state.workflowAttemptId, snapshot.uri(), snapshot.digest(), sqlTime(Instant.now()), state.id,
+                storedVersion);
         if (updated != 1) throw new OptimisticProjectionLockException(state.id, storedVersion, null);
         state.projectionVersion = storedVersion + 1;
     }
@@ -362,6 +366,10 @@ public final class PostgresTaskMemory implements TaskMemory {
         } catch (Exception impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         }
+    }
+
+    private static java.time.OffsetDateTime sqlTime(Instant value) {
+        return value == null ? null : value.atOffset(ZoneOffset.UTC);
     }
 
     private static String workflowId(TaskState state) {

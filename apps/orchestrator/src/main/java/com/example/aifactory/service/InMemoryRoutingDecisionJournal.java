@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentMap;
 
 /** Local append-only adapter; a durable TaskMemory projection can replace it without changing routing. */
 @Repository
-public final class InMemoryRoutingDecisionJournal implements RoutingDecisionJournal {
+public class InMemoryRoutingDecisionJournal implements RoutingDecisionJournal {
     private final ConcurrentMap<String, RoutingDecision> decisions = new ConcurrentHashMap<>();
 
     @Override

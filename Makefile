@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init build up all bootstrap bootstrap-signoz tokens demo test temporal-replay test-temporal-compose test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -33,6 +33,7 @@ help:
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
 	@echo -e "  $(CYAN)make temporal-replay$(NC) - replay versioned histories before worker image build"
+	@echo -e "  $(CYAN)make test-temporal-compose$(NC) - verify local namespace, UI, readiness and all pollers"
 	@echo -e "  $(CYAN)make test-sandbox-runtime$(NC) - verify the static Compose sandbox runner"
 	@echo -e "  $(CYAN)make test-sandbox-network$(NC) - verify Compose runner network isolation"
 	@echo -e "  $(CYAN)make mcp-shadow-campaign$(NC) - validate the 20-task campaign (set CAMPAIGN_ARGS=--execute to run)"
@@ -133,6 +134,10 @@ temporal-replay:
 	@echo -e "$(BLUE)Replaying versioned Temporal histories...$(NC)"
 	@if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=WorkflowDeterminismArchitectureTest; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=WorkflowDeterminismArchitectureTest; fi
 	@echo -e "$(GREEN)Temporal histories are replay-compatible.$(NC)"
+
+test-temporal-compose:
+	$(log-target)
+	@./scripts/test-temporal-compose-readiness.sh
 
 test-sandbox-runtime:
 	$(log-target)

@@ -7,6 +7,7 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.common.WorkflowExecutionHistory;
 import io.temporal.common.converter.DataConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -27,6 +28,7 @@ public final class TemporalProjectionHistorySource implements ProjectionHistoryS
     private final WorkflowClient client;
     private final DataConverter converter;
 
+    @Autowired
     public TemporalProjectionHistorySource(WorkflowClient client) {
         this(client, client.getOptions().getDataConverter());
     }

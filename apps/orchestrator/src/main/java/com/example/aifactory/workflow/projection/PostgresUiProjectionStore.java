@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.Set;
@@ -15,7 +16,7 @@ import java.util.UUID;
 
 /** Atomically replaces the metadata-only relational projection after external authorities were verified. */
 @Repository
-public final class PostgresUiProjectionStore implements UiProjectionStore {
+public class PostgresUiProjectionStore implements UiProjectionStore {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transactions;
 
@@ -43,23 +44,25 @@ public final class PostgresUiProjectionStore implements UiProjectionStore {
                             + "VALUES (?, 'AF-' || to_char(nextval('task_ticket_number_seq'), 'FM0000'), "
                             + "?, ?, ?, ?, ?, ?, ?, 0)",
                     task.taskId(), task.repositoryId(), task.attemptId(), task.sourceCommit(),
-                    task.requirementDigest(), task.status(), task.createdAt(), task.updatedAt());
+                    task.requirementDigest(), task.status(), sqlTime(task.createdAt()), sqlTime(task.updatedAt()));
         } else {
             jdbc.update("UPDATE tasks SET repository_id = ?, current_attempt_id = ?, source_commit = ?, "
                             + "requirement_digest = ?, status = ?, updated_at = ?, version = version + 1 "
                             + "WHERE task_id = ?", task.repositoryId(), task.attemptId(), task.sourceCommit(),
-                    task.requirementDigest(), task.status(), task.updatedAt(), task.taskId());
+                    task.requirementDigest(), task.status(), sqlTime(task.updatedAt()), task.taskId());
         }
         if (count("workflow_runs", "workflow_run_id", run.workflowRunId()) == 0) {
             jdbc.update("INSERT INTO workflow_runs(workflow_run_id, workflow_id, temporal_run_id, task_id, "
                             + "attempt_id, source_commit, status, started_at, completed_at, updated_at, version) "
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                     run.workflowRunId(), run.workflowId(), UUID.fromString(run.temporalRunId()), run.taskId(),
-                    run.attemptId(), run.sourceCommit(), run.status(), run.startedAt(), run.completedAt(), Instant.now());
+                    run.attemptId(), run.sourceCommit(), run.status(), sqlTime(run.startedAt()),
+                    sqlTime(run.completedAt()), sqlTime(Instant.now()));
         } else {
             jdbc.update("UPDATE workflow_runs SET source_commit = ?, status = ?, completed_at = ?, updated_at = ?, "
                             + "version = version + 1 WHERE workflow_run_id = ?",
-                    run.sourceCommit(), run.status(), run.completedAt(), Instant.now(), run.workflowRunId());
+                    run.sourceCommit(), run.status(), sqlTime(run.completedAt()), sqlTime(Instant.now()),
+                    run.workflowRunId());
         }
 
         Set<String> delegationIds = new HashSet<>();
@@ -73,7 +76,7 @@ public final class PostgresUiProjectionStore implements UiProjectionStore {
                     value.delegationId(), parent, value.workflowRunId(), value.taskId(), value.attemptId(),
                     value.sourceCommit(), value.role(), sha256(value.role() + ':' + value.delegationId()),
                     value.budgetTokens(), value.budgetCostMicros(), value.budgetTurns(), value.status(),
-                    run.startedAt(), run.completedAt(), Instant.now());
+                    sqlTime(run.startedAt()), sqlTime(run.completedAt()), sqlTime(Instant.now()));
         }
         for (UiProjectionSnapshot.Evidence value : snapshot.evidence()) {
             Instant now = Instant.now();
@@ -83,14 +86,14 @@ public final class PostgresUiProjectionStore implements UiProjectionStore {
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'EVIDENCE_MCP', 'application/octet-stream', ?, ?, ?, 0, "
                             + "'VERIFIED_EVIDENCE')",
                     value.artifactId(), value.taskId(), value.attemptId(), value.sourceCommit(), value.type(),
-                    value.uri(), value.digest(), value.status(), value.classification(), value.sizeBytes(), now,
-                    now.plus(Duration.ofDays(30)));
+                    value.uri(), value.digest(), value.status(), value.classification(), value.sizeBytes(),
+                    sqlTime(now), sqlTime(now.plus(Duration.ofDays(30))));
             jdbc.update("INSERT INTO evidence_refs(evidence_ref_id, artifact_id, workflow_run_id, task_id, "
                             + "attempt_id, source_commit, purpose, verification, verified_at, created_at, version, "
                             + "information_kind) VALUES (?, ?, ?, ?, ?, ?, 'PROJECTION_REBUILD', 'VERIFIED', ?, ?, 0, "
                             + "'VERIFIED_EVIDENCE')",
                     value.evidenceRefId(), value.artifactId(), value.workflowRunId(), value.taskId(),
-                    value.attemptId(), value.sourceCommit(), now, now);
+                    value.attemptId(), value.sourceCommit(), sqlTime(now), sqlTime(now));
         }
     }
 
@@ -132,5 +135,9 @@ public final class PostgresUiProjectionStore implements UiProjectionStore {
         } catch (Exception impossible) {
             throw new IllegalStateException(impossible);
         }
+    }
+
+    private static java.time.OffsetDateTime sqlTime(Instant value) {
+        return value == null ? null : value.atOffset(ZoneOffset.UTC);
     }
 }
