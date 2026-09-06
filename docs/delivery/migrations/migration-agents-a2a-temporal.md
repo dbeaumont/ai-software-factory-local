@@ -437,8 +437,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   transitions manquantes dans l'ordre puis réarmer une attente bornée. _(`awaitUntilTerminal` interroge `GetTask`
   au timeout, refuse tout trou de séquence, rejoue les transitions ordonnées puis réarme le même intervalle tant
   que la tâche n'est pas terminale ; le serveur expose sa version de projection.)_
-- [ ] **A2A-086 — Propager l'annulation.** Envoyer `CancelTask`, attendre une confirmation bornée et préserver les
+- [x] **A2A-086 — Propager l'annulation.** Envoyer `CancelTask`, attendre une confirmation bornée et préserver les
   preuves ; si l'agent est injoignable, conserver un état de réconciliation explicite.
+  _(`A2aCancellationCoordinator` borne l'appel et trois cycles de confirmation signal/poll, conserve toutes les
+  URI Evidence et retourne explicitement `RECONCILIATION_REQUIRED` lorsque l'agent reste injoignable.)_
 - [ ] **A2A-087 — Reprendre les demandes de complément.** Mapper `INPUT_REQUIRED` vers un signal ou une gate
   métier autorisée, puis envoyer un nouveau message sur le même `taskId/contextId`.
 - [ ] **A2A-088 — Gérer `AUTH_REQUIRED`.** Ne jamais transmettre de secret dans l'historique ; obtenir la décision
