@@ -549,6 +549,7 @@ services:
         multiagent-policies: ../resources/multiagents/policies
         multiagent-database: ../resources/multiagents/database
         agent-resources: ../resources/agents
+        a2a-resources: ../resources/a2a
       args:
         MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL}
       secrets:
@@ -654,6 +655,8 @@ services:
       AI_FACTORY_TEMPORAL_PRIVATE_KEY_PATH: ${AI_FACTORY_TEMPORAL_PRIVATE_KEY_PATH:-}
       AI_FACTORY_TEMPORAL_SERVER_NAME: ${AI_FACTORY_TEMPORAL_SERVER_NAME:-}
       AI_FACTORY_TEMPORAL_API_KEY_FILE: ${AI_FACTORY_TEMPORAL_API_KEY_FILE:-}
+      AI_FACTORY_A2A_ENABLED: ${AI_FACTORY_A2A_ENABLED:-false}
+      AI_FACTORY_A2A_READINESS_TIMEOUT: ${AI_FACTORY_A2A_READINESS_TIMEOUT:-3s}
       AI_FACTORY_A2A_REGISTRY_PROFILE: ${AI_FACTORY_A2A_REGISTRY_PROFILE:-compose}
       AI_FACTORY_A2A_CARD_CACHE_MAX_TTL: ${AI_FACTORY_A2A_CARD_CACHE_MAX_TTL:-5m}
       AI_FACTORY_A2A_CARD_CACHE_STALE_ON_OUTAGE: ${AI_FACTORY_A2A_CARD_CACHE_STALE_ON_OUTAGE:-2m}

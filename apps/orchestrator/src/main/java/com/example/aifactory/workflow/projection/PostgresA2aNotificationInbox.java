@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Repository
-public final class PostgresA2aNotificationInbox implements A2aNotificationInbox {
+public class PostgresA2aNotificationInbox implements A2aNotificationInbox {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transactions;
 

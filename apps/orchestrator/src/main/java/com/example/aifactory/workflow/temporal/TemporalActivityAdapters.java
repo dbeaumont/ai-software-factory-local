@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.Map;
 public final class TemporalActivityAdapters {
     private final Map<String, Object[]> registrations;
 
+    @Autowired
     public TemporalActivityAdapters(PatchIntegrationActivities patchIntegration,
                                     SourceResolutionActivities sourceResolution,
                                     PipelineExecutionActivities pipeline,

@@ -674,8 +674,10 @@ Le rôle `workflow` reste le contrôle Temporal et ne devient pas un agent A2A.
   perdu, divergence, certificat expiré, saturation et rollback. _(Huit procédures fail-closed couvrent diagnostic,
   confinement, rétablissement, vérification et escalade ; chaque alerte A2A pointe vers une procédure locale
   contrôlée automatiquement. Preuve : `docs/evidence/a2a/A2A-148-RUNBOOKS.md`.)_
-- [ ] **A2A-149 — Rendre la readiness globale explicable.** Exposer quels rôles, cartes, task queues ou
-  dépendances empêchent les nouvelles admissions.
+- [x] **A2A-149 — Rendre la readiness globale explicable.** Exposer quels rôles, cartes, task queues ou
+  dépendances empêchent les nouvelles admissions. _(Le composant `a2aFleet` agrège les 14 rôles, cartes, pollers
+  workflow/activity et dépendances obligatoires, suspend les admissions en présence d'un bloqueur et publie des
+  détails sanitizés ainsi que trois jauges OTLP. Preuve : `docs/evidence/a2a/A2A-149-READINESS.md`.)_
 
 ### Critères de sortie du lot 8
 

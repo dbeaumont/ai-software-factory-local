@@ -1,6 +1,7 @@
 package com.example.aifactory.a2a;
 
 import com.example.aifactory.config.A2aNotificationProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +31,7 @@ public final class A2aNotificationController {
     private final ObjectMapper mapper;
     private final SecretProvider secretProvider;
 
+    @Autowired
     public A2aNotificationController(A2aNotificationProperties properties,
                                      A2aNotificationReceiver receiver, ObjectMapper mapper) {
         this(properties, receiver, mapper, () -> loadSecret(properties));

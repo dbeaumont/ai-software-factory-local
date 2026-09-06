@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public final class PostgresA2aTaskAssociationStore implements A2aTaskAssociationStore {
+public class PostgresA2aTaskAssociationStore implements A2aTaskAssociationStore {
     private final JdbcTemplate jdbc;
 
     public PostgresA2aTaskAssociationStore(JdbcTemplate jdbc) { this.jdbc = jdbc; }

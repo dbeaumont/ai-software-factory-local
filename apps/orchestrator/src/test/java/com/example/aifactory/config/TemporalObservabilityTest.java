@@ -40,8 +40,9 @@ class TemporalObservabilityTest {
         Map<String, Object> health = (Map<String, Object>) endpoint.get("health");
         Map<String, Object> groups = (Map<String, Object>) health.get("group");
         Map<String, Object> readiness = (Map<String, Object>) groups.get("readiness");
+        assertThat(readiness).containsEntry("show-details", "always");
         assertThat((List<String>) readiness.get("include"))
-                .containsExactlyInAnyOrder("readinessState", "temporalEngine");
+                .containsExactlyInAnyOrder("readinessState", "temporalEngine", "a2aFleet");
 
         String collector = Files.readString(root.resolve("infrastructure/observability/otel-collector.yaml"));
         assertThat(collector).contains("prometheus/temporal:", "targets: [temporal:8000]");

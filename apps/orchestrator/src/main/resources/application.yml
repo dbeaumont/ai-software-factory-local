@@ -71,9 +71,11 @@ management:
         enabled: true
       group:
         readiness:
+          show-details: always
           include:
             - readinessState
             - temporalEngine
+            - a2aFleet
   tracing:
     sampling:
       probability: ${AI_FACTORY_OTEL_TRACES_SAMPLING_PROBABILITY:1.0}
@@ -137,6 +139,9 @@ management:
 
 ai-factory:
   a2a:
+    fleet:
+      enabled: ${AI_FACTORY_A2A_ENABLED:false}
+      readiness-timeout: ${AI_FACTORY_A2A_READINESS_TIMEOUT:3s}
     notifications:
       enabled: ${AI_FACTORY_A2A_PUSH_RECEIVER_ENABLED:false}
       hmac-secret-file: ${AI_FACTORY_A2A_PUSH_HMAC_SECRET_FILE:}
