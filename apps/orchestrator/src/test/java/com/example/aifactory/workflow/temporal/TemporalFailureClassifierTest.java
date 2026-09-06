@@ -1,12 +1,14 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.service.McpInvocationException;
+import io.temporal.client.ActivityWorkerShutdownException;
 import io.temporal.failure.ApplicationFailure;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TemporalFailureClassifierTest {
     @Test
@@ -37,6 +39,14 @@ class TemporalFailureClassifierTest {
         assertThat(contract.getMessage()).doesNotContain("unsafe payload detail");
         assertThat(dependency.getType()).isEqualTo("DEPENDENCY_UNAVAILABLE");
         assertThat(dependency.isNonRetryable()).isFalse();
+    }
+
+    @Test
+    void propagatesWorkerShutdownWithoutConsumingAnActivityAttempt() {
+        ActivityWorkerShutdownException shutdown = new ActivityWorkerShutdownException();
+
+        assertThatThrownBy(() -> TemporalFailureClassifier.toApplicationFailure(shutdown))
+                .isSameAs(shutdown);
     }
 
     private static void assertClassification(Throwable failure, TemporalFailureClassifier.Type type,

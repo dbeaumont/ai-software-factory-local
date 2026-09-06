@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.service.McpInvocationException;
+import io.temporal.client.ActivityWorkerShutdownException;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.failure.TimeoutFailure;
 
@@ -49,6 +50,7 @@ public final class TemporalFailureClassifier {
     }
 
     public static ApplicationFailure toApplicationFailure(Throwable failure) {
+        if (failure instanceof ActivityWorkerShutdownException shutdown) throw shutdown;
         if (failure instanceof ApplicationFailure application) return application;
         Classification classification = classify(failure);
         String message = "Activity failed: " + classification.type().name().toLowerCase(Locale.ROOT);
