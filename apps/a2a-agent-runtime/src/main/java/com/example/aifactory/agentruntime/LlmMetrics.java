@@ -32,13 +32,13 @@ final class LlmMetrics {
         }
         Counter.builder(REQUESTS).tags(with("outcome", outcome)).register(registry).increment();
         Timer.builder(DURATION).publishPercentileHistogram().tags(identity).register(registry).record(duration);
-        if (turn == null) return;
-        increment(TOKENS, turn.promptTokens(), "direction", "input");
-        increment(TOKENS, turn.completionTokens(), "direction", "output");
         Optional<Cost> cost = cost(response);
         Counter.builder(COST_AVAILABILITY).tags(with("status", cost.isPresent() ? "available" : "unavailable"))
                 .register(registry).increment();
         cost.ifPresent(value -> increment(COST, value.micros(), "currency", value.currency()));
+        if (turn == null) return;
+        increment(TOKENS, turn.promptTokens(), "direction", "input");
+        increment(TOKENS, turn.completionTokens(), "direction", "output");
     }
 
     private void increment(String name, long amount, String tag, String value) {
