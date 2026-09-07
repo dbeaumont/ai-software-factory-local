@@ -17,7 +17,8 @@ Le dashboard versionné cible les noms de métriques de ce plan : `ai_factory_ll
 - [x] Ne pas transformer l'absence de coût fournisseur en zéro ; documenter la source et la version de tarification si un coût déterministe est calculé.
 - [x] Instrumenter les erreurs de transport, refus, filtrages et réponses tronquées afin que leur cause soit visible dans le libellé borné `outcome`.
 - [x] Ajouter des tests unitaires de succès, échec, délai dépassé, réponse sans usage et réponse sans coût pour vérifier compteurs, histogramme et absence de données sensibles.
-- [ ] Vérifier que l'export OTLP du runtime A2A atteint le collecteur et que les processeurs de redaction continuent à supprimer prompts, résultats et en-têtes d'authentification.
+- [x] Configurer explicitement l'export OTLP des métriques du runtime A2A vers le collecteur, avec une période de 15 secondes.
+- [ ] Vérifier en exécution que l'export OTLP du runtime A2A atteint le collecteur et que les processeurs de redaction continuent à supprimer prompts, résultats et en-têtes d'authentification.
 - [ ] Exécuter une tâche représentative, puis vérifier dans SigNoz les séries par `provider` et `model`, les traces corrélées et l'absence de contenu de conversation.
 - [ ] Réviser les seuils d'alerte après une période de référence ; ne pas définir de seuil de coût avant d'avoir une couverture de coût fiable.
 

@@ -18,6 +18,22 @@ server:
     trust-certificate: ${AI_FACTORY_A2A_TLS_TRUST_CERTIFICATE:}
 
 management:
+  tracing:
+    sampling:
+      probability: ${AI_FACTORY_OTEL_TRACES_SAMPLING_PROBABILITY:1.0}
+  opentelemetry:
+    enabled: ${AI_FACTORY_OTEL_ENABLED:true}
+    resource-attributes:
+      service.namespace: ai-software-factory
+      service.version: 0.1.0
+  otlp:
+    metrics:
+      export:
+        enabled: ${AI_FACTORY_OTEL_ENABLED:true}
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://otel-collector:4318/v1/metrics}
+        base-time-unit: seconds
+        step: 15s
+        batch-size: 1000
   endpoints:
     web:
       exposure:
