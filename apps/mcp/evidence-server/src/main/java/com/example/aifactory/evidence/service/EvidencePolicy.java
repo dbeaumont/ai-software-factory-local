@@ -27,6 +27,7 @@ public class EvidencePolicy {
             Map.entry("code-patch", new Rule("INTERNAL", 90)),
             Map.entry("evaluation", new Rule("INTERNAL", 180)), Map.entry("integration", new Rule("INTERNAL", 90)),
             Map.entry("metadata", new Rule("INTERNAL", 180)), Map.entry("tests", new Rule("INTERNAL", 90)),
+            Map.entry("tests-deterministic", new Rule("INTERNAL", 90)),
             Map.entry("quality", new Rule("INTERNAL", 180)),
             Map.entry("security", new Rule("CONFIDENTIAL", 365)),
             Map.entry("sonar", new Rule("INTERNAL", 180)), Map.entry("sbom", new Rule("INTERNAL", 365)),

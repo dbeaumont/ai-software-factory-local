@@ -806,6 +806,8 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   `docs/evidence/a2a/A2A-185-DIRECT-CALL-CUTOVER.md`.)_
 - [ ] **A2A-186 — Exécuter le smoke test de production.** Vérifier Supervisor, un chemin hiérarchique complet,
   revue indépendante, gate humaine, annulation et récupération des preuves.
+  - [x] Aligner la politique Evidence sur l'artefact de tests pré-agent `tests-deterministic` et couvrir son
+    acceptation par un test de non-régression.
 - [ ] **A2A-187 — Rouvrir les admissions.** Autoriser les nouveaux tickets uniquement lorsque toutes les cartes,
   files Temporal, runtimes et dépendances obligatoires sont prêtes.
 - [ ] **A2A-188 — Surveiller la fenêtre de stabilisation.** Contrôler SLO, backlog, divergences, notifications,

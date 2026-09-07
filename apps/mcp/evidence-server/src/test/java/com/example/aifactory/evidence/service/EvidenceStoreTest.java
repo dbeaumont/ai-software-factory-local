@@ -22,7 +22,7 @@ class EvidenceStoreTest {
 
         for (String type : java.util.List.of(
                 "plan", "patch", "patch-candidate", "patch-validation-error", "code-patch",
-                "metadata", "tests", "quality", "security", "sbom", "review",
+                "metadata", "tests", "tests-deterministic", "quality", "security", "sbom", "review",
                 "a2a-input-plan", "a2a-input-generate-patch", "a2a-input-repair-patch",
                 "a2a-input-assess-tests", "a2a-input-review")) {
             assertDoesNotThrow(() -> policy.requireWrite(type, "workflow"), type);
