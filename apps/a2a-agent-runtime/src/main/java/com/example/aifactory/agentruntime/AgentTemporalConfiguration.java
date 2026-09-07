@@ -112,19 +112,8 @@ class AgentTemporalConfiguration {
 
     @Bean
     @ConditionalOnProperty(name = "ai-factory.agent-runtime.temporal.enabled", havingValue = "true")
-    SmartLifecycle a2aRecoveryLifecycle(A2aRecoveryCoordinator coordinator) {
-        return new SmartLifecycle() {
-            private volatile boolean running;
-            @Override public void start() {
-                running = true;
-                Thread.startVirtualThread(() -> coordinator.reconcile().whenComplete((report, failure) -> {
-                    if (failure != null) running = false;
-                }));
-            }
-            @Override public void stop() { running = false; }
-            @Override public boolean isRunning() { return running; }
-            @Override public int getPhase() { return 100; }
-        };
+    SmartLifecycle a2aRecoveryLifecycle(A2aRecoveryCoordinator coordinator, AgentTemporalProperties properties) {
+        return new A2aRecoveryLifecycle(coordinator, properties.recoveryInterval());
     }
 
     @Bean

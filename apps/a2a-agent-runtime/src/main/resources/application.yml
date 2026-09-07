@@ -73,6 +73,7 @@ ai-factory:
       namespace: ${AI_FACTORY_TEMPORAL_NAMESPACE:ai-factory}
       deployment-name: ${AI_FACTORY_A2A_TEMPORAL_DEPLOYMENT:ai-factory-a2a-agents}
       build-id: ${AI_FACTORY_A2A_TEMPORAL_BUILD_ID:dev}
+      recovery-interval: ${AI_FACTORY_A2A_RECOVERY_INTERVAL:15s}
     concurrency:
       workflow-pollers: ${AI_FACTORY_A2A_WORKFLOW_POLLERS:2}
       activity-pollers: ${AI_FACTORY_A2A_ACTIVITY_POLLERS:2}

@@ -819,6 +819,9 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
     contrats dynamique dans le vérificateur.
 - [ ] **A2A-187 — Rouvrir les admissions.** Autoriser les nouveaux tickets uniquement lorsque toutes les cartes,
   files Temporal, runtimes et dépendances obligatoires sont prêtes.
+  - [x] Réconcilier périodiquement l'outbox de notifications afin qu'un démarrage des agents avant le récepteur
+    ne laisse pas de callbacks durablement en attente.
+  - [x] Distinguer le job d'activation Temporal des quatorze runtimes dans le validateur de topologie Compose.
 - [ ] **A2A-188 — Surveiller la fenêtre de stabilisation.** Contrôler SLO, backlog, divergences, notifications,
   coûts, erreurs et saturation pendant la durée approuvée.
 - [ ] **A2A-189 — Faire approuver la bascule.** Obtenir une décision humaine explicite liée au commit, aux images,

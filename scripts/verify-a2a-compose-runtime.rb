@@ -14,7 +14,7 @@ path = ARGV.fetch(0, "infrastructure/a2a/compose-agents.yaml")
 document = YAML.safe_load(File.read(path), aliases: true)
 all_services = document.fetch("services")
 services = all_services.select do |name, _service|
-  name.start_with?("a2a-") && !%w[a2a-task-db a2a-identity].include?(name)
+  name.start_with?("a2a-") && !%w[a2a-task-db a2a-identity a2a-worker-activation].include?(name)
 end
 roles = %w[
   supervisor architecture-agent impact-analysis dependencies-contracts code-agent developer patch-repair

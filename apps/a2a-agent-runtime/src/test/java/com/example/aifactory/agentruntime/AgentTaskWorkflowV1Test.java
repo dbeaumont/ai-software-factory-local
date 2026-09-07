@@ -18,7 +18,7 @@ class AgentTaskWorkflowV1Test {
     void startsExactlyOneDeterministicPinnedWorkflowOnTheRoleQueue() throws Exception {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             AgentTemporalProperties properties = new AgentTemporalProperties(
-                    true, "unused", "default", "a2a-agents", "build-1");
+                    true, "unused", "default", "a2a-agents", "build-1", java.time.Duration.ofSeconds(15));
             String queue = properties.taskQueue("developer");
             Worker worker = environment.newWorker(queue);
             worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
