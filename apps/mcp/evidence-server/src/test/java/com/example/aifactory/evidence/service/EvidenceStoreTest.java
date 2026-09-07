@@ -46,6 +46,18 @@ class EvidenceStoreTest {
     }
 
     @Test
+    void restartRecognizesHyphenatedEvidenceTypes(@TempDir Path root) throws Exception {
+        EvidenceProperties properties = new EvidenceProperties(root, 1024);
+        byte[] content = "a2a input".getBytes(StandardCharsets.UTF_8);
+        String digest = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        new EvidenceStore(properties, new ObjectMapper(), new EvidencePolicy()).store(
+                "task-1", "attempt-1", "a2a-input-plan", "application/json",
+                Base64.getEncoder().encodeToString(content), digest, "workflow");
+
+        assertDoesNotThrow(() -> new EvidenceStore(properties, new ObjectMapper(), new EvidencePolicy()));
+    }
+
+    @Test
     void verifiesDigestAndKeepsIdempotentImmutableArtifact(@TempDir Path root) throws Exception {
         EvidenceStore store = new EvidenceStore(new EvidenceProperties(root, 1024), new ObjectMapper(), new EvidencePolicy());
         byte[] content = "proof".getBytes(StandardCharsets.UTF_8);

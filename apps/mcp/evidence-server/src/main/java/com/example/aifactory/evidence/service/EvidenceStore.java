@@ -194,9 +194,12 @@ public class EvidenceStore {
             for (Path file : files.filter(Files::isRegularFile).toList()) {
                 if (file.startsWith(root.resolve("audit")) || file.startsWith(root.resolve("legal-holds"))) continue;
                 String name = file.getFileName().toString();
-                int separator = name.indexOf('-');
-                if (separator < 1) continue;
-                String type = name.startsWith("manifest-") ? "manifest" : name.substring(0, separator);
+                java.util.regex.Matcher artifact = java.util.regex.Pattern
+                        .compile("^(.+)-[0-9a-f]{64}\\.bin$").matcher(name);
+                String type;
+                if (name.matches("^manifest-[0-9a-f]{64}\\.json$")) type = "manifest";
+                else if (artifact.matches()) type = artifact.group(1);
+                else continue;
                 EvidencePolicy.Rule rule = policy.require(type);
                 Path relative = root.relativize(file);
                 if (relative.getNameCount() < 3 || hasActiveLegalHold(
