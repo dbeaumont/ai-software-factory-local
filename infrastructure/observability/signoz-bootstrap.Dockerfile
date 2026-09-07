@@ -1,6 +1,6 @@
 FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1
 
-RUN apk add --no-cache bash curl jq
+RUN apk add --no-cache bash curl jq openssl
 
 WORKDIR /opt/ai-factory
 COPY scripts/bootstrap-signoz.sh scripts/bootstrap-signoz.sh
