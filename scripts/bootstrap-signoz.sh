@@ -10,6 +10,25 @@ SIGNOZ_BASE_URL=${SIGNOZ_BASE_URL:-http://127.0.0.1:${SIGNOZ_PORT:-3301}}
 SIGNOZ_ROOT_EMAIL=${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}
 : "${SIGNOZ_ROOT_PASSWORD:?SIGNOZ_ROOT_PASSWORD must be initialized by make init}"
 
+set_env() {
+  local key="$1" value="$2"
+  python3 - "$key" "$value" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path('.env')
+key, value = sys.argv[1:]
+lines = path.read_text().splitlines() if path.exists() else []
+for index, line in enumerate(lines):
+    if line.startswith(f"{key}="):
+        lines[index] = f"{key}={value}"
+        break
+else:
+    lines.append(f"{key}={value}")
+path.write_text("\n".join(lines) + "\n")
+PY
+}
+
 for attempt in {1..90}; do
   if curl -fsS "$SIGNOZ_BASE_URL/api/v1/health" >/dev/null; then
     break
@@ -50,6 +69,28 @@ cleanup() {
 trap cleanup EXIT
 
 auth=(-H "Authorization: Bearer $token")
+
+NEXT_SIGNOZ_PASSWORD=$(openssl rand -hex 32)
+password_payload=$(jq -nc --arg old "$SIGNOZ_ROOT_PASSWORD" --arg new "$NEXT_SIGNOZ_PASSWORD" \
+  '{old_password:$old,new_password:$new}')
+password_status=$(curl -sS -o /tmp/signoz-password-rotation.json -w '%{http_code}' \
+  -X PUT "$SIGNOZ_BASE_URL/api/v2/users/me/factor_password" "${auth[@]}" \
+  -H 'Content-Type: application/json' --data "$password_payload")
+if [ "$password_status" != "204" ]; then
+  echo "SigNoz root password rotation failed with HTTP $password_status" >&2
+  cat /tmp/signoz-password-rotation.json >&2
+  exit 1
+fi
+set_env "SIGNOZ_ROOT_PASSWORD" "$NEXT_SIGNOZ_PASSWORD"
+SIGNOZ_ROOT_PASSWORD="$NEXT_SIGNOZ_PASSWORD"
+chmod 600 .env
+login_payload=$(jq -nc --arg email "$SIGNOZ_ROOT_EMAIL" --arg password "$SIGNOZ_ROOT_PASSWORD" \
+  --arg orgId "$org_id" '{email:$email,password:$password,orgId:$orgId}')
+session=$(curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/sessions/email_password" \
+  -H 'Content-Type: application/json' --data "$login_payload")
+token=$(printf '%s' "$session" | jq -er '.data.accessToken')
+auth=(-H "Authorization: Bearer $token")
+echo "Rotated SigNoz root password and saved it to .env"
 
 # A valid session can be issued while the authenticated API modules are still
 # being initialized. Wait for every API used below so a fresh Compose startup
