@@ -18,6 +18,11 @@ public class EvidencePolicy {
             Map.entry("plan", new Rule("INTERNAL", 90)), Map.entry("patch", new Rule("INTERNAL", 90)),
             Map.entry("patch-candidate", new Rule("INTERNAL", 90)),
             Map.entry("patch-validation-error", new Rule("INTERNAL", 90)),
+            Map.entry("a2a-input-plan", new Rule("INTERNAL", 90)),
+            Map.entry("a2a-input-generate-patch", new Rule("INTERNAL", 90)),
+            Map.entry("a2a-input-repair-patch", new Rule("INTERNAL", 90)),
+            Map.entry("a2a-input-assess-tests", new Rule("INTERNAL", 90)),
+            Map.entry("a2a-input-review", new Rule("INTERNAL", 90)),
             Map.entry("agent-result", new Rule("INTERNAL", 180)),
             Map.entry("code-patch", new Rule("INTERNAL", 90)),
             Map.entry("evaluation", new Rule("INTERNAL", 180)), Map.entry("integration", new Rule("INTERNAL", 90)),
@@ -53,6 +58,7 @@ public class EvidencePolicy {
     public Rule requireRead(String type, String actor, String purpose) {
         Rule rule = require(type);
         boolean workflowInternalPurpose = "workflow".equals(actor) && ("repair-patch".equals(purpose)
+                || "pipeline-a2a-result".equals(purpose)
                 || (purpose != null && purpose.matches("apply-patch-integration:[0-9a-f]{64}")));
         boolean agentExecutionInput = AGENT_ROLES.contains(actor) && "agent-execution-input".equals(purpose);
         if (!("workflow".equals(actor) || "reviewer".equals(actor) || "independent-reviewer".equals(actor)

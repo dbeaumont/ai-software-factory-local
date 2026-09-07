@@ -22,12 +22,15 @@ class EvidenceStoreTest {
 
         for (String type : java.util.List.of(
                 "plan", "patch", "patch-candidate", "patch-validation-error", "code-patch",
-                "metadata", "tests", "quality", "security", "sbom", "review")) {
+                "metadata", "tests", "quality", "security", "sbom", "review",
+                "a2a-input-plan", "a2a-input-generate-patch", "a2a-input-repair-patch",
+                "a2a-input-assess-tests", "a2a-input-review")) {
             assertDoesNotThrow(() -> policy.requireWrite(type, "workflow"), type);
         }
         assertEquals("CONFIDENTIAL", policy.requireWrite("security", "workflow").classification());
         assertThrows(SecurityException.class, () -> policy.requireWrite("unregistered", "workflow"));
         assertDoesNotThrow(() -> policy.requireRead("patch-validation-error", "workflow", "repair-patch"));
+        assertDoesNotThrow(() -> policy.requireRead("agent-result", "workflow", "pipeline-a2a-result"));
         assertDoesNotThrow(() -> policy.requireRead(
                 "code-patch", "workflow", "apply-patch-integration:" + "a".repeat(64)));
         assertThrows(SecurityException.class, () -> policy.requireRead(
