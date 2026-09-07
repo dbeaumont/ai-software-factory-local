@@ -1,6 +1,6 @@
 # ADR-A2A-001 — A2A comme plan de données sous orchestration Temporal
 
-- Statut : accepté
+- Statut : accepté et implémenté
 - Date : 2026-09-06
 - Portée : communication et exécution des agents de l'AI Software Factory
 - Protocole cible : A2A 1.0
@@ -197,3 +197,16 @@ admissions restent fermées pendant le drainage ou la réconciliation.
 - [SDK Java officiel A2A](https://github.com/a2aproject/a2a-java)
 - [ADR-TEMP-001 — Temporal comme moteur unique](ADR-TEMP-001-bascule-franche-temporal.md)
 
+## Clôture de l'implémentation
+
+La bascule franche a été qualifiée puis approuvée le 2026-09-07 sur le candidat source
+`356eeebf5eab8c8d0c71884247a1789376a76d43`. La gate finale est
+`docs/qualification/a2a/GATE-A2A-180-CUTOVER.md`, l'approbation humaine est archivée dans
+`docs/evidence/a2a/A2A-189-CUTOVER-APPROVAL.md` et l'ensemble des preuves est scellé par
+`docs/evidence/a2a/MANIFEST.sha256`.
+
+Le dernier commit d'archivage précédant cette clôture est
+`86903bf5441882f0f0a2fa013bf6e837c35d2c72`. Les commits postérieurs au candidat qualifié ne modifient que les
+contrôles de gate, les preuves et la clôture documentaire. La décision demeure : Temporal est l'unique
+orchestrateur, A2A 1.0 l'unique frontière d'invocation d'agent et MCP l'unique frontière d'outil ; aucun fallback
+vers les appels Java directs n'est réintroduit.

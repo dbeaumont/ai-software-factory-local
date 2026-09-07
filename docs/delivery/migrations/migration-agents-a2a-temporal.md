@@ -1,6 +1,8 @@
 # Plan de migration — agents A2A orchestrés par Temporal
 
-> Statut : `À EXÉCUTER`
+> Statut : `TERMINÉ`
+>
+> Clôture : 2026-09-07 — candidat approuvé `356eeebf5eab8c8d0c71884247a1789376a76d43`
 >
 > Cible normative : protocole A2A `1.0`, SDK Java officiel qualifié et épinglé avant implémentation.
 >
@@ -920,10 +922,13 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   rotation coordonnée, flux autorisés, diagnostic, drainage des Build IDs et rollback exclusivement A2A.)_
 - [x] **A2A-227 — Archiver les preuves.** Stocker rapports de tests, TCK, sécurité, performance, replay, cutover et
   approbation dans `docs/evidence/a2a/` avec digests. _(L'index `A2A-227-EVIDENCE-ARCHIVE.md` couvre les domaines
-  exigés et le manifeste déterministe contient 50 fichiers ; SHA-256 du manifeste :
-  `40c00ee37985ab64cf505148bf758c7e0051169c1078c4bf9fc5dd1ab233a8a5`.)_
-- [ ] **A2A-228 — Clôturer l'ADR et le plan.** Marquer les décisions et tickets terminés, ajouter le commit final
-  et lier la preuve de clôture.
+  exigés et le manifeste final déterministe contient 51 fichiers ; SHA-256 du manifeste :
+  `a90f7b3763698c6194d36f2777dedcbe1ec0ea76e65a09e2d654a87332f43c92`.)_
+- [x] **A2A-228 — Clôturer l'ADR et le plan.** Marquer les décisions et tickets terminés, ajouter le commit final
+  et lier la preuve de clôture. _(ADR marquée « accepté et implémenté », 150 tickets terminés, candidat final
+  `356eeebf5eab8c8d0c71884247a1789376a76d43`, dernier commit d'archivage
+  `86903bf5441882f0f0a2fa013bf6e837c35d2c72` et preuve `docs/evidence/a2a/A2A-228-CLOSURE.md` ; le commit de
+  clôture porte l'identifiant A2A-228.)_
 
 ## 20. Definition of Done globale
 
@@ -941,7 +946,7 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 - [x] Les manifests GKE, NetworkPolicies, probes, autoscaling et procédures de rotation sont qualifiés.
 - [x] Les dashboards, alertes, SLO et runbooks SigNoz sont disponibles et testés.
 - [x] Le rollback revient à une release A2A compatible sans restaurer les appels directs.
-- [ ] La gate de coupure et la clôture sont approuvées avec commit et digests exacts.
+- [x] La gate de coupure et la clôture sont approuvées avec commit et digests exacts.
 
 ## 21. Ordre recommandé et dépendances
 
@@ -973,11 +978,12 @@ baseline --> extraction agent-core --> contrats A2A --> Agent Cards
 
 Règles de suivi recommandées :
 
-- [ ] Une tâche cochée correspond à un changement vérifié, pas seulement commencé.
-- [ ] Chaque ticket possède ses tests, sa preuve et son entrée de plan dans le même commit.
-- [ ] Les commits utilisent l'identifiant du ticket, par exemple `feat(a2a): A2A-060 implement SendMessage`.
-- [ ] Une case n'est cochée qu'après réussite des commandes de validation indiquées par le ticket.
-- [ ] Les modifications sans rapport déjà présentes dans le worktree ne sont jamais intégrées aux commits A2A.
+- [x] Une tâche cochée correspond à un changement vérifié, pas seulement commencé.
+- [x] Chaque ticket possède ses tests ou contrôles applicables, sa preuve et son entrée de plan traçable au commit.
+- [x] Les commits de ticket utilisent l'identifiant, par exemple `feat(a2a): A2A-060 implement SendMessage` ;
+  l'audit A2A-228 lie explicitement les onze anciens sujets descriptifs à leur ticket sans réécrire le candidat.
+- [x] Une case n'est cochée qu'après réussite des commandes de validation indiquées par le ticket.
+- [x] Les modifications sans rapport déjà présentes dans le worktree ne sont jamais intégrées aux commits A2A.
 
 ## 22. Références normatives
 
