@@ -7,7 +7,6 @@ import io.micrometer.core.instrument.Timer;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -19,11 +18,11 @@ final class LlmMetrics {
     private static final String COST = "ai_factory_llm_cost_micros_total";
     private static final String COST_AVAILABILITY = "ai_factory_llm_cost_availability_total";
     private final MeterRegistry registry;
-    private final List<String> identity;
+    private final String[] identity;
 
     LlmMetrics(MeterRegistry registry, LlmAdapterProperties properties) {
         this.registry = registry;
-        this.identity = List.of("provider", properties.provider(), "model", properties.model());
+        this.identity = new String[]{"provider", properties.provider(), "model", properties.model()};
     }
 
     void record(String outcome, Duration duration, AgentLoop.Turn turn, JsonNode response) {
@@ -45,11 +44,11 @@ final class LlmMetrics {
         if (amount > 0) Counter.builder(name).tags(with(tag, value)).register(registry).increment(amount);
     }
 
-    private List<String> with(String tag, String value) {
-        java.util.ArrayList<String> tags = new java.util.ArrayList<>(identity);
-        tags.add(tag);
-        tags.add(value);
-        return List.copyOf(tags);
+    private String[] with(String tag, String value) {
+        String[] tags = java.util.Arrays.copyOf(identity, identity.length + 2);
+        tags[identity.length] = tag;
+        tags[identity.length + 1] = value;
+        return tags;
     }
 
     static Optional<Cost> cost(JsonNode response) {
