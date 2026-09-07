@@ -918,8 +918,10 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 - [x] **A2A-226 — Documenter l'exploitation GKE.** Déploiement, scaling, rotation, NetworkPolicies, incidents,
   drainage et rollback. _(`docs/operations/A2A-GKE.md` fixe prérequis, ordre fail-closed, contrôles kubectl,
   rotation coordonnée, flux autorisés, diagnostic, drainage des Build IDs et rollback exclusivement A2A.)_
-- [ ] **A2A-227 — Archiver les preuves.** Stocker rapports de tests, TCK, sécurité, performance, replay, cutover et
-  approbation dans `docs/evidence/a2a/` avec digests.
+- [x] **A2A-227 — Archiver les preuves.** Stocker rapports de tests, TCK, sécurité, performance, replay, cutover et
+  approbation dans `docs/evidence/a2a/` avec digests. _(L'index `A2A-227-EVIDENCE-ARCHIVE.md` couvre les domaines
+  exigés et le manifeste déterministe contient 50 fichiers ; SHA-256 du manifeste :
+  `40c00ee37985ab64cf505148bf758c7e0051169c1078c4bf9fc5dd1ab233a8a5`.)_
 - [ ] **A2A-228 — Clôturer l'ADR et le plan.** Marquer les décisions et tickets terminés, ajouter le commit final
   et lier la preuve de clôture.
 
