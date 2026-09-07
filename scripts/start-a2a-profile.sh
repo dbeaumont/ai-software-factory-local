@@ -9,16 +9,15 @@ roles=(
 )
 
 wait_healthy() {
-  local deadline=$((SECONDS + ${A2A_START_TIMEOUT_SECONDS:-120}))
-  local service container health
+  local service container health deadline
   for service in "$@"; do
+    deadline=$((SECONDS + ${A2A_START_TIMEOUT_SECONDS:-300}))
     while true; do
       container=$("${compose[@]}" ps -q "$service")
       health=missing
       if test -n "$container"; then
         health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container")
       fi
-      test "$health" != unhealthy || { echo "$service became unhealthy" >&2; exit 1; }
       test "$health" != healthy || break
       test "$SECONDS" -lt "$deadline" || { echo "Timeout waiting for $service health" >&2; exit 1; }
       sleep 2
@@ -39,8 +38,15 @@ case "${1:-}" in
   full)
     services=()
     for role in "${roles[@]}"; do services+=("a2a-$role"); done
-    "${compose[@]}" --profile a2a-full up -d "${services[@]}"
-    wait_healthy a2a-identity a2a-task-db "${services[@]}"
+    batch_size=${A2A_START_BATCH_SIZE:-4}
+    [[ "$batch_size" =~ ^[1-9][0-9]*$ ]] || { echo "A2A_START_BATCH_SIZE must be positive" >&2; exit 2; }
+    "${compose[@]}" --profile a2a-full up -d a2a-identity a2a-task-db
+    wait_healthy a2a-identity a2a-task-db
+    for ((offset = 0; offset < ${#services[@]}; offset += batch_size)); do
+      batch=("${services[@]:offset:batch_size}")
+      "${compose[@]}" --profile a2a-full up -d "${batch[@]}"
+      wait_healthy "${batch[@]}"
+    done
     "${compose[@]}" --profile a2a-full up -d --force-recreate a2a-worker-activation
     ./scripts/wait-compose-job.sh a2a-worker-activation 120
     ./scripts/a2a-local.sh smoke
