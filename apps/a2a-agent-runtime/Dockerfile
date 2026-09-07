@@ -36,7 +36,7 @@ RUN --mount=type=secret,id=artifactory_token,required=false \
 FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682
 ARG VCS_REF=unknown
 ARG BUILD_CREATED=unknown
-ARG SOURCE_REPOSITORY=https://github.com/dbeaumont/ai-software-factory-local
+ARG SOURCE_REPOSITORY=https://github.com/dbeaumont/ai-factory-local
 LABEL org.opencontainers.image.title="AI Factory A2A Agent Runtime" \
       org.opencontainers.image.version="0.1.0" \
       org.opencontainers.image.revision="${VCS_REF}" \

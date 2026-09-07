@@ -661,14 +661,14 @@
     },
     "containerFootprint": [
       {
-        "name": "ai-software-factory-prometheus-1",
+        "name": "ai-factory-prometheus-1",
         "cpu": "0.07%",
         "memory": "60.02MiB / 31.29GiB",
         "network": "6.02MB / 206kB",
         "blockIo": "0B / 2.64MB"
       },
       {
-        "name": "ai-software-factory-grafana-1",
+        "name": "ai-factory-grafana-1",
         "cpu": "0.62%",
         "memory": "98.12MiB / 31.29GiB",
         "network": "23.3MB / 98.9kB",
@@ -899,7 +899,7 @@
     "apps/web/index.html",
     "docs/architecture/mcp/MCP-003-inventaire-dependances-runtime.md",
     "docs/architecture/mcp/MCP-015-slo-initiaux.md",
-    "docs/assets/cible-architecture-cible-gcp-ai-software-factory.svg",
+    "docs/assets/cible-architecture-cible-gcp-ai-factory.svg",
     "docs/assets/proto-software-factory-workflow.svg",
     "docs/delivery/roadmap/OPENTELEMETRY.md",
     "docs/delivery/roadmap/README.md",

@@ -27,7 +27,7 @@ receivers:
           static_configs:
             - targets: [temporal:8000]
               labels:
-                service_namespace: ai-software-factory
+                service_namespace: ai-factory
                 deployment_environment_name: local
 
 processors:

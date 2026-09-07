@@ -32,7 +32,7 @@ OPERATIONAL_LINKS = (
     },
     {
         "name": "Observability runbooks",
-        "url": "https://github.com/dbeaumont/ai-software-factory-local/tree/main/docs/operations/runbooks",
+        "url": "https://github.com/dbeaumont/ai-factory-local/tree/main/docs/operations/runbooks",
         "renderVariables": True,
     },
 )
@@ -293,7 +293,7 @@ def dashboard(slug: str, definition: dict) -> dict:
         "schemaVersion": "v6",
         "image": "/assets/Icons/eight-ball",
         "generateName": True,
-        "tags": [{"key": "project", "value": "ai-software-factory"}, {"key": "domain", "value": slug}],
+        "tags": [{"key": "project", "value": "ai-factory"}, {"key": "domain", "value": slug}],
         "spec": {
             "display": {"name": definition["name"], "description": definition["description"]},
             "variables": [text_variable(*variable) for variable in SEARCH_VARIABLES + definition.get("variables", ())],

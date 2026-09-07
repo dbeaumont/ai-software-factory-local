@@ -7,7 +7,7 @@ unpinned=()
 
 while IFS= read -r image; do
   case "$image" in
-    ai-software-factory-*|ai-factory-signoz-*|sha256:*) ;;
+    ai-factory-*|ai-factory-signoz-*|sha256:*) ;;
     *@sha256:[0-9a-f][0-9a-f]*) ;;
     *) unpinned+=("$image") ;;
   esac

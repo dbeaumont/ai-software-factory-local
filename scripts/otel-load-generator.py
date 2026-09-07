@@ -14,7 +14,7 @@ import uuid
 RESOURCE = {
     "attributes": [
         {"key": "service.name", "value": {"stringValue": "otel-load-generator"}},
-        {"key": "service.namespace", "value": {"stringValue": "ai-software-factory"}},
+        {"key": "service.namespace", "value": {"stringValue": "ai-factory"}},
         {"key": "deployment.environment.name", "value": {"stringValue": "load-test"}},
     ]
 }

@@ -28,7 +28,7 @@ manquaient jusque-là au JAR.
 Copying 21 resources from external-a2a to target/classes/a2a
 Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
-ai-software-factory-orchestrator-1 ... Up ... (healthy)
+ai-factory-orchestrator-1 ... Up ... (healthy)
 {"components":{"a2aFleet":{"details":{"admissions":"A2A_DISABLED","requiredRoles":[...],"blockers":[]},"status":"UP"},"temporalEngine":{"details":{"ticketEngine":"ACTIVE","registeredWorkers":7,"requiredWorkers":7},"status":"UP"}},"status":"UP"}
 ```
 

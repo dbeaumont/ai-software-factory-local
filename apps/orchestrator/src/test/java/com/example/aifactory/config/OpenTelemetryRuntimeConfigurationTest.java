@@ -72,7 +72,7 @@ class OpenTelemetryRuntimeConfigurationTest {
         for (Path application : applicationFiles(root, "src/main/resources/application.yml")) {
             assertThat(Files.readString(application))
                     .contains("management:", "opentelemetry:", "logging:", "otlp:")
-                    .contains("service.namespace: ai-software-factory")
+                    .contains("service.namespace: ai-factory")
                     .contains("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
                             "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT");
         }

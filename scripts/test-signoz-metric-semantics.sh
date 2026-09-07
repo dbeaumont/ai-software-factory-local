@@ -24,7 +24,7 @@ payload=$(jq -nc \
     bucketCounts:$counts,explicitBounds:[0.1,0.5,1,2,5],attributes:[]
   };
   {resourceMetrics:[{
-    resource:{attributes:[a("service.name";"otel-metric-semantics"),a("service.namespace";"ai-software-factory")]},
+    resource:{attributes:[a("service.name";"otel-metric-semantics"),a("service.namespace";"ai-factory")]},
     scopeMetrics:[{scope:{name:"ai-factory-parity",version:"1"},metrics:[
       counter("ai_factory_parity_throughput";[p($start;$old;0),p($start;$current;100)]),
       counter("ai_factory_parity_errors";[p($start;$old;0),p($start;$current;5)]),

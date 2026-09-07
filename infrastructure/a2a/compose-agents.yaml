@@ -7,7 +7,7 @@ x-a2a-agent-runtime: &a2a-agent-runtime
       MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL:-}
       VCS_REF: ${AI_FACTORY_A2A_RUNTIME_REVISION:-local}
       BUILD_CREATED: ${AI_FACTORY_A2A_RUNTIME_CREATED:-local}
-      SOURCE_REPOSITORY: "${AI_FACTORY_A2A_RUNTIME_SOURCE:-https://github.com/dbeaumont/ai-software-factory-local}"
+      SOURCE_REPOSITORY: "${AI_FACTORY_A2A_RUNTIME_SOURCE:-https://github.com/dbeaumont/ai-factory-local}"
     secrets:
       - artifactory_token
   restart: unless-stopped

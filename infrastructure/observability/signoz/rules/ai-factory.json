@@ -61,7 +61,7 @@
       "severity": "warning",
       "component": "agents",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Agent loop or turn limit detected",
@@ -131,7 +131,7 @@
       "severity": "warning",
       "component": "agents",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Agent execution budget exhausted",
@@ -201,7 +201,7 @@
       "severity": "warning",
       "component": "agents",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Aggregate agent cost exceeds the operational threshold",
@@ -271,7 +271,7 @@
       "severity": "warning",
       "component": "queues",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Worker backlog or saturation is sustained",
@@ -341,7 +341,7 @@
       "severity": "critical",
       "component": "sandbox",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Sandbox execution heartbeat is absent, invalid or stale",
@@ -411,7 +411,7 @@
       "severity": "warning",
       "component": "sandbox",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Sandbox executions are repeatedly failing",
@@ -481,7 +481,7 @@
       "severity": "critical",
       "component": "sandbox",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Sandbox cleanup or retention maintenance is failing",
@@ -551,7 +551,7 @@
       "severity": "warning",
       "component": "contracts",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Agent output contract validation failed",
@@ -621,7 +621,7 @@
       "severity": "critical",
       "component": "evidence",
       "owner": "ai-factory",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Evidence integrity verification failed",
@@ -691,7 +691,7 @@
       "severity": "critical",
       "component": "observability",
       "owner": "platform-observability",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Collector exports are failing",
@@ -761,7 +761,7 @@
       "severity": "warning",
       "component": "observability",
       "owner": "platform-observability",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Collector export queue is saturating",
@@ -831,7 +831,7 @@
       "severity": "critical",
       "component": "observability",
       "owner": "platform-observability",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Collector metric ingestion is absent",
@@ -901,7 +901,7 @@
       "severity": "warning",
       "component": "observability",
       "owner": "platform-observability",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Collector restarted",
@@ -971,7 +971,7 @@
       "severity": "warning",
       "component": "observability",
       "owner": "platform-observability",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Collector memory is near its limit",
@@ -1041,7 +1041,7 @@
       "severity": "critical",
       "component": "observability",
       "owner": "platform-observability",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Collector refused telemetry",
@@ -1111,7 +1111,7 @@
       "severity": "critical",
       "component": "temporal",
       "owner": "workflow-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "A required Temporal task queue has no poller",
@@ -1181,7 +1181,7 @@
       "severity": "warning",
       "component": "temporal",
       "owner": "workflow-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Temporal task queue backlog is sustained",
@@ -1251,7 +1251,7 @@
       "severity": "critical",
       "component": "temporal",
       "owner": "workflow-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Temporal workflow replay is non-deterministic",
@@ -1321,7 +1321,7 @@
       "severity": "warning",
       "component": "temporal",
       "owner": "workflow-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Temporal UI projection is stale",
@@ -1391,7 +1391,7 @@
       "severity": "critical",
       "component": "temporal",
       "owner": "workflow-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Temporal activity or workflow timed out",
@@ -1461,7 +1461,7 @@
       "severity": "critical",
       "component": "temporal",
       "owner": "workflow-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Temporal continue-as-new did not complete",
@@ -1531,7 +1531,7 @@
       "severity": "critical",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "An A2A agent Temporal queue has no poller",
@@ -1601,7 +1601,7 @@
       "severity": "critical",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "An A2A agent is not ready",
@@ -1671,7 +1671,7 @@
       "severity": "critical",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "An A2A Agent Card was rejected",
@@ -1741,7 +1741,7 @@
       "severity": "warning",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "A2A task failure rate exceeds five percent",
@@ -1811,7 +1811,7 @@
       "severity": "warning",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "A2A backlog is sustained",
@@ -1881,7 +1881,7 @@
       "severity": "critical",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "An A2A task is stuck",
@@ -1951,7 +1951,7 @@
       "severity": "warning",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "An A2A notification is late",
@@ -2021,7 +2021,7 @@
       "severity": "critical",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "An A2A idempotency collision was rejected",
@@ -2091,7 +2091,7 @@
       "severity": "critical",
       "component": "a2a",
       "owner": "agent-platform",
-      "managed_by": "ai-software-factory"
+      "managed_by": "ai-factory"
     },
     "annotations": {
       "summary": "Temporal and A2A state diverged",

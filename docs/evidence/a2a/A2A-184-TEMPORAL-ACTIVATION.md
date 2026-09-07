@@ -8,7 +8,7 @@ Commit applicatif déployé : `b83961cf622b5c4901535f545151ef1ac199026f`
 
 ## Résultat
 
-- L'image `ai-software-factory-orchestrator:latest` a été construite avec succès après exécution de la barrière
+- L'image `ai-factory-orchestrator:latest` a été construite avec succès après exécution de la barrière
   embarquée de 115 tests, sans échec ni test ignoré.
 - Digest local de l'image :
   `sha256:611e4bd2a50de1c6f27644c684212a293ee5c059b571b71ffa9497c9fe92368b`.

@@ -32,7 +32,7 @@ services:
     - SIGNOZ_USER_ROOT_ENABLED=true
     - SIGNOZ_USER_ROOT_EMAIL=${SIGNOZ_ROOT_EMAIL:-admin@ai-factory.local}
     - SIGNOZ_USER_ROOT_PASSWORD=${SIGNOZ_ROOT_PASSWORD:?SIGNOZ_ROOT_PASSWORD must be initialized by make init}
-    - SIGNOZ_USER_ROOT_ORG_NAME=${SIGNOZ_ROOT_ORG_NAME:-ai-software-factory}
+    - SIGNOZ_USER_ROOT_ORG_NAME=${SIGNOZ_ROOT_ORG_NAME:-ai-factory}
     healthcheck:
       interval: 30s
       retries: 3

@@ -39,7 +39,7 @@ management:
     propagation: { type: W3C }
   opentelemetry:
     enabled: ${AI_FACTORY_OTEL_ENABLED:true}
-    resource-attributes: { service.namespace: ai-software-factory, service.version: 0.3.0, deployment.environment.name: "${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}" }
+    resource-attributes: { service.namespace: ai-factory, service.version: 0.3.0, deployment.environment.name: "${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}" }
     tracing:
       export: { max-queue-size: 2048, max-batch-size: 512, schedule-delay: 5s, timeout: 10s, otlp: { endpoint: "${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://otel-collector:4318/v1/traces}", connect-timeout: 2s, timeout: 5s } }
       limits: { max-attributes: 64, max-attribute-value-length: 1024, max-events: 64, max-links: 32, max-attributes-per-event: 64, max-attributes-per-link: 64 }
@@ -50,7 +50,7 @@ management:
     metrics:
       export: { enabled: "${AI_FACTORY_OTEL_ENABLED:true}", url: "${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://otel-collector:4318/v1/metrics}", step: 15s, batch-size: 1000, base-time-unit: seconds, connect-timeout: 2s, read-timeout: 5s }
   metrics:
-    tags: { service.name: "${spring.application.name}", service.namespace: ai-software-factory, service.version: 0.3.0, deployment.environment.name: "${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}" }
+    tags: { service.name: "${spring.application.name}", service.namespace: ai-factory, service.version: 0.3.0, deployment.environment.name: "${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}" }
     distribution:
       percentiles-histogram: { http.server.requests: true }
 

@@ -36,7 +36,7 @@ metric_count=$("${compose[@]}" exec -T signoz-clickhouse clickhouse-client --que
 
 "${compose[@]}" stop signoz-ingester >/dev/null
 run_load --batches 40 --points 10 --workers 8
-queue_files=$(docker run --rm --network none -v ai-software-factory_otel-collector-queue:/queue:ro \
+queue_files=$(docker run --rm --network none -v ai-factory_otel-collector-queue:/queue:ro \
   busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 \
   find /queue -type f -size +0c | wc -l)
 [ "$queue_files" -ge 3 ] || { echo "Persistent queues were not populated during outage" >&2; exit 1; }
@@ -73,7 +73,7 @@ ingestion_delay_ms=$(($(date +%s) * 1000 - started_ms))
 collector_id=$("${compose[@]}" ps -q otel-collector)
 collector_memory=$(docker stats --no-stream --format '{{.MemUsage}}' "$collector_id")
 collector_cpu=$(docker stats --no-stream --format '{{.CPUPerc}}' "$collector_id")
-queue_disk=$(docker run --rm --network none -v ai-software-factory_otel-collector-queue:/queue:ro \
+queue_disk=$(docker run --rm --network none -v ai-factory_otel-collector-queue:/queue:ro \
   busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0 \
   du -sk /queue | awk '{print $1}')
 printf 'Collector load and persistent recovery verified: accepted_per_signal=%s delivered_per_signal=%s loss=0 duplicates=0 elapsed_ms=%s metric_series=%s trace_ids=%s collector_cpu=%s collector_memory=%s queue_disk_kib=%s local_cloud_cost_usd=0\n' \

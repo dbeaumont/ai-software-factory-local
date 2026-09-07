@@ -74,7 +74,7 @@ def build_rule(definition: tuple) -> dict:
         "evaluation": {"kind": "rolling", "spec": {"evalWindow": window, "frequency": "30s"}},
         "notificationSettings": {"groupBy": ["alertname", "component"], "renotify": {"enabled": True, "interval": "4h", "alertStates": ["firing"]}},
         "labels": {"severity": severity, "component": component, "owner": OWNERS.get(component, "ai-factory"),
-                   "managed_by": "ai-software-factory"},
+                   "managed_by": "ai-factory"},
         "annotations": {"summary": summary, "description": description, "runbook_url": runbook},
     }
 

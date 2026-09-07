@@ -19,7 +19,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void executesAsATemporalRootWorkflow() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -27,7 +27,7 @@ class SoftwareFactoryWorkflowTest {
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class,
                     WorkflowOptions.newBuilder().setWorkflowId(TemporalIds.workflow("task-1", "attempt-1"))
-                            .setTaskQueue("software-factory-test").build());
+                            .setTaskQueue("ai-factory-test").build());
 
             SoftwareFactoryWorkflow.Result result = workflow.run(new SoftwareFactoryWorkflow.Request(
                     "task-1", "attempt-1", "a".repeat(40), "change"));
@@ -45,7 +45,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void executesAGenericDelegationAsAChildWorkflow() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -53,7 +53,7 @@ class SoftwareFactoryWorkflowTest {
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class, WorkflowOptions.newBuilder()
                             .setWorkflowId(TemporalIds.workflow("task-2", "attempt-1"))
-                            .setTaskQueue("software-factory-test").build());
+                            .setTaskQueue("ai-factory-test").build());
             DelegationWorkflow.Request child = new DelegationWorkflow.Request(
                     "task-2", "attempt-1", "code-1", "supervisor", "code-agent",
                     "a".repeat(40), "produce a patch proposal",
@@ -72,7 +72,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void resumesOnlyForAnApprovalBoundToTheSubmittedManifest() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -80,7 +80,7 @@ class SoftwareFactoryWorkflowTest {
             SoftwareFactoryWorkflow workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryWorkflow.class, WorkflowOptions.newBuilder()
                             .setWorkflowId(TemporalIds.workflow("task-3", "attempt-1"))
-                            .setTaskQueue("software-factory-test").build());
+                            .setTaskQueue("ai-factory-test").build());
             String manifestId = "b".repeat(64);
             String digest = "c".repeat(64);
             DelegationWorkflow.Request approvalChild = new DelegationWorkflow.Request(
@@ -123,7 +123,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void consumesAnApprovalDeliveredAtomicallyWithWorkflowStartBeforeAwait() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -153,7 +153,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void terminatesOnARefusalBoundToTheSubmittedManifest() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -183,7 +183,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void recordsComplementaryHumanDecisionsAndSupportsCancellation() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -222,7 +222,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void keepsWaitingUntilHumanDecisionMatchesObjectDigestAndApproverRole() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -256,7 +256,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void boundsEachRunAndCarriesStateAcrossContinueAsNew() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -293,7 +293,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void resumesAnApprovalAfterSeveralVirtualDays() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -326,7 +326,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void launchesIndependentReviewerFromRootAndRejectsItAsASupervisorDelegation() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -361,7 +361,7 @@ class SoftwareFactoryWorkflowTest {
     @Test
     void runsIndependentReviewAfterConsolidationBeforeExposingApprovalEffect() {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
-            Worker worker = environment.newWorker("software-factory-test");
+            Worker worker = environment.newWorker("ai-factory-test");
             worker.registerWorkflowImplementationTypes(
                     SoftwareFactoryWorkflowImpl.class, DelegationWorkflowImpl.class,
                     IndependentReviewWorkflowImpl.class);
@@ -499,7 +499,7 @@ class SoftwareFactoryWorkflowTest {
     private static SoftwareFactoryWorkflow stub(TestWorkflowEnvironment environment, String taskId) {
         return environment.getWorkflowClient().newWorkflowStub(SoftwareFactoryWorkflow.class,
                 WorkflowOptions.newBuilder().setWorkflowId(TemporalIds.workflow(taskId, "attempt-1"))
-                        .setTaskQueue("software-factory-test").build());
+                        .setTaskQueue("ai-factory-test").build());
     }
 
     private static void awaitStatus(SoftwareFactoryWorkflow workflow, String expected) {

@@ -84,7 +84,7 @@ management:
   opentelemetry:
     enabled: ${AI_FACTORY_OTEL_ENABLED:true}
     resource-attributes:
-      service.namespace: ai-software-factory
+      service.namespace: ai-factory
       service.version: 0.1.0
       deployment.environment.name: ${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}
     tracing:
@@ -130,7 +130,7 @@ management:
   metrics:
     tags:
       service.name: ${spring.application.name}
-      service.namespace: ai-software-factory
+      service.namespace: ai-factory
       service.version: 0.1.0
       deployment.environment.name: ${AI_FACTORY_DEPLOYMENT_ENVIRONMENT:local}
     distribution:

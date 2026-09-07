@@ -1,4 +1,4 @@
-name: ai-software-factory
+name: ai-factory
 
 # Container names are derived from this project name and short service keys.
 # Do not add container_name: scripts must address services through Docker Compose.
@@ -540,7 +540,7 @@ services:
 
   # Spring Boot control plane. Its image pulls build dependencies through Artifactory using a BuildKit secret.
   orchestrator:
-    image: ${AI_FACTORY_ORCHESTRATOR_IMAGE:-ai-software-factory-orchestrator:latest}
+    image: ${AI_FACTORY_ORCHESTRATOR_IMAGE:-ai-factory-orchestrator:latest}
     stop_grace_period: 40s
     build:
       context: ../apps/orchestrator

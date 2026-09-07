@@ -41,8 +41,8 @@ L'instance active n'a pas été remplacée : TEMP-106 attend une nouvelle décis
 | Image active avant décision | ancienne image `sha256:85ba020303afbab6aad1f850df055c735adb063d4b35d237cd37a652d534347e` |
 
 Le candidat est conservé localement sous les tags
-`ai-software-factory-orchestrator:temporal-cutover-a589f5c` et
-`ai-software-factory-factory-web:temporal-cutover-a589f5c`. Les admissions restent fermées avec le motif
+`ai-factory-orchestrator:temporal-cutover-a589f5c` et
+`ai-factory-factory-web:temporal-cutover-a589f5c`. Les admissions restent fermées avec le motif
 `temporal_cutover` jusqu'à la réussite des contrôles TEMP-106 à TEMP-109.
 
 ## Décision

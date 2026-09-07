@@ -24,7 +24,7 @@ management:
   opentelemetry:
     enabled: ${AI_FACTORY_OTEL_ENABLED:true}
     resource-attributes:
-      service.namespace: ai-software-factory
+      service.namespace: ai-factory
       service.version: 0.1.0
   otlp:
     metrics:

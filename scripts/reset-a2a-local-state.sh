@@ -18,7 +18,7 @@ for role in "${roles[@]}"; do services+=("a2a-$role"); done
 
 "${compose[@]}" rm --stop --force "${services[@]}"
 volume=$(docker volume ls --quiet \
-  --filter label=com.docker.compose.project=ai-software-factory \
+  --filter label=com.docker.compose.project=ai-factory \
   --filter label=com.docker.compose.volume=a2a-task-db-data)
 test -n "$volume" || { echo "No A2A task-state volume exists."; exit 0; }
 test "$(printf '%s\n' "$volume" | wc -l | tr -d ' ')" = 1 || {

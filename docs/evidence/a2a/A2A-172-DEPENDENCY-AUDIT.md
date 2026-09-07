@@ -27,7 +27,7 @@ exacte de la commande Maven du Dockerfile.
 | Image locale | Digest Docker | HIGH/CRITICAL |
 |---|---|---:|
 | `ai-factory-a2a-agent-runtime:a2a-172` | `sha256:2b65b20d09414e46b92868e2cb82a88e67330b6a57544b67b5608d047f42d4ca` | 0 |
-| `ai-software-factory-orchestrator:a2a-172` | `sha256:ff8e04dae63cfc6937c802db470f8df39da05aade1e97099ff73de244183f556` | 0 |
+| `ai-factory-orchestrator:a2a-172` | `sha256:ff8e04dae63cfc6937c802db470f8df39da05aade1e97099ff73de244183f556` | 0 |
 | `ai-factory-repository-context-mcp:a2a-172` | `sha256:91b2e7f6bd8d8da2353ef8b8f63f2fc2a92af88f4639e76b577cb07f96f4e22b` | 0 |
 | `ai-factory-sandbox-execution-mcp:a2a-172` | `sha256:345bffa6d0c971f6793327caa7e6a20b33814f3929d3cf8c967bc6d7bef1adce` | 0 |
 | `ai-factory-scm-delivery-mcp:a2a-172` | `sha256:d46634801cdc55793f63fb435ba7a1128518b890b321b59becded4299e67a701` | 0 |

@@ -22,7 +22,7 @@ Le script échoue avant le build si la révision résolue ne correspond pas à c
 
 ## Reproduction
 
-Pré-requis : images locales `ai-software-factory-orchestrator:latest` et
+Pré-requis : images locales `ai-factory-orchestrator:latest` et
 `ai-factory-a2a-agent-runtime:0.1.0`, ainsi que les secrets locaux A2A générés.
 
 ```bash

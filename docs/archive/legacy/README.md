@@ -7,8 +7,8 @@ historiques ; ces fichiers ne décrivent pas l'état courant du prototype et ne 
 
 | Document | Motif | Référence actuelle |
 |---|---|---|
-| `architecture-cible-mcp-ai-software-factory.pdf` | étude de la transition MCP antérieure à l'architecture 04 | `../version-1.1.0-archi-02-mcp/` puis `../version-1.2.0-archi-04/` |
-| `cible-architecture-cible-gcp-ai-software-factory.md` | cible GCP pré-multi-agent | `../version-1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md` |
+| `architecture-cible-mcp-ai-factory.pdf` | étude de la transition MCP antérieure à l'architecture 04 | `../version-1.1.0-archi-02-mcp/` puis `../version-1.2.0-archi-04/` |
+| `cible-architecture-cible-gcp-ai-factory.md` | cible GCP pré-multi-agent | `../version-1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md` |
 | `cible-industrialisation avec GCP.md` | analyse d'industrialisation fondée sur l'ancien pipeline | architecture 1.2.0 et ADR MAH |
 | `ia software factory - archi technique - cible.png.png` | schéma statique historique | diagrammes Mermaid de l'architecture 1.2.0 |
 | `ia software factory - archi technique - poc.png` | schéma du POC historique | états versionnés 1.0.0 et 1.1.0 |

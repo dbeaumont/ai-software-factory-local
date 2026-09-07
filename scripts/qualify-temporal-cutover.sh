@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-qualified_image=${QUALIFIED_ORCHESTRATOR_IMAGE_ID:-$(docker image inspect ai-software-factory-orchestrator --format '{{.Id}}')}
+qualified_image=${QUALIFIED_ORCHESTRATOR_IMAGE_ID:-$(docker image inspect ai-factory-orchestrator --format '{{.Id}}')}
 [[ "$qualified_image" =~ ^sha256:[0-9a-f]{64}$ ]] || {
   echo "Qualified orchestrator image ID is invalid: $qualified_image" >&2
   exit 2
@@ -40,7 +40,7 @@ run_step pipeline-delivery make test-temporal-pipeline-delivery
 run_step worker-version-rollback make test-temporal-human-wait-rotation
 run_step compose-cycle make test-temporal-compose-cycle
 
-deployed_image=$(docker inspect ai-software-factory-orchestrator-1 --format '{{.Image}}')
+deployed_image=$(docker inspect ai-factory-orchestrator-1 --format '{{.Image}}')
 [ "$deployed_image" = "$qualified_image" ] || {
   echo "Deployed orchestrator image changed during qualification: $qualified_image -> $deployed_image" >&2
   exit 1

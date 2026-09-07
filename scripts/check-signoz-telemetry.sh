@@ -22,14 +22,14 @@ metric_count=$(printf '%s' "$metrics" | jq -er '.data.metrics // .metrics | leng
 [ "$metric_count" -gt 0 ] || { echo "No metric was ingested by SigNoz" >&2; exit 1; }
 
 dashboards=$(curl -fsS "$base_url/api/v2/dashboards?limit=100" "${auth[@]}")
-dashboard_count=$(printf '%s' "$dashboards" | jq '[.data.dashboards[] | select(.tags[]? | .key == "project" and .value == "ai-software-factory")] | length')
+dashboard_count=$(printf '%s' "$dashboards" | jq '[.data.dashboards[] | select(.tags[]? | .key == "project" and .value == "ai-factory")] | length')
 expected_dashboard_count=$(find infrastructure/observability/signoz/dashboards -name '*.json' | wc -l | tr -d ' ')
 [ "$dashboard_count" -eq "$expected_dashboard_count" ] || {
   echo "Expected $expected_dashboard_count managed dashboards, got $dashboard_count" >&2; exit 1;
 }
 dashboard_navigation_count=0
 for dashboard_id in $(printf '%s' "$dashboards" | jq -r '.data.dashboards[]
-  | select(.tags[]? | .key == "project" and .value == "ai-software-factory") | .id'); do
+  | select(.tags[]? | .key == "project" and .value == "ai-factory") | .id'); do
   dashboard_detail=$(curl -fsS "$base_url/api/v2/dashboards/$dashboard_id" "${auth[@]}")
   dashboard_name=$(printf '%s' "$dashboard_detail" | jq -er '.data.spec.display.name')
   dashboard_file=
@@ -52,7 +52,7 @@ done
 }
 
 rules=$(curl -fsS "$base_url/api/v2/rules" "${auth[@]}")
-rule_count=$(printf '%s' "$rules" | jq '[.data[] | select(.labels.managed_by == "ai-software-factory")] | length')
+rule_count=$(printf '%s' "$rules" | jq '[.data[] | select(.labels.managed_by == "ai-factory")] | length')
 expected_rule_count=$(jq -s 'map(length) | add' infrastructure/observability/signoz/rules/*.json)
 [ "$rule_count" -eq "$expected_rule_count" ] || {
   echo "Expected $expected_rule_count managed rules, got $rule_count" >&2; exit 1;

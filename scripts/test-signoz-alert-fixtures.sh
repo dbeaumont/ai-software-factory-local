@@ -16,7 +16,7 @@ payload=$(jq -nc --arg old "$old" --arg current "$current" '
   def counter($name;$series): {name:$name,sum:{aggregationTemporality:2,isMonotonic:true,dataPoints:$series}};
   def gauge($name;$value;$attrs): {name:$name,gauge:{dataPoints:[p($current;$value;$attrs)]}};
   {resourceMetrics:[{
-    resource:{attributes:[a("service.name";"otel-alert-fixture"),a("service.namespace";"ai-software-factory"),a("deployment.environment.name";"ai-factory-local")]},
+    resource:{attributes:[a("service.name";"otel-alert-fixture"),a("service.namespace";"ai-factory"),a("deployment.environment.name";"ai-factory-local")]},
     scopeMetrics:[{scope:{name:"ai-factory-alert-fixture",version:"1"},metrics:[
       counter("ai_agent_failures";[
         p($old;0;[a("reason";"repeated_call"),a("stop_condition";"LOOP_DETECTED")]),
@@ -103,7 +103,7 @@ recovery_payload=$(jq -nc --arg one "$recovery_one" --arg two "$recovery_two" '
   def counter($name;$value;$attrs): {name:$name,sum:{aggregationTemporality:2,isMonotonic:true,dataPoints:[p($one;$value;$attrs),p($two;$value;$attrs)]}};
   def gauge($name;$value;$attrs): {name:$name,gauge:{dataPoints:[p($one;$value;$attrs),p($two;$value;$attrs)]}};
   {resourceMetrics:[{
-    resource:{attributes:[a("service.name";"otel-alert-fixture"),a("service.namespace";"ai-software-factory"),a("deployment.environment.name";"ai-factory-local")]},
+    resource:{attributes:[a("service.name";"otel-alert-fixture"),a("service.namespace";"ai-factory"),a("deployment.environment.name";"ai-factory-local")]},
     scopeMetrics:[{scope:{name:"ai-factory-alert-fixture",version:"1"},metrics:[
       counter("ai_agent_failures";1;[a("reason";"repeated_call"),a("stop_condition";"LOOP_DETECTED")]),
       counter("ai_agent_failures";1;[a("reason";"budget"),a("stop_condition";"BUDGET_EXHAUSTED")]),

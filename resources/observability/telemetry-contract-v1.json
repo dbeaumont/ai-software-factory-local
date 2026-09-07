@@ -7,7 +7,7 @@
       "service.version",
       "deployment.environment.name"
     ],
-    "service_namespace": "ai-software-factory",
+    "service_namespace": "ai-factory",
     "services": [
       "ai-factory-orchestrator",
       "repository-context-mcp",

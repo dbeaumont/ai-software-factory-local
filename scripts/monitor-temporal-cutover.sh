@@ -50,17 +50,17 @@ temporal_failed_count() {
 }
 
 check_sample() {
-  active_image=$(docker inspect ai-software-factory-orchestrator-1 --format '{{.Image}}')
+  active_image=$(docker inspect ai-factory-orchestrator-1 --format '{{.Image}}')
   [ "$active_image" = "$expected_image" ] || fail_closed "active orchestrator image drift"
-  [ "$(docker inspect ai-software-factory-orchestrator-1 --format '{{.State.Health.Status}}')" = healthy ] \
+  [ "$(docker inspect ai-factory-orchestrator-1 --format '{{.State.Health.Status}}')" = healthy ] \
     || fail_closed "orchestrator is not healthy"
-  [ "$(docker inspect ai-software-factory-temporal-1 --format '{{.State.Health.Status}}')" = healthy ] \
+  [ "$(docker inspect ai-factory-temporal-1 --format '{{.State.Health.Status}}')" = healthy ] \
     || fail_closed "Temporal is not healthy"
-  [ "$(docker inspect ai-software-factory-evidence-mcp-1 --format '{{.State.Health.Status}}')" = healthy ] \
+  [ "$(docker inspect ai-factory-evidence-mcp-1 --format '{{.State.Health.Status}}')" = healthy ] \
     || fail_closed "Evidence MCP is not healthy"
-  [ "$(docker inspect ai-software-factory-otel-collector-1 --format '{{.State.Health.Status}}')" = healthy ] \
+  [ "$(docker inspect ai-factory-otel-collector-1 --format '{{.State.Health.Status}}')" = healthy ] \
     || fail_closed "OpenTelemetry Collector is not healthy"
-  [ "$(docker inspect ai-software-factory-signoz-1 --format '{{.State.Health.Status}}')" = healthy ] \
+  [ "$(docker inspect ai-factory-signoz-1 --format '{{.State.Health.Status}}')" = healthy ] \
     || fail_closed "SigNoz is not healthy"
   curl -fsS --max-time 5 "http://127.0.0.1:${orchestrator_port}/actuator/health/readiness" \
     | jq -e '.status == "UP"' >/dev/null || fail_closed "application readiness is not UP"
