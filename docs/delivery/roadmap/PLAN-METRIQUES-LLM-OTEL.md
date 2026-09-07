@@ -27,6 +27,7 @@ Le dashboard versionné cible les noms de métriques de ce plan : `ai_factory_ll
 - [x] Afficher le débit des requêtes par fournisseur, modèle et résultat.
 - [x] Afficher la latence p95, le ratio d'erreurs, les tokens par direction, les tokens par requête, le coût estimé et sa disponibilité.
 - [x] Réutiliser les liens opérationnels et les variables de recherche des autres dashboards, sans variable à forte cardinalité dans les requêtes de métriques.
+- [x] Vérifier statiquement les panneaux, requêtes et dimensions du dashboard avec `scripts/check-llm-signoz-dashboard.py`.
 - [ ] Provisionner ou mettre à jour le dashboard dans l'instance locale avec `make bootstrap-signoz`.
 - [ ] Valider les requêtes contre l'API SigNoz avec `./scripts/validate-signoz-queries.sh` après le déploiement des métriques.
 
