@@ -28,7 +28,12 @@ class EvidenceStoreTest {
             assertDoesNotThrow(() -> policy.requireWrite(type, "workflow"), type);
         }
         assertEquals("CONFIDENTIAL", policy.requireWrite("security", "workflow").classification());
-        assertThrows(SecurityException.class, () -> policy.requireWrite("unregistered", "workflow"));
+        SecurityException unknown = assertThrows(
+                SecurityException.class, () -> policy.requireWrite("unregistered", "workflow"));
+        assertEquals("unknown evidence type: unregistered", unknown.getMessage());
+        assertEquals("unknown evidence type: invalid",
+                assertThrows(SecurityException.class, () -> policy.requireWrite("SECRET=value", "workflow"))
+                        .getMessage());
         assertDoesNotThrow(() -> policy.requireRead("patch-validation-error", "workflow", "repair-patch"));
         assertDoesNotThrow(() -> policy.requireRead("agent-result", "workflow", "pipeline-a2a-result"));
         assertDoesNotThrow(() -> policy.requireRead(

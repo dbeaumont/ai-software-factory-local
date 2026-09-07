@@ -43,7 +43,10 @@ public class EvidencePolicy {
 
     public Rule require(String type) {
         Rule rule = RULES.get(type);
-        if (rule == null) throw new SecurityException("unknown evidence type");
+        if (rule == null) {
+            String safeType = type != null && type.matches("[a-z0-9-]{1,64}") ? type : "invalid";
+            throw new SecurityException("unknown evidence type: " + safeType);
+        }
         return rule;
     }
 
