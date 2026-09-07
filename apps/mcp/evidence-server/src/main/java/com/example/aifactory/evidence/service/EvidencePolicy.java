@@ -63,6 +63,7 @@ public class EvidencePolicy {
         Rule rule = require(type);
         boolean workflowInternalPurpose = "workflow".equals(actor) && ("repair-patch".equals(purpose)
                 || "pipeline-a2a-result".equals(purpose)
+                || "pipeline-test-consolidation".equals(purpose)
                 || (purpose != null && purpose.matches("apply-patch-integration:[0-9a-f]{64}")));
         boolean agentExecutionInput = AGENT_ROLES.contains(actor) && "agent-execution-input".equals(purpose);
         if (!("workflow".equals(actor) || "reviewer".equals(actor) || "independent-reviewer".equals(actor)

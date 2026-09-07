@@ -808,6 +808,8 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   revue indépendante, gate humaine, annulation et récupération des preuves.
   - [x] Aligner la politique Evidence sur l'artefact de tests pré-agent `tests-deterministic` et couvrir son
     acceptation par un test de non-régression.
+  - [x] Autoriser sa relecture uniquement par le workflow et pour la finalité
+    `pipeline-test-consolidation`, avec un test refusant le reviewer.
 - [ ] **A2A-187 — Rouvrir les admissions.** Autoriser les nouveaux tickets uniquement lorsque toutes les cartes,
   files Temporal, runtimes et dépendances obligatoires sont prêtes.
 - [ ] **A2A-188 — Surveiller la fenêtre de stabilisation.** Contrôler SLO, backlog, divergences, notifications,

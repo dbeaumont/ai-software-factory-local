@@ -37,6 +37,10 @@ class EvidenceStoreTest {
         assertDoesNotThrow(() -> policy.requireRead("patch-validation-error", "workflow", "repair-patch"));
         assertDoesNotThrow(() -> policy.requireRead("agent-result", "workflow", "pipeline-a2a-result"));
         assertDoesNotThrow(() -> policy.requireRead(
+                "tests-deterministic", "workflow", "pipeline-test-consolidation"));
+        assertThrows(SecurityException.class, () -> policy.requireRead(
+                "tests-deterministic", "reviewer", "pipeline-test-consolidation"));
+        assertDoesNotThrow(() -> policy.requireRead(
                 "code-patch", "workflow", "apply-patch-integration:" + "a".repeat(64)));
         assertThrows(SecurityException.class, () -> policy.requireRead(
                 "code-patch", "reviewer", "apply-patch-integration:" + "a".repeat(64)));
