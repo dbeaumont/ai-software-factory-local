@@ -248,11 +248,18 @@ final class A2aJsonRpcController {
             long sequence,
             List<A2aSendMessageService.HistoryItem> history,
             List<Map<String, Object>> artifacts) {
+        String updatedAt = history.isEmpty()
+                ? submission.submittedAt().toString()
+                : history.getLast().occurredAt().toString();
+        List<Map<String, Object>> transitions = history.stream().map(item -> Map.<String, Object>of(
+                "sequence", item.sequence(),
+                "state", "TASK_STATE_" + historyState(item.event()).name(),
+                "occurredAt", item.occurredAt().toString())).toList();
         Map<String, Object> task = new LinkedHashMap<>();
         task.put("kind", "task");
         task.put("id", submission.taskId());
         task.put("contextId", submission.contextId());
-        task.put("status", Map.of("state", "TASK_STATE_" + state.name(), "timestamp", submission.submittedAt().toString()));
+        task.put("status", Map.of("state", "TASK_STATE_" + state.name(), "timestamp", updatedAt));
         task.put("artifacts", List.copyOf(artifacts));
         task.put("history", history.stream().map(item -> Map.of(
                 "kind", "message",
@@ -265,8 +272,20 @@ final class A2aJsonRpcController {
                 "delegationId", submission.delegationId(),
                 "agentRole", submission.role(),
                 "skillId", submission.skill(),
-                "sequence", sequence));
+                "sequence", sequence,
+                "transitions", transitions));
         return Map.copyOf(task);
+    }
+
+    private static A2aSendMessageService.TaskState historyState(String event) {
+        if ("MESSAGE_ACCEPTED".equals(event)) return A2aSendMessageService.TaskState.SUBMITTED;
+        if ("MESSAGE_CONTINUED".equals(event)) return A2aSendMessageService.TaskState.WORKING;
+        for (String prefix : List.of("WORKFLOW_", "TASK_")) {
+            if (event.startsWith(prefix)) {
+                return A2aSendMessageService.TaskState.valueOf(event.substring(prefix.length()));
+            }
+        }
+        throw new IllegalStateException("Unsupported A2A task history event");
     }
 
     private static Map<String, Object> error(

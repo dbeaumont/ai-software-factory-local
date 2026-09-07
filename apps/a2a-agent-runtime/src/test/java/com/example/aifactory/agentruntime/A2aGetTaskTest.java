@@ -5,7 +5,12 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,6 +47,45 @@ class A2aGetTaskTest {
                 new A2aSendMessageService.Caller("orchestrator-a", Set.of("a2a.read"))))
                 .isInstanceOf(A2aSendMessageService.TaskLookupRejected.class)
                 .hasMessage("Task not found");
+    }
+
+    @Test
+    void exposesOrderedStateTransitionsForTemporalReconciliation() throws Exception {
+        A2aSendMessageService service = service();
+        A2aSendMessageService.Caller writer = new A2aSendMessageService.Caller("orchestrator-a", Set.of(
+                "a2a.invoke", "a2a.role.developer", "a2a.skill.developer.code-task-v1"));
+        A2aSendMessageService.Submission submission = service.send(sendParams(), writer);
+        service.projectState(submission.taskId(), A2aSendMessageService.TaskState.WORKING);
+        service.projectState(submission.taskId(), A2aSendMessageService.TaskState.COMPLETED);
+        A2aSecurityProperties security = new A2aSecurityProperties(
+                false, false, null, null, null, java.time.Duration.ofMinutes(5), false);
+        A2aJsonRpcController controller = new A2aJsonRpcController(mapper, service, security);
+        String request = """
+                {"jsonrpc":"2.0","id":"get-1","method":"GetTask",
+                 "params":{"id":"%s","historyLength":50}}
+                """.formatted(submission.taskId());
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                "orchestrator-a", "not-serialized", Set.of(
+                new SimpleGrantedAuthority("SCOPE_a2a.read"),
+                new SimpleGrantedAuthority("SCOPE_a2a.role.developer")));
+
+        Map<String, Object> response = controller.handle(
+                "1.0", request.getBytes(StandardCharsets.UTF_8), authentication);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = (Map<String, Object>) response.get("result");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> metadata = (Map<String, Object>) result.get("metadata");
+        assertThat(metadata.get("sequence")).isEqualTo(2L);
+        List<?> transitions = (List<?>) metadata.get("transitions");
+        List<String> states = transitions.stream()
+                .map(value -> String.valueOf(((Map<?, ?>) value).get("state"))).toList();
+        assertThat(states)
+                .containsExactly("TASK_STATE_SUBMITTED", "TASK_STATE_WORKING", "TASK_STATE_COMPLETED");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> status = (Map<String, Object>) result.get("status");
+        assertThat(status.get("timestamp")).isEqualTo(
+                ((Map<?, ?>) transitions.getLast()).get("occurredAt"));
     }
 
     private A2aSendMessageService service() {
