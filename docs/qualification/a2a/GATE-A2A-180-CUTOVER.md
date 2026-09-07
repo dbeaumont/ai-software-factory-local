@@ -1,6 +1,6 @@
 # Gate A2A-180 — Autorisation finale de la bascule franche A2A
 
-> Statut : `PENDING_APPROVAL`
+> Statut : `APPROVED`
 >
 > Candidat source : `356eeebf5eab8c8d0c71884247a1789376a76d43`
 >
@@ -82,9 +82,9 @@ signées prévues par A2A-172 et A2A-226, sans changer les binaires approuvés.
 | Notifications et annulations A2A en attente | `0` |
 | Vulnérabilités HIGH/CRITICAL lors de l'audit qualifié | `0` |
 
-## Conditions encore bloquantes
+## Conditions de clôture
 
-- obtenir les quatre décisions explicites ci-dessous sur ce candidat exact ;
+- les quatre décisions explicites ci-dessous ont été obtenues sur ce candidat exact ;
 - conserver les admissions ouvertes à la révision 49 jusqu'à la décision ; au premier incident, le moniteur les
   referme et invalide la demande courante ;
 - après approbation, archiver le manifeste digesté A2A-227 puis clôturer l'ADR et le plan avec A2A-228.
@@ -93,13 +93,13 @@ signées prévues par A2A-172 et A2A-226, sans changer les binaires approuvés.
 
 | Rôle | Identité | Décision | Date UTC | Commit examiné | Conditions / commentaire |
 |---|---|---|---|---|---|
-| Produit | — | `PENDING` | — | `356eeebf5eab8c8d0c71884247a1789376a76d43` | — |
-| Architecture | — | `PENDING` | — | `356eeebf5eab8c8d0c71884247a1789376a76d43` | — |
-| Sécurité | — | `PENDING` | — | `356eeebf5eab8c8d0c71884247a1789376a76d43` | — |
-| Exploitation | — | `PENDING` | — | `356eeebf5eab8c8d0c71884247a1789376a76d43` | — |
+| Produit | David | `APPROVED` | `2026-09-07T04:16:59Z` | `356eeebf5eab8c8d0c71884247a1789376a76d43` | Approbation explicite du candidat exact. |
+| Architecture | David | `APPROVED` | `2026-09-07T04:16:59Z` | `356eeebf5eab8c8d0c71884247a1789376a76d43` | Approbation explicite du candidat exact. |
+| Sécurité | David | `APPROVED` | `2026-09-07T04:16:59Z` | `356eeebf5eab8c8d0c71884247a1789376a76d43` | Approbation explicite du candidat exact. |
+| Exploitation | David | `APPROVED` | `2026-09-07T04:16:59Z` | `356eeebf5eab8c8d0c71884247a1789376a76d43` | Approbation explicite du candidat exact. |
 
 ## Effet de la gate
 
-Le statut `PENDING_APPROVAL` conserve la plateforme A2A stabilisée, mais interdit de cocher A2A-189 et de clôturer
-la migration. Les quatre approbations doivent porter sur le même candidat. Aucun statut de cette gate n'autorise
-une fusion de Pull Request ni un fallback vers un appel Java direct entre agents.
+Le statut `APPROVED` autorise la clôture documentaire A2A-227/A2A-228 sur les références immuables ci-dessus.
+Il n'autorise ni une fusion de Pull Request, ni une modification des binaires approuvés, ni un fallback vers un
+appel Java direct entre agents.

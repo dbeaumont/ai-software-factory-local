@@ -26,13 +26,13 @@ def section(document, heading, next_heading)
 end
 
 def table_rows(markdown)
-  markdown.lines.filter_map do |line|
+  markdown.lines.each_with_object([]) do |line, rows|
     next unless line.start_with?("|")
 
     cells = line.split("|")[1...-1].map { |cell| cell.strip.delete_prefix("`").delete_suffix("`") }
     next if cells.empty? || cells.first.match?(/\A[-:]+\z/)
 
-    cells
+    rows << cells
   end
 end
 

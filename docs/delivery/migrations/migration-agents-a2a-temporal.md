@@ -831,15 +831,17 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   378 secondes et 12 échantillons sans backlog, notification en retard, divergence, erreur, redémarrage, OOM,
   dérive d'image ou saturation ; révision 49 restée ouverte et télémétrie SigNoz complète. Preuve :
   `docs/evidence/a2a/A2A-188-STABILIZATION.md`.)_
-- [ ] **A2A-189 — Faire approuver la bascule.** Obtenir une décision humaine explicite liée au commit, aux images,
-  rapports et preuves exactes.
+- [x] **A2A-189 — Faire approuver la bascule.** Obtenir une décision humaine explicite liée au commit, aux images,
+  rapports et preuves exactes. _(David a approuvé explicitement les rôles Produit, Architecture, Sécurité et
+  Exploitation pour le candidat `356eeebf5eab8c8d0c71884247a1789376a76d43` ; la gate et la preuve
+  `docs/evidence/a2a/A2A-189-CUTOVER-APPROVAL.md` lient la décision aux images et Build IDs qualifiés.)_
 
 ### Critères de sortie du lot 10
 
 - [x] Toutes les nouvelles invocations d'agents passent exclusivement par A2A 1.0.
 - [x] Temporal demeure l'unique moteur de coordination et aucun agent ne délègue hors de son contrôle.
 - [x] La recherche automatisée ne trouve aucun chemin d'exécution direct résiduel.
-- [ ] Le smoke test et la fenêtre de stabilisation sont approuvés avec leurs digests.
+- [x] Le smoke test et la fenêtre de stabilisation sont approuvés avec leurs digests.
 
 ## 18. Lot 11 — rollback sans retour aux appels directs
 
