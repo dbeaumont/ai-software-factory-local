@@ -1,8 +1,8 @@
-# Gate A2A-180 — Autorisation de bascule franche A2A
+# Gate A2A-180 — Autorisation finale de la bascule franche A2A
 
-> Statut : `CLOSED`
+> Statut : `PENDING_APPROVAL`
 >
-> Candidat source : `18883d0f0e53f953a73d6e136ca56e439d1b9202`
+> Candidat source : `356eeebf5eab8c8d0c71884247a1789376a76d43`
 >
 > Protocole : A2A `1.0`, binding JSON-RPC, SDK Java `1.1.0.Final`
 >
@@ -10,34 +10,38 @@
 
 ## Décision demandée
 
-Autoriser ou refuser l'exécution atomique d'A2A-181 à A2A-189. La gate reste fermée tant qu'un prérequis, une
-preuve, un artefact ou une approbation est absent. Une approbation n'est valable que pour le commit et les digests
-exacts inscrits dans ce document ; toute modification du candidat impose une nouvelle qualification.
+Approuver ou refuser le candidat final déjà déployé et stabilisé. Une approbation n'est valable que pour le commit,
+les images, les Build IDs et les preuves exacts inscrits dans ce document. Toute modification d'un binaire ou d'un
+contrat impose une nouvelle qualification.
 
 Décisions admises :
 
-- `APPROVED` : la coupure peut commencer sur les artefacts exacts ;
-- `APPROVED_WITH_ACTIONS` : la gate reste fermée jusqu'à clôture vérifiée des actions ;
-- `REJECTED` : aucune coupure n'est autorisée ;
+- `APPROVED` : la migration A2A peut être clôturée sur les artefacts exacts ;
+- `APPROVED_WITH_ACTIONS` : la gate reste en attente jusqu'à la clôture vérifiée des actions ;
+- `REJECTED` : les admissions doivent être fermées et le runbook de rollback A2A évalué ;
 - `PENDING` : aucune décision n'a encore été donnée.
 
-## Artefacts candidats
+## Candidat exact
 
-| Artefact | Référence immuable |
+| Élément | Référence immuable |
 |---|---|
-| Runtime agent A2A | `sha256:2b65b20d09414e46b92868e2cb82a88e67330b6a57544b67b5608d047f42d4ca` |
-| Orchestrateur Temporal | `sha256:ff8e04dae63cfc6937c802db470f8df39da05aade1e97099ff73de244183f556` |
-| MCP Repository Context | `sha256:91b2e7f6bd8d8da2353ef8b8f63f2fc2a92af88f4639e76b577cb07f96f4e22b` |
-| MCP Sandbox Execution | `sha256:345bffa6d0c971f6793327caa7e6a20b33814f3929d3cf8c967bc6d7bef1adce` |
-| MCP SCM Delivery | `sha256:d46634801cdc55793f63fb435ba7a1128518b890b321b59becded4299e67a701` |
-| MCP Assurance | `sha256:3485d3be8de6b767d4e9e2ffffeeade7d55ca46bfee1791149221e8a31ea6859` |
-| MCP Evidence | `sha256:0bad2891a0261d2c6eb7d06b8166295787dc75c91a3f05dca1b4b3ccd1814ee2` |
-| SBOM CycloneDX workspace | `sha256:bd4bd4d6ce2def99f8c359d7faf971702e9ee079531aec98d5e482b2c9c4a508` |
-| SBOM SPDX workspace | `sha256:089cc13e553ff86fdd12bab5b7d3d4f0683dd11cbcc097bfe63ea2708bab1e1a` |
+| Bundle source et preuves | `356eeebf5eab8c8d0c71884247a1789376a76d43` |
+| Source runtime A2A | `eb776cd6cca1ea5724ebe0fa49577d6322f3d19c` |
+| Source orchestrateur | `90057523c6e9460840743bd6032e8713b7e2a65b` |
+| Runtime agent A2A, 14 rôles | `sha256:a9f616dd78e43300bfc7f92d992d9aae6a322711590a783401667c3311543ba8` |
+| Orchestrateur Temporal | `sha256:a58d1600269abd9d9b0c6276129a12f29d9187d4dd0b3fedc59faaf1d4fd2ff0` |
+| MCP Repository Context | `sha256:876c923401911ce02f840ac8df6705a7fe10c9bc4789b753e784e60ac3d50487` |
+| MCP Sandbox Execution | `sha256:31fc6fc2f983af278490c359b54a1fe29614b2b40d6cb4bf646ea015f8e790ff` |
+| MCP SCM Delivery | `sha256:22fcf004deef72b20b364e4cb28eba3a05d64f045b1357b7b76c5ed8f50531d6` |
+| MCP Assurance | `sha256:7ec65436b33b5c3c15a751656c1aebfc692268ac5081e93bc78ed52e9030e0ff` |
+| MCP Evidence | `sha256:b0acb4af07773eb92a00c89003b88344f217d5ae7f86b0cf06e34d625d3617ad` |
+| Build ID Temporal A2A | `a2a-agent-eb776cd` |
+| Build ID Temporal orchestrateur | `a2a-cutover-d4b55c7` |
+| Révision d'admission stabilisée | `49`, `normal_operation`, ouverte |
 
-Les digests ci-dessus identifient les builds locaux qualifiés. Avant un déploiement dans un registre, A2A-183 doit
-les remplacer ou les compléter avec les digests de manifeste du registre, les signatures Cosign et les preuves
-SLSA vérifiées.
+Ces identifiants sont ceux des images locales effectivement exécutées et qualifiées. Ils ne sont pas présentés
+comme des digests de manifeste d'un registre distant. Un déploiement GKE devra employer les références de registre
+signées prévues par A2A-172 et A2A-226, sans changer les binaires approuvés.
 
 ## Matrice de qualification
 
@@ -46,14 +50,22 @@ SLSA vérifiées.
 | TCK officiel | [`tck/README.md`](../../evidence/a2a/tck/README.md) | `PASS` — 68 réussis, 0 échec |
 | Interopérabilité | [`A2A-163-INTEROPERABILITY.md`](../../evidence/a2a/A2A-163-INTEROPERABILITY.md) | `PASS` |
 | Temporal et replay | [`A2A-164-TEMPORAL-EMBEDDED.md`](../../evidence/a2a/A2A-164-TEMPORAL-EMBEDDED.md) | `PASS` — 0 erreur de replay |
-| Compose et reprise | [`A2A-165-COMPOSE-INTEGRATION.log`](../../evidence/a2a/A2A-165-COMPOSE-INTEGRATION.log) | `PASS` |
+| Compose, persistance et reprise | [`A2A-165-COMPOSE-INTEGRATION.log`](../../evidence/a2a/A2A-165-COMPOSE-INTEGRATION.log) | `PASS` |
 | Pannes et effets uniques | [`A2A-166-FAILURE-CAMPAIGN.md`](../../evidence/a2a/A2A-166-FAILURE-CAMPAIGN.md) | `PASS` |
 | Concurrence et rotation | [`A2A-167-CONCURRENCY.md`](../../evidence/a2a/A2A-167-CONCURRENCY.md) | `PASS` |
 | Sécurité et isolation | [`A2A-168-SECURITY-CAMPAIGN.md`](../../evidence/a2a/A2A-168-SECURITY-CAMPAIGN.md) | `PASS` |
 | Performance et saturation | [`A2A-169-PERFORMANCE.md`](../../evidence/a2a/A2A-169-PERFORMANCE.md) | `PASS` — p95 A2A = 0,60 % du budget historique |
 | Parité E2E | [`A2A-170-E2E-PARITY.md`](../../evidence/a2a/A2A-170-E2E-PARITY.md) | `PASS` — 36 fixtures |
+| Non-régression pipeline | [`A2A-171-PIPELINE-NON-REGRESSION.md`](../../evidence/a2a/A2A-171-PIPELINE-NON-REGRESSION.md) | `PASS` |
 | Dépendances, images et SBOM | [`A2A-172-DEPENDENCY-AUDIT.md`](../../evidence/a2a/A2A-172-DEPENDENCY-AUDIT.md) | `PASS` |
-| Rollback sans appels directs | A2A-200 à A2A-206 | `PENDING` |
+| Sauvegarde et restauration | [`A2A-182-CUTOVER-BACKUP.md`](../../evidence/a2a/A2A-182-CUTOVER-BACKUP.md) | `PASS` |
+| Déploiement des agents | [`A2A-183-AGENT-DEPLOYMENT.md`](../../evidence/a2a/A2A-183-AGENT-DEPLOYMENT.md) | `PASS` |
+| Activation Temporal | [`A2A-184-TEMPORAL-ACTIVATION.md`](../../evidence/a2a/A2A-184-TEMPORAL-ACTIVATION.md) | `PASS` |
+| Suppression des appels directs | [`A2A-185-DIRECT-CALL-CUTOVER.md`](../../evidence/a2a/A2A-185-DIRECT-CALL-CUTOVER.md) | `PASS` |
+| Smoke de production | [`A2A-186-PRODUCTION-SMOKE.md`](../../evidence/a2a/A2A-186-PRODUCTION-SMOKE.md) | `PASS` |
+| Réouverture contrôlée | [`A2A-187-ADMISSIONS-REOPEN.md`](../../evidence/a2a/A2A-187-ADMISSIONS-REOPEN.md) | `PASS` |
+| Stabilisation fail-closed | [`A2A-188-STABILIZATION.md`](../../evidence/a2a/A2A-188-STABILIZATION.md) | `PASS` — 378 s, 12 échantillons |
+| Rollback exclusivement A2A | A2A-200 à A2A-206 dans le plan | `PASS` |
 
 ## Seuils obligatoires
 
@@ -66,28 +78,28 @@ SLSA vérifiées.
 | Divergence sur les fixtures métier | `0` |
 | Budget p95 A2A | `PASS`, inférieur à 1 % de la baseline E2E |
 | Scénarios d'annulation et de reprise sans preuve | `0` |
-| Vulnérabilités HIGH/CRITICAL sur sources et images | `0` |
+| Violations pendant la stabilisation | `0` |
+| Notifications et annulations A2A en attente | `0` |
+| Vulnérabilités HIGH/CRITICAL lors de l'audit qualifié | `0` |
 
 ## Conditions encore bloquantes
 
-- A2A-171 : prouver après la coupure que le mode métier `PIPELINE` n'offre aucun transport direct.
-- A2A-181 à A2A-188 : exécuter la fenêtre de coupure, le smoke test et la stabilisation.
-- A2A-200 à A2A-206 : qualifier le rollback vers une release A2A compatible, jamais vers les agents en mémoire.
-- Remplacer les digests locaux par les digests du candidat final si une image est reconstruite.
-- Obtenir les quatre décisions explicites ci-dessous sur ce candidat final.
+- obtenir les quatre décisions explicites ci-dessous sur ce candidat exact ;
+- conserver les admissions ouvertes à la révision 49 jusqu'à la décision ; au premier incident, le moniteur les
+  referme et invalide la demande courante ;
+- après approbation, archiver le manifeste digesté A2A-227 puis clôturer l'ADR et le plan avec A2A-228.
 
 ## Sign-off
 
 | Rôle | Identité | Décision | Date UTC | Commit examiné | Conditions / commentaire |
 |---|---|---|---|---|---|
-| Produit | — | `PENDING` | — | — | — |
-| Architecture | — | `PENDING` | — | — | — |
-| Sécurité | — | `PENDING` | — | — | — |
-| Exploitation | — | `PENDING` | — | — | — |
+| Produit | — | `PENDING` | — | `356eeebf5eab8c8d0c71884247a1789376a76d43` | — |
+| Architecture | — | `PENDING` | — | `356eeebf5eab8c8d0c71884247a1789376a76d43` | — |
+| Sécurité | — | `PENDING` | — | `356eeebf5eab8c8d0c71884247a1789376a76d43` | — |
+| Exploitation | — | `PENDING` | — | `356eeebf5eab8c8d0c71884247a1789376a76d43` | — |
 
 ## Effet de la gate
 
-Le statut `CLOSED` interdit de fermer les admissions pour la bascule A2A. Une fois toutes les conditions remplies,
-les quatre approbations doivent porter sur le même commit et les mêmes images, puis le statut peut devenir
-`APPROVED`. Aucun statut de cette gate n'autorise une fusion de Pull Request ni un fallback vers un appel Java
-direct entre agents.
+Le statut `PENDING_APPROVAL` conserve la plateforme A2A stabilisée, mais interdit de cocher A2A-189 et de clôturer
+la migration. Les quatre approbations doivent porter sur le même candidat. Aucun statut de cette gate n'autorise
+une fusion de Pull Request ni un fallback vers un appel Java direct entre agents.
