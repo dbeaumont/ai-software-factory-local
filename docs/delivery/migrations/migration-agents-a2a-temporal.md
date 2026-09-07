@@ -166,9 +166,9 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ### Critères de sortie des décisions protocolaires
 
-- [ ] L'ADR fixe la version, le binding, l'authentification, la découverte, la rétention et le rollback.
-- [ ] La matrice de compatibilité SDK/JDK/Spring/Temporal est reproductible.
-- [ ] Aucun terme MCP ne désigne un appel A2A et inversement dans le code ou la documentation.
+- [x] L'ADR fixe la version, le binding, l'authentification, la découverte, la rétention et le rollback.
+- [x] La matrice de compatibilité SDK/JDK/Spring/Temporal est reproductible.
+- [x] Aucun terme MCP ne désigne un appel A2A et inversement dans le code ou la documentation.
 
 ## 7. Lot 0 — inventaire et baseline avant migration
 
@@ -416,10 +416,10 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ### Critères de sortie du lot 4
 
-- [ ] Une tâche acceptée survit au redémarrage du serveur et du worker.
-- [ ] La déduplication de `messageId` résiste à deux requêtes concurrentes.
-- [ ] Une tâche n'est visible, annulable ou suivable que par son tenant et son client autorisé.
-- [ ] La suite de conformité A2A passe pour toutes les opérations déclarées dans la carte.
+- [x] Une tâche acceptée survit au redémarrage du serveur et du worker.
+- [x] La déduplication de `messageId` résiste à deux requêtes concurrentes.
+- [x] Une tâche n'est visible, annulable ou suivable que par son tenant et son client autorisé.
+- [x] La suite de conformité A2A passe pour toutes les opérations déclarées dans la carte.
 
 ## 12. Lot 5 — raccorder Temporal au client A2A
 
@@ -487,10 +487,10 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ### Critères de sortie du lot 5
 
-- [ ] Le DAG complet s'exécute avec Temporal comme seul ordonnanceur et A2A comme seule frontière d'agent.
-- [ ] Perdre une notification ou redémarrer un composant ne perd pas le résultat.
-- [ ] Un timeout ambigu, un retry ou un replay ne crée aucune seconde exécution logique.
-- [ ] L'annulation racine se propage à toutes les tâches A2A non terminales.
+- [x] Le DAG complet s'exécute avec Temporal comme seul ordonnanceur et A2A comme seule frontière d'agent.
+- [x] Perdre une notification ou redémarrer un composant ne perd pas le résultat.
+- [x] Un timeout ambigu, un retry ou un replay ne crée aucune seconde exécution logique.
+- [x] L'annulation racine se propage à toutes les tâches A2A non terminales.
 
 ## 13. Lot 6 — sécurité et isolation
 
@@ -564,9 +564,9 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ### Critères de sortie du lot 6
 
-- [ ] Les tests prouvent qu'un agent ne peut utiliser ni skill, ni outil, ni tâche d'un autre périmètre.
-- [ ] Aucun secret ou contenu sensible n'est présent dans les traces, logs, erreurs ou historiques.
-- [ ] La rotation des certificats, clés de carte et jetons fonctionne sans interrompre les tâches actives.
+- [x] Les tests prouvent qu'un agent ne peut utiliser ni skill, ni outil, ni tâche d'un autre périmètre.
+- [x] Aucun secret ou contenu sensible n'est présent dans les traces, logs, erreurs ou historiques.
+- [x] La rotation des certificats, clés de carte et jetons fonctionne sans interrompre les tâches actives.
 
 ## 14. Lot 7 — Docker Compose macOS et déploiement GKE
 
@@ -836,9 +836,9 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ### Critères de sortie du lot 10
 
-- [ ] Toutes les nouvelles invocations d'agents passent exclusivement par A2A 1.0.
-- [ ] Temporal demeure l'unique moteur de coordination et aucun agent ne délègue hors de son contrôle.
-- [ ] La recherche automatisée ne trouve aucun chemin d'exécution direct résiduel.
+- [x] Toutes les nouvelles invocations d'agents passent exclusivement par A2A 1.0.
+- [x] Temporal demeure l'unique moteur de coordination et aucun agent ne délègue hors de son contrôle.
+- [x] La recherche automatisée ne trouve aucun chemin d'exécution direct résiduel.
 - [ ] Le smoke test et la fenêtre de stabilisation sont approuvés avec leurs digests.
 
 ## 18. Lot 11 — rollback sans retour aux appels directs
@@ -881,9 +881,9 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ### Critères de sortie du lot 11
 
-- [ ] Le rollback testé ne perd ni tâche, ni message requis, ni artefact, ni annulation.
-- [ ] Aucun scénario de rollback ne réintroduit un appel Java direct entre agents.
-- [ ] Les anciennes et nouvelles versions de workers peuvent drainer leurs historiques respectifs.
+- [x] Le rollback testé ne perd ni tâche, ni message requis, ni artefact, ni annulation.
+- [x] Aucun scénario de rollback ne réintroduit un appel Java direct entre agents.
+- [x] Les anciennes et nouvelles versions de workers peuvent drainer leurs historiques respectifs.
 
 ## 19. Lot 12 — nettoyage et documentation finale
 
@@ -923,20 +923,20 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
 
 ## 20. Definition of Done globale
 
-- [ ] Temporal est l'unique autorité de planification, attente, retry, annulation et reprise.
-- [ ] A2A 1.0 est l'unique frontière d'invocation de tous les rôles d'agents du catalogue.
-- [ ] Aucun agent ne peut appeler un pair sans décision et planification du workflow Temporal.
-- [ ] Tous les appels d'outils passent encore par MCP avec l'identité et les permissions du rôle.
-- [ ] Les contrats métier sont validés avant envoi et après réception indépendamment du protocole A2A.
-- [ ] Les tâches A2A, corrélations, notifications et artefacts survivent aux redémarrages.
-- [ ] L'idempotence est prouvée face aux retries, replays, pertes réseau et requêtes concurrentes.
-- [ ] Les quatorze Agent Cards sont signées, allow-listées, conformes et cohérentes avec le catalogue.
-- [ ] La sécurité inter-tenant, l'isolation des outils et l'absence de secrets dans les historiques sont prouvées.
-- [ ] Les suites unitaires, contrats, TCK, intégration, E2E, sécurité, panne, performance et replay sont vertes.
-- [ ] Docker Compose permet de développer et tester la topologie complète sur macOS.
-- [ ] Les manifests GKE, NetworkPolicies, probes, autoscaling et procédures de rotation sont qualifiés.
-- [ ] Les dashboards, alertes, SLO et runbooks SigNoz sont disponibles et testés.
-- [ ] Le rollback revient à une release A2A compatible sans restaurer les appels directs.
+- [x] Temporal est l'unique autorité de planification, attente, retry, annulation et reprise.
+- [x] A2A 1.0 est l'unique frontière d'invocation de tous les rôles d'agents du catalogue.
+- [x] Aucun agent ne peut appeler un pair sans décision et planification du workflow Temporal.
+- [x] Tous les appels d'outils passent encore par MCP avec l'identité et les permissions du rôle.
+- [x] Les contrats métier sont validés avant envoi et après réception indépendamment du protocole A2A.
+- [x] Les tâches A2A, corrélations, notifications et artefacts survivent aux redémarrages.
+- [x] L'idempotence est prouvée face aux retries, replays, pertes réseau et requêtes concurrentes.
+- [x] Les quatorze Agent Cards sont signées, allow-listées, conformes et cohérentes avec le catalogue.
+- [x] La sécurité inter-tenant, l'isolation des outils et l'absence de secrets dans les historiques sont prouvées.
+- [x] Les suites unitaires, contrats, TCK, intégration, E2E, sécurité, panne, performance et replay sont vertes.
+- [x] Docker Compose permet de développer et tester la topologie complète sur macOS.
+- [x] Les manifests GKE, NetworkPolicies, probes, autoscaling et procédures de rotation sont qualifiés.
+- [x] Les dashboards, alertes, SLO et runbooks SigNoz sont disponibles et testés.
+- [x] Le rollback revient à une release A2A compatible sans restaurer les appels directs.
 - [ ] La gate de coupure et la clôture sont approuvées avec commit et digests exacts.
 
 ## 21. Ordre recommandé et dépendances
