@@ -822,6 +822,7 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   - [x] Réconcilier périodiquement l'outbox de notifications afin qu'un démarrage des agents avant le récepteur
     ne laisse pas de callbacks durablement en attente.
   - [x] Distinguer le job d'activation Temporal des quatorze runtimes dans le validateur de topologie Compose.
+  - [x] Convertir explicitement le payload sérialisé en `jsonb` lors de son admission dans l'inbox PostgreSQL.
 - [ ] **A2A-188 — Surveiller la fenêtre de stabilisation.** Contrôler SLO, backlog, divergences, notifications,
   coûts, erreurs et saturation pendant la durée approuvée.
 - [ ] **A2A-189 — Faire approuver la bascule.** Obtenir une décision humaine explicite liée au commit, aux images,

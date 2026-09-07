@@ -53,7 +53,7 @@ public class PostgresA2aNotificationInbox implements A2aNotificationInbox {
                     INSERT INTO a2a_notification_inbox
                       (agent_role, a2a_task_id, context_id, transition_sequence, task_state, payload_digest,
                        payload_json, workflow_id, workflow_run_id, signal_status, occurred_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
+                    VALUES (?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, 'PENDING', ?)
                     """, notification.agentRole(), notification.taskId(), notification.contextId(),
                     notification.sequence(), notification.state().name(), payloadDigest, payloadJson,
                     association.workflowId(), association.workflowRunId(), Timestamp.from(notification.occurredAt()));
