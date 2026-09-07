@@ -1,131 +1,110 @@
-# Précision sur les agents
+# Modèle de déploiement des agents A2A
 
-Les agents ne sont pas des services distincts dans `compose.yaml`. Ils sont exécutés comme des rôles internes au service `orchestrator`.
+> État courant au 7 septembre 2026. Cette page remplace le modèle historique où les rôles étaient chargés dans la
+> JVM de l'orchestrateur.
 
-```mermaid
-flowchart LR
-  C[Conteneur orchestrator]
-  C --> S[Supervisor]
-  S --> A[Architecture agents]
-  S --> D[Code agents]
-  S --> T[Test agents]
-  S --> X[Security agents]
-  C --> R[Independent Reviewer]
-```
+## Topologie active
 
-Le conteneur est déclaré dans [`compose.yaml`](../../../infrastructure/compose.yaml). Il embarque notamment :
-
-- le runtime d’agents ;
-- le catalogue des rôles ;
-- les prompts ;
-- les contrats JSON ;
-- le scheduler de DAG ;
-- les implémentations de workflows Temporal.
-
-Les rôles sont configurés par ces variables Compose :
-
-- `AI_FACTORY_AGENT_TOOL_ROLES` : rôles autorisés ;
-- `AI_FACTORY_AGENT_TOOL_EVALUATION_ROLES` : rôles utilisables en shadow ;
-- `AI_FACTORY_AGENT_TOOL_QUALIFICATION` : verdict de qualification ;
-- `AI_FACTORY_AGENT_TOOL_SECURITY_PASSED` : validation sécurité.
-
-Elles sont visibles dans [`compose.yaml`](../../../infrastructure/compose.yaml).
-
-Le catalogue complet se trouve dans [`catalog-v1.yaml`](../../../resources/agents/catalog-v1.yaml), avec :
-
-- `supervisor`
-- `architecture-agent`
-  - `impact-analysis`
-  - `dependencies-contracts`
-- `code-agent`
-  - `developer`
-  - `patch-repair`
-- `test-agent`
-  - `test-design`
-  - `test-evidence`
-- `security-agent`
-  - `threat-model`
-  - `security-findings`
-- `independent-reviewer`
-
-Le choix est volontaire : la hiérarchie multi-agent est une organisation logique, pas un microservice par agent. Les services séparés dans Compose sont plutôt les capacités techniques gouvernées : Temporal et les serveurs MCP.
-
-Point important : même si leur code est embarqué dans l’orchestrateur, les agents hiérarchiques sont désactivés par défaut (`qualification=INCOMPLETE`, listes de rôles vides). Ils ne sont donc pas actuellement lancés comme un workflow hiérarchique opérationnel.
-
-# Cible GCP
-
-Si ces agents GCP doivent être invoqués par plusieurs systèmes, ils ne sont plus de simples rôles internes à la
-Software Factory : ce sont des services autonomes avec leur propre API, identité, version et cycle de déploiement.
-
-Aujourd’hui, le prototype les embarque tous dans `orchestrator`, comme indiqué dans ce document et dans la
-[cible actuelle](../../archive/releases/1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md). Cette organisation
-convient au prototype, mais ne représente pas une cible dans laquelle les agents sont mutualisés entre produits.
-
-### Topologie Compose recommandée
+Les quatorze rôles du catalogue sont aujourd'hui quatorze services Compose distincts. Ils partagent l'image
+immuable `ai-factory-a2a-agent-runtime`, mais chaque service possède son rôle, son identité mTLS, son secret OAuth2,
+son Agent Card signée, ses réseaux MCP et sa task queue Temporal.
 
 ```mermaid
 flowchart LR
-  USER[Factory Web / API] --> COORD[Workflow Coordinator<br/>Temporal + Supervisor]
-  OTHER[Autres consommateurs] --> GW[Agent Gateway / Registry]
-
-  COORD --> GW
-
-  GW --> ARCH[Agent Runtime<br/>Architecture]
-  GW --> CODE[Agent Runtime<br/>Code]
-  GW --> TEST[Agent Runtime<br/>Tests]
-  GW --> SEC[Agent Runtime<br/>Sécurité]
-  GW --> REVIEW[Agent Runtime<br/>Independent Reviewer]
-  GW --> EXT[Agents externes GCP]
-
-  ARCH --> RO[MCP lecture seule]
-  CODE --> RO
-  TEST --> RO
-  SEC --> RO
-  REVIEW --> EVIDENCE[Evidence MCP]
-
-  COORD --> EFFECT[MCP à effet<br/>Sandbox / Assurance / SCM]
-  ARCH & CODE & TEST & SEC & REVIEW --> LLM[LiteLLM / modèles]
+  API[Factory Web / API] --> ORCH[Orchestrator]
+  ORCH --> ROOT[Temporal<br/>workflow racine]
+  ROOT -->|activité A2A| ID[A2A Identity]
+  ID -->|OAuth2 + mTLS| FLEET[14 runtimes A2A]
+  FLEET -->|AgentTaskWorkflowV1| TEMP[Temporal<br/>14 task queues]
+  FLEET --> EVIDENCE[Evidence MCP]
+  FLEET --> CONTEXT[Repository Context MCP]
+  ORCH --> EFFECTS[MCP à effet<br/>Sandbox / Assurance / SCM]
 ```
 
-Je n’irais cependant pas jusqu’à créer systématiquement un conteneur par sous-agent. La bonne granularité est une frontière de déploiement, de sécurité ou de montée en charge :
+Temporal reste l'unique ordonnanceur. Un agent peut produire une intention de délégation, mais il ne contacte pas
+directement un pair et ne déclenche aucun effet SCM. L'orchestrateur valide l'intention et crée la prochaine tâche
+A2A depuis le workflow durable.
 
-- `orchestrator` : workflow Temporal, Supervisor, DAG, budgets et décisions ;
-- `agent-gateway` : contrat d’invocation versionné, authentification, routage et registre des agents ;
-- `agent-runtime-analysis` : agents Architecture, Tests et éventuellement Sécurité en lecture seule ;
-- `agent-runtime-code` : Developer et Patch Repair, fortement isolés ;
-- `agent-runtime-review` : Independent Reviewer, séparé pour garantir son indépendance ;
-- éventuellement un service par agent GCP réellement partagé ou ayant un SLA spécifique.
+## Couverture des rôles
 
-Les sous-agents courts comme `impact-analysis`, `test-design` ou `security-findings` peuvent rester des rôles configurés dans un runtime générique.
+Le catalogue [`catalog-v1.yaml`](../../../resources/agents/catalog-v1.yaml) définit :
 
-### Point de gouvernance essentiel
+- `supervisor` ;
+- `architecture-agent`, `impact-analysis`, `dependencies-contracts` ;
+- `code-agent`, `developer`, `patch-repair` ;
+- `test-agent`, `test-design`, `test-evidence` ;
+- `security-agent`, `threat-model`, `security-findings` ;
+- `independent-reviewer`.
 
-Les agents autonomes ne devraient pas appeler directement les opérations à effet :
+La définition Compose se trouve dans
+[`compose-agents.yaml`](../../../infrastructure/a2a/compose-agents.yaml), inclus par
+[`compose.yaml`](../../../infrastructure/compose.yaml). Le profil `a2a-full` sélectionne les quatorze rôles ; chaque
+profil `a2a-<role>` permet un démarrage isolé pour le développement.
 
-- pas d’écriture SCM ;
-- pas d’application directe de patch ;
-- pas de validation de gate ;
-- pas de secret de la Software Factory.
+## Isolation
 
-Ils produisent une réponse typée et des références de preuves. Le `WorkflowCoordinator` reste le seul composant autorisé à déclencher `sandbox-execution-mcp`, `assurance-mcp` et `scm-delivery-mcp`.
+```mermaid
+flowchart TB
+  subgraph CONTROL[Plan de contrôle]
+    ORCH[Orchestrator]
+    TEMP[Temporal]
+  end
+  subgraph A2A[Réseau A2A privé]
+    ID[Identity]
+    ROLE[Runtime d'un rôle]
+    DB[(Projection A2A)]
+  end
+  subgraph CAP[Capacités autorisées]
+    LLM[LiteLLM]
+    CTX[Context MCP]
+    EVD[Evidence MCP]
+  end
 
-### Préparation de la cible GCP
+  ORCH -->|A2A 1.0 JSON-RPC| ROLE
+  ROLE --> TEMP
+  ROLE --> DB
+  ROLE --> LLM
+  ROLE --> CTX
+  ROLE --> EVD
+  ID -. identité .-> ORCH
+  ID -. identité .-> ROLE
+```
 
-Le même contrat d’invocation doit fonctionner localement dans Compose et sur GCP :
+Les runtimes sont non privilégiés, en lecture seule, sans socket Docker et sans secret SCM. Les réseaux accordés
+diffèrent par rôle : un rôle ne rejoint que les MCP nécessaires à ses capacités. La matrice est vérifiée par
+`make a2a-config`.
 
-- Cloud Run privé pour les agents exposés par API et à charge intermittente ;
-- Vertex AI Agent Engine pour un runtime d’agent managé ;
-- GKE pour les workers longs, les besoins d’isolation avancée, les sidecars ou les traitements nécessitant davantage de contrôle ;
-- une identité IAM minimale distincte par classe d’agent.
+## Démarrage local
 
-Cloud Run fournit des services privés et des identités de service dédiées
-([sécurité Cloud Run](https://docs.cloud.google.com/run/docs/securing/security)). Vertex AI Agent Engine fournit
-un runtime managé pour déployer et mettre à l'échelle des agents
-([documentation Agent Engine](https://cloud.google.com/vertex-ai/generative-ai/docs/reasoning-engine/overview)).
-Sur GKE, Workload Identity Federation permet d'attribuer des identités et autorisations distinctes aux runtimes
-([documentation GKE](https://docs.cloud.google.com/kubernetes-engine/docs/concepts/workload-identity)).
+```shell
+# Un rôle et ses dépendances
+make a2a-up-role A2A_ROLE=developer
 
-La recommandation est donc de conserver temporairement le mode embarqué, puis d'ajouter un profil
-`distributed-agents` avec un gateway et trois pools indépendants — analyse, code et review. Cela prépare GCP sans
-imposer prématurément un microservice par rôle. L'argumentaire complet et la trajectoire de migration figurent dans
-la [rétrodocumentation](../../overview/current-state.md#35-pertinence-de-modules-dagents-autonomes).
+# Flotte complète, démarrée par lots bornés
+make a2a-up-full
+
+# Usine complète depuis des volumes Docker vides
+make all
+```
+
+`make a2a-up-full` stabilise d'abord les identités DNS de la flotte, recrée ensuite l'orchestrateur, puis active les
+Build IDs des deux déploiements Temporal. `make verify-ready` contrôle les quatorze Agent Cards et les vingt-huit
+pollers workflow/activity.
+
+## Cible GKE
+
+La cible conserve exactement les mêmes frontières : un Deployment par rôle, une identité Workload Identity par
+workload, des NetworkPolicies deny-by-default et le même contrat A2A. Les manifests sont générés sous
+[`infrastructure/gke/a2a`](../../../infrastructure/gke/a2a/).
+
+La cible GKE n'est pas qualifiée par le seul succès local. Elle exige encore un cluster réel, les identités cloud,
+la gestion de secrets et les exercices de reprise décrits dans
+[`A2A-GKE.md`](../../operations/A2A-GKE.md).
+
+## Invariants
+
+- A2A 1.0 est l'unique frontière d'invocation des agents.
+- Temporal est l'unique autorité de coordination et de reprise.
+- MCP reste la frontière d'accès aux outils.
+- Evidence MCP porte les contenus volumineux ; A2A et Temporal ne transportent que des références digestées.
+- Une identité, une carte ou une task queue invalide ferme les admissions ; aucun fallback en mémoire n'existe.

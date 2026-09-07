@@ -29,9 +29,9 @@ approuvés par la plateforme.
 La bascule est franche : le premier changement de runtime retire Prometheus et Grafana en même temps qu'il
 ajoute le Collector, SigNoz et l'export OTLP. Il n'existe ni période de double collecte, ni profil legacy dans
 la branche active. La parité est contrôlée à partir de baselines et de fixtures capturées avant la suppression,
-puis vérifiée directement dans SigNoz. Le document
-[`strategie-opentelemetry.md`](../roadmap/strategie-opentelemetry.md) décrit l'introduction initiale d'OTel en
-complément ; la décision du présent plan la remplace pour retenir une substitution immédiate et complète.
+puis vérifiée directement dans SigNoz. La
+[`stratégie OpenTelemetry courante`](strategie-opentelemetry.md) décrit l'architecture active après cette
+substitution immédiate et complète.
 
 Décision de mise en œuvre : les lots décrivent les dépendances techniques, mais les lots 2 à 4 sont livrés dans
 une même bascule atomique. La branche ne doit jamais contenir un runtime actif sans observabilité, ni un runtime
@@ -511,8 +511,8 @@ retirer Prometheus/Grafana sans SigNoz fonctionnel, ni activer les deux chaînes
 
 Points de départ :
 
-- [Stratégie OpenTelemetry du projet](../roadmap/strategie-opentelemetry.md)
-- [Roadmap OpenTelemetry initiale](../roadmap/OPENTELEMETRY.md)
+- [Stratégie OpenTelemetry du projet](strategie-opentelemetry.md)
+- [État de livraison OpenTelemetry](migration-opentelemetry.md)
 - [Baseline Prometheus/Grafana retirée](../../evidence/observability/prometheus-grafana-baseline-2026-09-05.json)
 - [Configuration Collector active](../../../infrastructure/observability/otel-collector.yaml)
 - [Dashboards SigNoz actifs](../../../infrastructure/observability/signoz/dashboards/)
@@ -526,9 +526,10 @@ Points de départ :
 
 ## 20. État d'exécution et conditions de déblocage
 
-État vérifié le **5 septembre 2026** après exécution continue du plan. La pile locale active contient uniquement
-OpenTelemetry Collector et SigNoz ; la suite complète de l'orchestrateur passe, les services reconstruits sont
-sains et SigNoz expose 611 métriques, sept dashboards et quinze règles. Les cases restées ouvertes ne sont pas
+État initial vérifié le **5 septembre 2026**, puis état documentaire actualisé le **7 septembre 2026** après la
+bascule A2A. La pile locale active contient uniquement OpenTelemetry Collector et SigNoz ; l'orchestrateur, les
+cinq MCP et les quatorze runtimes agents exportent en OTLP. SigNoz provisionne désormais huit dashboards et
+trente règles. Les cases restées ouvertes ne sont pas
 présentées comme réalisées : elles exigent les ressources ou décisions suivantes.
 
 | Périmètre ouvert | Condition objective de reprise |
@@ -536,7 +537,7 @@ présentées comme réalisées : elles exigent les ressources ou décisions suiv
 | Export, dashboards, alertes, rétention, Secret Manager et campagne GKE | Fournir un projet GCP de validation, un cluster GKE, un contexte `kubectl`, Workload Identity, les droits IAM minimaux, les canaux de notification et un budget. Sur le poste vérifié, `gcloud` est absent et `kubectl` n'a aucun contexte actif. |
 | Workflow réel API → LLM/MCP/sandbox/assurance/SCM et corrélation des trois signaux | Fournir un ticket et un dépôt de test non sensibles, les credentials des systèmes cibles et une autorisation portant sur le payload exact transmis au fournisseur LLM. Le parcours doit ensuite atteindre un verdict terminal ; une exécution arrêtée par ambiguïté ne vaut pas preuve. |
 | Propagation W3C incluant Temporal | Réalisé le 6 septembre 2026 : le client et les sept workers Temporal sont actifs dans la configuration locale, la propagation est validée et les replays n'émettent pas de spans. Voir le plan `raccordement-orchestrateur-temporal.md` et les preuves `TEMP-102` à `TEMP-111`. |
-| Déclenchement, notification et acquittement des alertes | Raccorder un canal humain de validation, nommer l'astreinte destinataire, déclencher les neuf règles puis conserver les horodatages de détection, notification et acquittement. Les fixtures valident actuellement les requêtes et seuils, pas l'acquittement humain. |
+| Déclenchement, notification et acquittement des alertes | Raccorder un canal humain de validation, nommer l'astreinte destinataire, déclencher les trente règles puis conserver les horodatages de détection, notification et acquittement. Les fixtures valident actuellement les requêtes et seuils, pas l'acquittement humain. |
 | Captures des anciens dashboards Grafana | Restaurer temporairement le tag legacy isolé et fournir un navigateur ou renderer de capture. Les six exports JSON et leurs requêtes sont conservés ; aucun navigateur ou renderer n'est installé sur le poste vérifié. |
 | Approbations, formations et exercice opérateur | Désigner les propriétaires application, plateforme, sécurité et exploitation, faire signer la matrice de parité et de rétention, puis enregistrer les participants, résultats et écarts de l'exercice. |
 | Suppression du rollback et clôture `OTEL-080`/`OTEL-090` | Attendre au minimum le **5 octobre 2026**, obtenir l'approbation formelle de stabilité, vérifier une dernière fois les sommes SHA-256, puis supprimer les deux archives Grafana et le tag legacy de façon coordonnée. Au 5 septembre 2026, la sauvegarde est présente et ne doit pas être détruite. |

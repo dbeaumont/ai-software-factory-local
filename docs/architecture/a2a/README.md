@@ -1,6 +1,6 @@
-# Architecture A2A cible
+# Architecture A2A active
 
-Cette vue décrit l’architecture après la bascule franche. Temporal reste le plan de contrôle ; A2A 1.0 est
+Cette vue décrit l’architecture active depuis la bascule franche. Temporal reste le plan de contrôle ; A2A 1.0 est
 l’unique frontière réseau d’invocation d’un agent ; MCP reste la frontière des outils. Aucun agent ne contacte
 directement un autre agent et aucun runtime d’agent ne reçoit un accès SCM, Docker ou à la projection métier.
 

@@ -25,7 +25,7 @@ sum by (role, outcome) (rate({__name__="ai_agent_duration.count"}[15m]))
 Consulter la tâche sans exposer son contenu sensible :
 
 ```bash
-curl -fsS "http://localhost:${ORCHESTRATOR_PORT:-8080}/api/tasks/<task-id>"
+curl -fsS "http://localhost:${ORCHESTRATOR_PORT:-8088}/api/tasks/<task-id>"
 docker compose -f infrastructure/compose.yaml logs --tail=200 orchestrator
 ```
 
@@ -40,17 +40,13 @@ Une relance ciblée n'est autorisée que si l'API confirme que la délégation e
 ```bash
 curl -fsS -X POST -H 'Content-Type: application/json' \
   -d '{"reason":"cause corrigée et preuves vérifiées","actor":"operations"}' \
-  "http://localhost:${ORCHESTRATOR_PORT:-8080}/api/tasks/<task-id>/delegations/<delegation-id>/retry"
+  "http://localhost:${ORCHESTRATOR_PORT:-8088}/api/tasks/<task-id>/delegations/<delegation-id>/retry"
 ```
 
-Sinon corriger prompt, contrat, routage ou dépendance dans une nouvelle version et exécuter les tests de
-régression. Utiliser le fallback pipeline pour une tâche éligible, jamais pour contourner un gate :
-
-```bash
-curl -fsS -X POST -H 'Content-Type: application/json' \
-  -d '{"reason":"agent hiérarchique isolé après incident","actor":"operations"}' \
-  "http://localhost:${ORCHESTRATOR_PORT:-8080}/api/tasks/<task-id>/fallback"
-```
+Sinon corriger le prompt, le contrat, le routage ou la dépendance dans une nouvelle release A2A et exécuter les
+tests de régression. L'API ne fournit plus d'endpoint de fallback vers une invocation locale. Si la release est en
+cause, fermer les admissions et appliquer le rollback A2A ; ne jamais contourner un gate ni changer le transport
+de la tâche en cours.
 
 ## Vérification et clôture
 
@@ -63,8 +59,8 @@ curl -fsS -X POST -H 'Content-Type: application/json' \
 ## Escalade
 
 Escalader à l'équipe IA pour une dérive modèle/prompt, à Architecture pour une insuffisance de contrat ou de
-routage, et à Sécurité pour toute tentative d'escalade, injection ou contenu sensible. Basculer selon le
-[runbook de rollback](ROLLBACK-MULTI-AGENTS.md) si plusieurs rôles ou tâches sont affectés.
+routage, et à Sécurité pour toute tentative d'escalade, injection ou contenu sensible. Appliquer le
+[runbook de rollback A2A](ROLLBACK-A2A.md) si plusieurs rôles ou tâches sont affectés par la release.
 
 ## Corrélation OpenTelemetry
 

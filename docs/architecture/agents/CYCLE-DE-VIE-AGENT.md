@@ -1,8 +1,12 @@
 # Cycle de vie d'un agent
 
 Ce guide décrit le chemin obligatoire pour ajouter, modifier, évaluer, promouvoir puis retirer un agent ou un
-sous-agent. Une présence dans le dépôt ne vaut jamais activation : l'hôte applique la qualification, le mode et
-l'allowlist de rôles à chaque invocation.
+sous-agent. Tous les rôles actifs sont invoqués par A2A 1.0 et orchestrés par Temporal ; le mode métier ne peut
+jamais sélectionner un transport local. La checklist technique normative est
+[`AJOUTER-UN-AGENT-A2A.md`](AJOUTER-UN-AGENT-A2A.md).
+
+Une présence au catalogue ne suffit pas : le rôle doit aussi disposer d'une Agent Card signée, d'une identité,
+d'un service Compose/GKE, d'une task queue Temporal, de permissions MCP et de preuves de qualification cohérentes.
 
 ## Artefacts gouvernés
 

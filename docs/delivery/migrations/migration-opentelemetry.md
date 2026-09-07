@@ -6,10 +6,10 @@ Observability est la cible des manifests GKE.
 
 ## Livré
 
-- instrumentation Micrometer/OpenTelemetry des six applications Spring Boot ;
+- instrumentation Micrometer/OpenTelemetry de l'orchestrateur, des cinq MCP et du runtime partagé par les quatorze agents ;
 - propagation W3C HTTP et MCP, corrélation `trace_id`/`span_id` dans les logs ;
 - Collector durci, pipelines séparés et redaction des attributs sensibles ;
-- SigNoz local persistant, sept dashboards, neuf alertes métier et six alertes techniques ;
+- SigNoz local persistant, huit dashboards et trente alertes couvrant la plateforme et la flotte A2A ;
 - provisioning idempotent, validation des requêtes, fixtures d'alertes et tests de résilience ;
 - gateway GKE avec mTLS, Workload Identity, NetworkPolicy, HPA et PDB ;
 - retrait du runtime, des dépendances et des liens opérateur historiques.
@@ -32,5 +32,5 @@ make up
 - exercice humain de notification et d'incident ;
 - approbations plateforme, sécurité, exploitation et produit.
 
-Voir le [plan de migration détaillé](../migrations/remplacement-prometheus-grafana-opentelemetry.md), la
+Voir le [plan de migration détaillé](remplacement-prometheus-grafana-opentelemetry.md), la
 [stratégie courante](strategie-opentelemetry.md) et les [preuves](../../evidence/observability/README.md).

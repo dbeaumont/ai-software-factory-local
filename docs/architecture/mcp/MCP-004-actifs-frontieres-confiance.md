@@ -17,10 +17,11 @@ flowchart LR
     U[Ticket et approbation]
   end
   subgraph Z1[Zone 1 — Plan de contrôle]
-    O[Orchestrateur<br/>état · gates · politique]
+    O[Orchestrateur et Temporal<br/>état · gates · politique]
   end
   subgraph Z2[Zone 2 — Inférence non fiable]
-    L[Agents via LiteLLM]
+    R[Runtimes agents A2A]
+    L[LiteLLM et modèle]
   end
   subgraph Z3[Zone 3 — MCP lecture]
     C[repository-context-mcp]
@@ -41,9 +42,10 @@ flowchart LR
   end
 
   U -->|commande non fiable| O
-  O -->|prompt borné| L
-  L -->|sortie non fiable| O
-  O -->|appel validé, authentification cible| C
+  O -->|tâche A2A validée| R
+  R -->|prompt borné| L
+  L -->|sortie non fiable| R
+  R -->|appel de lecture validé, rôle borné| C
   O -->|appel validé + politique, authentification cible| S & D & A & E
   C -->|lecture bornée| J
   S -->|profil signé| J
@@ -74,7 +76,7 @@ Le passage à `VALIDATED` ne transforme jamais un patch, un workspace ou un rapp
 | Dépôt | registre d'administration, jamais le modèle | `scm-delivery-mcp`/registre SCM | `repository_id` opaque | allow-list, tenant, branches autorisées, URL résolue côté serveur | `VERIFIED_REFERENCE`; configuration versionnée |
 | Source SHA | SCM | `scm.resolve_revision` | dépôt + branche/tag autorisé | SHA complet immuable, lié à `repository_id`, `task_id`, `attempt_id` | `VERIFIED_REFERENCE`; durée du run et de l'audit |
 | Contenu source | auteurs du dépôt | SCM pour les octets ; serveur de contexte pour la lecture | source SHA vérifié | chemins relatifs, limites, exclusions, digest par fichier, provenance | `UNTRUSTED`; copie jetable |
-| Plan agent | Planner/LLM | aucune autorité de sécurité ; orchestrateur pour l'enregistrement | tâche/tentative + empreinte prompt/modèle | schéma/contrat de sortie, taille, digest et provenance | `UNTRUSTED` puis artefact enregistré ; audit |
+| Plan agent | Supervisor ou spécialiste A2A/LLM | aucune autorité de sécurité ; workflow pour l'enregistrement | tâche/tentative + empreinte prompt/modèle | schéma/contrat de sortie, taille, digest et provenance | `UNTRUSTED` puis artefact enregistré ; audit |
 | Patch candidat | Developer/PatchRepair/LLM | orchestrateur pour la version candidate ; sandbox pour l'applicabilité | tâche/tentative + source SHA | diff normalisé, chemins autorisés, taille, digest, `sandbox.validate_patch` | `UNTRUSTED`, même applicable ; audit |
 | Workspace | préparateur de source/contrôleur sandbox | contrôleur de workspace | tâche/tentative + source SHA | racine enregistrée, isolation inter-tâches, absence de symlink sortant, durée de vie | hostile et mutable ; destruction en fin de tentative |
 | Exécution sandbox | `sandbox-execution-mcp` | serveur sandbox | principal + tâche/tentative | profil allow-listé, source/patch digests, handle non prédictible, deadline | état opérationnel ; rétention bornée |
@@ -90,9 +92,9 @@ Le passage à `VALIDATED` ne transforme jamais un patch, un workspace ou un rapp
 | ID | Frontière | Données traversantes | Contrôles obligatoires | Interdictions |
 |---|---|---|---|---|
 | F1 | utilisateur/IHM -> orchestrateur | ticket, dépôt demandé, branche, mode LLM, approbation | SSO/API auth, RBAC, schéma, quotas, CSRF selon canal, corrélation | URL arbitraire comme autorité, identité déclarative non vérifiée |
-| F2 | orchestrateur -> LiteLLM/modèle | prompts et contexte borné | politique de modèle, classification des données, redaction, budget, timeout, empreinte prompt | secrets, tokens, instruction d'autorisation, accès direct aux backends |
-| F3 | modèle -> orchestrateur | plan, patch, revue, éventuelles demandes d'outil futures | sortie structurée, taille, validation déterministe, marquage non fiable | transition d'état privilégiée, approbation, sélection libre d'URL/image/commande |
-| F4 | orchestrateur -> serveur MCP | enveloppe commune et arguments métier | identité workload, issuer/audience/scopes, schéma, deadline, trace et idempotence | token passthrough, commande shell, chemin absolu, URL backend libre |
+| F2 | runtime A2A -> LiteLLM/modèle | prompts et contexte borné | politique de modèle, classification des données, redaction, budget, timeout, empreinte prompt | secrets, tokens, instruction d'autorisation, accès direct aux backends |
+| F3 | modèle -> runtime A2A | plan, patch, revue et intentions d'outil | sortie structurée, taille, validation déterministe, marquage non fiable | transition d'état privilégiée, approbation, sélection libre d'URL/image/commande |
+| F4 | orchestrateur ou runtime A2A -> serveur MCP autorisé | enveloppe commune et arguments métier | rôle, réseau, schéma, deadline, trace et idempotence ; effets réservés au workflow | token passthrough, commande shell, chemin absolu, URL backend libre |
 | F5 | serveur de contexte -> workspace | chemins et contenu source | racine enregistrée, source SHA, normalisation, refus traversal/symlink, limites et redaction | mutation, egress, lecture inter-tâches |
 | F6 | contrôleur sandbox -> job hostile | manifeste, source et patch, secrets de profil minimaux | image/profil allow-listés, quotas, filesystem jetable, gVisor cible, egress par profil | socket dans le job, secret global, privilège, réseau du control plane |
 | F7 | job hostile -> contrôleur/evidence | logs, statuts, rapports et artefacts | sorties bornées, digests côté réception, type autorisé, antivirus/politique si requis | confiance dans un chemin/URI fourni, interprétation de logs comme commande |

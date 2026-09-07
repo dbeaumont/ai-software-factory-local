@@ -1,6 +1,6 @@
 # MCP-005 — Threat model de la trajectoire MCP
 
-> Statut : baseline approuvée pour le POC local ; risques ouverts remis en cohérence le 3 septembre 2026
+> Statut : baseline approuvée pour le POC local ; état des contrôles remis en cohérence le 7 septembre 2026.
 > Propriétaires : `Product Owner AI Software Factory` et `Représentant RSSI`  
 > Référence des actifs/frontières : `docs/architecture/mcp/MCP-004-actifs-frontieres-confiance.md`
 
@@ -47,7 +47,7 @@ Le score est `vraisemblance × impact` : `1–3 Faible`, `4–7 Modéré`, `8–
 | TM-09 | rejeu, double effet et confusion de tentative | T/R/E | F4/F9/F10 | 12 Critique | 4 Modéré | sandbox contrôlée, SCM ouvert |
 | TM-10 | déni de service et consommation non bornée | D | F1–F8 | 12 Critique | 6 Modéré | quotas sandbox présents, reste ouvert |
 | TM-11 | serveur MCP compromis | T/I/E/D | F4/F8 | 16 Critique | 8 Élevé | ouvert |
-| TM-12 | évasion sandbox ou abus du socket Docker | E/T/I | F6 | 16 Critique | 4 Modéré | risque POC ouvert |
+| TM-12 | évasion sandbox ou abus du moteur d'exécution | E/T/I | F6 | 16 Critique | 4 Modéré | socket retirée ; runners statiques actifs, GKE à qualifier |
 | TM-13 | altération/suppression de preuves | T/R | F7 | 12 Critique | 3 Faible | ouvert |
 | TM-14 | approbation forgée, obsolète ou TOCTOU | S/T/R/E | F9/F10 | 16 Critique | 4 Modéré | preuve structurée ouverte |
 | TM-15 | supply chain compromise d'image/SDK/scanner | T/E | F6/F8 | 12 Critique | 6 Modéré | versions partielles, signature ouverte |

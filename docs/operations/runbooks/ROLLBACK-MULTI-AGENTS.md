@@ -54,7 +54,7 @@ réutilise pas implicitement les décisions ou approbations de la tentative hié
 ```bash
 docker compose -f infrastructure/compose.yaml ps
 docker compose -f infrastructure/compose.yaml logs --tail=200 orchestrator temporal
-curl -fsS "http://localhost:${ORCHESTRATOR_PORT:-8080}/actuator/health"
+curl -fsS "http://localhost:${ORCHESTRATOR_PORT:-8088}/actuator/health"
 ```
 
 Déterminer le premier événement fautif, les tâches et effets concernés, puis vérifier journal chaîné, historique

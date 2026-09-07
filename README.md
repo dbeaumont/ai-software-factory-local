@@ -233,11 +233,15 @@ sequenceDiagram
 
 ## Démarrage rapide
 
+Pour une première installation ou une remise à zéro volontaire des volumes Docker :
+
 ```bash
-make init
-make up
-make bootstrap
+make all
 ```
+
+`make all` valide d'abord la configuration et les secrets, supprime ensuite les volumes Docker, construit toutes
+les images, démarre les quatorze agents A2A, bootstrappe Gitea/SonarQube et applique la barrière de disponibilité.
+Pour redémarrer en conservant les données existantes, utiliser `make up`.
 
 URLs principales :
 
@@ -245,7 +249,7 @@ URLs principales :
 - Gitea : `http://localhost:3000` (dépôts de démonstration : `customer-api`, `inventory-gradle`, `checkout-node`)
 - Orchestrateur direct (diagnostic & Actuator) : `http://localhost:8088`
 - SonarQube : `http://localhost:9000`
-- Artifactory : `http://localhost:8082` (utilisateur `admin`, mot de passe `password`)
+- Artifactory : `http://localhost:8082`
 - SigNoz : `http://localhost:3301` (compte initial généré par `make init`)
 
 Le script `make bootstrap` initialise les comptes Gitea `aiadmin` et `reviewer`, pousse les trois dépôts de référence Maven, Gradle et Node depuis `examples/`, et génère automatiquement les jetons `GITEA_TOKEN` et `SONAR_TOKEN` dans le fichier `.env`.
@@ -603,8 +607,8 @@ make demo
 
 - **SonarQube** (`http://localhost:9000`) : Analyse de la qualité du code Java/Maven. Les jetons sont générés par `make bootstrap` ou `make tokens`.
 - **Artifactory** (`http://localhost:8082`) : Dépôt d'artefacts local. Les builds Maven des sandboxes utilisent le miroir explicite `MAVEN_MIRROR_URL`.
-- **SigNoz** (`http://localhost:3301`) : reçoit métriques, traces et logs via le Collector OpenTelemetry. Sept dashboards, neuf alertes de parité et six alertes techniques sont provisionnés automatiquement.
-- **Collector OpenTelemetry** : reçoit OTLP des six applications, collecte les métriques Temporal par un receiver de compatibilité interne et n'expose aucun port à l'hôte.
+- **SigNoz** (`http://localhost:3301`) : reçoit métriques, traces et logs via le Collector OpenTelemetry. Huit dashboards et trente alertes couvrant la plateforme et la flotte A2A sont provisionnés automatiquement.
+- **Collector OpenTelemetry** : reçoit l'OTLP de l'orchestrateur, des cinq MCP et des quatorze runtimes A2A, collecte les métriques Temporal par un receiver de compatibilité interne et n'expose aucun port à l'hôte.
 
 ## Commandes Make disponibles
 
@@ -617,11 +621,13 @@ make demo
 | `make a2a-cards` | Télécharge et valide les quatorze Agent Cards privées |
 | `make a2a-smoke` | Vérifie services, task queues et Agent Cards |
 | `make a2a-up-full` | Démarre explicitement le profil complet des agents A2A |
-| `make build` | Construit l'image sandbox et les services Compose |
-| `make up` | Démarre la stack complète en arrière-plan |
-| `make all` | Remet à zéro les données et démarre une stack entièrement bootstrappée |
-| `make bootstrap` | Initialise Gitea, SonarQube et génère les jetons d'accès |
-| `make tokens` | Régénère ou valide les jetons Gitea et SonarQube |
+| `make test-a2a-temporal` | Vérifie le Build ID, les 14 task queues et les 28 pollers A2A |
+| `make verify-ready` | Applique la barrière finale Temporal/A2A/Agent Cards/admissions |
+| `make build` | Construit toutes les images nécessaires à la fabrique A2A |
+| `make up` | Construit, démarre et vérifie la stack complète en conservant les volumes |
+| `make all` | Supprime les volumes Docker puis reconstruit et bootstrappe une usine A2A complète |
+| `make bootstrap` | Initialise Gitea/SonarQube, recrée les consommateurs et revalide la stack |
+| `make tokens` | Met à jour les jetons, recrée les consommateurs et revalide la stack |
 | `make demo` | Soumet une tâche de démo à l'orchestrateur |
 | `make test` | Exécute les tests de l'orchestrateur et des serveurs MCP |
 | `make test-sandbox-runtime` | Vérifie les contraintes effectives des conteneurs sandbox |
@@ -630,20 +636,20 @@ make demo
 | `make mcp-shadow-campaign CAMPAIGN_ARGS=--execute AI_FACTORY_RUN_CLOUD_CAMPAIGN=true` | Exécute volontairement la campagne cloud séquentielle |
 | `make mcp-shadow-report` | Génère le rapport des métriques shadow courantes |
 | `make package` | Compile et empaquette l'orchestrateur Java (sans tests) |
-| `make config` | Valide et affiche la configuration Compose |
-| `make status` | Affiche l'état des conteneurs |
-| `make restart` | Redémarre l'orchestrateur |
+| `make config` | Valide Compose ainsi que la topologie et les réseaux A2A |
+| `make status` | Affiche les services et jobs one-shot du profil `a2a-full` |
+| `make restart` | Recrée l'orchestrateur, réactive son Build ID et vérifie Temporal/A2A |
 | `make logs` | Suit les journaux de l'orchestrateur |
 | `make urls` | Liste toutes les URLs de services et points d'accès |
-| `make down` | Arrête la stack Compose |
-| `make clean` | Arrête la stack et supprime tous les volumes (destructif) |
+| `make down` | Arrête tous les profils A2A en conservant les volumes |
+| `make clean` | Arrête tous les profils et supprime tous les volumes Docker (destructif) |
 
 ## Limites actuelles
 
 - le raccordement A2A local est complet, mais la qualification de la cible GKE requiert toujours un cluster et
   des identités Workload Identity disponibles ;
-- le déploiement local Compose ne démontre pas encore la reprise après arrêt simultané de l'orchestrateur, de
-  Temporal et de tous les serveurs MCP à chaque phase critique ;
+- le Compose local reste mono-hôte ; la haute disponibilité et le PRA doivent être qualifiés sur l'infrastructure
+  cible ;
 - les projections PostgreSQL, associations A2A et Evidence sont intégrées ; leur exploitation managée et leur
   restauration sur la cible GKE restent à valider ;
 - les prompts, cartes, contrats et politiques sont versionnés ; leur promotion reste soumise aux propriétaires
@@ -667,4 +673,4 @@ ni une sandbox de production : ces limites restent bloquantes pour un usage entr
 - [Architecture A2A et frontières de confiance](docs/architecture/a2a/README.md)
 - [Exploitation locale A2A sur macOS](docs/development/a2a-macos.md)
 - [Plan de migration A2A/Temporal](docs/delivery/migrations/migration-agents-a2a-temporal.md)
-- [Architecture, workflow et sécurité de la baseline 1.1.0](docs/version-1.1.0-archi-02-mcp/ETAT-PROTO-1.1.0.md)
+- [Architecture, workflow et sécurité de la baseline 1.1.0](docs/archive/releases/1.1.0-archi-02-mcp/ETAT-PROTO-1.1.0.md)

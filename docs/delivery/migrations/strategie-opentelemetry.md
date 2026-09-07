@@ -1,11 +1,12 @@
 # Stratégie OpenTelemetry retenue
 
-> État vérifié le 5 septembre 2026 sur `features/multiagents`.
+> État vérifié le 7 septembre 2026 sur `features/multiagents`.
 
 ## Décision
 
-OpenTelemetry est l'unique chaîne active de métriques, traces et logs. Les six applications Spring Boot exportent
-en OTLP vers un Collector central. SigNoz fournit le stockage, la recherche, sept dashboards et 15 alertes en
+OpenTelemetry est l'unique chaîne active de métriques, traces et logs. L'orchestrateur, les cinq MCP et les
+quatorze instances du runtime agent exportent en OTLP vers un Collector central. SigNoz fournit le stockage, la
+recherche, huit dashboards et trente alertes en
 Docker Compose sur macOS. Sur GKE, la gateway Collector exporte vers Cloud Monitoring, Cloud Trace et Cloud
 Logging avec Workload Identity et mTLS.
 
@@ -17,7 +18,7 @@ chaîne parallèle.
 
 ```mermaid
 flowchart LR
-  A[Orchestrateur et cinq MCP] -->|OTLP HTTP| C[OpenTelemetry Collector]
+  A[Orchestrateur, cinq MCP et 14 agents A2A] -->|OTLP HTTP| C[OpenTelemetry Collector]
   T[Temporal] -->|receiver de compatibilité borné| C
   C -->|OTLP| S[SigNoz local]
   C -. GKE .-> G[Google Cloud Observability]
@@ -58,5 +59,5 @@ les contrôles Cloud réels exigent un projet GCP et un cluster de validation au
 - supprimer les artefacts de rollback après expiration de la fenêtre de stabilité.
 
 Le suivi détaillé et les preuves sont dans
-[`remplacement-prometheus-grafana-opentelemetry.md`](../migrations/remplacement-prometheus-grafana-opentelemetry.md)
+[`remplacement-prometheus-grafana-opentelemetry.md`](remplacement-prometheus-grafana-opentelemetry.md)
 et [`docs/evidence/observability`](../../evidence/observability/README.md).

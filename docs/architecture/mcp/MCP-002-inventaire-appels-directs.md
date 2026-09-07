@@ -1,8 +1,13 @@
 # MCP-002 — Inventaire des appels directs et cible MCP
 
-> Statut : validé pour le prototype  
+> Statut : inventaire historique de la migration MCP, remplacé pour l'exécution courante par les frontières A2A/MCP.
 > Périmètre : `TaskService`, `RepositoryContextService`, `SandboxService`, `GiteaService`  
 > Référence d'architecture : `docs/architecture/adr/ADR-MCP-001-boundaries-and-transport.md`
+
+> Les formulations « actuel » et « cible » ci-dessous décrivent le point de départ de MCP-002. Elles ne décrivent
+> plus le runtime actif : les agents sont désormais des services A2A isolés avec des clients MCP de lecture bornés,
+> tandis que les effets restent déclenchés par le workflow. Voir
+> [`deployment-model.md`](../agents/deployment-model.md).
 
 ## 1. Objet
 

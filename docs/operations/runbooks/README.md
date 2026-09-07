@@ -1,16 +1,16 @@
 # Runbooks multi-agents
 
 > Applicabilité : Temporal est l'unique coordinateur, y compris pour le pipeline. Il n'existe aucun fallback local.
-> Les procédures multi-agents qui parlent de canary restent applicables aux rôles hiérarchiques, pas au raccordement
-> Temporal lui-même.
+> Les procédures historiques de canary métier restent utiles pour évaluer une stratégie, mais elles ne permettent
+> jamais de réactiver une invocation locale : tous les modes invoquent les agents par A2A.
 
 | Situation | Action initiale | Runbook |
 |---|---|---|
-| Activation ou extension progressive | vérifier prérequis, périmètre et retour arrière | [Canary, kill switch et incident](CANARY-KILL-SWITCH-INCIDENT.md) |
-| Violation critique, qualification révoquée ou SLO dépassé | ramener les admissions à `PIPELINE` | [Rollback multi-agents](ROLLBACK-MULTI-AGENTS.md) |
+| Ajout ou modification d'un rôle | qualifier catalogue, carte, identité, task queue et permissions | [Ajouter un agent A2A](../../architecture/agents/AJOUTER-UN-AGENT-A2A.md) |
+| Violation critique, release révoquée ou SLO A2A dépassé | fermer les admissions et redéployer une release A2A compatible | [Rollback A2A](ROLLBACK-A2A.md) |
 | Boucle, budget, coût ou contrat d'un rôle | isoler le rôle sans élargir ses droits | [Agent défaillant](AGENT-DEFAILLANT.md) |
 | Serveur MCP suspect ou preuve altérée | couper serveur/outils et geler les effets | [MCP compromis](MCP-COMPROMIS.md) |
-| Backlog ou saturation | suspendre les admissions hiérarchiques | [Saturation](SATURATION.md) |
+| Backlog ou saturation globale | suspendre les admissions | [Saturation](SATURATION.md) |
 | Temporal indisponible | préserver l'historique et geler les effets inconnus | [Temporal indisponible](TEMPORAL-INDISPONIBLE.md) |
 | Worker Temporal absent ou incompatible | geler les admissions de la file et conserver le build ID | [Worker Temporal défaillant](WORKER-TEMPORAL-DEFAILLANT.md) |
 | Rollback de la couche d'exécution | revenir à un build worker compatible, jamais au coordinateur local | [Rollback Temporal](ROLLBACK-TEMPORAL.md) |

@@ -26,6 +26,15 @@ ont terminé en moins d'une minute.
 
 ## Démarrage
 
+Pour créer une usine complète depuis des volumes Docker vides, la commande canonique est :
+
+```shell
+make all
+```
+
+Cette commande est destructive pour les volumes Docker. Elle conserve toutefois `.env`, `.vault`, la PKI et les
+secrets A2A locaux. Pour construire et redémarrer toute la stack sans supprimer les données, utiliser `make up`.
+
 Initialiser une seule fois les fichiers locaux hors Git :
 
 ```shell
@@ -46,14 +55,15 @@ Démarrer un rôle pour le développement ciblé :
 make a2a-up-role A2A_ROLE=developer
 ```
 
-Démarrer et tester les quatorze rôles :
+Démarrer et tester seulement la flotte des quatorze rôles et ses dépendances :
 
 ```shell
 make a2a-up-full
 ```
 
-Le premier build peut prendre plusieurs minutes. À image déjà construite, le délai attendu est inférieur à deux
-minutes ; la commande attend chaque healthcheck avant le smoke test. Utiliser `make a2a-status` et
+La commande démarre d'abord Temporal, LiteLLM et les MCP requis, lance les agents par lots bornés, recrée
+l'orchestrateur après stabilisation DNS, puis active les Build IDs Temporal de l'orchestrateur et des agents. À
+image déjà construite, le délai attendu est inférieur à deux minutes. Utiliser `make a2a-status` et
 `make a2a-logs` si ce délai est dépassé.
 
 ## Diagnostic courant
@@ -75,6 +85,14 @@ Valider la santé des conteneurs, le mTLS et toutes les cartes signées :
 ```shell
 make a2a-smoke
 make a2a-cards
+make test-a2a-temporal
+```
+
+Pour contrôler l'usine complète, y compris les sept files du plan de contrôle, les vingt-huit pollers A2A et
+l'ouverture des admissions :
+
+```shell
+make verify-ready
 ```
 
 Suivre les 200 dernières lignes de logs, ou ajuster la profondeur :
@@ -164,7 +182,7 @@ CONFIRM_A2A_RESET=DELETE_A2A_LOCAL_STATE make a2a-reset-state
 ```
 
 La commande ne supprime ni Temporal, ni Evidence, ni les dépôts, ni les secrets/PKI locaux. Après un reset,
-redémarrer avec `make a2a-up-full` et vérifier `make a2a-smoke`.
+redémarrer avec `make a2a-up-full` et vérifier `make verify-ready`.
 
 ## Réglages et entretien
 
