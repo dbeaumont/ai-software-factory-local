@@ -32,12 +32,22 @@ class A2aJsonRpcHttpTransportTest {
             assertThat(exchange.getRequestHeaders().getFirst("A2A-Version")).isEqualTo("1.0");
             assertThat(request.path("method").asText()).isEqualTo("SendMessage");
             assertThat(request.path("params").path("configuration").path("returnImmediately").asBoolean()).isTrue();
+            Map<String, Object> reference = Map.of(
+                    "schema_version", "1",
+                    "uri", "evidence://business-task/attempt-1/agent-result/" + "a".repeat(64),
+                    "digest", "a".repeat(64),
+                    "contract", "pipeline-agent-result-v1");
+            Map<String, Object> artifact = Map.of(
+                    "artifactId", "reference-artifact", "name", "result",
+                    "parts", List.of(Map.of("kind", "data", "data", reference)));
+            Map<String, Object> resultTask = Map.of(
+                    "id", "reference-task", "contextId", "reference-context",
+                    "status", Map.of("state", "TASK_STATE_COMPLETED",
+                            "timestamp", "2026-09-06T18:00:00Z"),
+                    "artifacts", List.of(artifact));
             byte[] response = mapper.writeValueAsBytes(Map.of(
                     "jsonrpc", "2.0", "id", request.path("id").asText(),
-                    "result", Map.of("task", Map.of(
-                            "id", "reference-task", "contextId", "reference-context",
-                            "status", Map.of("state", "TASK_STATE_COMPLETED",
-                                    "timestamp", "2026-09-06T18:00:00Z")))));
+                    "result", Map.of("task", resultTask)));
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, response.length);
             exchange.getResponseBody().write(response);
@@ -55,6 +65,10 @@ class A2aJsonRpcHttpTransportTest {
 
         assertThat(task.taskId()).isEqualTo("reference-task");
         assertThat(task.state()).isEqualTo(A2aContracts.TaskState.COMPLETED);
+        assertThat(task.artifacts()).hasSize(1);
+        assertThat(task.artifacts().getFirst().parts().getFirst().mediaType())
+                .isEqualTo(A2aMediaTypes.EVIDENCE_REFERENCE);
+        assertThat(task.artifacts().getFirst().parts().getFirst().uri()).hasScheme("evidence");
     }
 
     @Test

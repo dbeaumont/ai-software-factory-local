@@ -173,8 +173,12 @@ public final class A2aJsonRpcHttpTransport implements A2aAuthenticatedClientTran
                 if (value.has("text")) {
                     parts.add(new A2aContracts.Part(A2aMediaTypes.TEXT, value.path("text").asText(), Map.of(), null));
                 } else if (value.has("data")) {
-                    parts.add(new A2aContracts.Part(A2aMediaTypes.JSON, null,
-                            mapper.convertValue(value.path("data"), new TypeReference<>() {}), null));
+                    Map<String, Object> data = mapper.convertValue(
+                            value.path("data"), new TypeReference<>() {});
+                    URI evidenceUri = evidenceUri(data);
+                    parts.add(new A2aContracts.Part(evidenceUri == null
+                            ? A2aMediaTypes.JSON : A2aMediaTypes.EVIDENCE_REFERENCE,
+                            null, data, evidenceUri));
                 }
             }
             if (!parts.isEmpty()) {
@@ -187,6 +191,16 @@ public final class A2aJsonRpcHttpTransport implements A2aAuthenticatedClientTran
                 ? mapper.convertValue(node.path("metadata"), new TypeReference<>() {}) : Map.of();
         return new A2aContracts.TaskSnapshot(node.path("id").asText(),
                 node.path("contextId").asText(null), state, timestamp, artifacts, metadata);
+    }
+
+    private static URI evidenceUri(Map<String, Object> data) {
+        Object value = data.get("uri");
+        if (!(value instanceof String text) || !text.startsWith("evidence://")) return null;
+        try {
+            return URI.create(text);
+        } catch (IllegalArgumentException invalid) {
+            throw new A2aTransportException("A2A artifact Evidence URI is invalid", invalid);
+        }
     }
 
     public static final class A2aTransportException extends RuntimeException {
