@@ -38,6 +38,17 @@ path.write_text("\n".join(lines) + "\n")
 PY
 }
 
+rotate_password() {
+  local username="$1"
+  local key="$2"
+  local next_password
+  next_password=$(openssl rand -hex 32)
+  "${COMPOSE[@]}" exec -T --user git gitea gitea admin user change-password \
+    --username "$username" --password "$next_password" >/dev/null
+  set_config_value ".env" "$key" "$next_password"
+  printf '%s' "$next_password"
+}
+
 until "${COMPOSE[@]}" exec -T --user git gitea gitea admin user list >/dev/null 2>&1; do sleep 2; done
 if [ "$TOKEN_ONLY" = false ]; then
   if ! "${COMPOSE[@]}" exec -T --user git gitea gitea admin user list | grep -q "${USER}"; then
@@ -46,6 +57,10 @@ if [ "$TOKEN_ONLY" = false ]; then
   if ! "${COMPOSE[@]}" exec -T --user git gitea gitea admin user list | grep -q "${REVIEWER_USER}"; then
     "${COMPOSE[@]}" exec -T --user git gitea gitea admin user create --username "$REVIEWER_USER" --password "$REVIEWER_PASS" --email "$REVIEWER_EMAIL" --admin --must-change-password=false
   fi
+  PASS=$(rotate_password "$USER" "GITEA_ADMIN_PASSWORD")
+  REVIEWER_PASS=$(rotate_password "$REVIEWER_USER" "GITEA_REVIEWER_PASSWORD")
+  chmod 600 .env
+  echo "Rotated Gitea administrator and reviewer passwords and saved them to .env"
 
   TMP_ROOT=$(mktemp -d)
   trap 'rm -rf "$TMP_ROOT"' EXIT
@@ -75,31 +90,20 @@ if [ "$TOKEN_ONLY" = false ]; then
   done
 fi
 
-TOKEN_VALID=false
-if [ -n "$GITEA_TOKEN" ] && curl -fsS -H "Authorization: token $GITEA_TOKEN" \
-  "http://localhost:$HTTP_PORT/api/v1/repos/$USER/customer-api/collaborators" >/dev/null 2>&1; then
-  TOKEN_VALID=true
-  echo "Gitea token already configured and valid."
-elif [ -n "$GITEA_TOKEN" ]; then
-  echo "Existing Gitea token is invalid; generating a replacement."
-fi
-
-if [ "$TOKEN_VALID" = false ]; then
-  TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"
-  TOKEN=$("${COMPOSE[@]}" exec -T --user git gitea \
-    gitea admin user generate-access-token \
-    --username "$USER" \
-    --token-name "$TOKEN_NAME" \
-    --scopes "write:repository,write:issue" \
-    --raw 2>/dev/null || true)
-  if [ -n "$TOKEN" ]; then
-    set_config_value ".env" "GITEA_TOKEN" "$TOKEN"
-    set_config_value ".vault" "GITEA_TOKEN" "$TOKEN"
-    chmod 600 .env .vault
-    echo "Generated Gitea token and saved it to the local configuration"
-  else
-    echo "Could not auto-generate a Gitea token. Create one in Settings -> Applications and set the same GITEA_TOKEN in .env and .vault."
-  fi
+TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"
+TOKEN=$("${COMPOSE[@]}" exec -T --user git gitea \
+  gitea admin user generate-access-token \
+  --username "$USER" \
+  --token-name "$TOKEN_NAME" \
+  --scopes "write:repository,write:issue" \
+  --raw 2>/dev/null || true)
+if [ -n "$TOKEN" ]; then
+  set_config_value ".env" "GITEA_TOKEN" "$TOKEN"
+  set_config_value ".vault" "GITEA_TOKEN" "$TOKEN"
+  chmod 600 .env .vault
+  echo "Generated Gitea token and saved it to the local configuration"
+else
+  echo "Could not auto-generate a Gitea token. Create one in Settings -> Applications and set the same GITEA_TOKEN in .env and .vault."
 fi
 
 if [ "$TOKEN_ONLY" = false ]; then
