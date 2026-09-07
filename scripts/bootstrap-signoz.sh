@@ -76,21 +76,24 @@ password_payload=$(jq -nc --arg old "$SIGNOZ_ROOT_PASSWORD" --arg new "$NEXT_SIG
 password_status=$(curl -sS -o /tmp/signoz-password-rotation.json -w '%{http_code}' \
   -X PUT "$SIGNOZ_BASE_URL/api/v2/users/me/factor_password" "${auth[@]}" \
   -H 'Content-Type: application/json' --data "$password_payload")
-if [ "$password_status" != "204" ]; then
+if [ "$password_status" = "204" ]; then
+  set_env "SIGNOZ_ROOT_PASSWORD" "$NEXT_SIGNOZ_PASSWORD"
+  SIGNOZ_ROOT_PASSWORD="$NEXT_SIGNOZ_PASSWORD"
+  chmod 600 .env
+  login_payload=$(jq -nc --arg email "$SIGNOZ_ROOT_EMAIL" --arg password "$SIGNOZ_ROOT_PASSWORD" \
+    --arg orgId "$org_id" '{email:$email,password:$password,orgId:$orgId}')
+  session=$(curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/sessions/email_password" \
+    -H 'Content-Type: application/json' --data "$login_payload")
+  token=$(printf '%s' "$session" | jq -er '.data.accessToken')
+  auth=(-H "Authorization: Bearer $token")
+  echo "Rotated SigNoz root password and saved it to .env"
+elif [ "$password_status" = "501" ]; then
+  echo "SigNoz does not support password rotation in this version; retaining SIGNOZ_ROOT_PASSWORD from .env" >&2
+else
   echo "SigNoz root password rotation failed with HTTP $password_status" >&2
   cat /tmp/signoz-password-rotation.json >&2
   exit 1
 fi
-set_env "SIGNOZ_ROOT_PASSWORD" "$NEXT_SIGNOZ_PASSWORD"
-SIGNOZ_ROOT_PASSWORD="$NEXT_SIGNOZ_PASSWORD"
-chmod 600 .env
-login_payload=$(jq -nc --arg email "$SIGNOZ_ROOT_EMAIL" --arg password "$SIGNOZ_ROOT_PASSWORD" \
-  --arg orgId "$org_id" '{email:$email,password:$password,orgId:$orgId}')
-session=$(curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/sessions/email_password" \
-  -H 'Content-Type: application/json' --data "$login_payload")
-token=$(printf '%s' "$session" | jq -er '.data.accessToken')
-auth=(-H "Authorization: Bearer $token")
-echo "Rotated SigNoz root password and saved it to .env"
 
 # A valid session can be issued while the authenticated API modules are still
 # being initialized. Wait for every API used below so a fresh Compose startup
