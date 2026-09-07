@@ -817,8 +817,11 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
     admis par A2A, sans déléguer ces champs de sécurité au modèle.
   - [x] Resceller la baseline E2E après l'ajout des contrats de compatibilité pipeline et rendre le compte de
     contrats dynamique dans le vérificateur.
-- [ ] **A2A-187 — Rouvrir les admissions.** Autoriser les nouveaux tickets uniquement lorsque toutes les cartes,
-  files Temporal, runtimes et dépendances obligatoires sont prêtes.
+- [x] **A2A-187 — Rouvrir les admissions.** Autoriser les nouveaux tickets uniquement lorsque toutes les cartes,
+  files Temporal, runtimes et dépendances obligatoires sont prêtes. _(Terminé le 2026-09-07 : projection A2A
+  propre, 14 cartes et runtimes sains, 28 pollers d'agents et 7 workers de coordination prêts, dépendances et
+  readiness globales `UP` ; admissions ouvertes à la révision 47. Preuve :
+  `docs/evidence/a2a/A2A-187-ADMISSIONS-REOPEN.md`.)_
   - [x] Réconcilier périodiquement l'outbox de notifications afin qu'un démarrage des agents avant le récepteur
     ne laisse pas de callbacks durablement en attente.
   - [x] Distinguer le job d'activation Temporal des quatorze runtimes dans le validateur de topologie Compose.
