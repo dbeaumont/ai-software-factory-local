@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-worker-drainage a2a-rollback-gate a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state a2a-up-role a2a-up-full test-a2a-compose-integration test-a2a-compose-failures test-a2a-security test-a2a-performance test-a2a-e2e-parity test-a2a-rollback-load test-a2a-rollback-gate build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-worker-drainage a2a-rollback-gate a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state a2a-up-role a2a-up-full monitor-a2a-cutover test-a2a-compose-integration test-a2a-compose-failures test-a2a-security test-a2a-performance test-a2a-e2e-parity test-a2a-rollback-load test-a2a-rollback-gate build up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -38,6 +38,7 @@ help:
 	@echo -e "  $(CYAN)make a2a-reset-state CONFIRM_A2A_RESET=DELETE_A2A_LOCAL_STATE$(NC) - delete local A2A task state"
 	@echo -e "  $(CYAN)make a2a-up-role A2A_ROLE=developer$(NC) - start one role test profile"
 	@echo -e "  $(CYAN)make a2a-up-full$(NC) - start the complete A2A test profile"
+	@echo -e "  $(CYAN)make monitor-a2a-cutover$(NC) - monitor the fail-closed A2A stabilization window"
 	@echo -e "  $(CYAN)make test-a2a-security$(NC) - run the A2A adversarial security campaign"
 	@echo -e "  $(CYAN)make test-a2a-performance$(NC) - benchmark A2A admission and bounded saturation"
 	@echo -e "  $(CYAN)make test-a2a-e2e-parity$(NC) - replay business fixtures against the pre-cutover baseline"
@@ -158,6 +159,10 @@ a2a-up-role:
 a2a-up-full:
 	$(log-target)
 	@./scripts/start-a2a-profile.sh full
+
+monitor-a2a-cutover:
+	$(log-target)
+	@./scripts/monitor-a2a-cutover.sh
 
 test-a2a-compose-integration:
 	$(log-target)

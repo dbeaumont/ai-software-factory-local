@@ -826,8 +826,11 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
     ne laisse pas de callbacks durablement en attente.
   - [x] Distinguer le job d'activation Temporal des quatorze runtimes dans le validateur de topologie Compose.
   - [x] Convertir explicitement le payload sérialisé en `jsonb` lors de son admission dans l'inbox PostgreSQL.
-- [ ] **A2A-188 — Surveiller la fenêtre de stabilisation.** Contrôler SLO, backlog, divergences, notifications,
-  coûts, erreurs et saturation pendant la durée approuvée.
+- [x] **A2A-188 — Surveiller la fenêtre de stabilisation.** Contrôler SLO, backlog, divergences, notifications,
+  coûts, erreurs et saturation pendant la durée approuvée. _(Terminé le 2026-09-07 : moniteur fail-closed validé,
+  378 secondes et 12 échantillons sans backlog, notification en retard, divergence, erreur, redémarrage, OOM,
+  dérive d'image ou saturation ; révision 49 restée ouverte et télémétrie SigNoz complète. Preuve :
+  `docs/evidence/a2a/A2A-188-STABILIZATION.md`.)_
 - [ ] **A2A-189 — Faire approuver la bascule.** Obtenir une décision humaine explicite liée au commit, aux images,
   rapports et preuves exactes.
 
