@@ -16,25 +16,49 @@ Aucun rôle du catalogue v1 ne possède une autonomie supérieure à `A2`.
 
 ## Hiérarchie
 
-```text
-workflow (Platform)
-├── supervisor (Platform)
-│   ├── architecture-agent (Architecture)
-│   │   ├── impact-analysis
-│   │   └── dependencies-contracts
-│   ├── code-agent (Engineering)
-│   │   ├── developer
-│   │   └── patch-repair
-│   ├── test-agent (Quality Engineering)
-│   │   ├── test-design
-│   │   └── test-evidence
-│   └── security-agent (Application Security)
-│       ├── threat-model
-│       └── security-findings
-└── independent-reviewer (Product and Risk)
+```mermaid
+flowchart TB
+  W["Workflow Temporal<br/>Platform · A0"]
+  S["Supervisor<br/>Platform · A2"]
+  R["Independent Reviewer<br/>Product and Risk · A1"]
+
+  W -->|coordonne| S
+  W -->|revue indépendante| R
+
+  S --> AA["Architecture Agent<br/>Architecture · A2"]
+  S --> CA["Code Agent<br/>Engineering · A2"]
+  S --> TA["Test Agent<br/>Quality Engineering · A2"]
+  S --> SA["Security Agent<br/>Application Security · A2"]
+
+  AA --> IA["Impact Analysis<br/>A1"]
+  AA --> DC["Dependencies & Contracts<br/>A1"]
+  CA --> DEV["Developer<br/>A1"]
+  CA --> PR["Patch Repair<br/>A1"]
+  TA --> TD["Test Design<br/>A1"]
+  TA --> TE["Test Evidence<br/>A1"]
+  SA --> TM["Threat Model<br/>A1"]
+  SA --> SF["Security Findings<br/>A1"]
+
+  classDef control fill:#172B4D,color:#FFFFFF,stroke:#091E42,stroke-width:2px
+  classDef platform fill:#DEEBFF,color:#0747A6,stroke:#4C9AFF
+  classDef architecture fill:#EAE6FF,color:#403294,stroke:#8777D9
+  classDef engineering fill:#E3FCEF,color:#006644,stroke:#36B37E
+  classDef quality fill:#FFF0B3,color:#7A5D00,stroke:#FFAB00
+  classDef security fill:#FFEBE6,color:#BF2600,stroke:#FF5630
+  classDef review fill:#F4F5F7,color:#172B4D,stroke:#6B778C,stroke-width:2px
+
+  class W control
+  class S platform
+  class AA,IA,DC architecture
+  class CA,DEV,PR engineering
+  class TA,TD,TE quality
+  class SA,TM,SF security
+  class R review
 ```
 
-L'Independent Reviewer appartient au runtime d'agents, mais il est enfant du workflow et non du Supervisor.
+Les flèches représentent une autorité de délégation. Elles ne sont pas des connexions directes entre agents : le
+workflow Temporal valide, planifie et suit chaque échange A2A. L'Independent Reviewer appartient au runtime
+d'agents, mais il est enfant du workflow et non du Supervisor afin de préserver son indépendance.
 
 ## Matrice des rôles et contrats
 

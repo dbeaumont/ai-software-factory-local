@@ -40,8 +40,25 @@ verify_identity() {
   openssl verify -CAfile "$ca" -CRLfile "$crl" -crl_check \
     -purpose sslclient "$certificate" >/dev/null
   openssl verify -CAfile "$ca" -CRLfile "$crl" -crl_check \
-    -purpose sslserver -verify_hostname "$dns_name" "$certificate" >/dev/null
-  openssl x509 -in "$certificate" -noout -ext subjectAltName | grep -Fq "URI:$spiffe_id"
+    -purpose sslserver "$certificate" >/dev/null
+
+  # macOS ships LibreSSL, whose `verify` command has no `-verify_hostname` option and whose `x509` command has
+  # no `-ext` selector. Decode the certificate once and compare complete, comma-delimited SAN entries so the
+  # same verification remains strict with both LibreSSL and OpenSSL 3.
+  local certificate_text subject_alt_names
+  certificate_text=$(openssl x509 -in "$certificate" -noout -text)
+  subject_alt_names=$(printf '%s\n' "$certificate_text" \
+    | sed -n '/Subject Alternative Name/{n;p;}' \
+    | tr ',' '\n' \
+    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  printf '%s\n' "$subject_alt_names" | grep -Fxq "DNS:$dns_name" || {
+    echo "Certificate DNS SAN does not match $identity: expected $dns_name" >&2
+    exit 1
+  }
+  printf '%s\n' "$subject_alt_names" | grep -Fxq "URI:$spiffe_id" || {
+    echo "Certificate SPIFFE SAN does not match $identity: expected $spiffe_id" >&2
+    exit 1
+  }
 
   local public_from_certificate public_from_key
   public_from_certificate=$(openssl x509 -in "$certificate" -pubkey -noout | openssl sha256)

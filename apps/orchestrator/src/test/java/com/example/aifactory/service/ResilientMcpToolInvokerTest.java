@@ -222,6 +222,20 @@ class ResilientMcpToolInvokerTest {
         assertThat(usage.snapshot("task-1", TaskUsageLedger.Lane.FINALIZATION).mcpCalls()).isZero();
     }
 
+    @Test
+    void doesNotChargeProjectionRecoveryEvidenceReadsToTaskMcpQuota() {
+        TaskUsageLedger usage = new TaskUsageLedger(new HierarchicalBudgetPolicy());
+        invoker = new ResilientMcpToolInvoker(delegate((server, tool, arguments) ->
+                new ObjectMapper().createObjectNode().put("ok", true)),
+                properties(1, Duration.ofSeconds(1)), new SimpleMeterRegistry(), new ObjectMapper(), usage);
+
+        invoker.call("evidence-mcp", "evidence.read", argumentsWithPurpose("projection-recovery"));
+        invoker.call("evidence-mcp", "evidence.read", argumentsWithPurpose("pipeline-a2a-result"));
+
+        assertThat(usage.snapshot("task-1", TaskUsageLedger.Lane.STANDARD).mcpCalls()).isEqualTo(1);
+        assertThat(usage.snapshot("task-1", TaskUsageLedger.Lane.FINALIZATION).mcpCalls()).isZero();
+    }
+
     private void assertConcurrencyLimit(ConcurrencyCase limits) throws Exception {
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
@@ -270,6 +284,15 @@ class ResilientMcpToolInvokerTest {
                 "attempt_id", "attempt-1",
                 "actor", role,
                 "deadline", Instant.now().plus(remaining).toString());
+    }
+
+    private static Map<String, Object> argumentsWithPurpose(String purpose) {
+        return Map.of(
+                "task_id", "task-1",
+                "attempt_id", "attempt-1",
+                "actor", "workflow",
+                "purpose", purpose,
+                "deadline", Instant.now().plusSeconds(5).toString());
     }
 
     private static McpToolInvoker delegate(Call call) {

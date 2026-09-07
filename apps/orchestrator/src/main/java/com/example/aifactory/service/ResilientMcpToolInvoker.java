@@ -35,6 +35,8 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
             "evidence.create_manifest", "scm.create_draft_pull_request");
     private static final Set<String> FINAL_GATE_TOOLS = Set.of(
             "assurance.evaluate_policy", "evidence.create_manifest", "scm.create_draft_pull_request");
+    private static final Set<String> HOST_CONTROLLED_EVIDENCE_READ_PURPOSES = Set.of(
+            "projection-recovery", "legacy-task-read");
     private static final int CIRCUIT_FAILURE_THRESHOLD = 5;
     private static final Duration CIRCUIT_OPEN_DURATION = Duration.ofSeconds(30);
 
@@ -162,9 +164,9 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
     }
 
     private void accountMcp(String toolName, Map<String, Object> arguments) {
-        // Sandbox status polling is host-controlled and bounded by the sandbox polling timeout.
-        // It must not exhaust the task budget reserved for agent work.
-        if ("sandbox.get_execution".equals(toolName)) {
+        // Status polling and projection recovery are host-controlled. They must not exhaust the
+        // task budget reserved for agent work, even when the UI refreshes while a task is running.
+        if ("sandbox.get_execution".equals(toolName) || isHostControlledEvidenceRead(toolName, arguments)) {
             return;
         }
         String actor = String.valueOf(arguments.getOrDefault("actor", "unknown"));
@@ -173,6 +175,11 @@ public class ResilientMcpToolInvoker implements McpToolInvoker {
         usage.consume(String.valueOf(arguments.getOrDefault("task_id", "unknown")),
                 String.valueOf(arguments.getOrDefault("attempt_id", "unknown")), lane,
                 new TaskUsageLedger.Delta(0, 0, 0, 0, 1));
+    }
+
+    private static boolean isHostControlledEvidenceRead(String toolName, Map<String, Object> arguments) {
+        return "evidence.read".equals(toolName)
+                && HOST_CONTROLLED_EVIDENCE_READ_PURPOSES.contains(String.valueOf(arguments.get("purpose")));
     }
 
     private JsonNode timedCall(String serverName, String toolName, Map<String, Object> arguments) {
