@@ -32,13 +32,27 @@ SONAR_URL="http://localhost:$SONAR_PORT"
 echo "Waiting for SonarQube to become ready..."
 until curl -fsS "$SONAR_URL/api/system/status" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'; do sleep 2; done
 
-if [ -n "$SONAR_TOKEN" ]; then
-  if curl -fsS -u "$SONAR_TOKEN:" "$SONAR_URL/api/authentication/validate" 2>/dev/null | grep -Eq '"valid"[[:space:]]*:[[:space:]]*true'; then
-    echo "SonarQube token already configured and valid."
-    exit 0
-  fi
-  echo "Existing SonarQube token is invalid; generating a replacement."
+if ! curl -fsS -u "$SONAR_LOGIN:$SONAR_PASSWORD" "$SONAR_URL/api/authentication/validate" 2>/dev/null \
+  | grep -Eq '"valid"[[:space:]]*:[[:space:]]*true'; then
+  echo "SonarQube authentication failed. SONAR_ADMIN_LOGIN and SONAR_ADMIN_PASSWORD in .env must match the existing SonarQube account."
+  echo "The SonarQube volume keeps its password after .env changes. Update .env with the current password, then rerun make bootstrap."
+  exit 1
 fi
+
+NEXT_SONAR_PASSWORD=$(openssl rand -hex 32)
+PASSWORD_RESPONSE=$(curl -sS -w '\n%{http_code}' -u "$SONAR_LOGIN:$SONAR_PASSWORD" \
+  -X POST --data-urlencode "login=$SONAR_LOGIN" \
+  --data-urlencode "previousPassword=$SONAR_PASSWORD" \
+  --data-urlencode "password=$NEXT_SONAR_PASSWORD" \
+  "$SONAR_URL/api/users/change_password" 2>/dev/null || true)
+PASSWORD_HTTP_STATUS="${PASSWORD_RESPONSE##*$'\n'}"
+if [ "$PASSWORD_HTTP_STATUS" != "204" ]; then
+  echo "Could not rotate the SonarQube administrator password (HTTP $PASSWORD_HTTP_STATUS)."
+  exit 1
+fi
+set_env "SONAR_ADMIN_PASSWORD" "$NEXT_SONAR_PASSWORD"
+SONAR_PASSWORD="$NEXT_SONAR_PASSWORD"
+echo "Rotated SonarQube administrator password and saved it to .env"
 
 TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"
 TOKEN_RESPONSE=$(curl -sS -w '\n%{http_code}' -u "$SONAR_LOGIN:$SONAR_PASSWORD" \
@@ -51,8 +65,7 @@ if [ -n "$TOKEN" ]; then
   set_env "SONAR_TOKEN" "$TOKEN"
   echo "Generated SonarQube analysis token and saved it to .env"
 elif [ "$TOKEN_HTTP_STATUS" = "401" ]; then
-  echo "SonarQube authentication failed. SONAR_ADMIN_LOGIN and SONAR_ADMIN_PASSWORD in .env must match the existing SonarQube account."
-  echo "The SonarQube volume keeps its password after .env changes. Update .env with the current password, then rerun make bootstrap."
+  echo "SonarQube authentication failed after administrator password rotation."
   exit 1
 else
   echo "Could not auto-generate a SonarQube token (HTTP $TOKEN_HTTP_STATUS)."
