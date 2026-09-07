@@ -31,10 +31,12 @@ class A2aActivitiesTest {
                 URI.create("https://developer.internal/a2a"), "JSONRPC", "1.0", "b".repeat(64),
                 List.of("developer.code-task-v1"), false, true));
         java.util.concurrent.atomic.AtomicInteger sends = new java.util.concurrent.atomic.AtomicInteger();
+        AtomicReference<A2aContracts.SendCommand> sent = new AtomicReference<>();
         A2aClient client = new A2aClient() {
             @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> send(
                     A2aContracts.SendCommand command) {
                 sends.incrementAndGet();
+                sent.set(command);
                 return CompletableFuture.completedFuture(snapshot);
             }
             @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> getTask(
@@ -76,6 +78,12 @@ class A2aActivitiesTest {
             assertThat(correlation.messageId()).isEqualTo("message-1");
             assertThat(correlation.agentCardDigest()).isEqualTo("b".repeat(64));
         });
+        assertThat(sent.get().metadata()).extractingByKey(
+                        "https://ai-factory.local/extensions/w3c-trace-context/v1")
+                .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                .extractingByKey("traceparent")
+                .asString()
+                .matches("00-(?!0{32})[0-9a-f]{32}-(?!0{16})[0-9a-f]{16}-[0-9a-f]{2}");
         assertThat(activities.reconcileDispatch(new A2aActivities.DispatchRequest(
                 execution(), "b".repeat(64), command()))).isEqualTo(snapshot);
         assertThat(sends).hasValue(1);

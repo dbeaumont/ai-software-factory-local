@@ -4,6 +4,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.context.Context;
 
 import java.util.LinkedHashMap;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -32,6 +33,23 @@ public record A2aW3cTraceContext(String traceparent, String baggage) {
         return new A2aW3cTraceContext(traceparent, carrier.get("baggage"));
     }
 
+    /** Activities must always cross the A2A boundary with a valid trace context, even with a no-op SDK. */
+    public static A2aW3cTraceContext captureOrCreate() {
+        A2aW3cTraceContext captured = capture();
+        if (captured != null) return captured;
+        byte[] identifiers = new byte[24];
+        SecureRandomHolder.INSTANCE.nextBytes(identifiers);
+        if (allZero(identifiers, 0, 16)) identifiers[0] = 1;
+        if (allZero(identifiers, 16, 24)) identifiers[16] = 1;
+        String hex = HexFormat.of().formatHex(identifiers);
+        return new A2aW3cTraceContext("00-" + hex.substring(0, 32) + '-' + hex.substring(32) + "-01", null);
+    }
+
+    private static boolean allZero(byte[] value, int start, int end) {
+        for (int index = start; index < end; index++) if (value[index] != 0) return false;
+        return true;
+    }
+
     public Map<String, Object> addTo(Map<String, Object> metadata) {
         Map<String, Object> result = new LinkedHashMap<>(metadata == null ? Map.of() : metadata);
         Map<String, String> value = new LinkedHashMap<>();
@@ -39,5 +57,9 @@ public record A2aW3cTraceContext(String traceparent, String baggage) {
         if (baggage != null) value.put("baggage", baggage);
         result.put(EXTENSION, Map.copyOf(value));
         return Map.copyOf(result);
+    }
+
+    private static final class SecureRandomHolder {
+        private static final java.security.SecureRandom INSTANCE = new java.security.SecureRandom();
     }
 }

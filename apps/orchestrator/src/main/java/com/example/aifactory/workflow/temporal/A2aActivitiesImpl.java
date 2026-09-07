@@ -223,8 +223,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     }
 
     private static A2aContracts.SendCommand withCurrentTrace(A2aContracts.SendCommand command) {
-        A2aW3cTraceContext trace = A2aW3cTraceContext.capture();
-        if (trace == null) return command;
+        A2aW3cTraceContext trace = A2aW3cTraceContext.captureOrCreate();
         return new A2aContracts.SendCommand(command.agentRole(), command.skillId(), command.messageId(),
                 command.taskId(), command.contextId(), command.parts(), trace.addTo(command.metadata()),
                 command.returnImmediately());
