@@ -22,14 +22,14 @@ class A2aIndependentReviewWorkflowTest {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("a2a-review-test");
             worker.registerWorkflowImplementationTypes(A2aIndependentReviewWorkflowImpl.class);
-            AtomicReference<A2aContracts.SendCommand> sent = new AtomicReference<>();
+            AtomicReference<A2aActivities.DispatchRequest> dispatch = new AtomicReference<>();
             worker.registerActivitiesImplementations((A2aActivities.ResolveAgent) role ->
                     new A2aContracts.AgentCardDescriptor(role,
                             URI.create("https://a2a-independent-reviewer/.well-known/agent-card.json"),
                             URI.create("https://a2a-independent-reviewer/a2a"), "JSONRPC", "1.0", "a".repeat(64),
                             List.of("independent-reviewer.integration-result-v1"), false, true));
             worker.registerActivitiesImplementations((A2aActivities.ReconcileDispatch) request -> {
-                sent.set(request.command());
+                dispatch.set(request);
                 return completed();
             });
             worker.registerActivitiesImplementations((A2aActivities.ValidateArtifacts) request ->
@@ -49,9 +49,11 @@ class A2aIndependentReviewWorkflowTest {
 
             assertThat(result).isEqualTo(new IndependentReviewWorkflow.Result(
                     "final-review", "independent-reviewer", "READY_FOR_ACTIVITIES"));
-            assertThat(sent.get().parts()).hasSize(1);
-            assertThat(sent.get().parts().getFirst().mediaType()).isEqualTo(A2aMediaTypes.JSON);
-            Map<String, Object> envelope = sent.get().parts().getFirst().data();
+            assertThat(dispatch.get().execution().delegationId())
+                    .isEqualTo(TemporalIds.delegation("task-1", "attempt-1", "final-review"));
+            assertThat(dispatch.get().command().parts()).hasSize(1);
+            assertThat(dispatch.get().command().parts().getFirst().mediaType()).isEqualTo(A2aMediaTypes.JSON);
+            Map<String, Object> envelope = dispatch.get().command().parts().getFirst().data();
             assertThat(envelope).containsEntry("target_role", "independent-reviewer")
                     .containsEntry("skill_id", "independent-reviewer.integration-result-v1")
                     .doesNotContainKeys("prompt", "reasoning", "raw_output", "private_output");

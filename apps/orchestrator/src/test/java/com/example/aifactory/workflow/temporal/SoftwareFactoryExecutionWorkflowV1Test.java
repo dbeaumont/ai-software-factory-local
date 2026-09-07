@@ -53,6 +53,8 @@ class SoftwareFactoryExecutionWorkflowV1Test {
             assertThat(result.approvedManifestId()).isEqualTo(MANIFEST_ID);
             assertThat(result.chronology()).contains("DELIVERY_COMPLETED");
             assertThat(deliveries).hasValue(1);
+            assertThat(activities.delegationIds).isNotEmpty().doesNotHaveDuplicates()
+                    .allMatch(value -> value.startsWith("delegation-task-1-pipeline-1-pipeline-"));
             assertThat(workflow.evidence()).hasSizeGreaterThanOrEqualTo(7)
                     .allMatch(uri -> uri.startsWith("evidence://task-1/pipeline-1/"));
         }
@@ -178,6 +180,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         private final CountDownLatch blockedStarted = new CountDownLatch(1);
         private final CountDownLatch releaseBlocked = new CountDownLatch(1);
         private final java.util.List<Cancellation> cancellations = new java.util.concurrent.CopyOnWriteArrayList<>();
+        private final java.util.List<String> delegationIds = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         private TestActivities(AtomicInteger deliveries) {
             this(deliveries, null, null);
@@ -257,6 +260,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         }
 
         @Override public A2aContracts.TaskSnapshot reconcileDispatch(A2aActivities.DispatchRequest request) {
+            delegationIds.add(request.execution().delegationId());
             String uri = "evidence://task-1/pipeline-1/agent-result/" + request.command().messageId();
             A2aContracts.Part part = new A2aContracts.Part(
                     com.example.aifactory.a2a.A2aMediaTypes.EVIDENCE_REFERENCE, null,

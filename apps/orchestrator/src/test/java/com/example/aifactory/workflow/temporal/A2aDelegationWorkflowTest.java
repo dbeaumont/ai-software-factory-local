@@ -62,6 +62,9 @@ class A2aDelegationWorkflowTest {
                     "evidence://task-1/attempt-1/delegation-input/developer-1.json");
             assertThat(envelope.get("constraints").toString()).contains("patch-proposal-v1");
             assertThat(dispatch.get().execution().workflowId()).contains("delegation/task-1");
+            assertThat(dispatch.get().execution().delegationId())
+                    .isEqualTo(TemporalIds.delegation("task-1", "attempt-1", "developer-1"));
+            assertThat(dispatch.get().execution().parentDelegationId()).isNull();
             assertThat(dispatch.get().command().metadata().toString()).doesNotContain("prompt", "result");
         }
     }

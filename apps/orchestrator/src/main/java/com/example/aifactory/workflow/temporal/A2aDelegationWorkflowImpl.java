@@ -29,9 +29,12 @@ public final class A2aDelegationWorkflowImpl implements DelegationWorkflow {
                     "Agent Card does not expose required skill", "INCOMPATIBLE_SCHEMA");
         }
         var info = Workflow.getInfo();
+        String delegationId = TemporalIds.delegation(request.taskId(), request.attemptId(), request.nodeId());
+        String parentDelegationId = request.parentNodeId() == null || "supervisor".equals(request.parentNodeId()) ? null
+                : TemporalIds.delegation(request.taskId(), request.attemptId(), request.parentNodeId());
         A2aExecutionContext execution = new A2aExecutionContext("1", request.taskId(), request.attemptId(),
-                info.getWorkflowId(), info.getRunId(), request.taskId(), request.sourceCommit(), request.nodeId(),
-                "supervisor".equals(request.parentNodeId()) ? null : request.parentNodeId(), request.role(),
+                info.getWorkflowId(), info.getRunId(), request.taskId(), request.sourceCommit(), delegationId,
+                parentDelegationId, request.role(),
                 List.of(request.objectiveDigest()));
         String messageId = TemporalIds.sha256(String.join("\n", request.nodeId(), request.role(),
                 request.objectiveDigest(), card.cardDigest()));

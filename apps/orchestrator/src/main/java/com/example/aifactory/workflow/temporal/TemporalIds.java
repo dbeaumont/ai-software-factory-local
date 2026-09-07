@@ -16,7 +16,7 @@ public final class TemporalIds {
     }
 
     public static String delegation(String taskId, String attemptId, String nodeId) {
-        return bounded("delegation", require(taskId), require(attemptId), require(nodeId));
+        return bounded(128, "delegation", require(taskId), require(attemptId), require(nodeId));
     }
 
     public static String activity(String taskId, String attemptId, String nodeId, String operation, int sequence) {
@@ -42,8 +42,12 @@ public final class TemporalIds {
     }
 
     private static String bounded(String prefix, String... parts) {
+        return bounded(MAX_ID_LENGTH, prefix, parts);
+    }
+
+    private static String bounded(int maximumLength, String prefix, String... parts) {
         String value = prefix + '-' + String.join("-", parts);
-        if (value.length() <= MAX_ID_LENGTH) return value;
+        if (value.length() <= maximumLength) return value;
         return prefix + '-' + digest(value);
     }
 

@@ -38,8 +38,9 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toCollection(LinkedHashSet::new), List::copyOf));
         var info = Workflow.getInfo();
+        String delegationId = TemporalIds.delegation(request.taskId(), request.attemptId(), request.reviewId());
         A2aExecutionContext execution = new A2aExecutionContext("1", request.taskId(), request.attemptId(),
-                info.getWorkflowId(), info.getRunId(), request.taskId(), request.sourceCommit(), request.reviewId(),
+                info.getWorkflowId(), info.getRunId(), request.taskId(), request.sourceCommit(), delegationId,
                 null, ROLE, digests);
         String messageId = TemporalIds.sha256(String.join("\n", request.reviewId(), card.cardDigest(),
                 String.join("\n", digests)));

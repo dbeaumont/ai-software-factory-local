@@ -222,8 +222,9 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
             throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
                     "Agent Card does not expose the pipeline compatibility skill", "INCOMPATIBLE_SCHEMA");
         }
-        String delegationId = "pipeline-" + step.replaceAll("[^A-Za-z0-9_-]", "-")
+        String nodeId = "pipeline-" + step.replaceAll("[^A-Za-z0-9_-]", "-")
                 + (repairAttempt > 0 ? "-" + repairAttempt : "");
+        String delegationId = TemporalIds.delegation(request.taskId(), request.attemptId(), nodeId);
         var info = io.temporal.workflow.Workflow.getInfo();
         A2aExecutionContext execution = new A2aExecutionContext("1", request.taskId(), request.attemptId(),
                 info.getWorkflowId(), info.getRunId(), request.repositoryId(), resolved.sourceCommit(),
