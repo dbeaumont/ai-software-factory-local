@@ -21,7 +21,7 @@ public class PostgresA2aTaskAssociationStore implements A2aTaskAssociationStore 
                         + "SELECT ?, CAST(? AS varchar(128)), workflow.workflow_run_id, ?, ?, ?, ?, ?, ?, ?, ?, "
                         + "'DISPATCHING', now(), NULL, now(), 0 FROM workflow_runs workflow "
                         + "WHERE workflow.task_id = ? AND workflow.attempt_id = ? AND workflow.source_commit = ? "
-                        + "AND (? IS NULL OR EXISTS (SELECT 1 FROM delegations parent "
+                        + "AND (CAST(? AS varchar(128)) IS NULL OR EXISTS (SELECT 1 FROM delegations parent "
                         + "WHERE parent.delegation_id = ? AND parent.task_id = ? AND parent.attempt_id = ? "
                         + "AND parent.source_commit = ?)) "
                         + "ON CONFLICT (delegation_id) DO UPDATE SET updated_at = now() "
