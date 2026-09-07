@@ -70,9 +70,9 @@ trap cleanup EXIT
 
 auth=(-H "Authorization: Bearer $token")
 
-NEXT_SIGNOZ_PASSWORD=$(openssl rand -hex 32)
+NEXT_SIGNOZ_PASSWORD="Aa1!$(openssl rand -hex 30)"
 password_payload=$(jq -nc --arg old "$SIGNOZ_ROOT_PASSWORD" --arg new "$NEXT_SIGNOZ_PASSWORD" \
-  '{old_password:$old,new_password:$new}')
+  '{oldPassword:$old,newPassword:$new}')
 password_status=$(curl -sS -o /tmp/signoz-password-rotation.json -w '%{http_code}' \
   -X PUT "$SIGNOZ_BASE_URL/api/v2/users/me/factor_password" "${auth[@]}" \
   -H 'Content-Type: application/json' --data "$password_payload")
