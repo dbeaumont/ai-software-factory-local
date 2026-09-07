@@ -83,6 +83,29 @@ DASHBOARDS = {
             ("Agent outcomes", ['sum by (role, outcome) (rate({__name__="ai_agent_duration.count"}[5m]))']),
         ],
     },
+    "llm": {
+        "name": "AI Factory LLM",
+        "description": "Appels LLM, latence, erreurs, tokens et coût estimé, sans contenu de conversation.",
+        "panels": [
+            ("LLM request rate", ["sum by (provider, model, outcome) (rate(ai_factory_llm_requests_total[5m]))"]),
+            ("LLM request latency p95", [
+                "histogram_quantile(0.95, sum by (le, provider, model) (rate(ai_factory_llm_request_duration_seconds_bucket[5m])))",
+            ]),
+            ("LLM error ratio", [
+                "sum by (provider, model) (rate(ai_factory_llm_requests_total{outcome=~\"error|timeout\"}[5m])) / clamp_min(sum by (provider, model) (rate(ai_factory_llm_requests_total[5m])), 1e-9)",
+            ]),
+            ("LLM token rate", ["sum by (provider, model, direction) (rate(ai_factory_llm_tokens_total[5m]))"]),
+            ("LLM tokens per request", [
+                "sum by (provider, model) (rate(ai_factory_llm_tokens_total[5m])) / clamp_min(sum by (provider, model) (rate(ai_factory_llm_requests_total[5m])), 1e-9)",
+            ]),
+            ("LLM estimated cost rate", [
+                "sum by (provider, model, currency) (rate(ai_factory_llm_cost_micros_total[5m])) / 1000000",
+            ]),
+            ("LLM cost availability", [
+                "sum by (provider, model, status) (rate(ai_factory_llm_cost_availability_total[5m]))",
+            ]),
+        ],
+    },
     "a2a": {
         "name": "AI Factory A2A Fleet",
         "description": "Flotte A2A, latence, états, erreurs, divergences, retries, files et saturation.",

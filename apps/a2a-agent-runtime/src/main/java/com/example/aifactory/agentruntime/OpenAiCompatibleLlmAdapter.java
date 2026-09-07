@@ -13,17 +13,26 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.Duration;
+import java.time.Instant;
 
 /** Synchronous worker-side adapter for the OpenAI-compatible chat-completions contract. */
 final class OpenAiCompatibleLlmAdapter implements LlmCompletionPort {
     private final WebClient client;
     private final ObjectMapper mapper;
     private final LlmAdapterProperties properties;
+    private final LlmMetrics metrics;
 
     OpenAiCompatibleLlmAdapter(WebClient.Builder builder, ObjectMapper mapper, LlmAdapterProperties properties) {
+        this(builder, mapper, properties, null);
+    }
+
+    OpenAiCompatibleLlmAdapter(WebClient.Builder builder, ObjectMapper mapper, LlmAdapterProperties properties,
+                                LlmMetrics metrics) {
         this.client = builder.baseUrl(properties.baseUrl()).build();
         this.mapper = mapper;
         this.properties = properties;
+        this.metrics = metrics;
     }
 
     @Override
@@ -34,17 +43,26 @@ final class OpenAiCompatibleLlmAdapter implements LlmCompletionPort {
         ToolAliases aliases = aliases(tools);
         List<Map<String, Object>> wireMessages = messages.stream()
                 .map(message -> wireMessage(message, aliases.canonicalToWire())).toList();
+        Instant startedAt = Instant.now();
+        JsonNode response = null;
+        AgentLoop.Turn turn = null;
+        String outcome = "error";
         try {
-            JsonNode response = client.post().uri("/chat/completions")
+            response = client.post().uri("/chat/completions")
                     .headers(headers -> authorize(headers, properties.apiKey()))
                     .bodyValue(requestBody(properties.model(), wireMessages, tools, boundedTokens, aliases))
                     .retrieve().bodyToMono(JsonNode.class).block(properties.timeout());
-            return parse(response, tools, aliases, mapper);
+            turn = parse(response, tools, aliases, mapper);
+            outcome = "success";
+            return turn;
         } catch (LlmCompletionException exception) {
             throw exception;
         } catch (RuntimeException exception) {
+            if (isTimeout(exception)) outcome = "timeout";
             throw new LlmCompletionException("provider_transport", true,
                     "LLM provider request failed", exception);
+        } finally {
+            if (metrics != null) metrics.record(outcome, Duration.between(startedAt, Instant.now()), turn, response);
         }
     }
 
@@ -158,6 +176,14 @@ final class OpenAiCompatibleLlmAdapter implements LlmCompletionPort {
     }
     private static LlmCompletionException failure(String reason, boolean retryable, String message) {
         return new LlmCompletionException(reason, retryable, message);
+    }
+
+    private static boolean isTimeout(Throwable exception) {
+        for (Throwable current = exception; current != null; current = current.getCause()) {
+            if (current instanceof java.util.concurrent.TimeoutException
+                    || current instanceof java.net.http.HttpTimeoutException) return true;
+        }
+        return false;
     }
 
     record ToolAliases(Map<String, String> canonicalToWire, Map<String, String> wireToCanonical) {}

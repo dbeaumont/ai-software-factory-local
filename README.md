@@ -607,7 +607,7 @@ make demo
 
 - **SonarQube** (`http://localhost:9000`) : Analyse de la qualité du code Java/Maven. Les jetons sont générés par `make bootstrap` ou `make tokens`.
 - **Artifactory** (`http://localhost:8082`) : Dépôt d'artefacts local. Les builds Maven des sandboxes utilisent le miroir explicite `MAVEN_MIRROR_URL`.
-- **SigNoz** (`http://localhost:3301`) : reçoit métriques, traces et logs via le Collector OpenTelemetry. Huit dashboards et trente alertes couvrant la plateforme et la flotte A2A sont provisionnés automatiquement.
+- **SigNoz** (`http://localhost:3301`) : reçoit métriques, traces et logs via le Collector OpenTelemetry. Neuf dashboards et trente alertes couvrent la plateforme, la flotte A2A et les appels LLM ; ils sont provisionnés automatiquement.
 - **Collector OpenTelemetry** : reçoit l'OTLP de l'orchestrateur, des cinq MCP et des quatorze runtimes A2A, collecte les métriques Temporal par un receiver de compatibilité interne et n'expose aucun port à l'hôte.
 
 ## Commandes Make disponibles

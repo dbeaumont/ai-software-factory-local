@@ -7,6 +7,7 @@ import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
+import io.micrometer.core.instrument.MeterRegistry;
 import tools.jackson.databind.ObjectMapper;
 
 /** Runtime-only adapters around the framework-neutral agent core. */
@@ -23,8 +24,8 @@ class AgentCoreConfiguration {
     }
 
     @Bean LlmCompletionPort llmCompletionPort(WebClient.Builder builder, ObjectMapper mapper,
-                                             LlmAdapterProperties properties) {
-        return new OpenAiCompatibleLlmAdapter(builder, mapper, properties);
+                                             LlmAdapterProperties properties, MeterRegistry metrics) {
+        return new OpenAiCompatibleLlmAdapter(builder, mapper, properties, new LlmMetrics(metrics, properties));
     }
 
     @Bean McpToolPort mcpToolPort(WebClient.Builder builder, ObjectMapper mapper,
