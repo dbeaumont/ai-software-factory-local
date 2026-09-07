@@ -812,6 +812,8 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
     `pipeline-test-consolidation`, avec un test refusant le reviewer.
   - [x] Lier côté hôte chaque appel MCP d'agent à la tâche, la tentative, le commit, la trace et l'échéance
     admis par A2A, sans déléguer ces champs de sécurité au modèle.
+  - [x] Resceller la baseline E2E après l'ajout des contrats de compatibilité pipeline et rendre le compte de
+    contrats dynamique dans le vérificateur.
 - [ ] **A2A-187 — Rouvrir les admissions.** Autoriser les nouveaux tickets uniquement lorsque toutes les cartes,
   files Temporal, runtimes et dépendances obligatoires sont prêtes.
 - [ ] **A2A-188 — Surveiller la fenêtre de stabilisation.** Contrôler SLO, backlog, divergences, notifications,

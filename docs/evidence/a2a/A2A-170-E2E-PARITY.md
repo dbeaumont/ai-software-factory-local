@@ -29,7 +29,7 @@ La campagne vérifie les digests SHA-256 des preuves de référence avant de rej
 | `BEFORE_EXTERNAL_EFFECT` | 10 |
 | `BEFORE_CODE` | 2 |
 
-Les 18 documents contractuels de référence sont chargés. Chacune des 14 sorties A2A primaires traverse le garde
+Les 20 documents contractuels de référence sont chargés. Chacune des 14 sorties A2A primaires traverse le garde
 de contrat réel ; sa représentation canonique JCS et son objet `usage` restent strictement identiques avant et
 après validation. La consommation agrégée demeure fixée à 134 365 tokens et 543 041 ms. L'absence de prix dans
 la baseline conserve la sémantique `UNAVAILABLE_NOT_ZERO` et n'est jamais convertie en coût nul.

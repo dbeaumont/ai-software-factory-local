@@ -78,4 +78,6 @@ unless failures.empty?
   exit 1
 end
 
-puts "A2A post-cutover E2E parity verified: #{expected.fetch('cases')} cases, 18 contracts, 14 primary outputs."
+puts "A2A post-cutover E2E parity verified: #{expected.fetch('cases')} cases, " \
+     "#{post.dig('golden_contracts', 'documents')} contracts, " \
+     "#{post.dig('a2a_contract_mapping', 'primary_outputs')} primary outputs."

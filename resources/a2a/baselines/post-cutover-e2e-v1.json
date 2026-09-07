@@ -8,12 +8,12 @@
   },
   "golden_contracts": {
     "path": "resources/multiagents/fixtures/golden-contracts-v1.json",
-    "sha256": "1a388f5814ec9ef5b6b862281075a1c8f25076a7e074f17644169e4248d4397a",
-    "documents": 18
+    "sha256": "ab6edc56180d8acaf3c51c8b308c05757d6c356c3f1eaf6938b0caf3e0aee925",
+    "documents": 20
   },
   "a2a_contract_mapping": {
     "path": "resources/a2a/skill-contract-map-v1.json",
-    "sha256": "28d48f4d147ca6e35b02f564e1f765bbeb9fd0bde92427ed9e2f9fdb8be12f6d",
+    "sha256": "92c392f5e52f77ce77c6868606cf0cfecd8ecd7e40c975916fff4750e1f7c63f",
     "primary_outputs": 14
   },
   "expected": {
