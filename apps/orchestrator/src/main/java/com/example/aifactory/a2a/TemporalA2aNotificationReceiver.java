@@ -76,7 +76,7 @@ public final class TemporalA2aNotificationReceiver implements A2aNotificationRec
                         || part.uri() == null || !uriValue.equals(part.uri().toString())) {
                     throw new SecurityException("A2A notification artifact reference is incomplete");
                 }
-                A2aEvidenceUriPolicy.requireBound(uriValue, association.a2aTaskId(),
+                A2aEvidenceUriPolicy.requireBound(uriValue, association.taskId(),
                         association.attemptId(), digestValue);
             }
         }

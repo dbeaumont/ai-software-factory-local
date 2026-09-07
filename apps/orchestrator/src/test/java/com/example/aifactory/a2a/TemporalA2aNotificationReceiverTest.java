@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -74,7 +75,13 @@ class TemporalA2aNotificationReceiverTest {
     }
 
     private static A2aContracts.Notification notification(String contextId) {
+        String digest = "c".repeat(64);
+        String uri = "evidence://task-1/attempt-1/agent-result/" + digest;
+        A2aContracts.Part reference = new A2aContracts.Part(A2aMediaTypes.EVIDENCE_REFERENCE, null,
+                java.util.Map.of("uri", uri, "digest", digest), URI.create(uri));
         return new A2aContracts.Notification("developer", "agent-task-1", contextId, 1,
-                A2aContracts.TaskState.WORKING, Instant.parse("2026-09-06T12:00:00Z"), List.of(), java.util.Map.of());
+                A2aContracts.TaskState.WORKING, Instant.parse("2026-09-06T12:00:00Z"),
+                List.of(new A2aContracts.Artifact("artifact-1", "result", List.of(reference), java.util.Map.of())),
+                java.util.Map.of());
     }
 }

@@ -71,7 +71,7 @@ public final class A2aActivities {
                         TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_CONTINUE)));
     }
 
-    public record ValidationRequest(String agentRole, String outputContract, String attemptId,
+    public record ValidationRequest(String agentRole, String outputContract, String taskId, String attemptId,
                                     A2aContracts.TaskSnapshot task) {}
 
     public record DispatchRequest(com.example.aifactory.a2a.A2aExecutionContext execution,

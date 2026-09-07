@@ -254,7 +254,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 Map.of("sequence", terminal.sequence()));
         A2aActivities.ValidatedArtifacts validated = a2a.validateArtifacts().validateArtifacts(
                 new A2aActivities.ValidationRequest(role, "pipeline-agent-result-v1",
-                        request.attemptId(), completed));
+                        request.taskId(), request.attemptId(), completed));
         if (validated.references().size() != 1) {
             throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
                     "Pipeline A2A agent returned an ambiguous result set", "INCOMPATIBLE_SCHEMA");

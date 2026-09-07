@@ -78,7 +78,7 @@ class A2aActivitiesTest {
 
         assertThat(activities.resolveAgent("developer").agentRole()).isEqualTo("developer");
         assertThat(activities.dispatchTask(new A2aActivities.DispatchRequest(
-                execution(), "b".repeat(64), command())).taskId()).isEqualTo("task-1");
+                execution(), "b".repeat(64), command())).taskId()).isEqualTo("a2a-task-1");
         assertThat(persisted.get()).satisfies(correlation -> {
             assertThat(correlation.workflowId()).isEqualTo("workflow-1");
             assertThat(correlation.workflowRunId()).isEqualTo("run-1");
@@ -95,19 +95,21 @@ class A2aActivitiesTest {
                 execution(), "b".repeat(64), command()))).isEqualTo(snapshot);
         assertThat(sends).hasValue(1);
         A2aContracts.SendCommand continuation = new A2aContracts.SendCommand(
-                "developer", "developer.code-task-v1", "message-2", "task-1", "context-1",
+                "developer", "developer.code-task-v1", "message-2", "a2a-task-1", "context-1",
                 command().parts(), Map.of("continuationSequence", 1), true);
         assertThat(activities.continueTask(new A2aActivities.ContinuationRequest(execution(), continuation)))
                 .isEqualTo(snapshot);
         assertThat(sends).hasValue(2);
-        assertThat(activities.getTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
-        assertThat(activities.cancelTask(new A2aContracts.TaskQuery("developer", "task-1", 10))).isEqualTo(snapshot);
+        assertThat(activities.getTask(new A2aContracts.TaskQuery("developer", "a2a-task-1", 10)))
+                .isEqualTo(snapshot);
+        assertThat(activities.cancelTask(new A2aContracts.TaskQuery("developer", "a2a-task-1", 10)))
+                .isEqualTo(snapshot);
         assertThat(activities.validateArtifacts(new A2aActivities.ValidationRequest(
-                "developer", "patch-proposal-v1", "attempt-1", snapshot)).references()).singleElement()
+                "developer", "patch-proposal-v1", "task-1", "attempt-1", snapshot)).references()).singleElement()
                 .satisfies(reference -> assertThat(reference.uri()).startsWith("evidence://task-1/"));
 
         assertThatThrownBy(() -> activities.validateArtifacts(new A2aActivities.ValidationRequest(
-                "developer", "security-assessment-v1", "attempt-1", snapshot)))
+                "developer", "security-assessment-v1", "task-1", "attempt-1", snapshot)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -159,7 +161,7 @@ class A2aActivitiesTest {
                 "contract", contract, "contract_version", "1");
         A2aContracts.Part part = new A2aContracts.Part(
                 A2aMediaTypes.EVIDENCE_REFERENCE, null, data, URI.create(uri));
-        return new A2aContracts.TaskSnapshot("task-1", "context-1", A2aContracts.TaskState.COMPLETED,
+        return new A2aContracts.TaskSnapshot("a2a-task-1", "context-1", A2aContracts.TaskState.COMPLETED,
                 Instant.parse("2026-09-06T12:00:00Z"),
                 List.of(new A2aContracts.Artifact("artifact-1", "developer-result", List.of(part), Map.of())),
                 Map.of());

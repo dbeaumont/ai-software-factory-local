@@ -115,7 +115,7 @@ public final class A2aRetryReconciler {
                             || !uriValue.equals(part.uri().toString())) {
                         throw new SecurityException("A2A retry Evidence reference is incomplete");
                     }
-                    A2aEvidenceUriPolicy.requireBound(uriValue, snapshot.taskId(), association.attemptId(),
+                    A2aEvidenceUriPolicy.requireBound(uriValue, association.taskId(), association.attemptId(),
                             digestValue);
                 }
             }

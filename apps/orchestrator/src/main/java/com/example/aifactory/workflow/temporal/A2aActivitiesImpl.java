@@ -177,7 +177,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     @Override
     public A2aActivities.ValidatedArtifacts validateArtifacts(A2aActivities.ValidationRequest request) {
         if (request == null || request.task() == null || request.agentRole() == null
-                || request.outputContract() == null || request.attemptId() == null) {
+                || request.outputContract() == null || request.taskId() == null || request.attemptId() == null) {
             throw new IllegalArgumentException("A2A artifact validation request is incomplete");
         }
         contracts.requireOutput(request.agentRole(), request.outputContract());
@@ -197,7 +197,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
                         || !uri.equals(part.uri().toString())) {
                     throw new SecurityException("A2A artifact reference is not bound to its business contract");
                 }
-                A2aEvidenceUriPolicy.requireBound(uri, request.task().taskId(), request.attemptId(), digest);
+                A2aEvidenceUriPolicy.requireBound(uri, request.taskId(), request.attemptId(), digest);
                 references.add(new A2aActivities.EvidenceReference(artifact.artifactId(), uri, digest, contract));
             }
         }

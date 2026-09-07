@@ -98,7 +98,7 @@ class A2aRetryReconcilerTest {
     }
 
     private static A2aContracts.Artifact evidenceArtifact() {
-        String uri = "evidence://a2a-task-1/pipeline-1/output/" + DIGEST;
+        String uri = "evidence://task-1/pipeline-1/output/" + DIGEST;
         A2aContracts.Part part = new A2aContracts.Part(A2aMediaTypes.EVIDENCE_REFERENCE, null,
                 Map.of("schema_version", "1", "uri", uri, "digest", DIGEST,
                         "contract", "code-patch-v1"), URI.create(uri));

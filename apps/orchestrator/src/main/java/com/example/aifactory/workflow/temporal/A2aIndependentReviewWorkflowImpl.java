@@ -61,7 +61,7 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
                 terminal.contextId(), terminal.state(), terminal.occurredAt(), terminal.artifacts(),
                 Map.of("sequence", terminal.sequence()));
         activities.validateArtifacts().validateArtifacts(new A2aActivities.ValidationRequest(
-                ROLE, "independent-review-v1", request.attemptId(), completed));
+                ROLE, "independent-review-v1", request.taskId(), request.attemptId(), completed));
         return new Result(request.reviewId(), ROLE, "READY_FOR_ACTIVITIES");
     }
 
