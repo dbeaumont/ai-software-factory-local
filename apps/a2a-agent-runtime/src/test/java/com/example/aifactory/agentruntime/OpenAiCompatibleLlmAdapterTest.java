@@ -80,6 +80,6 @@ class OpenAiCompatibleLlmAdapterTest {
     @Test
     void rejectsInvalidAdapterBudgets() {
         assertThrows(IllegalArgumentException.class, () -> new LlmAdapterProperties(
-                "http://litellm:4000/v1", "", "model", 8193, Duration.ofMinutes(10)));
+                "http://litellm:4000/v1", "", "litellm", "model", 8193, Duration.ofMinutes(10)));
     }
 }

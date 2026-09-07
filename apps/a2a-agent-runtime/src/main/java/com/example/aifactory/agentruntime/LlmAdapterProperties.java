@@ -7,11 +7,6 @@ import java.time.Duration;
 @ConfigurationProperties("ai-factory.agent-runtime.llm")
 public record LlmAdapterProperties(String baseUrl, String apiKey, String provider, String model,
                                    int maxOutputTokens, Duration timeout) {
-    public LlmAdapterProperties(String baseUrl, String apiKey, String model,
-                                int maxOutputTokens, Duration timeout) {
-        this(baseUrl, apiKey, "litellm", model, maxOutputTokens, timeout);
-    }
-
     public LlmAdapterProperties {
         if (baseUrl == null || baseUrl.isBlank() || provider == null || !provider.matches("[a-z0-9_-]{1,64}")
                 || model == null || model.isBlank()) {
