@@ -49,7 +49,14 @@ class A2aActivitiesTest {
             }
         };
         AtomicReference<A2aTaskAssociationStore.Association> persisted = new AtomicReference<>();
+        java.util.concurrent.atomic.AtomicInteger preparations = new java.util.concurrent.atomic.AtomicInteger();
         A2aTaskAssociationStore associations = new A2aTaskAssociationStore() {
+            @Override public void prepareDelegation(A2aExecutionContext execution, DispatchIntent intent) {
+                assertThat(intent).isEqualTo(new DispatchIntent("c".repeat(64), 1_000, 2_000, 3));
+                if (preparations.incrementAndGet() == 1) {
+                    assertThat(sends).as("delegation must precede the remote side effect").hasValue(0);
+                }
+            }
             @Override public void record(A2aExecutionContext execution, String messageId, String cardDigest,
                                          String taskId, String contextId) {
                 persisted.set(new Association(execution.delegationId(), execution.taskId(), execution.attemptId(),
@@ -133,7 +140,9 @@ class A2aActivitiesTest {
 
     private static A2aContracts.SendCommand command() {
         return new A2aContracts.SendCommand("developer", "developer.code-task-v1", "message-1", null, null,
-                List.of(new A2aContracts.Part(A2aMediaTypes.JSON, null, Map.of("instruction", "change"), null)),
+                List.of(new A2aContracts.Part(A2aMediaTypes.JSON, null,
+                        Map.of("instruction", "change", "budget", Map.of(
+                                "max_tokens", 1_000, "max_cost_micros", 2_000, "max_turns", 3)), null)),
                 Map.of(), true);
     }
 

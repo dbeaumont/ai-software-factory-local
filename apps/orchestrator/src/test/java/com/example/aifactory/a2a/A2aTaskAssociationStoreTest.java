@@ -23,7 +23,19 @@ class A2aTaskAssociationStoreTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
         PostgresA2aTaskAssociationStore store = new PostgresA2aTaskAssociationStore(jdbc);
+        store.prepareDelegation(context(), intent());
         store.record(context(), "message-1", "b".repeat(64), "server-task-a8b4", "server-context-92ef");
+    }
+
+    @Test
+    void rejectsMissingOrDivergentDelegationLineageBeforeDispatch() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.update(anyString(), any(Object[].class))).thenReturn(0);
+        PostgresA2aTaskAssociationStore store = new PostgresA2aTaskAssociationStore(jdbc);
+
+        assertThatThrownBy(() -> store.prepareDelegation(context(), intent()))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("delegation lineage");
     }
 
     @Test
@@ -52,5 +64,9 @@ class A2aTaskAssociationStoreTest {
     private static A2aExecutionContext context() {
         return new A2aExecutionContext("1", "task-1", "attempt-1", "workflow-1", "run-1", "customer-api",
                 "a".repeat(40), "delegation-1", null, "developer", List.of("b".repeat(64)));
+    }
+
+    private static A2aTaskAssociationStore.DispatchIntent intent() {
+        return new A2aTaskAssociationStore.DispatchIntent("c".repeat(64), 12_000, 5_000_000, 6);
     }
 }

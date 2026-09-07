@@ -66,6 +66,11 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     @Override
     public A2aContracts.TaskSnapshot dispatchTask(A2aActivities.DispatchRequest request) {
         requireDispatch(request);
+        associations.prepareDelegation(request.execution(), dispatchIntent(request));
+        return dispatchPrepared(request);
+    }
+
+    private A2aContracts.TaskSnapshot dispatchPrepared(A2aActivities.DispatchRequest request) {
         return spanLinks.call("ai.factory.a2a.dispatch", "temporal-to-a2a", null, Map.of(
                 "ai_factory.task.id", request.execution().taskId(),
                 "temporal.workflow.id", request.execution().workflowId(),
@@ -103,6 +108,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     @Override
     public A2aContracts.TaskSnapshot reconcileDispatch(A2aActivities.DispatchRequest request) {
         requireDispatch(request);
+        associations.prepareDelegation(request.execution(), dispatchIntent(request));
         java.util.Optional<A2aTaskAssociationStore.Association> persisted = associations
                 .findByDelegation(request.execution().delegationId());
         if (persisted.isPresent()) {
@@ -128,7 +134,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
             return task;
         }
         metrics.reconciliation(request.command().agentRole(), "dispatch");
-        return dispatchTask(request);
+        return dispatchPrepared(request);
     }
 
     @Override
@@ -227,6 +233,35 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
         return new A2aContracts.SendCommand(command.agentRole(), command.skillId(), command.messageId(),
                 command.taskId(), command.contextId(), command.parts(), trace.addTo(command.metadata()),
                 command.returnImmediately());
+    }
+
+    private static A2aTaskAssociationStore.DispatchIntent dispatchIntent(A2aActivities.DispatchRequest request) {
+        Object rawBudget = request.command().parts().getFirst().data().get("budget");
+        if (!(rawBudget instanceof Map<?, ?> budget)) {
+            throw new IllegalArgumentException("A2A dispatch envelope lacks its budget");
+        }
+        long tokens = integer(budget, "max_tokens", true);
+        long costMicros = integer(budget, "max_cost_micros", false);
+        long turns = integer(budget, "max_turns", true);
+        if (turns > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("A2A dispatch budget max_turns is invalid");
+        }
+        List<String> digests = request.execution().inputDigests();
+        String objective = digests.size() == 1 ? digests.getFirst()
+                : TemporalIds.sha256(String.join("\n", digests));
+        return new A2aTaskAssociationStore.DispatchIntent(objective, tokens, costMicros, (int) turns);
+    }
+
+    private static long integer(Map<?, ?> values, String field, boolean strictlyPositive) {
+        Object value = values.get(field);
+        if (!(value instanceof Number number)) {
+            throw new IllegalArgumentException("A2A dispatch budget " + field + " is invalid");
+        }
+        long result = number.longValue();
+        if (number.doubleValue() != result || (strictlyPositive ? result <= 0 : result < 0)) {
+            throw new IllegalArgumentException("A2A dispatch budget " + field + " is invalid");
+        }
+        return result;
     }
 
     private static String text(Map<String, Object> data, String field) {

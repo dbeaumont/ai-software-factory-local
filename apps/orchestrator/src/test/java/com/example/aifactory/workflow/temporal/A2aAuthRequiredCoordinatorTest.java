@@ -74,6 +74,7 @@ class A2aAuthRequiredCoordinatorTest {
                 execution.workflowRunId(), execution.sourceCommit(), "initial-message", execution.agentRole(),
                 "c".repeat(64), "a2a-task-1", "context-1");
         return new A2aTaskAssociationStore() {
+            @Override public void prepareDelegation(A2aExecutionContext ignored, DispatchIntent intent) { }
             @Override public void record(A2aExecutionContext ignored, String messageId, String cardDigest,
                                          String taskId, String contextId) { }
             @Override public Optional<Association> findByDelegation(String delegationId) {

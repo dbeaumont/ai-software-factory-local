@@ -51,6 +51,9 @@ class TemporalA2aNotificationReceiverTest {
 
     private static A2aTaskAssociationStore associations(A2aTaskAssociationStore.Association association) {
         return new A2aTaskAssociationStore() {
+            @Override public void prepareDelegation(A2aExecutionContext execution, DispatchIntent intent) {
+                throw new AssertionError();
+            }
             @Override public void record(A2aExecutionContext execution, String messageId, String cardDigest,
                                          String taskId, String contextId) { throw new AssertionError(); }
             @Override public Optional<Association> findByDelegation(String delegationId) { return Optional.empty(); }

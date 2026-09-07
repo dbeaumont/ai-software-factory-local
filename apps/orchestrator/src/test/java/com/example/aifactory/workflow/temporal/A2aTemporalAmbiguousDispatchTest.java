@@ -58,6 +58,7 @@ class A2aTemporalAmbiguousDispatchTest {
         AtomicReference<A2aTaskAssociationStore.Association> stored = new AtomicReference<>();
         AtomicInteger records = new AtomicInteger();
         A2aTaskAssociationStore associations = new A2aTaskAssociationStore() {
+            @Override public void prepareDelegation(A2aExecutionContext execution, DispatchIntent intent) { }
             @Override public void record(A2aExecutionContext execution, String messageId, String cardDigest,
                                          String taskId, String contextId) {
                 stored.set(new Association(execution.delegationId(), execution.taskId(), execution.attemptId(),
@@ -105,7 +106,8 @@ class A2aTemporalAmbiguousDispatchTest {
         A2aContracts.SendCommand command = new A2aContracts.SendCommand(
                 "developer", "developer.code-task-v1", "message-1", null, null,
                 List.of(new A2aContracts.Part(
-                        A2aMediaTypes.JSON, null, Map.of("instruction", "change"), null)),
+                        A2aMediaTypes.JSON, null, Map.of("instruction", "change", "budget", Map.of(
+                                "max_tokens", 1_000, "max_cost_micros", 2_000, "max_turns", 3)), null)),
                 Map.of(), true);
         return new A2aActivities.DispatchRequest(execution, "b".repeat(64), command);
     }

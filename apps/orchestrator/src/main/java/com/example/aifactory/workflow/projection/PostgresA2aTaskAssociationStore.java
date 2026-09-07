@@ -14,6 +14,38 @@ public class PostgresA2aTaskAssociationStore implements A2aTaskAssociationStore 
     public PostgresA2aTaskAssociationStore(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
     @Override
+    public void prepareDelegation(A2aExecutionContext execution, DispatchIntent intent) {
+        int rows = jdbc.update("INSERT INTO delegations(delegation_id, parent_delegation_id, workflow_run_id, "
+                        + "task_id, attempt_id, source_commit, role, objective_digest, budget_tokens, "
+                        + "budget_cost_micros, budget_turns, status, created_at, completed_at, updated_at, version) "
+                        + "SELECT ?, CAST(? AS varchar(128)), workflow.workflow_run_id, ?, ?, ?, ?, ?, ?, ?, ?, "
+                        + "'DISPATCHING', now(), NULL, now(), 0 FROM workflow_runs workflow "
+                        + "WHERE workflow.task_id = ? AND workflow.attempt_id = ? AND workflow.source_commit = ? "
+                        + "AND (? IS NULL OR EXISTS (SELECT 1 FROM delegations parent "
+                        + "WHERE parent.delegation_id = ? AND parent.task_id = ? AND parent.attempt_id = ? "
+                        + "AND parent.source_commit = ?)) "
+                        + "ON CONFLICT (delegation_id) DO UPDATE SET updated_at = now() "
+                        + "WHERE delegations.parent_delegation_id IS NOT DISTINCT FROM excluded.parent_delegation_id "
+                        + "AND delegations.workflow_run_id = excluded.workflow_run_id "
+                        + "AND delegations.task_id = excluded.task_id "
+                        + "AND delegations.attempt_id = excluded.attempt_id "
+                        + "AND delegations.source_commit = excluded.source_commit "
+                        + "AND delegations.role = excluded.role "
+                        + "AND delegations.objective_digest = excluded.objective_digest "
+                        + "AND delegations.budget_tokens = excluded.budget_tokens "
+                        + "AND delegations.budget_cost_micros = excluded.budget_cost_micros "
+                        + "AND delegations.budget_turns = excluded.budget_turns",
+                execution.delegationId(), execution.parentDelegationId(), execution.taskId(), execution.attemptId(),
+                execution.sourceCommit(), execution.agentRole(), intent.objectiveDigest(), intent.budgetTokens(),
+                intent.budgetCostMicros(), intent.budgetTurns(), execution.taskId(), execution.attemptId(),
+                execution.sourceCommit(), execution.parentDelegationId(), execution.parentDelegationId(),
+                execution.taskId(), execution.attemptId(), execution.sourceCommit());
+        if (rows != 1) {
+            throw new SecurityException("Missing or divergent durable A2A delegation lineage");
+        }
+    }
+
+    @Override
     public void record(A2aExecutionContext execution, String messageId, String agentCardDigest,
                        String a2aTaskId, String a2aContextId) {
         requireServerId("Task.id", a2aTaskId);
