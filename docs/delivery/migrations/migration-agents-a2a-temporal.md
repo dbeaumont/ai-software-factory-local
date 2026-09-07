@@ -799,8 +799,11 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   `a2a-cutover-b83961c` est courant sans ramping, les sept files de coordination et les 28 pollers d'agents sont
   prêts, l'orchestrateur est `UP` et le commutateur métier reste fermé ; preuve :
   `docs/evidence/a2a/A2A-184-TEMPORAL-ACTIVATION.md`.)_
-- [ ] **A2A-185 — Couper les appels directs en une fois.** Livrer la suppression des beans/routes directes dans le
-  même release que l'activation A2A ; ne conserver aucun feature flag de fallback.
+- [x] **A2A-185 — Couper les appels directs en une fois.** Livrer la suppression des beans/routes directes dans le
+  même release que l'activation A2A ; ne conserver aucun feature flag de fallback. _(Terminé le 2026-09-07 : seuls
+  les workflows A2A sont enregistrés, la recherche ne trouve ni exécution directe ni sélecteur de transport et
+  10 tests d'architecture/non-régression passent ; preuve :
+  `docs/evidence/a2a/A2A-185-DIRECT-CALL-CUTOVER.md`.)_
 - [ ] **A2A-186 — Exécuter le smoke test de production.** Vérifier Supervisor, un chemin hiérarchique complet,
   revue indépendante, gate humaine, annulation et récupération des preuves.
 - [ ] **A2A-187 — Rouvrir les admissions.** Autoriser les nouveaux tickets uniquement lorsque toutes les cartes,
