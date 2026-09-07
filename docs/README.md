@@ -1,4 +1,4 @@
-# Documentation de l’AI Software Factory
+# Documentation de l’AI Factory
 
 Cette documentation est organisée par usage et par statut. Le code et la configuration exécutable restent la source de vérité pour le comportement actif.
 

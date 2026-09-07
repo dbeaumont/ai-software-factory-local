@@ -86,7 +86,7 @@ class A2aAgentCardVerifierTest {
         Map<String, Object> card = new LinkedHashMap<>();
         card.put("protocolVersion", "1.0");
         card.put("name", "AI Factory " + role);
-        card.put("provider", Map.of("organization", "AI Software Factory", "url", "https://ai-factory.local"));
+        card.put("provider", Map.of("organization", "AI Factory", "url", "https://ai-factory.local"));
         card.put("url", "https://agent-developer:8090/a2a");
         card.put("preferredTransport", "JSONRPC");
         card.put("supportedInterfaces", List.of(Map.of(

@@ -2,7 +2,7 @@
 
 - Statut : accepté
 - Date : 2026-09-05
-- Portée : admission et exécution des tickets de l'AI Software Factory
+- Portée : admission et exécution des tickets de l'AI Factory
 
 ## Contexte
 

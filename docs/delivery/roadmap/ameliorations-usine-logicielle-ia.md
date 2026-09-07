@@ -1,4 +1,4 @@
-# Améliorations recommandées pour l'AI Software Factory
+# Améliorations recommandées pour l'AI Factory
 
 > État revu le 7 septembre 2026. Temporal, A2A, OpenTelemetry et le retrait de la socket Docker sont désormais des
 > acquis ; cette roadmap ne les présente plus comme des activations futures.

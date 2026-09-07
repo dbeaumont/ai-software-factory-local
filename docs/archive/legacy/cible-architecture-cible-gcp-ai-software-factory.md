@@ -1,4 +1,4 @@
-# Architecture cible GCP — AI Software Factory
+# Architecture cible GCP — AI Factory
 
 > **ARCHIVE — document remplacé.** Cette étude ne décrit pas l'état courant. Consulter la
 > [rétrodocumentation](../../overview/current-state.md) et l'[architecture 1.2](../releases/1.2.0-archi-04/cible-architecture-multi-agent-hierarchique.md).

@@ -155,12 +155,12 @@ function showView(name) {
 
 function renderBreadcrumbs(name) {
   if (name === 'executions') {
-    breadcrumbs.innerHTML = '<a href="/">AI Software Factory</a><span>/</span><strong>Exécutions</strong>';
-    document.title = 'AI Software Factory | Exécutions';
+    breadcrumbs.innerHTML = '<a href="/">AI Factory</a><span>/</span><strong>Exécutions</strong>';
+    document.title = 'AI Factory | Exécutions';
     return;
   }
-  breadcrumbs.innerHTML = '<a href="/">AI Software Factory</a><span>/</span><strong>Tickets</strong>';
-  document.title = 'AI Software Factory | Tickets';
+  breadcrumbs.innerHTML = '<a href="/">AI Factory</a><span>/</span><strong>Tickets</strong>';
+  document.title = 'AI Factory | Tickets';
 }
 
 function resetTicketDraft() {

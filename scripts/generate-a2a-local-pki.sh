@@ -61,7 +61,7 @@ x509_extensions = ca_ext
 
 [ dn ]
 CN = AI Factory local A2A development CA
-O = AI Software Factory
+O = AI Factory
 
 [ ca_ext ]
 basicConstraints = critical,CA:true,pathlen:0
@@ -89,7 +89,7 @@ req_extensions = san
 
 [ dn ]
 CN = $client_id
-O = AI Software Factory
+O = AI Factory
 
 [ san ]
 subjectAltName = @names

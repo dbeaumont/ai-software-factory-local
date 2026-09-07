@@ -5,7 +5,7 @@
 
 ## Objectif
 
-Cette note propose une trajectoire pour faire évoluer le prototype AI Software Factory vers une plateforme d'agents de développement fiable, mesurable et exploitable en équipe.
+Cette note propose une trajectoire pour faire évoluer le prototype AI Factory vers une plateforme d'agents de développement fiable, mesurable et exploitable en équipe.
 
 Le projet dispose déjà d'une base solide :
 

@@ -33,7 +33,7 @@ key = OpenSSL::PKey::RSA.new(3072)
 certificate = OpenSSL::X509::Certificate.new
 certificate.version = 2
 certificate.serial = 1
-certificate.subject = OpenSSL::X509::Name.parse("/CN=#{identity}.a2a.local/O=AI Software Factory")
+certificate.subject = OpenSSL::X509::Name.parse("/CN=#{identity}.a2a.local/O=AI Factory")
 certificate.issuer = certificate.subject
 certificate.public_key = key.public_key
 certificate.not_before = Time.now - 60

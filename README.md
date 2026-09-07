@@ -1,4 +1,4 @@
-# AI Software Factory
+# AI Factory
 
 Prototype local d'usine logicielle agentique, exécuté avec Docker Compose. Les agents sont des services autonomes
 adressables exclusivement avec **A2A 1.0**. Temporal est l'unique moteur de workflow : il planifie les délégations,

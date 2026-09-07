@@ -8,7 +8,7 @@
 
 ## 1. Décision demandée
 
-Le `Product Owner AI Software Factory` doit décider si le cadrage MCP-000 à MCP-017 autorise la poursuite du plan dans le périmètre suivant :
+Le `Product Owner AI Factory` doit décider si le cadrage MCP-000 à MCP-017 autorise la poursuite du plan dans le périmètre suivant :
 
 - développement et tests du **POC local isolé** ;
 - correction des écarts de contrats, observabilité et isolation déjà recensés ;
@@ -62,9 +62,9 @@ Ces restrictions restent applicables même si le budget SLO est disponible.
 | Écart | Propriétaire de suivi | Échéance de contrôle | Tâches |
 |---|---|---|---|
 | authentification workload absente | Sécurité + plateforme | avant tout environnement partagé | MCP-210 à MCP-213 |
-| enveloppe sans `attempt_id`/deadline | Équipe AI Software Factory | avant clôture du gate lot 1 | MCP-026, MCP-033 |
-| schéma sandbox incomplet | Équipe AI Software Factory | avant activation de MCP-025 | MCP-025, MCP-033 |
-| catalogue incomplet | Équipe AI Software Factory | avant négociation autoritative | MCP-024, MCP-025 |
+| enveloppe sans `attempt_id`/deadline | Équipe AI Factory | avant clôture du gate lot 1 | MCP-026, MCP-033 |
+| schéma sandbox incomplet | Équipe AI Factory | avant activation de MCP-025 | MCP-025, MCP-033 |
+| catalogue incomplet | Équipe AI Factory | avant négociation autoritative | MCP-024, MCP-025 |
 | livraison Gitea non isolée/idempotente | Produit + sécurité | avant toute campagne réelle de retry/livraison MCP | MCP-110 à MCP-120 |
 | SLO non totalement instrumentés | Exploitation | avant déclaration de SLO supervisé | MCP-030, MCP-222 |
 | contrôleur Docker POC-only | Plateforme | avant cible GCP | MCP-092, MCP-214, MCP-215 |
@@ -77,7 +77,7 @@ Ces restrictions restent applicables même si le budget SLO est disponible.
 | Coordinateur — David Beaumont | `PREPARED` | 2026-08-31 | `2dd5442e83a0241d33b78472dc1e9e94085b339f` | dossier consolidé |
 | Sécurité — Représentant RSSI | `APPROVED` | 2026-08-31 | `13ebb632f7be925dfac0b6b75ada1ae178543ac5` | restrictions techniques maintenues |
 | Exploitation — Responsable Exploitation | `APPROVED` | 2026-08-31 | `13ebb632f7be925dfac0b6b75ada1ae178543ac5` | restrictions techniques maintenues |
-| Produit — Product Owner AI Software Factory | `APPROVED` | 2026-08-31 | `2dd5442e83a0241d33b78472dc1e9e94085b339f` | poursuite du POC local dans le périmètre du gate |
+| Produit — Product Owner AI Factory | `APPROVED` | 2026-08-31 | `2dd5442e83a0241d33b78472dc1e9e94085b339f` | poursuite du POC local dans le périmètre du gate |
 
 ## 6. Effet de la décision `APPROVED`
 

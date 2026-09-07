@@ -1,4 +1,4 @@
-# Architecture de l'AI Software Factory locale
+# Architecture de l'AI Factory locale
 
 | Référence | Valeur |
 |---|---|
@@ -21,7 +21,7 @@
 
 ```mermaid
 flowchart LR
-  REQ[Demandeur] --> FACTORY[AI Software Factory]
+  REQ[Demandeur] --> FACTORY[AI Factory]
   APPROVER[Approbateur] --> FACTORY
   FACTORY --> MODEL[Modèle via LiteLLM]
   FACTORY --> SCM[Gitea]

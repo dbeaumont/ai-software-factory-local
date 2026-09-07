@@ -1,10 +1,10 @@
-# Industrialisation GCP de l’AI Software Factory
+# Industrialisation GCP de l’AI Factory
 
 > **ARCHIVE — étude datée du 27 août 2026.** Les constats au présent s'appliquent à la révision citée ci-dessous,
 > pas au dépôt courant. Consulter la [rétrodocumentation](../../overview/current-state.md) pour l'état actuel.
 
-**Dépôt analysé :** [`dbeaumont/ai-software-factory-local`](https://github.com/dbeaumont/ai-software-factory-local)  
-**Révision de référence :** [`3b68ba5e`](https://github.com/dbeaumont/ai-software-factory-local/commit/3b68ba5e491e219c6d5bb8cc6ad280b12dfaf398), branche `main`, 27 août 2026  
+**Dépôt analysé :** [`dbeaumont/ai-software-factory-local`](https://github.com/dbeaumont/ai-software-factory-local)
+**Révision de référence :** [`3b68ba5e`](https://github.com/dbeaumont/ai-software-factory-local/commit/3b68ba5e491e219c6d5bb8cc6ad280b12dfaf398), branche `main`, 27 août 2026
 **Objet :** état de l’art du marché, diagnostic du prototype et trajectoire vers une usine logicielle IA d’entreprise déployée dans Google Cloud.
 
 ---
@@ -760,7 +760,7 @@ Après six mois de pilote, viser des tendances plutôt que des objectifs artific
 
 ## 13. Conclusion
 
-L’AI Software Factory actuelle possède déjà le bon squelette fonctionnel : rôles distincts, patch vérifié, sandbox, preuves déterministes, revue IA, approbation humaine et PR. Elle est donc plus proche de l’état de l’art fonctionnel que ne le suggère son statut de prototype.
+L’AI Factory actuelle possède déjà le bon squelette fonctionnel : rôles distincts, patch vérifié, sandbox, preuves déterministes, revue IA, approbation humaine et PR. Elle est donc plus proche de l’état de l’art fonctionnel que ne le suggère son statut de prototype.
 
 Le passage à l’entreprise exige toutefois un changement de nature : **l’orchestrateur doit devenir un plan de contrôle durable et la sandbox un plan d’exécution hostile, jetable et strictement isolé**. Autour de cette séparation viennent l’identité, la gouvernance des données et des modèles, les évaluations, l’observabilité GenAI, la policy-as-code et la chaîne de confiance.
 
@@ -774,7 +774,7 @@ Le premier investissement ne doit donc pas être un agent supplémentaire. Il do
 
 ### Dépôt analysé
 
-- [AI Software Factory — README](https://github.com/dbeaumont/ai-software-factory-local/blob/main/README.md)
+- [AI Factory — README](https://github.com/dbeaumont/ai-software-factory-local/blob/main/README.md)
 - [Architecture du prototype](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-architecture.md)
 - [Sécurité du prototype](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-security.md)
 - [Workflow](https://github.com/dbeaumont/ai-software-factory-local/blob/main/docs/proto-workflow.md)

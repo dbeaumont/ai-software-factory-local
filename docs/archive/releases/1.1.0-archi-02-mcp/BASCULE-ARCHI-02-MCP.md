@@ -1,6 +1,6 @@
 # Plan de mise en place des serveurs MCP
 
-> Feuille de route exécutable pour découpler les outils de l'AI Software Factory, réduire les privilèges de l'orchestrateur et préparer la cible GCP.
+> Feuille de route exécutable pour découpler les outils de l'AI Factory, réduire les privilèges de l'orchestrateur et préparer la cible GCP.
 >
 > État de référence : prototype local Spring Boot 4.1 / Spring AI 2.0 / Java 25, Docker Compose, tâches en mémoire, agents sans outils, sandbox lancée via `/var/run/docker.sock`.
 
@@ -71,7 +71,7 @@ Un agent ne contacte donc jamais directement Gitea, SonarQube, Artifactory, Dock
 
 | Responsabilité | Interlocuteur désigné | Décisions attendues |
 |---|---|---|
-| Produit | **Product Owner AI Software Factory** | Priorisation, valeur métier, ajout, évolution et retrait des capacités du catalogue |
+| Produit | **Product Owner AI Factory** | Priorisation, valeur métier, ajout, évolution et retrait des capacités du catalogue |
 | Sécurité | **Représentant RSSI** | Validation des frontières de confiance, permissions, secrets, risques et conditions d'ouverture des outils |
 
 | Couche | Organisation | Responsabilités | Accès interdits |
@@ -242,7 +242,7 @@ Le serveur interprète les preuves ; leur production reste dans le runner isolé
 
 Objectif : rendre les décisions vérifiables avant d'ajouter des dépendances ou des services.
 
-- [x] **MCP-000** — Nommer un responsable produit et un responsable sécurité du catalogue d'outils. _(Produit : `Product Owner AI Software Factory` ; sécurité : `Représentant RSSI`.)_
+- [x] **MCP-000** — Nommer un responsable produit et un responsable sécurité du catalogue d'outils. _(Produit : `Product Owner AI Factory` ; sécurité : `Représentant RSSI`.)_
 - [x] **MCP-001** — Écrire `docs/adr/ADR-MCP-001-boundaries-and-transport.md` avec les frontières ci-dessus, HTTP stateless, handles explicites et alternatives rejetées.
 - [x] **MCP-002** — Faire l'inventaire des appels directs dans `TaskService`, `RepositoryContextService`, `SandboxService` et `GiteaService` ; associer chaque appel au futur outil. _(Inventaire et matrice de migration versionnés dans `docs/mcp/MCP-002-inventaire-appels-directs.md` ; les écarts de matérialisation de source, staging d'artefacts et isolation par tentative y sont explicités.)_
 - [x] **MCP-003** — Inventorier secrets, volumes, réseaux, comptes techniques et destinations utilisés par chaque capacité. _(Baseline Compose et propriété cible documentées dans `docs/mcp/MCP-003-inventaire-dependances-runtime.md`, sans lecture ni copie des valeurs de `.env`/`.vault`.)_
@@ -263,7 +263,7 @@ Objectif : rendre les décisions vérifiables avant d'ajouter des dépendances o
 
 **Gate du lot 0**
 
-- [x] Les contrats, frontières, risques, propriétaires, baseline et règles de rollback sont approuvés ; aucune implémentation serveur ne commence avant ce gate. _(Gate `APPROVED` dans `docs/mcp/GATE-MCP-LOT-0.md` sur le commit `2dd5442e83a0241d33b78472dc1e9e94085b339f` par le `Product Owner AI Software Factory`, le `Représentant RSSI` et le `Responsable Exploitation`. Autorisation limitée au POC local et aux restrictions consignées.)_
+- [x] Les contrats, frontières, risques, propriétaires, baseline et règles de rollback sont approuvés ; aucune implémentation serveur ne commence avant ce gate. _(Gate `APPROVED` dans `docs/mcp/GATE-MCP-LOT-0.md` sur le commit `2dd5442e83a0241d33b78472dc1e9e94085b339f` par le `Product Owner AI Factory`, le `Représentant RSSI` et le `Responsable Exploitation`. Autorisation limitée au POC local et aux restrictions consignées.)_
 
 ### Lot 1 — Socle client MCP dans l'orchestrateur (`MCP-020` à `MCP-039`)
 

@@ -6,7 +6,7 @@
 
 ## Décision de rollout
 
-La bascule reste limitée au POC local. Elle s'appuie sur le gate du lot 0 déjà approuvé par le Product Owner AI Software Factory et le Représentant RSSI, ainsi que sur l'autorisation explicite de David Beaumont du 1er septembre 2026 de poursuivre les tâches MCP et leurs campagnes.
+La bascule reste limitée au POC local. Elle s'appuie sur le gate du lot 0 déjà approuvé par le Product Owner AI Factory et le Représentant RSSI, ainsi que sur l'autorisation explicite de David Beaumont du 1er septembre 2026 de poursuivre les tâches MCP et leurs campagnes.
 
 La promotion est progressive :
 

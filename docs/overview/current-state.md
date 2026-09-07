@@ -1,4 +1,4 @@
-# État courant de l'AI Software Factory locale
+# État courant de l'AI Factory locale
 
 > Revue documentaire du 7 septembre 2026 sur la branche `features/multiagents`. Le code, les contrats et la
 > configuration Compose restent les sources de vérité exécutables.

@@ -1,7 +1,7 @@
 # MCP-005 — Threat model de la trajectoire MCP
 
 > Statut : baseline approuvée pour le POC local ; état des contrôles remis en cohérence le 7 septembre 2026.
-> Propriétaires : `Product Owner AI Software Factory` et `Représentant RSSI`  
+> Propriétaires : `Product Owner AI Factory` et `Représentant RSSI`
 > Référence des actifs/frontières : `docs/architecture/mcp/MCP-004-actifs-frontieres-confiance.md`
 
 ## 1. Périmètre et hypothèses
@@ -235,7 +235,7 @@ Ces risques ne peuvent pas être considérés comme compensés uniquement par le
 
 ## 8. Gouvernance et acceptation
 
-- Le `Product Owner AI Software Factory` possède l'usage, l'impact métier et l'arbitrage de priorité.
+- Le `Product Owner AI Factory` possède l'usage, l'impact métier et l'arbitrage de priorité.
 - Le `Représentant RSSI` valide la méthode, les scénarios, les risques résiduels élevés et les exceptions temporaires.
 - Les propriétaires des plateformes valident les scopes Gitea/Sonar/Artifactory, les identités et destinations.
 - Toute nouvelle capacité, backend, source de contexte, classe de données ou autonomie d'agent déclenche une mise à jour du modèle.

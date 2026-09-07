@@ -8,7 +8,7 @@ autonomyLevels:
   A2: model may propose bounded delegations; host validates and schedules them
 
 owners:
-  platform: AI Software Factory platform team
+  platform: AI Factory platform team
   architecture: Architecture practice
   engineering: Product engineering
   quality: Quality engineering

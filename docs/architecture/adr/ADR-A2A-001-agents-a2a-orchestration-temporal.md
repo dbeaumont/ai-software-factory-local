@@ -2,7 +2,7 @@
 
 - Statut : accepté et implémenté
 - Date : 2026-09-06
-- Portée : communication et exécution des agents de l'AI Software Factory
+- Portée : communication et exécution des agents de l'AI Factory
 - Protocole cible : A2A 1.0
 
 ## Contexte

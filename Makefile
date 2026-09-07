@@ -22,7 +22,7 @@ endef
 
 help:
 	$(log-target)
-	@echo -e "$(YELLOW)AI Software Factory prototype - Commandes :$(NC)"
+	@echo -e "$(YELLOW)AI Factory prototype - Commandes :$(NC)"
 	@echo -e "  $(CYAN)make init$(NC)       - create .env and .vault from their examples"
 	@echo -e "  $(CYAN)make a2a-pki$(NC)    - verify the generated local A2A mTLS material"
 	@echo -e "  $(CYAN)make a2a-pki-rotate$(NC) - rotate local A2A mTLS material with a recoverable backup"

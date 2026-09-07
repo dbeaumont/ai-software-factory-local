@@ -28,7 +28,7 @@
   </defs>
 
   <rect width="3200" height="3100" fill="#fff"/>
-  <text x="1600" y="62" text-anchor="middle" class="title">AI Software Factory — Architecture cible GCP</text>
+  <text x="1600" y="62" text-anchor="middle" class="title">AI Factory — Architecture cible GCP</text>
   <text x="1600" y="100" text-anchor="middle" class="subtitle">Chaque fonction indique son service Google Cloud sous-jacent · flux orthogonaux routés dans des couloirs dédiés</text>
 
   <!-- Acteurs externes -->

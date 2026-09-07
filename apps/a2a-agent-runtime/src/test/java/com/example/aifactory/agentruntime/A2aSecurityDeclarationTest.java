@@ -57,7 +57,7 @@ class A2aSecurityDeclarationTest {
                 URI.create("https://identity.internal/oauth/token"), "ai-factory-a2a",
                 java.time.Duration.ofMinutes(5), false);
         A2aCardIdentityProperties identity = new A2aCardIdentityProperties(
-                "ai-factory", "AI Software Factory", URI.create("https://ai-factory.local"),
+                "ai-factory", "AI Factory", URI.create("https://ai-factory.local"),
                 java.time.Duration.ofMinutes(15));
         AgentCardController controller = new AgentCardController(runtime, security, identity,
                 new AgentCardCatalogGenerator(new tools.jackson.databind.ObjectMapper()), testSigner(),

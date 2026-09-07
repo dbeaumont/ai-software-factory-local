@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1060" viewBox="0 0 1900 1060" role="img" aria-labelledby="title desc">
-  <title id="title">Flux de l'AI Software Factory</title>
+  <title id="title">Flux de l'AI Factory</title>
   <desc id="desc">Diagramme du flux de l'usine logicielle, avec les responsabilites manuelles et celles de l'orchestrateur.</desc>
   <defs>
     <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1">
@@ -41,7 +41,7 @@
   <circle cx="1790" cy="106" r="170" fill="#dbeafe" opacity=".42"/>
   <circle cx="120" cy="980" r="200" fill="#d1fae5" opacity=".34"/>
 
-  <text x="950" y="64" text-anchor="middle" class="title">AI Software Factory</text>
+  <text x="950" y="64" text-anchor="middle" class="title">AI Factory</text>
   <text x="950" y="94" text-anchor="middle" class="subtitle">Du besoin a la pull request, avec des controles techniques et une decision humaine</text>
 
   <!-- Manual input zone -->

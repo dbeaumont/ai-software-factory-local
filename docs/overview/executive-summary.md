@@ -1,4 +1,4 @@
-# AI Software Factory — synthèse exécutive
+# AI Factory — synthèse exécutive
 
 | Élément | Référence |
 |---|---|
