@@ -19,5 +19,18 @@ full=$("${compose[@]}" --profile a2a-full config --services)
 for role in "${roles[@]}"; do
   grep -qx "a2a-$role" <<< "$full" || { echo "Full A2A profile is missing $role" >&2; exit 1; }
 done
+grep -qx 'a2a-worker-activation' <<< "$full" || {
+  echo "Full A2A profile is missing the Temporal worker activation gate" >&2
+  exit 1
+}
 
-echo "A2A Compose profiles verified: one isolated developer role and the complete 14-role topology."
+activation=$("${compose[@]}" --profile a2a-full config --format json | jq -r \
+  '.services["a2a-worker-activation"].environment.EXPECTED_TASK_QUEUES')
+for role in "${roles[@]}"; do
+  grep -Eq "(^|,)a2a-agent-${role}-v1(,|$)" <<< "$activation" || {
+    echo "A2A worker activation is missing the $role task queue" >&2
+    exit 1
+  }
+done
+
+echo "A2A Compose profiles verified: one isolated role and a gated, complete 14-role topology."

@@ -41,6 +41,8 @@ case "${1:-}" in
     for role in "${roles[@]}"; do services+=("a2a-$role"); done
     "${compose[@]}" --profile a2a-full up -d "${services[@]}"
     wait_healthy a2a-identity a2a-task-db "${services[@]}"
+    "${compose[@]}" --profile a2a-full up -d --force-recreate a2a-worker-activation
+    ./scripts/wait-compose-job.sh a2a-worker-activation 120
     ./scripts/a2a-local.sh smoke
     ;;
   *) echo "usage: start-a2a-profile.sh {role|full}" >&2; exit 2 ;;

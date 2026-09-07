@@ -327,5 +327,38 @@ services:
       - ../../.local/a2a-secrets/orchestrator/push-hmac-key:/run/secrets/a2a-push-hmac:ro
     networks: [a2a-internal, workflow-internal, llm-internal, mcp-context-internal, mcp-evidence-internal]
 
+  # Full-fleet cutover job: a Build ID becomes current only after every role has registered its queue.
+  a2a-worker-activation:
+    image: temporalio/admin-tools:1.31.2@sha256:dbc5fcd6ee8f0f4d808bf765af9a87dea9d8a283abfdcfbd2fc148496ba66107
+    profiles: [a2a-full]
+    depends_on:
+      temporal-namespace: {condition: service_completed_successfully}
+      a2a-supervisor: {condition: service_healthy}
+      a2a-architecture-agent: {condition: service_healthy}
+      a2a-impact-analysis: {condition: service_healthy}
+      a2a-dependencies-contracts: {condition: service_healthy}
+      a2a-code-agent: {condition: service_healthy}
+      a2a-developer: {condition: service_healthy}
+      a2a-patch-repair: {condition: service_healthy}
+      a2a-test-agent: {condition: service_healthy}
+      a2a-test-design: {condition: service_healthy}
+      a2a-test-evidence: {condition: service_healthy}
+      a2a-security-agent: {condition: service_healthy}
+      a2a-threat-model: {condition: service_healthy}
+      a2a-security-findings: {condition: service_healthy}
+      a2a-independent-reviewer: {condition: service_healthy}
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      DEFAULT_NAMESPACE: ${AI_FACTORY_TEMPORAL_NAMESPACE:-ai-factory-local}
+      WORKER_DEPLOYMENT_NAME: ${AI_FACTORY_A2A_TEMPORAL_DEPLOYMENT:-ai-factory-a2a-agents}
+      WORKER_BUILD_ID: ${AI_FACTORY_A2A_TEMPORAL_BUILD_ID:-0.1.0}
+      EXPECTED_TASK_QUEUES: a2a-agent-supervisor-v1,a2a-agent-architecture-agent-v1,a2a-agent-impact-analysis-v1,a2a-agent-dependencies-contracts-v1,a2a-agent-code-agent-v1,a2a-agent-developer-v1,a2a-agent-patch-repair-v1,a2a-agent-test-agent-v1,a2a-agent-test-design-v1,a2a-agent-test-evidence-v1,a2a-agent-security-agent-v1,a2a-agent-threat-model-v1,a2a-agent-security-findings-v1,a2a-agent-independent-reviewer-v1
+    entrypoint: ["/bin/sh"]
+    command: ["/opt/temporal/scripts/activate-worker-version.sh"]
+    volumes:
+      - ../temporal:/opt/temporal:ro
+    restart: on-failure:5
+    networks: [workflow-internal]
+
 volumes:
   a2a-task-db-data:
