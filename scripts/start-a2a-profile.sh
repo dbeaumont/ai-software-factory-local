@@ -47,6 +47,12 @@ case "${1:-}" in
       "${compose[@]}" --profile a2a-full up -d "${batch[@]}"
       wait_healthy "${batch[@]}"
     done
+    # Compose assigns new service IPs on runtime replacement. Restart the closed-admission control plane so its
+    # DNS-rebinding pins are established against the fully healthy replacement fleet.
+    "${compose[@]}" --profile a2a-full up -d --force-recreate orchestrator
+    wait_healthy orchestrator
+    "${compose[@]}" --profile a2a-full up -d --force-recreate temporal-worker-activation
+    ./scripts/wait-compose-job.sh temporal-worker-activation 120
     "${compose[@]}" --profile a2a-full up -d --force-recreate a2a-worker-activation
     ./scripts/wait-compose-job.sh a2a-worker-activation 120
     ./scripts/a2a-local.sh smoke
