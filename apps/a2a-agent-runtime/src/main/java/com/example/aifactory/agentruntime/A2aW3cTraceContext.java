@@ -37,6 +37,8 @@ record A2aW3cTraceContext(String traceparent, String baggage) {
 
     static A2aW3cTraceContext current() { return CURRENT.get(); }
 
+    String traceId() { return traceparent.substring(3, 35); }
+
     static A2aW3cTraceContext propagatedFromCurrent(A2aW3cTraceContext fallback) {
         io.opentelemetry.api.trace.SpanContext active =
                 io.opentelemetry.api.trace.Span.current().getSpanContext();

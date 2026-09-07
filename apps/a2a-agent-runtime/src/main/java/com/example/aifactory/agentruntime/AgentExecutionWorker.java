@@ -7,6 +7,7 @@ import com.example.aifactory.agentcore.McpToolPort;
 import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import tools.jackson.databind.JsonNode;
 
+import java.time.Instant;
 import java.util.Set;
 
 /** Worker-side execution service consumed by the A2A server transport. */
@@ -46,9 +47,13 @@ public final class AgentExecutionWorker {
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
         boolean pipelineCompatibility = "pipeline-agent-task-v1".equals(request.inputContract());
         String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : request.input().toString();
-        java.util.concurrent.Callable<AgentLoop.Result> invocation = () -> loop.run(
+        java.util.concurrent.Callable<AgentLoop.Result> agentLoop = () -> loop.run(
                 new AgentLoop.Actor(request.taskId(), role.identity().role(), request.executionMode()),
                 role.systemPrompt(request.inputContract()), agentInput, request.budget());
+        AgentMcpExecutionContext mcpContext = new AgentMcpExecutionContext(
+                request.taskId(), request.attemptId(), request.input().path("source_commit").asText(),
+                Instant.now().plus(request.budget().deadline()));
+        java.util.concurrent.Callable<AgentLoop.Result> invocation = () -> mcpContext.call(agentLoop);
         AgentLoop.Result result;
         try {
             result = request.traceparent() == null ? invocation.call()

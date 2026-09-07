@@ -63,8 +63,23 @@ final class RoleScopedMcpClient implements McpToolPort, AutoCloseable {
             throw new SecurityException("MCP actor cannot differ from the active agent role");
         }
         bound.put("actor", role.identity().role());
+        AgentMcpExecutionContext execution = AgentMcpExecutionContext.current();
         A2aW3cTraceContext trace = A2aW3cTraceContext.current();
-        if (trace != null) bound = new LinkedHashMap<>(trace.addTo(bound));
+        if (toolName.startsWith("context.")) {
+            if (trace == null) throw new IllegalStateException("Repository context call lacks W3C trace context");
+            bound.put("schema_version", "1");
+            bound.put("task_id", execution.taskId());
+            bound.put("attempt_id", execution.attemptId());
+            bound.put("source_commit", execution.sourceCommit());
+            bound.put("trace_id", trace.traceId());
+            bound.put("traceparent", trace.traceparent());
+            bound.put("deadline", execution.deadline().toString());
+        } else {
+            bound.put("schema_version", "1");
+            bound.put("task_id", execution.taskId());
+            bound.put("attempt_id", execution.attemptId());
+            if ("evidence.read".equals(toolName)) bound.put("purpose", "agent-execution-input");
+        }
         return session.call(toolName, Map.copyOf(bound));
     }
 
