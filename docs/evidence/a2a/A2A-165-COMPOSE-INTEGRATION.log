@@ -1,8 +1,8 @@
 A2A-165 Compose integration qualification
 agent_card=valid protocol=1.0
-send=idempotent task=6c302cb9-9b97-4d7f-82a1-7d0f1c474809
+send=idempotent task=a654ee46-e86a-4964-803f-ae42e6e2c4e8
 continuation=accepted state=TASK_STATE_WORKING
 restart=durable
-result=TASK_STATE_COMPLETED artifact=artifact-compose-98374 history=4
+result=TASK_STATE_COMPLETED artifact=artifact-compose-6503 history=4
 lost_callback=pending:1 reconciliation=polling-success
 cancellation=TASK_STATE_CANCELED

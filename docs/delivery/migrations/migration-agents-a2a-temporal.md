@@ -804,8 +804,11 @@ registres, identités, cartes, task queues et topologies privées Compose/GKE._
   les workflows A2A sont enregistrés, la recherche ne trouve ni exécution directe ni sélecteur de transport et
   10 tests d'architecture/non-régression passent ; preuve :
   `docs/evidence/a2a/A2A-185-DIRECT-CALL-CUTOVER.md`.)_
-- [ ] **A2A-186 — Exécuter le smoke test de production.** Vérifier Supervisor, un chemin hiérarchique complet,
-  revue indépendante, gate humaine, annulation et récupération des preuves.
+- [x] **A2A-186 — Exécuter le smoke test de production.** Vérifier Supervisor, un chemin hiérarchique complet,
+  revue indépendante, gate humaine, annulation et récupération des preuves. _(Terminé le 2026-09-07 : les 14
+  runtimes et cartes sont valides, les 10 parcours hiérarchiques sont conformes, une livraison Temporal → A2A
+  réelle a franchi la revue et l'approbation liée au manifeste, et les campagnes de panne/annulation ont récupéré
+  sans doublon ni perte de preuve ; preuve : `docs/evidence/a2a/A2A-186-PRODUCTION-SMOKE.md`.)_
   - [x] Aligner la politique Evidence sur l'artefact de tests pré-agent `tests-deterministic` et couvrir son
     acceptation par un test de non-régression.
   - [x] Autoriser sa relecture uniquement par le workflow et pour la finalité
