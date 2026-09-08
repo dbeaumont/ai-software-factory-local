@@ -2,6 +2,8 @@ package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.model.TaskRoutingFacts;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowStub;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.testing.WorkflowReplayer;
 import org.junit.jupiter.api.Test;
@@ -83,6 +85,57 @@ class SoftwareFactoryExecutionWorkflowV2Test {
             history = environment.getWorkflowClient().fetchHistory("ai-factory/task-1/attempt-1");
         }
         WorkflowReplayer.replayWorkflowExecution(history, SoftwareFactoryExecutionWorkflowV2Impl.class);
+    }
+
+    @Test
+    void executesTheShortPathWithSupervisorAndWithoutArchitectureOrSecurityAgents() {
+        AtomicInteger deliveries = new AtomicInteger();
+        var activities = new SoftwareFactoryExecutionWorkflowV1Test.TestActivities(deliveries);
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            var workflowWorker = environment.newWorker("test-workflow");
+            workflowWorker.registerWorkflowImplementationTypes(SoftwareFactoryExecutionWorkflowV2Impl.class);
+            workflowWorker.registerActivitiesImplementations(activities);
+            var contextWorker = environment.newWorker("test-context");
+            contextWorker.registerActivitiesImplementations(activities,
+                    (HierarchicalRoutingActivities) request -> new HierarchicalRoutingActivities.Decision(
+                            "c".repeat(64), "routing-policy-v1", "1", Map.of("risk", "R1"),
+                            "short-code-path", "SHORT_CODE_PATH", List.of("Bounded scope"),
+                            List.of("supervisor", "developer", "independent-reviewer"), "NONE"));
+            for (String queue : List.of("test-llm", "test-sandbox", "test-assurance",
+                    "test-evidence", "test-scm")) {
+                environment.newWorker(queue).registerActivitiesImplementations(activities);
+            }
+            environment.start();
+            SoftwareFactoryExecutionWorkflowV2 workflow = environment.getWorkflowClient().newWorkflowStub(
+                    SoftwareFactoryExecutionWorkflowV2.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId("ai-factory/task-1/pipeline-1-short")
+                            .setTaskQueue("test-workflow").build());
+            TaskRoutingFacts facts = TaskRoutingFacts.qualifiedLowRiskFixture();
+            var request = new SoftwareFactoryExecutionWorkflowV2.Request(
+                    "task-1", "pipeline-1", "customer-api", "UNRESOLVED", "requirement",
+                    new SoftwareFactoryWorkflow.SourceLocation(
+                            "http://gitea:3000/aiadmin/customer-api.git", "main", "test-context",
+                            Map.of("workflow", "test-workflow", "context", "test-context", "llm", "test-llm",
+                                    "sandbox", "test-sandbox", "assurance", "test-assurance",
+                                    "evidence", "test-evidence", "scm", "test-scm")), null, facts);
+
+            WorkflowClient.start(workflow::run, request);
+            long deadline = System.nanoTime() + java.time.Duration.ofSeconds(5).toNanos();
+            while (!"WAITING_APPROVAL".equals(workflow.status()) && System.nanoTime() < deadline) {
+                Thread.onSpinWait();
+            }
+            workflow.approve(new SoftwareFactoryWorkflow.ApprovalSignal(
+                    "task-1", "pipeline-1", "b".repeat(64), "c".repeat(64),
+                    "APPROVE", "operator@example.test", "2026-09-08T00:00:00Z"));
+            SoftwareFactoryWorkflow.Result result = WorkflowStub.fromTyped(workflow)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
+
+            assertThat(result.status()).isEqualTo("PR_CREATED");
+            assertThat(activities.roles).containsExactly(
+                    "supervisor", "developer", "independent-reviewer");
+            assertThat(activities.roles).doesNotContain("architecture-agent", "security-agent");
+            assertThat(deliveries).hasValue(1);
+        }
     }
 
     private static final class TriageProjectionActivities implements PipelineExecutionActivities {

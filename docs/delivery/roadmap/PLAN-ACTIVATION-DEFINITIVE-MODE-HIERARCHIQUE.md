@@ -286,6 +286,9 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [x] Rejouer les historiques V1 avec le worker V1.
 - [x] Rejouer les historiques V2 avec le worker V2. _(Une histoire V2 `HUMAN_TRIAGE`, incluant résolution source
   et décision de routage, est capturée puis rejouée par le test Temporal.)_
+- [x] Exécuter le chemin V2 `SHORT_CODE_PATH` jusqu'à l'approbation et la livraison dans l'environnement Temporal
+  de test avec `supervisor`, `developer` et `independent-reviewer`, sans agent Architecture, Test ou Sécurité ; les
+  tests, la qualité et la sécurité restent des contrôles déterministes.
 - [x] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
 - [ ] Tester le redémarrage de l'orchestrateur.
 - [ ] Tester une rotation de Build ID.

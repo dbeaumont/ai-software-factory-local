@@ -9,13 +9,13 @@
     "schema_version": {"const": "1"},
     "task_id": {"$ref": "#/$defs/id"},
     "attempt_id": {"$ref": "#/$defs/id"},
-    "role": {"enum": ["architecture-agent", "developer", "patch-repair", "test-agent", "independent-reviewer"]},
+    "role": {"enum": ["supervisor", "architecture-agent", "developer", "patch-repair", "test-agent", "independent-reviewer"]},
     "operation": {"enum": ["PLAN", "GENERATE_PATCH", "REPAIR_PATCH", "ASSESS_TESTS", "REVIEW"]},
     "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "payload": {"type": "string", "minLength": 1, "maxLength": 1000000}
   },
   "allOf": [
-    {"if": {"properties": {"operation": {"const": "PLAN"}}}, "then": {"properties": {"role": {"const": "architecture-agent"}}}},
+    {"if": {"properties": {"operation": {"const": "PLAN"}}}, "then": {"properties": {"role": {"enum": ["supervisor", "architecture-agent"]}}}},
     {"if": {"properties": {"operation": {"const": "GENERATE_PATCH"}}}, "then": {"properties": {"role": {"const": "developer"}}}},
     {"if": {"properties": {"operation": {"const": "REPAIR_PATCH"}}}, "then": {"properties": {"role": {"const": "patch-repair"}}}},
     {"if": {"properties": {"operation": {"const": "ASSESS_TESTS"}}}, "then": {"properties": {"role": {"const": "test-agent"}}}},

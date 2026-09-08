@@ -9,7 +9,7 @@
     "schema_version": {"const": "1"},
     "task_id": {"$ref": "#/$defs/id"},
     "attempt_id": {"$ref": "#/$defs/id"},
-    "role": {"enum": ["architecture-agent", "developer", "patch-repair", "test-agent", "independent-reviewer"]},
+    "role": {"enum": ["supervisor", "architecture-agent", "developer", "patch-repair", "test-agent", "independent-reviewer"]},
     "operation": {"enum": ["PLAN", "GENERATE_PATCH", "REPAIR_PATCH", "ASSESS_TESTS", "REVIEW"]},
     "status": {"const": "COMPLETED"},
     "content": {"type": "string", "minLength": 1, "maxLength": 1000000},

@@ -26,6 +26,7 @@ import tools.jackson.databind.ObjectMapper;
 public final class PipelineExecutionActivitiesImpl implements PipelineExecutionActivities {
     private static final Map<String, String> STEP_WORKERS = Map.of(
             "apply-patch", "sandbox",
+            "test", "sandbox",
             "quality", "assurance", "security", "assurance");
     private final PipelineStepService steps;
     private final TaskMemory memory;
@@ -83,6 +84,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
             Path workspace = Path.of(request.workspace());
             PipelineProjectionEvent.StepExecution execution = switch (command.step()) {
                 case "apply-patch" -> steps.applyPatch(state, workspace, command);
+                case "test" -> steps.test(state, workspace, command);
                 case "quality" -> steps.quality(state, workspace, command);
                 case "security" -> steps.security(state, workspace, command);
                 default -> throw new IllegalArgumentException("Unsupported Temporal pipeline step");
@@ -123,7 +125,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
                     + request.operation());
             project(state, "a2a-input-started");
             PipelineStepService.PreparedAgentInput prepared = steps.prepareAgentInput(state,
-                    Path.of(request.workspace()), request.operation(), request.command(),
+                    Path.of(request.workspace()), request.role(), request.operation(), request.command(),
                     request.validationError(), request.repairAttempt());
             Map<String, Object> document = Map.of(
                     "schema_version", "1",
@@ -389,7 +391,12 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
 
     private static void requireRoleOperation(String role, String operation) {
         String expectedRole = switch (operation) {
-            case "PLAN" -> "architecture-agent";
+            case "PLAN" -> {
+                if (!java.util.Set.of("supervisor", "architecture-agent").contains(role)) {
+                    throw new SecurityException("Pipeline A2A role/operation mismatch");
+                }
+                yield role;
+            }
             case "GENERATE_PATCH" -> "developer";
             case "REPAIR_PATCH" -> "patch-repair";
             case "ASSESS_TESTS" -> "test-agent";

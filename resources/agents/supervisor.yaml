@@ -15,12 +15,14 @@ operations:
   REPLAN: supervisor-decision-v1
 primary_output_contract: supervisor-decision-v1
 input_contracts:
+  - pipeline-agent-task-v1
   - specialist-result-v1
   - architecture-assessment-v1
   - integration-result-v1
   - test-assessment-v1
   - security-assessment-v1
 output_contracts:
+  - pipeline-agent-result-v1
   - delegation-plan-v1
   - supervisor-decision-v1
 may_delegate_to:
@@ -41,3 +43,4 @@ default_budget:
   timeout_seconds: 600
   max_tool_calls: 24
 human_gate: risk-dependent
+compatibility_prompt: prompts/supervisor-short-path.md

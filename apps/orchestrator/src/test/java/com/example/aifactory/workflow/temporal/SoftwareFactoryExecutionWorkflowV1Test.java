@@ -170,7 +170,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         assertThat(workflow.status()).isEqualTo(expected);
     }
 
-    private static final class TestActivities implements SourceResolutionActivities, PipelineExecutionActivities,
+    static final class TestActivities implements SourceResolutionActivities, PipelineExecutionActivities,
             A2aActivities.ResolveAgent, A2aActivities.ReconcileDispatch, A2aActivities.GetTask,
             A2aActivities.ValidateArtifacts {
         private final AtomicInteger deliveries;
@@ -180,9 +180,10 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         private final CountDownLatch blockedStarted = new CountDownLatch(1);
         private final CountDownLatch releaseBlocked = new CountDownLatch(1);
         private final java.util.List<Cancellation> cancellations = new java.util.concurrent.CopyOnWriteArrayList<>();
-        private final java.util.List<String> delegationIds = new java.util.concurrent.CopyOnWriteArrayList<>();
+        final java.util.List<String> delegationIds = new java.util.concurrent.CopyOnWriteArrayList<>();
+        final java.util.List<String> roles = new java.util.concurrent.CopyOnWriteArrayList<>();
 
-        private TestActivities(AtomicInteger deliveries) {
+        TestActivities(AtomicInteger deliveries) {
             this(deliveries, null, null);
         }
 
@@ -214,6 +215,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
             }
             String name = switch (step) {
                 case "apply-patch" -> "integration";
+                case "test" -> "tests";
                 case "quality" -> "quality";
                 case "security" -> "security";
                 default -> throw new IllegalArgumentException(step);
@@ -261,6 +263,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
 
         @Override public A2aContracts.TaskSnapshot reconcileDispatch(A2aActivities.DispatchRequest request) {
             delegationIds.add(request.execution().delegationId());
+            roles.add(request.execution().agentRole());
             String uri = "evidence://task-1/pipeline-1/agent-result/" + request.command().messageId();
             A2aContracts.Part part = new A2aContracts.Part(
                     com.example.aifactory.a2a.A2aMediaTypes.EVIDENCE_REFERENCE, null,

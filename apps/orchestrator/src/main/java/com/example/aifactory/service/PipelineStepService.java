@@ -80,7 +80,7 @@ public class PipelineStepService {
                 new PipelineProjectionEvent.SourceCloned(sourceCommit, model));
     }
 
-    public PreparedAgentInput prepareAgentInput(TaskState state, Path workspace, String operation,
+    public PreparedAgentInput prepareAgentInput(TaskState state, Path workspace, String role, String operation,
                                                 PipelineStepContracts.Command command,
                                                 PipelineStepContracts.ArtifactReference validationError,
                                                 int repairAttempt) throws Exception {
@@ -93,7 +93,7 @@ public class PipelineStepService {
         String payload = switch (operation) {
             case "PLAN" -> untrusted("REQUIREMENT", state.request.requirement())
                     + untrusted("REPOSITORY_CONTEXT", contextService.collectForRole(
-                    workspace, state.id, state.sourceCommit, "architecture-agent"));
+                    workspace, state.id, state.sourceCommit, role));
             case "GENERATE_PATCH" -> untrusted("REQUIREMENT", state.request.requirement())
                     + untrusted("PLAN", state.plan)
                     + untrusted("REPOSITORY_CONTEXT", contextService.collectForRole(
@@ -249,6 +249,19 @@ public class PipelineStepService {
         var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("quality", artifact));
         return PipelineProjectionEvent.StepExecution.of(result,
                 new PipelineProjectionEvent.QualityCompleted(summary, Map.of("quality", projection)));
+    }
+
+    public PipelineProjectionEvent.StepExecution test(TaskState state, Path workspace,
+                                                      PipelineStepContracts.Command command) throws Exception {
+        command.requireStep("test");
+        String summary = tail(sandbox.test(workspace, state.id, state.sourceCommit), 12_000);
+        Files.createDirectories(workspace.resolve(".ai-factory"));
+        Files.writeString(workspace.resolve(".ai-factory/test.txt"), summary);
+        var artifact = persist(command, "tests", "text/plain", summary, "PASSED");
+        var result = PipelineStepContracts.Result.from(command, state.sourceCommit, Map.of("tests", artifact));
+        return PipelineProjectionEvent.StepExecution.of(result, new PipelineProjectionEvent.TestsCompleted(
+                summary, Map.of("tests", evidenceResult(command, artifact)),
+                PipelineProjectionEvent.AgentMetadata.none()));
     }
 
     public PipelineProjectionEvent.StepExecution security(TaskState state, Path workspace,

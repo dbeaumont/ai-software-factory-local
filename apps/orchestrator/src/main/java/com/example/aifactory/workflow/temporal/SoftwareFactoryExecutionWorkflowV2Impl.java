@@ -53,7 +53,8 @@ public final class SoftwareFactoryExecutionWorkflowV2Impl extends ProductionExec
         if (!List.of("SHORT_CODE_PATH", "HIERARCHICAL_PATH").contains(routingDecision.selectedPath())) {
             throw new SecurityException("Routing policy returned an unsupported execution path");
         }
-        SoftwareFactoryWorkflow.Result result = execute(executionRequest, resolved, true);
+        SoftwareFactoryWorkflow.Result result = execute(
+                executionRequest, resolved, true, routingDecision.selectedPath());
         phase = result.status();
         return result;
     }

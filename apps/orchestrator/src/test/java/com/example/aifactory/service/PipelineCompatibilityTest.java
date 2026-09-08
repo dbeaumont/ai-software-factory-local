@@ -101,14 +101,14 @@ class PipelineCompatibilityTest {
         state.transition(TaskStatus.PLANNING, "Planning");
         PipelineProjectionEvent.AgentMetadata metadata = new PipelineProjectionEvent.AgentMetadata(
                 Map.of("a2a", "b".repeat(64)), 10, 1, 1);
-        steps.prepareAgentInput(state, workspace, "PLAN", command(state, "plan", Map.of(
+        steps.prepareAgentInput(state, workspace, "architecture-agent", "PLAN", command(state, "plan", Map.of(
                 "requirement", state.request.requirement())), null, 0);
         apply(state, steps.consumeAgentResult(state, workspace, command(state, "plan", Map.of(
                 "requirement", state.request.requirement())), "PLAN", plan, metadata, null));
         steps.writeRunMetadata(workspace, state);
         state.transition(TaskStatus.GENERATING_PATCH, "Generating patch");
         var patchCommand = command(state, "generate-patch-candidate", Map.of("plan", state.plan));
-        steps.prepareAgentInput(state, workspace, "GENERATE_PATCH", patchCommand, null, 0);
+        steps.prepareAgentInput(state, workspace, "developer", "GENERATE_PATCH", patchCommand, null, 0);
         apply(state, steps.consumeAgentResult(state, workspace, patchCommand,
                 "GENERATE_PATCH", proposal, metadata, null));
         apply(state, steps.validatePatchCandidate(state, workspace,
@@ -120,7 +120,7 @@ class PipelineCompatibilityTest {
         state.transition(TaskStatus.TESTING, "Testing");
         var testCommand = command(state, "test", Map.of("patch", state.patch));
         PipelineStepService.PreparedAgentInput testInput = steps.prepareAgentInput(
-                state, workspace, "ASSESS_TESTS", testCommand, null, 0);
+                state, workspace, "test-agent", "ASSESS_TESTS", testCommand, null, 0);
         apply(state, steps.consumeAgentResult(state, workspace, testCommand,
                 "ASSESS_TESTS", tester, metadata, testInput.supportingArtifact()));
         steps.writeRunMetadata(workspace, state);
@@ -133,7 +133,7 @@ class PipelineCompatibilityTest {
         state.transition(TaskStatus.REVIEWING, "Reviewing");
         var reviewCommand = command(state, "review", Map.of(
                 "plan", state.plan, "patch", state.patch, "assurance", state.assuranceResults.toString()));
-        steps.prepareAgentInput(state, workspace, "REVIEW", reviewCommand, null, 0);
+        steps.prepareAgentInput(state, workspace, "independent-reviewer", "REVIEW", reviewCommand, null, 0);
         apply(state, steps.consumeAgentResult(state, workspace, reviewCommand,
                 "REVIEW", review, metadata, null));
         steps.writeRunMetadata(workspace, state);

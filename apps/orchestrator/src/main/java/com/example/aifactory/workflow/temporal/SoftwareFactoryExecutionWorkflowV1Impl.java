@@ -17,7 +17,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl extends ProductionExec
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
     public SoftwareFactoryWorkflow.Result run(SoftwareFactoryWorkflow.Request request) {
-        return execute(request, null, false);
+        return execute(request, null, false, null);
     }
 }
 
@@ -34,10 +34,12 @@ abstract class ProductionExecutionWorkflowRuntime {
     private final A2aTaskAwaiter a2aTasks = new A2aTaskAwaiter();
     private final A2aActivities.Stubs a2a = A2aActivities.newStubs();
     private final List<DelegationWorkflow.Result> pipelineDelegations = new java.util.ArrayList<>();
+    private SoftwareFactoryWorkflow.Request activeRequest;
+    private SoftwareFactoryWorkflow.ApprovalRequest activeApprovalRequest;
 
     protected final SoftwareFactoryWorkflow.Result execute(
             SoftwareFactoryWorkflow.Request request, SourceResolutionActivities.Result admittedSource,
-            boolean sourceAlreadyBound) {
+            boolean sourceAlreadyBound, String selectedPath) {
         requireProductionExecutionMode(request);
         SoftwareFactoryWorkflow.SourceLocation source = request == null ? null : request.sourceLocation();
         if (source == null) throw new IllegalArgumentException("Production workflow source location is required");
@@ -50,13 +52,19 @@ abstract class ProductionExecutionWorkflowRuntime {
         if (!sourceAlreadyBound) bindSource(source, request, resolved);
         try {
             throwIfCancelled();
-            runPipelineAgent(source, request, resolved, "architecture-agent", "PLAN", "plan",
+            String planningRole = "SHORT_CODE_PATH".equals(selectedPath) ? "supervisor" : "architecture-agent";
+            runPipelineAgent(source, request, resolved, planningRole, "PLAN", "plan",
                     Map.of("requirement", request.requirementDigest()), null, 0);
             generateAndRepairPatch(source, request, resolved);
             runStep(source, request, resolved, "apply-patch", TemporalActivityPolicies.Kind.SANDBOX,
                     Map.of("patch", artifacts.get("patch").digest()));
-            runPipelineAgent(source, request, resolved, "test-agent", "ASSESS_TESTS", "test",
-                    Map.of("patch", artifacts.get("patch").digest()), null, 0);
+            if ("SHORT_CODE_PATH".equals(selectedPath)) {
+                runStep(source, request, resolved, "test", TemporalActivityPolicies.Kind.SANDBOX,
+                        Map.of("patch", artifacts.get("patch").digest()));
+            } else {
+                runPipelineAgent(source, request, resolved, "test-agent", "ASSESS_TESTS", "test",
+                        Map.of("patch", artifacts.get("patch").digest()), null, 0);
+            }
             runStep(source, request, resolved, "quality", TemporalActivityPolicies.Kind.ASSURANCE,
                     Map.of("tests", artifacts.get("tests").digest()));
             runStep(source, request, resolved, "security", TemporalActivityPolicies.Kind.ASSURANCE,
@@ -92,13 +100,18 @@ abstract class ProductionExecutionWorkflowRuntime {
                         request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(), artifacts));
         SoftwareFactoryWorkflow.ApprovalRequest approvalRequest = new SoftwareFactoryWorkflow.ApprovalRequest(
                 storedManifest.manifestId(), storedManifest.uri(), storedManifest.digest());
+        activeRequest = request;
+        activeApprovalRequest = approvalRequest;
         phase = "WAITING_APPROVAL";
         if (request.executionMode() == SoftwareFactoryWorkflow.WorkflowExecutionMode.HIERARCHICAL_ACTIVE
                 && request.independentReview() != null) {
             request.independentReview().bundle().requireProductionArtifactBinding(artifacts);
         }
-        SoftwareFactoryWorkflow.Result coordinated = delegate.run(
-                request.withResolvedSource(resolved.sourceCommit()).withApprovalRequest(approvalRequest));
+        SoftwareFactoryWorkflow.Request approvalBoundRequest = request.withResolvedSource(resolved.sourceCommit())
+                .withApprovalRequest(approvalRequest);
+        SoftwareFactoryWorkflow.Result coordinated = selectedPath == null
+                ? delegate.run(approvalBoundRequest)
+                : awaitNativeHierarchicalApproval(approvalBoundRequest);
         phase = coordinated.status();
         List<String> chronology = new java.util.ArrayList<>();
         chronology.add("SOURCE_RESOLVED:" + resolved.sourceCommit());
@@ -188,6 +201,47 @@ abstract class ProductionExecutionWorkflowRuntime {
                 && cancellation.actor() != null && !cancellation.actor().isBlank()) {
             throw new RequestedCancellation();
         }
+    }
+
+    private SoftwareFactoryWorkflow.Result awaitNativeHierarchicalApproval(
+            SoftwareFactoryWorkflow.Request request) {
+        List<String> chronology = new java.util.ArrayList<>();
+        chronology.add("WAITING_APPROVAL:" + activeApprovalRequest.manifestId());
+        io.temporal.workflow.Workflow.await(() -> cancellationMatches(request) || approvalMatches(request));
+        if (cancellationMatches(request)) {
+            chronology.add("CANCELLED");
+            return new SoftwareFactoryWorkflow.Result(request.taskId(), request.attemptId(), request.sourceCommit(),
+                    "CANCELLED", chronology, List.of(), Map.of(), null, null,
+                    cancellation.reasonDigest(), null);
+        }
+        if ("REJECT".equals(approval.decision())) {
+            chronology.add("REJECTED:" + activeApprovalRequest.manifestId());
+            return new SoftwareFactoryWorkflow.Result(request.taskId(), request.attemptId(), request.sourceCommit(),
+                    "REJECTED", chronology, List.of(), Map.of(), null, null, null, null);
+        }
+        chronology.add("APPROVED:" + activeApprovalRequest.manifestId());
+        return new SoftwareFactoryWorkflow.Result(request.taskId(), request.attemptId(), request.sourceCommit(),
+                "APPROVED", chronology, List.of(), Map.of(), activeApprovalRequest.manifestId(),
+                approval.approver(), null, null);
+    }
+
+    private boolean approvalMatches(SoftwareFactoryWorkflow.Request request) {
+        return approval != null && activeApprovalRequest != null
+                && request.taskId().equals(approval.taskId())
+                && request.attemptId().equals(approval.attemptId())
+                && activeApprovalRequest.manifestId().equals(approval.manifestId())
+                && activeApprovalRequest.digest().equals(approval.manifestDigest())
+                && java.util.Set.of("APPROVE", "REJECT").contains(approval.decision())
+                && approval.approver() != null && !approval.approver().isBlank()
+                && approval.decidedAt() != null && !approval.decidedAt().isBlank();
+    }
+
+    private boolean cancellationMatches(SoftwareFactoryWorkflow.Request request) {
+        return cancellation != null && request.taskId().equals(cancellation.taskId())
+                && request.attemptId().equals(cancellation.attemptId())
+                && cancellation.reasonDigest() != null && cancellation.reasonDigest().matches("[0-9a-f]{64}")
+                && cancellation.actor() != null && !cancellation.actor().isBlank()
+                && cancellation.decidedAt() != null && !cancellation.decidedAt().isBlank();
     }
 
     static boolean isBusinessGateFailure(Throwable failure) {
@@ -372,9 +426,17 @@ abstract class ProductionExecutionWorkflowRuntime {
     public List<String> evidence() {
         return java.util.stream.Stream.concat(artifacts.values().stream().map(
                 com.example.aifactory.service.PipelineStepContracts.ArtifactReference::uri),
-                delegate.evidence().stream()).distinct().sorted().toList();
+                java.util.stream.Stream.concat(delegate.evidence().stream(), activeApprovalRequest == null
+                        ? java.util.stream.Stream.empty()
+                        : java.util.stream.Stream.of(activeApprovalRequest.uri())))
+                .distinct().sorted().toList();
     }
     public List<SoftwareFactoryWorkflow.PendingEffectView> pendingEffects() {
+        if ("WAITING_APPROVAL".equals(phase) && activeRequest != null && activeApprovalRequest != null
+                && !approvalMatches(activeRequest)) {
+            return List.of(new SoftwareFactoryWorkflow.PendingEffectView(
+                    "APPROVAL", activeApprovalRequest.manifestId()));
+        }
         return delegate.pendingEffects();
     }
 
