@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /** Deterministic signal buffer with a bounded reconciliation timer. */
 final class A2aTaskAwaiter {
@@ -20,9 +21,22 @@ final class A2aTaskAwaiter {
         A2aContracts.Notification current = latest.get(notification.taskId());
         if (current == null || notification.sequence() > current.sequence()) {
             latest.put(notification.taskId(), notification);
-        } else if (notification.sequence() == current.sequence() && !notification.equals(current)) {
+        } else if (notification.sequence() == current.sequence() && !sameTransition(current, notification)) {
             throw new SecurityException("Divergent A2A workflow notification replay");
         }
+    }
+
+    /**
+     * A sequence identifies one protocol transition for an agent role/task pair. Cross-channel representations
+     * may differ in transport timestamp or provenance, while context, state and complete artifacts must agree.
+     */
+    static boolean sameTransition(A2aContracts.Notification current, A2aContracts.Notification incoming) {
+        return current.agentRole().equals(incoming.agentRole())
+                && current.taskId().equals(incoming.taskId())
+                && Objects.equals(current.contextId(), incoming.contextId())
+                && current.sequence() == incoming.sequence()
+                && current.state() == incoming.state()
+                && current.artifacts().equals(incoming.artifacts());
     }
 
     WaitResult awaitNext(String taskId, long afterSequence, Duration reconciliationInterval) {
