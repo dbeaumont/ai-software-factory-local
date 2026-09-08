@@ -14,9 +14,9 @@ class WorkflowRoutingServiceTest {
     @Test
     void recordsNormalizedFactsMatchedRuleReasonsAndSelectedAgents() {
         RoutingDecision shortDecision = routing.decide(input(
-                "short-task", "HIERARCHICAL_ACTIVE", "R1", 1, 1, 2, 1, Set.of(), false));
+                "short-task", "R1", 1, 1, 2, 1, Set.of(), false));
         RoutingDecision hierarchicalDecision = routing.decide(input(
-                "hier-task", "HIERARCHICAL_ACTIVE", "R2", 2, 2, 6, 2,
+                "hier-task", "R2", 2, 2, 6, 2,
                 Set.of("public-contract"), false));
 
         assertThat(shortDecision.matchedRule()).isEqualTo("short-code-path");
@@ -33,24 +33,21 @@ class WorkflowRoutingServiceTest {
     }
 
     @Test
-    void recordsConservativeFallbackReasonsAndKeepsShadowBaselineAuthoritative() {
+    void recordsConservativeFailClosedReasonsWithoutABaselineFallback() {
         RoutingDecision incomplete = routing.decide(new WorkflowRoutingService.Input(
-                "missing-task", "a".repeat(40), "HIERARCHICAL_ACTIVE", "QUALIFIED", "repo", "R1",
+                "missing-task", "a".repeat(40), "QUALIFIED", "repo", "R1",
                 1, 1, 1, 1, Set.of(), false, true, true, false, false, true));
-        RoutingDecision shadow = routing.decide(input(
-                "shadow-task", "HIERARCHICAL_SHADOW", "R1", 1, 1, 1, 1, Set.of(), false));
 
         assertThat(incomplete.selectedPath()).isEqualTo("HUMAN_TRIAGE");
         assertThat(incomplete.matchedRule()).isEqualTo("human-triage");
-        assertThat(shadow.selectedPath()).isEqualTo("PIPELINE_BASELINE");
-        assertThat(shadow.effectiveMode()).isEqualTo("PIPELINE");
-        assertThat(shadow.matchedRule()).isEqualTo("shadow-authority");
+        assertThat(journal.list()).extracting(RoutingDecision::selectedPath)
+                .doesNotContain("PIPELINE_BASELINE");
     }
 
     @Test
     void producesAnIdempotentDecisionIdForTheSameNormalizedFacts() {
         WorkflowRoutingService.Input input = input(
-                "task-1", "HIERARCHICAL_ACTIVE", "R1", 1, 1, 2, 1, Set.of(), false);
+                "task-1", "R1", 1, 1, 2, 1, Set.of(), false);
 
         RoutingDecision first = routing.decide(input);
         RoutingDecision replay = routing.decide(input);
@@ -59,10 +56,10 @@ class WorkflowRoutingServiceTest {
         assertThat(journal.findByTask("task-1")).containsExactly(first);
     }
 
-    private static WorkflowRoutingService.Input input(String taskId, String mode, String risk,
+    private static WorkflowRoutingService.Input input(String taskId, String risk,
                                                       int modules, int domains, int files, int independentScopes,
                                                       Set<String> impacts, boolean materialDecisionOpen) {
-        return new WorkflowRoutingService.Input(taskId, "a".repeat(40), mode, "QUALIFIED", "sample-repo",
+        return new WorkflowRoutingService.Input(taskId, "a".repeat(40), "QUALIFIED", "sample-repo",
                 risk, modules, domains, files, independentScopes, impacts, materialDecisionOpen,
                 true, true, true, false, true);
     }

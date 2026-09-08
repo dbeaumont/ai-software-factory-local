@@ -33,42 +33,26 @@ public final class WorkflowRoutingService {
         Selection selection = select(input);
         String decisionId = digest(input.taskId(), input.sourceCommit(), facts, selection.path());
         RoutingDecision decision = new RoutingDecision(decisionId, shortPath.policyId(),
-                shortPath.policyVersion(), input.taskId(), input.sourceCommit(), input.mode(),
-                selection.effectiveMode(), facts, selection.rule(), selection.path(), selection.reasons(),
+                shortPath.policyVersion(), input.taskId(), input.sourceCommit(), facts,
+                selection.rule(), selection.path(), selection.reasons(),
                 selection.agents(), selection.humanGate());
         journal.append(decision);
         return decision;
     }
 
     private Selection select(Input input) {
-        if ("PIPELINE".equals(input.mode())) {
-            return selection("PIPELINE", "mode-ceiling", "PIPELINE_BASELINE",
-                    "Requested mode only authorizes the baseline pipeline.",
-                    List.of("planner", "developer", "tester", "reviewer"), "R2".equals(input.risk())
-                            ? "BEFORE_EXTERNAL_EFFECT" : "NONE");
-        }
-        if ("HIERARCHICAL_SHADOW".equals(input.mode())) {
-            return selection("PIPELINE", "shadow-authority", "PIPELINE_BASELINE",
-                    "Shadow mode records analysis while the baseline pipeline remains authoritative.",
-                    List.of("planner", "developer", "tester", "reviewer"), "NONE");
-        }
         if (!input.inputsComplete() || input.contradictory() || !input.budgetAvailable()) {
-            return triage(input.mode(), "human-triage",
+            return triage("human-triage",
                     "Required routing facts are missing, contradictory, or lack an approved budget.");
         }
         if (!"QUALIFIED".equals(input.qualification())) {
-            return triage(input.mode(), "qualification", "The task is not qualified for autonomous routing.");
+            return triage("qualification", "The task is not qualified for autonomous routing.");
         }
         if (Set.of("R3", "R4").contains(input.risk())) {
-            return triage(input.mode(), "human-triage", "The risk class requires human triage before routing.");
-        }
-        if ("HIERARCHICAL_CANARY".equals(input.mode())
-                && (!input.repositoryAllowlisted() || !input.stableCanaryBucket())) {
-            return triage(input.mode(), "canary-eligibility",
-                    "Repository allowlist and stable canary bucket are both required.");
+            return triage("human-triage", "The risk class requires human triage before routing.");
         }
         var hierarchical = hierarchicalPath.plan(new HierarchicalPathPlanner.Input(
-                input.mode(), input.qualification(), input.risk(), input.modules(), input.domains(),
+                "HIERARCHICAL_ACTIVE", input.qualification(), input.risk(), input.modules(), input.domains(),
                 input.independentCodeScopes(), input.impacts(), input.materialDecisionOpen(),
                 input.repositoryAllowlisted(), input.stableCanaryBucket(), input.inputsComplete(),
                 input.contradictory(), input.budgetAvailable()));
@@ -77,31 +61,31 @@ public final class WorkflowRoutingService {
             List<String> agents = new ArrayList<>();
             agents.add(plan.supervisor());
             agents.addAll(plan.specialistAgents());
-            return selection(input.mode(), "hierarchical-path", plan.path(),
+            return selection("hierarchical-path", plan.path(),
                     "At least one configured cross-domain or uncertainty trigger matched.",
                     agents, plan.humanGate());
         }
         var shortPlan = shortPath.plan(new ShortCodePathPlanner.Input(
-                input.mode(), input.qualification(), input.risk(), input.modules(), input.domains(),
+                "HIERARCHICAL_ACTIVE", input.qualification(), input.risk(), input.modules(), input.domains(),
                 input.estimatedFiles(), input.impacts(), input.repositoryAllowlisted(),
                 input.stableCanaryBucket(), input.inputsComplete(), input.contradictory(),
                 input.budgetAvailable()));
         if (shortPlan.isPresent()) {
             ShortCodePathPlanner.Plan plan = shortPlan.orElseThrow();
-            return selection(input.mode(), "short-code-path", plan.path(),
+            return selection("short-code-path", plan.path(),
                     "Low-risk scope is limited to one module, one domain, and the configured file ceiling.",
                     plan.agents(), plan.humanGate());
         }
-        return triage(input.mode(), "default-decision", "No executable route matched all policy constraints.");
+        return triage("default-decision", "No executable route matched all policy constraints.");
     }
 
-    private static Selection triage(String effectiveMode, String rule, String reason) {
-        return selection(effectiveMode, rule, "HUMAN_TRIAGE", reason, List.of(), "BEFORE_CODE");
+    private static Selection triage(String rule, String reason) {
+        return selection(rule, "HUMAN_TRIAGE", reason, List.of(), "BEFORE_CODE");
     }
 
-    private static Selection selection(String effectiveMode, String rule, String path, String reason,
+    private static Selection selection(String rule, String path, String reason,
                                        List<String> agents, String humanGate) {
-        return new Selection(effectiveMode, rule, path, List.of(reason), agents, humanGate);
+        return new Selection(rule, path, List.of(reason), agents, humanGate);
     }
 
     private static Map<String, String> normalized(Input input) {
@@ -145,7 +129,7 @@ public final class WorkflowRoutingService {
     private static void requireIdentity(Input input) {
         if (input == null || input.taskId() == null || !input.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || input.sourceCommit() == null || !input.sourceCommit().matches("[0-9a-f]{40}")
-                || input.mode() == null || input.impacts() == null) {
+                || input.impacts() == null) {
             throw new IllegalArgumentException("Routing identity is invalid");
         }
     }
@@ -154,7 +138,7 @@ public final class WorkflowRoutingService {
         return value == null ? "<missing>" : value;
     }
 
-    public record Input(String taskId, String sourceCommit, String mode, String qualification,
+    public record Input(String taskId, String sourceCommit, String qualification,
                         String repositoryId, String risk, int modules, int domains, int estimatedFiles,
                         int independentCodeScopes, Set<String> impacts, boolean materialDecisionOpen,
                         boolean repositoryAllowlisted, boolean stableCanaryBucket, boolean inputsComplete,
@@ -164,6 +148,6 @@ public final class WorkflowRoutingService {
         }
     }
 
-    private record Selection(String effectiveMode, String rule, String path, List<String> reasons,
+    private record Selection(String rule, String path, List<String> reasons,
                              List<String> agents, String humanGate) {}
 }

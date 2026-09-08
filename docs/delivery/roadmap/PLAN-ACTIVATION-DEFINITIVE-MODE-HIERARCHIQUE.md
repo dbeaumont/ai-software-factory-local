@@ -129,27 +129,29 @@ feat(orchestrator): route new tasks to hierarchical workflow v2
 
 ## 3. Simplifier le routage métier
 
-- [ ] Retirer le paramètre `mode` de `WorkflowRoutingService.Input`.
-- [ ] Supprimer la branche `PIPELINE` de `WorkflowRoutingService`.
-- [ ] Supprimer la branche `HIERARCHICAL_SHADOW` de `WorkflowRoutingService`.
-- [ ] Supprimer les conditions propres à `HIERARCHICAL_CANARY`.
-- [ ] Conserver la validation des entrées requises.
-- [ ] Conserver le contrôle de qualification.
-- [ ] Conserver le contrôle du budget.
-- [ ] Conserver la classification du risque et les décisions humaines obligatoires.
-- [ ] Sélectionner uniquement `SHORT_CODE_PATH`, `HIERARCHICAL_PATH` ou `HUMAN_TRIAGE`.
-- [ ] Supprimer `requestedMode` et `effectiveMode` des nouvelles décisions si ces champs deviennent constants.
-- [ ] Prévoir une migration additive de projection si des champs de mode sont actuellement persistés.
-- [ ] Conserver la lecture des anciennes projections jusqu'à la fin de leur rétention.
+- [x] Retirer le paramètre `mode` de `WorkflowRoutingService.Input`.
+- [x] Supprimer la branche `PIPELINE` de `WorkflowRoutingService`.
+- [x] Supprimer la branche `HIERARCHICAL_SHADOW` de `WorkflowRoutingService`.
+- [x] Supprimer les conditions propres à `HIERARCHICAL_CANARY`.
+- [x] Conserver la validation des entrées requises.
+- [x] Conserver le contrôle de qualification.
+- [x] Conserver le contrôle du budget.
+- [x] Conserver la classification du risque et les décisions humaines obligatoires.
+- [x] Sélectionner uniquement `SHORT_CODE_PATH`, `HIERARCHICAL_PATH` ou `HUMAN_TRIAGE`.
+- [x] Supprimer `requestedMode` et `effectiveMode` des nouvelles décisions si ces champs deviennent constants.
+- [x] Prévoir une migration additive de projection si des champs de mode sont actuellement persistés. _(Sans objet :
+  `RoutingDecisionJournal` est en mémoire et aucune colonne de décision de routage ne persiste ces champs.)_
+- [x] Conserver la lecture des anciennes projections jusqu'à la fin de leur rétention. _(Les projections de tâche
+  restent inchangées dans ce lot.)_
 
 ### Critères de sortie du lot 3
 
-- [ ] Aucun appelant ne peut choisir un ancien mode.
-- [ ] Une tâche simple reste exécutée dans la nouvelle architecture via `SHORT_CODE_PATH`, sans appel aux rôles
+- [x] Aucun appelant ne peut choisir un ancien mode.
+- [x] Une tâche simple reste exécutée dans la nouvelle architecture via `SHORT_CODE_PATH`, sans appel aux rôles
   historiques Planner et Reviewer.
-- [ ] Une tâche complexe ou transverse reste exécutée via `HIERARCHICAL_PATH`.
-- [ ] Une entrée incomplète, contradictoire ou sans budget produit toujours un triage humain fail-closed.
-- [ ] Les risques R3 et R4 conservent leurs décisions humaines ou refus obligatoires.
+- [x] Une tâche complexe ou transverse reste exécutée via `HIERARCHICAL_PATH`.
+- [x] Une entrée incomplète, contradictoire ou sans budget produit toujours un triage humain fail-closed.
+- [x] Les risques R3 et R4 conservent leurs décisions humaines ou refus obligatoires.
 
 ### Commit proposé
 
