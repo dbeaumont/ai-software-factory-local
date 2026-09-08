@@ -272,13 +272,3 @@ roles:
       - evidence.read
     outputContract: independent-review-v1
     humanGate: required-after-review
-
-compatibilityRoles:
-  planner:
-    replacement: architecture-agent
-    availableInModes:
-      - PIPELINE
-  reviewer:
-    replacement: independent-reviewer
-    availableInModes:
-      - PIPELINE

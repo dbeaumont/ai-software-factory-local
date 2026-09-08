@@ -356,7 +356,7 @@ Après validation de MCP-057, le contexte dépôt est exclusivement fourni par M
 ```bash
 AI_FACTORY_MCP_ENABLED=true
 AI_FACTORY_MCP_REPOSITORY_CONTEXT_MODE=MCP_ACTIVE
-AI_FACTORY_MCP_REPOSITORY_CONTEXT_ACTIVE_ROLES=planner,developer,patch-repair
+AI_FACTORY_MCP_REPOSITORY_CONTEXT_ACTIVE_ROLES=architecture-agent,developer,patch-repair
 ```
 
 Les anciennes valeurs `DIRECT` et `MCP_SHADOW` sont conservées dans l'énumération de configuration pour détecter

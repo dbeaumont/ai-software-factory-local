@@ -135,11 +135,11 @@ class RepositorySymbolToolsTest {
         assertThrows(SecurityException.class, () -> symbols.getSymbols(new GetSymbolsRequest(
                 "1", "task-1", commit, "unknown-role", TRACE_ID, "src", null, null, 100)));
         assertThrows(IllegalArgumentException.class, () -> symbols.getSymbols(new GetSymbolsRequest(
-                "1", "task-1", "0".repeat(40), "planner", TRACE_ID, "src", null, null, 100)));
+                "1", "task-1", "0".repeat(40), "architecture-agent", TRACE_ID, "src", null, null, 100)));
     }
 
     private GetSymbolsRequest request(String path, String query, String language, int maxResults, String cursor) {
-        return new GetSymbolsRequest("1", "task-1", "attempt-test", commit, "planner", TRACE_ID,
+        return new GetSymbolsRequest("1", "task-1", "attempt-test", commit, "architecture-agent", TRACE_ID,
                 "00-" + TRACE_ID + "-0123456789abcdef-01", Instant.now().plusSeconds(60).toString(),
                 path, query, language, maxResults, cursor);
     }

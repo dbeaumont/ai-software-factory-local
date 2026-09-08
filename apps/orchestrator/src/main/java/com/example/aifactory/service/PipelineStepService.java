@@ -93,7 +93,7 @@ public class PipelineStepService {
         String payload = switch (operation) {
             case "PLAN" -> untrusted("REQUIREMENT", state.request.requirement())
                     + untrusted("REPOSITORY_CONTEXT", contextService.collectForRole(
-                    workspace, state.id, state.sourceCommit, "planner"));
+                    workspace, state.id, state.sourceCommit, "architecture-agent"));
             case "GENERATE_PATCH" -> untrusted("REQUIREMENT", state.request.requirement())
                     + untrusted("PLAN", state.plan)
                     + untrusted("REPOSITORY_CONTEXT", contextService.collectForRole(
@@ -347,15 +347,15 @@ public class PipelineStepService {
 
     private static void logReviewerDecision(TaskState state, AgentResponseValidator.ReviewSummary review) {
         if (review.findings().isEmpty()) {
-            log.info("Task {} ({}) reviewer decision={}; no findings reported", state.id, state.ticketNumber,
+            log.info("Task {} ({}) independent review decision={}; no findings reported", state.id, state.ticketNumber,
                     review.decision());
             return;
         }
-        log.warn("Task {} ({}) reviewer decision={}; findings: {}", state.id, state.ticketNumber,
+        log.warn("Task {} ({}) independent review decision={}; findings: {}", state.id, state.ticketNumber,
                 review.decision(), review.findingCounts());
         for (int index = 0; index < review.findings().size(); index++) {
             AgentResponseValidator.ReviewFinding finding = review.findings().get(index);
-            log.warn("Task {} ({}) reviewer finding {}/{}: severity={}, file={}, rule={}, recommended_fix={}",
+            log.warn("Task {} ({}) independent review finding {}/{}: severity={}, file={}, rule={}, recommended_fix={}",
                     state.id, state.ticketNumber, index + 1, review.findings().size(), logField(finding.severity()),
                     logField(finding.file()), logField(finding.rule()), logField(finding.fix()));
         }

@@ -100,7 +100,7 @@ class McpRepositoryContextServiceTest {
                         "repository-context-mcp"), new SimpleMeterRegistry());
 
         assertThrows(IllegalStateException.class,
-                () -> service.collectForRole(Path.of("unused"), "task-1", "a".repeat(40), "planner"));
+                () -> service.collectForRole(Path.of("unused"), "task-1", "a".repeat(40), "architecture-agent"));
     }
 
     @Test
@@ -110,7 +110,7 @@ class McpRepositoryContextServiceTest {
                         "repository-context-mcp"), new SimpleMeterRegistry());
 
         assertThrows(IllegalStateException.class,
-                () -> service.collectForRole(Path.of("unused"), "task-1", "a".repeat(40), "reviewer"));
+                () -> service.collectForRole(Path.of("unused"), "task-1", "a".repeat(40), "independent-reviewer"));
     }
 
     private static McpToolInvoker unusedInvoker() {

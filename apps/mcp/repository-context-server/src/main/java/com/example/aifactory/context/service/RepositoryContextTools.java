@@ -46,26 +46,23 @@ public class RepositoryContextTools {
             "AGENTS.md", "CONTRIBUTING.md", "CONTRIBUTING", "README.md", "README", "CODEOWNERS");
     private static final Set<String> TREE_READERS = Set.of(
             "workflow", "supervisor", "architecture-agent", "dependencies-contracts", "code-agent",
-            "developer", "planner");
+            "developer");
     private static final Set<String> RULE_READERS = Set.of(
             "workflow", "supervisor", "architecture-agent", "impact-analysis", "code-agent",
-            "developer", "planner");
+            "developer");
     private static final Set<String> CODE_SEARCHERS = Set.of(
             "workflow", "supervisor", "architecture-agent", "impact-analysis", "code-agent", "developer",
-            "test-agent", "test-design", "security-agent", "threat-model", "independent-reviewer",
-            "planner", "tester", "reviewer");
+            "test-agent", "test-design", "security-agent", "threat-model", "independent-reviewer");
     private static final Set<String> FILE_READERS = Set.of(
             "workflow", "architecture-agent", "impact-analysis", "dependencies-contracts", "developer",
             "patch-repair", "test-agent", "test-design", "security-agent", "threat-model",
-            "independent-reviewer", "planner", "tester", "reviewer");
+            "independent-reviewer");
     private static final Set<String> DEPENDENCY_READERS = Set.of(
             "workflow", "supervisor", "architecture-agent", "dependencies-contracts", "developer",
-            "test-agent", "test-design", "security-agent", "threat-model", "independent-reviewer",
-            "planner", "tester", "reviewer");
+            "test-agent", "test-design", "security-agent", "threat-model", "independent-reviewer");
     private static final Set<String> SYMBOL_READERS = Set.of(
             "workflow", "architecture-agent", "impact-analysis", "developer", "patch-repair", "test-agent",
-            "test-design", "security-agent", "threat-model", "independent-reviewer",
-            "planner", "tester", "reviewer");
+            "test-design", "security-agent", "threat-model", "independent-reviewer");
     private static final Set<String> TEXT_EXTENSIONS = Set.of(
             ".java", ".kt", ".xml", ".yml", ".yaml", ".json", ".ts", ".js", ".css", ".html",
             ".properties", ".gradle", ".md", ".txt", ".toml", ".sh", ".sql", ".py", ".go");

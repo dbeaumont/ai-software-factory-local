@@ -194,7 +194,9 @@ refactor(orchestrator): remove legacy execution-mode routing
   - [x] supprimer le champ `mode`, de préférence ;
   - [ ] ou limiter temporairement sa valeur à `HIERARCHICAL_ACTIVE` pendant la transition.
 - [x] Mettre à jour les golden contracts et fixtures correspondants.
-- [ ] Retirer les rôles ou alias de compatibilité `planner` et `reviewer` après vérification de leurs consommateurs.
+- [x] Retirer les rôles ou alias de compatibilité `planner` et `reviewer` après vérification de leurs consommateurs.
+  _(Les capacités actives utilisent `architecture-agent`, `test-agent` et `independent-reviewer` ; les manifestes,
+  permissions MCP, schémas d'enveloppe et valeurs par défaut des anciens alias ont été retirés.)_
 - [x] Vérifier séparément les usages de `MCP_SHADOW` avant toute suppression. _(Frontière MCP indépendante,
   inchangée par ce lot.)_
 

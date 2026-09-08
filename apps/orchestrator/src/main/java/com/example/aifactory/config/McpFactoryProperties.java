@@ -33,7 +33,7 @@ public record McpFactoryProperties(
     public McpFactoryProperties(boolean enabled, ContextMode repositoryContextMode, String repositoryContextServerName) {
         this(enabled, repositoryContextMode, repositoryContextServerName, false, SandboxMode.DIRECT,
                 "sandbox-execution-mcp", Duration.ofMillis(250), Duration.ofMinutes(20),
-                Set.of("planner", "developer", "patch-repair"), ALL_SANDBOX_OPERATIONS);
+                Set.of("architecture-agent", "developer", "patch-repair"), ALL_SANDBOX_OPERATIONS);
     }
 
     public McpFactoryProperties(boolean enabled, ContextMode repositoryContextMode, String repositoryContextServerName,
@@ -41,7 +41,7 @@ public record McpFactoryProperties(
                                 Duration sandboxPollInterval, Duration sandboxPollTimeout) {
         this(enabled, repositoryContextMode, repositoryContextServerName, sandboxEnabled, sandboxMode,
                 sandboxServerName, sandboxPollInterval, sandboxPollTimeout,
-                Set.of("planner", "developer", "patch-repair"), ALL_SANDBOX_OPERATIONS);
+                Set.of("architecture-agent", "developer", "patch-repair"), ALL_SANDBOX_OPERATIONS);
     }
 
     public boolean sandboxOperationActive(String operation) {

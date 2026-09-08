@@ -412,11 +412,11 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
 
     private static String promptName(String operation) {
         return switch (operation) {
-            case "PLAN" -> "planner";
+            case "PLAN" -> "architecture-agent";
             case "GENERATE_PATCH" -> "developer";
             case "REPAIR_PATCH" -> "patch-repair";
-            case "ASSESS_TESTS" -> "tester";
-            case "REVIEW" -> "reviewer";
+            case "ASSESS_TESTS" -> "test-agent";
+            case "REVIEW" -> "independent-reviewer";
             default -> throw new IllegalArgumentException("Unsupported pipeline A2A operation");
         };
     }

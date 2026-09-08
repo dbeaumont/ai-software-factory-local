@@ -192,7 +192,7 @@ class RepositoryContextMcpIntegrationTest {
                                         Map.entry("task_id", "integration-task"),
                                         Map.entry("attempt_id", "attempt-1"),
                                         Map.entry("source_commit", commit),
-                                        Map.entry("actor", "planner"),
+                                        Map.entry("actor", "architecture-agent"),
                                         Map.entry("trace_id", "3123456789abcdef0123456789abcdef"),
                                         Map.entry("traceparent", "00-3123456789abcdef0123456789abcdef-0123456789abcdef-01"),
                                         Map.entry("deadline", java.time.Instant.now().plusSeconds(60).toString()),

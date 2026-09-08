@@ -48,15 +48,6 @@ roles:
       - context.list_tree
       - context.search_code
       - context.get_repository_rules
-  planner:
-    tools:
-      - context.list_tree
-      - context.search_code
-      - context.read_file
-      - context.get_repository_rules
-      - context.get_dependencies
-      - context.get_symbols
-      - evidence.get_summary
   developer:
     tools:
       - context.list_tree
@@ -102,20 +93,6 @@ roles:
     tools:
       - evidence.get_summary
   independent-reviewer:
-    tools:
-      - context.search_code
-      - context.read_file
-      - context.get_dependencies
-      - context.get_symbols
-      - evidence.get_summary
-      - evidence.read
-  tester:
-    tools:
-      - context.search_code
-      - context.read_file
-      - context.get_dependencies
-      - context.get_symbols
-  reviewer:
     tools:
       - context.search_code
       - context.read_file

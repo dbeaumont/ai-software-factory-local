@@ -117,7 +117,7 @@ class RepositoryContextToolsTest {
     @Test
     void readsAndRedactsSensitiveSettings() throws Exception {
         ReadFileResult result = tools.readFile(new ReadFileRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "src/application.properties", 1, null, 4096));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "src/application.properties", 1, null, 4096));
 
         assertTrue(result.content().contains("token=[REDACTED]"));
         assertFalse(result.content().contains("secret-value"));
@@ -133,7 +133,7 @@ class RepositoryContextToolsTest {
     @Test
     void returnsRepositoryRulesWithImmutableProvenanceAndExplicitOrder() throws Exception {
         RepositoryRulesResult result = tools.getRepositoryRules(new RepositoryRulesRequest(
-                "1", "task-1", commit, "planner", TRACE_ID));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID));
 
         assertFalse(result.rules().isEmpty());
         assertEquals(1, result.rules().getFirst().applicabilityOrder());
@@ -144,7 +144,7 @@ class RepositoryContextToolsTest {
     @Test
     void searchesLiteralTextWithLineCitations() throws Exception {
         SearchCodeResult result = tools.searchCode(new SearchCodeRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "Application", "src", 10));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "Application", "src", 10));
 
         assertEquals(1, result.matches().size());
         assertEquals("src/Application.java", result.matches().getFirst().path());
@@ -154,7 +154,7 @@ class RepositoryContextToolsTest {
     @Test
     void searchesAnExplicitAllowedFile() throws Exception {
         SearchCodeResult result = tools.searchCode(new SearchCodeRequest(
-                "1", "task-1", commit, "reviewer", TRACE_ID, "Application", "src/Application.java", 10));
+                "1", "task-1", commit, "independent-reviewer", TRACE_ID, "Application", "src/Application.java", 10));
 
         assertEquals(1, result.matches().size());
         assertEquals("src/Application.java", result.matches().getFirst().path());
@@ -163,7 +163,7 @@ class RepositoryContextToolsTest {
     @Test
     void readsOnlyDirectMavenDependenciesWithoutResolvingOrDownloading() throws Exception {
         GetDependenciesResult result = tools.getDependencies(new GetDependenciesRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "pom.xml", "MAVEN", 100));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "pom.xml", "MAVEN", 100));
 
         assertEquals("MAVEN", result.ecosystem());
         assertEquals(".", result.module());
@@ -200,7 +200,7 @@ class RepositoryContextToolsTest {
     @Test
     void rejectsUnsupportedDependencyInputsAndUnauthorizedActors() {
         assertThrows(IllegalArgumentException.class, () -> tools.getDependencies(new GetDependenciesRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "README.md", "UNKNOWN", 100)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "README.md", "UNKNOWN", 100)));
         assertThrows(SecurityException.class, () -> tools.getDependencies(new GetDependenciesRequest(
                 "1", "task-1", commit, "patch-repair", TRACE_ID, "pom.xml", "MAVEN", 100)));
     }
@@ -215,15 +215,15 @@ class RepositoryContextToolsTest {
                 """);
 
         assertThrows(org.xml.sax.SAXParseException.class, () -> tools.getDependencies(new GetDependenciesRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "pom.xml", "MAVEN", 100)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "pom.xml", "MAVEN", 100)));
     }
 
     @Test
     void enforcesToolPermissionsAndExcludedStartPaths() {
         assertThrows(SecurityException.class, () -> tools.listTree(new ListTreeRequest(
-                "1", "task-1", commit, "reviewer", TRACE_ID, "", 6, 100)));
+                "1", "task-1", commit, "independent-reviewer", TRACE_ID, "", 6, 100)));
         assertThrows(IllegalArgumentException.class, () -> tools.listTree(new ListTreeRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, ".git", 6, 100)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, ".git", 6, 100)));
     }
 
     @Test
@@ -266,13 +266,13 @@ class RepositoryContextToolsTest {
     @Test
     void rejectsTraversalAndCommitMismatch() {
         assertThrows(IllegalArgumentException.class, () -> tools.readFile(new ReadFileRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "../outside.txt", 1, null, 4096)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "../outside.txt", 1, null, 4096)));
         assertThrows(IllegalArgumentException.class, () -> tools.listTree(new ListTreeRequest(
-                "1", "task-1", "0".repeat(40), "planner", TRACE_ID, "", 6, 100)));
+                "1", "task-1", "0".repeat(40), "architecture-agent", TRACE_ID, "", 6, 100)));
         assertThrows(IllegalArgumentException.class, () -> tools.readFile(new ReadFileRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "%2e%2e/outside.txt", 1, null, 4096)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "%2e%2e/outside.txt", 1, null, 4096)));
         assertThrows(IllegalArgumentException.class, () -> tools.readFile(new ReadFileRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, root.resolve("outside.txt").toString(), 1, null, 4096)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, root.resolve("outside.txt").toString(), 1, null, 4096)));
     }
 
     @Test
@@ -300,7 +300,7 @@ class RepositoryContextToolsTest {
         }
 
         assertThrows(IllegalArgumentException.class, () -> tools.readFile(new ReadFileRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "src/outside-link.md", 1, null, 4096)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "src/outside-link.md", 1, null, 4096)));
     }
 
     @Test
@@ -310,22 +310,22 @@ class RepositoryContextToolsTest {
         Files.write(repository.resolve("src/binary.java"), new byte[]{0, (byte) 0xff, 0, (byte) 0xfe});
 
         assertThrows(IllegalArgumentException.class, () -> tools.readFile(new ReadFileRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "src/huge.java", 1, null, 4096)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "src/huge.java", 1, null, 4096)));
         assertThrows(IllegalArgumentException.class, () -> tools.readFile(new ReadFileRequest(
-                "1", "task-1", commit, "planner", TRACE_ID, "src/binary.java", 1, null, 4096)));
+                "1", "task-1", commit, "architecture-agent", TRACE_ID, "src/binary.java", 1, null, 4096)));
     }
 
     @Test
     void rejectsExpiredDeadlinesAndTreatsRegexSyntaxAsLiteralText() {
         SearchCodeRequest expired = new SearchCodeRequest(
-                "1", "task-1", "attempt-test", commit, "planner", TRACE_ID,
+                "1", "task-1", "attempt-test", commit, "architecture-agent", TRACE_ID,
                 "00-" + TRACE_ID + "-0123456789abcdef-01", Instant.now().minusSeconds(1).toString(),
                 "Application", "src", 10);
         assertThrows(IllegalArgumentException.class, () -> tools.searchCode(expired));
 
         assertTimeoutPreemptively(Duration.ofSeconds(1), () -> {
             SearchCodeResult result = tools.searchCode(new SearchCodeRequest(
-                    "1", "task-1", commit, "planner", TRACE_ID, "(.+)+$", "src", 10));
+                    "1", "task-1", commit, "architecture-agent", TRACE_ID, "(.+)+$", "src", 10));
             assertTrue(result.matches().isEmpty());
         });
     }
@@ -337,10 +337,10 @@ class RepositoryContextToolsTest {
             List<java.util.concurrent.Callable<String>> reads = new ArrayList<>();
             for (int index = 0; index < 25; index++) {
                 reads.add(() -> tools.readFile(new ReadFileRequest(
-                        "1", "task-1", commit, "planner", TRACE_ID,
+                        "1", "task-1", commit, "architecture-agent", TRACE_ID,
                         "src/Application.java", 1, null, 4096)).content());
                 reads.add(() -> tools.readFile(new ReadFileRequest(
-                        "1", "task-2", secondCommit, "planner", TRACE_ID,
+                        "1", "task-2", secondCommit, "architecture-agent", TRACE_ID,
                         "src/Application.java", 1, null, 4096)).content());
             }
             List<String> results = executor.invokeAll(reads).stream().map(future -> {
@@ -373,7 +373,7 @@ class RepositoryContextToolsTest {
 
     private GetDependenciesRequest dependenciesRequest(String module, String ecosystem, int maxDependencies,
                                                       String cursor) {
-        return new GetDependenciesRequest("1", "task-1", "attempt-test", commit, "planner", TRACE_ID,
+        return new GetDependenciesRequest("1", "task-1", "attempt-test", commit, "architecture-agent", TRACE_ID,
                 "00-" + TRACE_ID + "-0123456789abcdef-01", Instant.now().plusSeconds(60).toString(),
                 module, ecosystem, maxDependencies, cursor);
     }

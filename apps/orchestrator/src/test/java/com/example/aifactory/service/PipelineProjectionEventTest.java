@@ -16,7 +16,7 @@ class PipelineProjectionEventTest {
     void explicitEventsAreTheOnlyWayStepsUpdateTheTaskProjection() throws Exception {
         TaskState state = new TaskState("task-1", "AF-0001",
                 new TaskRequest("https://example.test/repo.git", "main", "change", null));
-        var metadata = new PipelineProjectionEvent.AgentMetadata(Map.of("planner", "a".repeat(64)), 12, 34, 1);
+        var metadata = new PipelineProjectionEvent.AgentMetadata(Map.of("architecture-agent", "a".repeat(64)), 12, 34, 1);
         PendingEffect effect = new PendingEffect("scm.create_draft_pull_request", Map.of("base_branch", "main"),
                 "creates a draft PR", "ALLOW", true);
 
