@@ -332,7 +332,8 @@ refactor(factory): remove shadow canary and pipeline remnants
 
 ### Validations globales
 
-- [x] Exécuter la suite orchestrateur. _(569 tests réussis hors sandbox le 2026-09-08.)_
+- [x] Exécuter la suite orchestrateur. _(596 tests réussis, 0 échec, 0 erreur et 1 test ignoré hors sandbox le
+  2026-09-09.)_
 - [x] Exécuter la suite du runtime agent.
 - [x] Exécuter les tests de schémas et politiques.
 - [x] Exécuter les replays Temporal versionnés.
