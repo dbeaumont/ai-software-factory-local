@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 /** V2 boundary: hierarchical execution is implicit and no legacy mode is persisted in its input. */
-public final class SoftwareFactoryExecutionWorkflowV2Impl implements SoftwareFactoryExecutionWorkflowV2 {
-    private final SoftwareFactoryExecutionWorkflowV1Impl delegate = new SoftwareFactoryExecutionWorkflowV1Impl();
+public final class SoftwareFactoryExecutionWorkflowV2Impl extends ProductionExecutionWorkflowRuntime
+        implements SoftwareFactoryExecutionWorkflowV2 {
     private String phase = "CREATED";
     private HierarchicalRoutingActivities.Decision routingDecision;
 
@@ -49,22 +49,22 @@ public final class SoftwareFactoryExecutionWorkflowV2Impl implements SoftwareFac
         if (!List.of("SHORT_CODE_PATH", "HIERARCHICAL_PATH").contains(routingDecision.selectedPath())) {
             throw new SecurityException("Routing policy returned an unsupported execution path");
         }
-        SoftwareFactoryWorkflow.Result result = delegate.run(request.hierarchicalRequest());
+        SoftwareFactoryWorkflow.Result result = execute(request.hierarchicalRequest(), resolved);
         phase = result.status();
         return result;
     }
 
-    @Override public void approve(SoftwareFactoryWorkflow.ApprovalSignal signal) { delegate.approve(signal); }
-    @Override public void cancel(SoftwareFactoryWorkflow.CancellationSignal signal) { delegate.cancel(signal); }
-    @Override public void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal) { delegate.decide(signal); }
-    @Override public void a2aTaskUpdate(A2aContracts.Notification notification) { delegate.a2aTaskUpdate(notification); }
+    @Override public void approve(SoftwareFactoryWorkflow.ApprovalSignal signal) { super.approve(signal); }
+    @Override public void cancel(SoftwareFactoryWorkflow.CancellationSignal signal) { super.cancel(signal); }
+    @Override public void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal) { super.decide(signal); }
+    @Override public void a2aTaskUpdate(A2aContracts.Notification notification) { super.a2aTaskUpdate(notification); }
     @Override public String status() {
-        return phase.startsWith("ROUTED:") || "CREATED".equals(phase) ? delegate.status() : phase;
+        return phase.startsWith("ROUTED:") || "CREATED".equals(phase) ? super.status() : phase;
     }
-    @Override public List<SoftwareFactoryWorkflow.DelegationView> dag() { return delegate.dag(); }
-    @Override public Map<String, DelegationWorkflow.Budget> budgets() { return delegate.budgets(); }
-    @Override public List<String> evidence() { return delegate.evidence(); }
+    @Override public List<SoftwareFactoryWorkflow.DelegationView> dag() { return super.dag(); }
+    @Override public Map<String, DelegationWorkflow.Budget> budgets() { return super.budgets(); }
+    @Override public List<String> evidence() { return super.evidence(); }
     @Override public List<SoftwareFactoryWorkflow.PendingEffectView> pendingEffects() {
-        return delegate.pendingEffects();
+        return super.pendingEffects();
     }
 }

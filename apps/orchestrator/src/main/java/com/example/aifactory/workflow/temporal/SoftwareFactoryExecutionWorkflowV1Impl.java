@@ -12,7 +12,17 @@ import java.util.List;
 import java.util.Map;
 
 /** V1 admission wrapper around the already replay-tested durable coordination implementation. */
-public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFactoryExecutionWorkflowV1 {
+public final class SoftwareFactoryExecutionWorkflowV1Impl extends ProductionExecutionWorkflowRuntime
+        implements SoftwareFactoryExecutionWorkflowV1 {
+    @Override
+    @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
+    public SoftwareFactoryWorkflow.Result run(SoftwareFactoryWorkflow.Request request) {
+        return execute(request, null);
+    }
+}
+
+/** Shared durable execution mechanics; versioned workflow boundaries own admission and routing. */
+abstract class ProductionExecutionWorkflowRuntime {
     private final SoftwareFactoryWorkflow delegate = new SoftwareFactoryWorkflowImpl();
     private String phase = "CREATED";
     private String currentStep = "source";
@@ -25,22 +35,13 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
     private final A2aActivities.Stubs a2a = A2aActivities.newStubs();
     private final List<DelegationWorkflow.Result> pipelineDelegations = new java.util.ArrayList<>();
 
-    @Override
-    @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
-    public SoftwareFactoryWorkflow.Result run(SoftwareFactoryWorkflow.Request request) {
+    protected final SoftwareFactoryWorkflow.Result execute(
+            SoftwareFactoryWorkflow.Request request, SourceResolutionActivities.Result admittedSource) {
         requireProductionExecutionMode(request);
         SoftwareFactoryWorkflow.SourceLocation source = request == null ? null : request.sourceLocation();
         if (source == null) throw new IllegalArgumentException("Production workflow source location is required");
-        SourceResolutionActivities activities = io.temporal.workflow.Workflow.newActivityStub(
-                SourceResolutionActivities.class, TemporalActivityPolicies.forKind(
-                        TemporalActivityPolicies.Kind.READ, source.contextTaskQueue()));
-        String inputDigest = TemporalIds.sha256(String.join("\u0000", request.repositoryId(),
-                source.repositoryUrl(), source.branch()));
-        String idempotencyKey = TemporalIds.effectKey(request.taskId(), request.attemptId(), "source",
-                "resolve", 1, inputDigest, inputDigest);
-        SourceResolutionActivities.Result resolved = activities.resolve(new SourceResolutionActivities.Request(
-                request.taskId(), request.attemptId(), request.repositoryId(), source.repositoryUrl(),
-                source.branch(), idempotencyKey));
+        SourceResolutionActivities.Result resolved = admittedSource == null
+                ? resolveSource(request, source) : admittedSource;
         if (!request.repositoryId().equals(resolved.repositoryId()) || !source.branch().equals(resolved.branch())) {
             throw new SecurityException("Resolved source attestation changed workflow identity");
         }
@@ -133,6 +134,20 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 java.util.stream.Stream.concat(pipelineDelegations.stream(), coordinated.delegations().stream()).toList(),
                 coordinated.humanDecisions(), coordinated.approvedManifestId(), coordinated.approvedBy(),
                 coordinated.cancellationReasonDigest(), coordinated.independentReview());
+    }
+
+    private static SourceResolutionActivities.Result resolveSource(
+            SoftwareFactoryWorkflow.Request request, SoftwareFactoryWorkflow.SourceLocation source) {
+        SourceResolutionActivities activities = io.temporal.workflow.Workflow.newActivityStub(
+                SourceResolutionActivities.class, TemporalActivityPolicies.forKind(
+                        TemporalActivityPolicies.Kind.READ, source.contextTaskQueue()));
+        String inputDigest = TemporalIds.sha256(String.join("\u0000", request.repositoryId(),
+                source.repositoryUrl(), source.branch()));
+        String idempotencyKey = TemporalIds.effectKey(request.taskId(), request.attemptId(), "source",
+                "resolve", 1, inputDigest, inputDigest);
+        return activities.resolve(new SourceResolutionActivities.Request(
+                request.taskId(), request.attemptId(), request.repositoryId(), source.repositoryUrl(),
+                source.branch(), idempotencyKey));
     }
 
     private SoftwareFactoryWorkflow.Result cancelBeforeApproval(SoftwareFactoryWorkflow.SourceLocation source,
@@ -320,30 +335,30 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl implements SoftwareFac
                 TemporalActivityPolicies.forKind(kind, queue));
     }
 
-    @Override public void approve(SoftwareFactoryWorkflow.ApprovalSignal signal) {
+    public void approve(SoftwareFactoryWorkflow.ApprovalSignal signal) {
         approval = signal;
         delegate.approve(signal);
     }
-    @Override public void cancel(SoftwareFactoryWorkflow.CancellationSignal signal) {
+    public void cancel(SoftwareFactoryWorkflow.CancellationSignal signal) {
         cancellation = signal;
         delegate.cancel(signal);
     }
-    @Override public void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal) {
+    public void decide(SoftwareFactoryWorkflow.HumanDecisionSignal signal) {
         if (signal != null && signal.decisionId() != null) humanDecisions.put(signal.decisionId(), signal);
         delegate.decide(signal);
     }
-    @Override public void a2aTaskUpdate(com.example.aifactory.a2a.A2aContracts.Notification notification) {
+    public void a2aTaskUpdate(com.example.aifactory.a2a.A2aContracts.Notification notification) {
         a2aTasks.accept(notification);
     }
-    @Override public String status() { return "CREATED".equals(phase) ? delegate.status() : phase; }
-    @Override public List<SoftwareFactoryWorkflow.DelegationView> dag() { return delegate.dag(); }
-    @Override public Map<String, DelegationWorkflow.Budget> budgets() { return delegate.budgets(); }
-    @Override public List<String> evidence() {
+    public String status() { return "CREATED".equals(phase) ? delegate.status() : phase; }
+    public List<SoftwareFactoryWorkflow.DelegationView> dag() { return delegate.dag(); }
+    public Map<String, DelegationWorkflow.Budget> budgets() { return delegate.budgets(); }
+    public List<String> evidence() {
         return java.util.stream.Stream.concat(artifacts.values().stream().map(
                 com.example.aifactory.service.PipelineStepContracts.ArtifactReference::uri),
                 delegate.evidence().stream()).distinct().sorted().toList();
     }
-    @Override public List<SoftwareFactoryWorkflow.PendingEffectView> pendingEffects() {
+    public List<SoftwareFactoryWorkflow.PendingEffectView> pendingEffects() {
         return delegate.pendingEffects();
     }
 

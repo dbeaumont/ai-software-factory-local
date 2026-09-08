@@ -15,6 +15,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SoftwareFactoryExecutionWorkflowV2Test {
     @Test
+    void usesTheSharedDurableRuntimeWithoutDependingOnTheV1WorkflowClass() {
+        assertThat(SoftwareFactoryExecutionWorkflowV2Impl.class.getSuperclass())
+                .isEqualTo(ProductionExecutionWorkflowRuntime.class)
+                .isNotEqualTo(SoftwareFactoryExecutionWorkflowV1Impl.class);
+    }
+
+    @Test
     void keepsExecutionModeOutOfThePersistedV2Contract() {
         assertThat(Arrays.stream(SoftwareFactoryExecutionWorkflowV2.Request.class.getRecordComponents())
                 .map(RecordComponent::getName))
