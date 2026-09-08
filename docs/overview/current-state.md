@@ -1,14 +1,19 @@
 # État courant de l'AI Factory locale
 
-> Revue documentaire du 7 septembre 2026 sur la branche `features/multiagents`. Le code, les contrats et la
+> Revue documentaire du 8 septembre 2026 sur la branche `features/multiagents`. Le code, les contrats et la
 > configuration Compose restent les sources de vérité exécutables.
 
 ## 1. Résumé
 
-Le parcours public `POST /api/tasks` utilise obligatoirement Temporal. Chaque invocation d'agent traverse A2A 1.0
-vers l'un des quatorze runtimes isolés ; aucune implémentation locale ou sélection de transport ne subsiste. Les
-accès aux outils passent par cinq serveurs MCP et l'exécution locale du code utilise des runners Compose statiques
-sans socket Docker.
+Le parcours public `POST /api/tasks` utilise obligatoirement le workflow Temporal V2. Le choix d'un ancien mode
+n'est plus exposé : l'hôte route vers `SHORT_CODE_PATH`, `HIERARCHICAL_PATH` ou `HUMAN_TRIAGE` à partir de faits
+structurés et vérifiés. Chaque invocation d'agent traverse A2A 1.0 vers l'un des quatorze runtimes isolés ; les
+contrôles déterministes restent des activités hôte. Les accès aux outils passent par cinq serveurs MCP et
+l'exécution locale du code utilise des runners Compose statiques sans socket Docker.
+
+Le chemin court V2 est raccordé de bout en bout dans le moteur Temporal : Supervisor minimal, Developer, contrôles
+déterministes et revue indépendante. Le chemin complet est sélectionné par la politique, mais son assemblage natif
+des contrats `specialist-task-v1`, Code et Sécurité reste le chantier actif avant promotion du nouveau build.
 
 La sortie métier est une Pull Request brouillon Gitea, créée seulement après les gates déterministes et une
 approbation humaine valide.
@@ -18,7 +23,7 @@ approbation humaine valide.
 | Capacité | État | Source de vérité |
 |---|---|---|
 | API et interface web | Active | `orchestrator`, `factory-web`, `reverse-proxy` |
-| Workflow durable | Actif, obligatoire | `TemporalWorkflowCoordinator`, Temporal et sept task queues |
+| Workflow durable | V2 obligatoire à l'admission ; promotion du nouveau build en cours | `TemporalWorkflowCoordinator`, Temporal et sept task queues |
 | Agents | Actifs, obligatoires | 14 services `a2a-*`, image runtime commune |
 | Transport agents | A2A 1.0 uniquement | JSON-RPC sur HTTPS, mTLS, OAuth2 et cartes JWS |
 | Projection métier | Active | PostgreSQL `orchestrator-db` |
@@ -131,7 +136,7 @@ sequenceDiagram
 ```
 
 Une panne A2A, Temporal, identité ou carte ferme les admissions. Le système ne contourne jamais cette indisponibilité
-par une invocation d'agent en mémoire.
+par une invocation d'agent en mémoire ou par un ancien mode métier.
 
 ## 7. Construction et démarrage
 
@@ -204,6 +209,8 @@ multi-tenancy forte, ni haute disponibilité.
 
 ## 11. Limites restantes
 
+- assemblage et qualification bout en bout du chemin V2 `HIERARCHICAL_PATH` avec les contrats spécialistes natifs ;
+- construction, rotation et observation du Build ID portant la frontière V2 définitive ;
 - qualification de la topologie GKE sur un cluster réel ;
 - Workload Identity, Secret Manager, politique réseau et stockage managé ;
 - CI distante obligatoire, signatures et provenance de toutes les images ;

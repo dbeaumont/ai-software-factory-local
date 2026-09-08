@@ -1,6 +1,6 @@
 # Backlog et pistes d'évolution
 
-> État revu le 7 septembre 2026. Les éléments cochés sont présents et actifs dans le déploiement Compose ; ils ne
+> État revu le 8 septembre 2026. Les éléments cochés sont présents et actifs dans le déploiement Compose ; ils ne
 > valent pas qualification automatique de la cible GKE ou d'un usage d'entreprise.
 
 ## Baseline active
@@ -44,6 +44,8 @@
 
 ## Plans réalisés et trajectoires
 
+- [Activation définitive du mode hiérarchique](PLAN-ACTIVATION-DEFINITIVE-MODE-HIERARCHIQUE.md) — en cours ;
+  admission V2 et chemin court raccordés, chemin hiérarchique complet et promotion du build restant à qualifier.
 - [Migration Temporal](../migrations/raccordement-orchestrateur-temporal.md)
 - [Migration des agents vers A2A](../migrations/migration-agents-a2a-temporal.md)
 - [Retrait de la socket Docker](../migrations/retrait-docker-socket.md)

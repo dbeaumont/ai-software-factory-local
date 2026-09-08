@@ -426,9 +426,9 @@ docs(operations): align task projection guide with active runtime
 
 ## 12. Documentation et traçabilité finales
 
-- [ ] Mettre à jour `docs/overview/current-state.md`.
-- [ ] Mettre à jour `docs/delivery/roadmap/README.md`.
-- [ ] Marquer `ADR-MAH-005` et `ADR-MAH-008` comme remplacées par la décision hiérarchique définitive.
+- [x] Mettre à jour `docs/overview/current-state.md`.
+- [x] Mettre à jour `docs/delivery/roadmap/README.md`.
+- [x] Marquer `ADR-MAH-005` et `ADR-MAH-008` comme remplacées par la décision hiérarchique définitive.
 - [ ] Retirer des documents actifs toute affirmation présentant `PIPELINE_BASELINE` comme un chemin standard du
   mode multi-agent hiérarchique ou comme un fallback de `HIERARCHICAL_ACTIVE`.
 - [ ] Décrire explicitement `SHORT_CODE_PATH` et `HIERARCHICAL_PATH` comme les deux chemins exécutables de la
