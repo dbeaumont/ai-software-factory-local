@@ -19,11 +19,11 @@ La livraison A reste interdite tant que les trois points suivants ne sont pas r�
 
 - [ ] Remplacer dans `SoftwareFactoryExecutionWorkflowV2Impl` la délégation interne vers
   `SoftwareFactoryExecutionWorkflowV1Impl` par une orchestration V2 native.
-- [ ] Raccorder `WorkflowRoutingService` au chemin de production ; il n'est actuellement consommé que par les
-  tests et ne décide donc d'aucune nouvelle admission réelle.
-- [ ] Ajouter à la frontière d'admission une source vérifiable pour les faits requis par le routage
+- [x] Raccorder `WorkflowRoutingService` au chemin de production ; la décision est exécutée par une activité
+  Temporal après attestation du commit source et conservée dans l'historique V2.
+- [x] Ajouter à la frontière d'admission une source vérifiable pour les faits requis par le routage
   (`qualification`, risque, modules, domaines, fichiers estimés, scopes indépendants, impacts, contradiction et
-  budget). `TaskRequest` ne transporte aujourd'hui que dépôt, branche, besoin et configuration LLM.
+  budget). `TaskRequest`, l'API, l'interface et les scripts actifs transportent désormais explicitement ces faits.
 
 Sans ces corrections, V2 masque le parcours compatible V1, et choisir un chemin à partir du seul texte du besoin
 reviendrait à fabriquer des faits de risque. Aucun build ne doit être promu sur cette base.
