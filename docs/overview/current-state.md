@@ -163,7 +163,7 @@ Commandes principales :
 | `make verify-ready` | Vérifie provisioning, cartes, services, 7 + 28 pollers et admissions |
 | `make restart` | Recrée l'orchestrateur, réactive son Build ID et revalide Temporal/A2A |
 | `make down` | Arrête tous les profils A2A en conservant les volumes |
-| `make clean` | Arrête tous les profils et supprime tous les volumes Docker |
+| `make clean` | Arrête tous les profils et supprime les volumes Docker, ressources de test interrompues et caches locaux |
 
 ## 8. Données persistantes
 

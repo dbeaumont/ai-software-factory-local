@@ -642,7 +642,7 @@ make demo
 | `make logs` | Suit les journaux de l'orchestrateur |
 | `make urls` | Liste toutes les URLs de services et points d'accès |
 | `make down` | Arrête tous les profils A2A en conservant les volumes |
-| `make clean` | Arrête tous les profils et supprime tous les volumes Docker (destructif) |
+| `make clean` | Arrête tous les profils et supprime les volumes Docker, ressources de test interrompues et caches locaux (destructif) |
 
 ## Limites actuelles
 

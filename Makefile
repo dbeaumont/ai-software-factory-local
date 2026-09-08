@@ -93,7 +93,7 @@ help:
 	@echo -e "  $(CYAN)make temporal-logs$(NC) - follow Temporal server, UI and orchestrator logs"
 	@echo -e "  $(CYAN)make temporal-ui$(NC) - open the loopback-only Temporal UI"
 	@echo -e "  $(CYAN)make down$(NC)       - stop stack"
-	@echo -e "  $(CYAN)make clean$(NC)      - stop and remove volumes (destructive)"
+	@echo -e "  $(CYAN)make clean$(NC)      - remove runtime resources and local caches (destructive)"
 
 init:
 	$(log-target)
@@ -585,7 +585,8 @@ urls:
 
 clean:
 	$(log-target)
-	@echo -e "$(RED)Removing the complete stack and every Docker data volume, including A2A task state...$(NC)"
+	@echo -e "$(RED)Removing the complete stack, Docker data and repository-local caches...$(NC)"
 	@echo -e "$(YELLOW)Local .env/.vault files, A2A PKI and role secrets are intentionally preserved.$(NC)"
 	$(COMPOSE) --profile a2a-full down -v --remove-orphans
-	@echo -e "$(GREEN)Docker data reset complete!$(NC)"
+	@bash ./scripts/clean-local-runtime.sh
+	@echo -e "$(GREEN)Runtime resources and local caches reset complete!$(NC)"

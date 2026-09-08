@@ -39,7 +39,7 @@
 | `make restart` | Recrée l'orchestrateur, réactive son Build ID et revalide Temporal/A2A |
 | `make status` | Affiche tous les services et jobs one-shot du profil complet |
 | `make down` | Arrête le profil complet sans supprimer les volumes |
-| `make clean` | Supprime tous les volumes Docker ; opération destructive |
+| `make clean` | Supprime les volumes Docker, ressources de test interrompues et caches locaux ; opération destructive |
 | `make urls` | Affiche uniquement les URLs, jamais les mots de passe |
 
 ## Plans réalisés et trajectoires
