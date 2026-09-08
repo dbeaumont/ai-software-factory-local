@@ -3,6 +3,7 @@ package com.example.aifactory.workflow.temporal;
 import com.example.aifactory.model.TaskRoutingFacts;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
+import io.temporal.testing.WorkflowReplayer;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
@@ -41,8 +42,9 @@ class SoftwareFactoryExecutionWorkflowV2Test {
     }
 
     @Test
-    void resolvesTheSourceThenFailsClosedOnThePersistedHumanTriageDecision() {
+    void resolvesTheSourceThenFailsClosedOnThePersistedHumanTriageDecision() throws Exception {
         AtomicInteger resolutions = new AtomicInteger();
+        io.temporal.common.WorkflowExecutionHistory history;
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             var workflowWorker = environment.newWorker("test-workflow");
             workflowWorker.registerWorkflowImplementationTypes(SoftwareFactoryExecutionWorkflowV2Impl.class);
@@ -74,6 +76,8 @@ class SoftwareFactoryExecutionWorkflowV2Test {
             assertThat(result.status()).isEqualTo("HUMAN_TRIAGE");
             assertThat(result.chronology()).contains("ROUTING_DECIDED:" + "c".repeat(64) + ":HUMAN_TRIAGE");
             assertThat(resolutions).hasValue(1);
+            history = environment.getWorkflowClient().fetchHistory("ai-factory/task-1/attempt-1");
         }
+        WorkflowReplayer.replayWorkflowExecution(history, SoftwareFactoryExecutionWorkflowV2Impl.class);
     }
 }
