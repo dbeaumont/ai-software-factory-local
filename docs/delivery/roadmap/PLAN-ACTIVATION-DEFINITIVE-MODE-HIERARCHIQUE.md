@@ -310,6 +310,9 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [x] Remplacer la génération de patch Developer de compatibilité sur le chemin complet par un à quatre workflows
   enfants A2A `developer.code-task-v1`, dont les scopes sont résolus depuis l'analyse Architecture, les entrées
   sont matérialisées dans Evidence et les propositions sont vérifiées puis projetées avant le sandbox.
+- [x] Remplacer le fallback de réparation de patch V2 par un workflow enfant A2A natif `patch-repair`, avec le
+  candidat rejeté et son diagnostic bornés dans `patch-repair-task-v1`, puis validation du contenu, du digest et
+  du scope de `patch-repair-proposal-v1` avant une nouvelle tentative sandbox.
 - [x] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
 - [ ] Tester le redémarrage de l'orchestrateur.
 - [ ] Tester une rotation de Build ID.

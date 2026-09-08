@@ -20,6 +20,7 @@ class A2aDelegationWorkflowTest {
     @ParameterizedTest
     @CsvSource({
             "developer, developer.code-task-v1, patch-proposal-v1",
+            "patch-repair, patch-repair.patch-repair-task-v1, patch-repair-proposal-v1",
             "supervisor, supervisor.specialist-task-v1, delegation-plan-v1"
     })
     void executesSpecialistOnlyThroughA2aActivitiesAndValidatesItsArtifact(

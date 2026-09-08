@@ -77,6 +77,22 @@ class PatchProposalValidatorTest {
     }
 
     @Test
+    void validatesRepairContentAgainstTheImmutableTargetPaths() throws Exception {
+        String normalized = PatchIntegrator.normalize(PATCH);
+        JsonNode repairTask = mapper.readTree("""
+                {"target_paths":["src/App.java"]}
+                """);
+
+        PatchProposalValidator.ValidatedPatch validated = validator.validateRepair(
+                repairTask, proposal(normalized, "src/App.java", "MODIFY"), PATCH);
+
+        assertThat(validated.digest()).isEqualTo(PatchIntegrator.digestFor(normalized));
+        assertThatThrownBy(() -> validator.validateRepair(repairTask,
+                proposal(normalized, "src/Other.java", "MODIFY"), PATCH))
+                .hasMessageContaining("outside assigned write scope");
+    }
+
+    @Test
     void convertsAnInvalidBlankContextLineIntoAnAddedBlankLineWhenTheWorkspaceRequiresIt(@TempDir Path workspace)
             throws Exception {
         Path source = workspace.resolve("src/App.java");

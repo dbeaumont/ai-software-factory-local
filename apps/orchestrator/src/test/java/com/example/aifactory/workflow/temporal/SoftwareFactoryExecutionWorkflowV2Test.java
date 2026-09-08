@@ -8,6 +8,8 @@ import io.temporal.client.WorkflowStub;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.testing.WorkflowReplayer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
@@ -88,10 +90,11 @@ class SoftwareFactoryExecutionWorkflowV2Test {
         WorkflowReplayer.replayWorkflowExecution(history, SoftwareFactoryExecutionWorkflowV2Impl.class);
     }
 
-    @Test
-    void executesTheShortPathWithSupervisorAndWithoutArchitectureOrSecurityAgents() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void executesTheShortPathWithSupervisorAndWithoutArchitectureOrSecurityAgents(boolean repairPatch) {
         AtomicInteger deliveries = new AtomicInteger();
-        var activities = new SoftwareFactoryExecutionWorkflowV1Test.TestActivities(deliveries);
+        var activities = new SoftwareFactoryExecutionWorkflowV1Test.TestActivities(deliveries, repairPatch ? 1 : 0);
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             var workflowWorker = environment.newWorker("test-workflow");
             workflowWorker.registerWorkflowImplementationTypes(
@@ -135,8 +138,9 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                     .getResult(SoftwareFactoryWorkflow.Result.class);
 
             assertThat(result.status()).isEqualTo("PR_CREATED");
-            assertThat(activities.roles).containsExactly(
-                    "supervisor", "developer", "independent-reviewer");
+            assertThat(activities.roles).containsExactlyElementsOf(repairPatch
+                    ? List.of("supervisor", "developer", "patch-repair", "independent-reviewer")
+                    : List.of("supervisor", "developer", "independent-reviewer"));
             assertThat(activities.roles).doesNotContain("architecture-agent", "security-agent");
             assertThat(hierarchical.preparedRoles).containsExactly("supervisor");
             assertThat(deliveries).hasValue(1);
@@ -297,6 +301,27 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                     new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
                             reference.uri(), reference.digest(), 64, "COMPLETE", "ACCEPTED"));
             return new AcceptedDeveloperPatches(artifact, java.util.List.of(proposal));
+        }
+
+        @Override public PatchRepairTask preparePatchRepair(PreparePatchRepair request) {
+            String digest = TemporalIds.sha256("patch-repair-task-" + request.repairAttempt());
+            var input = com.example.aifactory.a2a.A2aEvidencePartFactory.reference(
+                    "repair-" + request.repairAttempt(),
+                    "evidence://task-1/pipeline-1/patch-repair-task/" + digest,
+                    digest, "patch-repair-task-v1", 64);
+            return new PatchRepairTask("patch-repair-" + request.repairAttempt(),
+                    "repair-" + request.repairAttempt(), request.budget(), input);
+        }
+
+        @Override public AcceptedPatchRepair acceptPatchRepair(AcceptPatchRepair request) {
+            var reference = request.resultReference();
+            var artifact = new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                    "evidence://task-1/pipeline-1/code-patch/" + reference.digest(),
+                    reference.digest(), 64, "COMPLETE", "REPAIRED");
+            return new AcceptedPatchRepair(artifact, new ReviewedSpecialistResult(
+                    "repair-proposal-" + request.task().nodeId(), "patch-repair",
+                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                            reference.uri(), reference.digest(), 64, "COMPLETE", "ACCEPTED")));
         }
 
         @Override public PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request) {

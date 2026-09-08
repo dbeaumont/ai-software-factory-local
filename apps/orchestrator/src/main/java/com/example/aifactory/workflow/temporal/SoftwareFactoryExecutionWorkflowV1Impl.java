@@ -314,13 +314,54 @@ abstract class ProductionExecutionWorkflowRuntime {
                 throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
                         "Patch remains invalid after two workflow repair attempts", "BUSINESS_REJECTION");
             }
-            runPipelineAgent(source, request, resolved, "patch-repair", "REPAIR_PATCH",
-                    "repair-patch-candidate", Map.of(
-                            "candidate", artifacts.get("patch-candidate").digest(),
-                            "validation-error", validation.validationError().digest()),
-                    validation.validationError(), repairAttempt + 1);
+            if (selectedPath != null) {
+                runHierarchicalPatchRepair(source, request, resolved, selectedPath,
+                        validation.validationError(), repairAttempt + 1);
+            } else {
+                runPipelineAgent(source, request, resolved, "patch-repair", "REPAIR_PATCH",
+                        "repair-patch-candidate", Map.of(
+                                "candidate", artifacts.get("patch-candidate").digest(),
+                                "validation-error", validation.validationError().digest()),
+                        validation.validationError(), repairAttempt + 1);
+            }
             throwIfCancelled();
         }
+    }
+
+    private void runHierarchicalPatchRepair(SoftwareFactoryWorkflow.SourceLocation source,
+                                            SoftwareFactoryWorkflow.Request request,
+                                            SourceResolutionActivities.Result resolved,
+                                            String selectedPath,
+                                            com.example.aifactory.service.PipelineStepContracts.ArtifactReference error,
+                                            int repairAttempt) {
+        currentStep = "repair-patch-candidate";
+        HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
+                HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
+                        TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
+        DelegationWorkflow.Budget budget = new DelegationWorkflow.Budget(6_000, 6_000_000, 3, 360);
+        var task = hierarchical.preparePatchRepair(new HierarchicalExecutionActivities.PreparePatchRepair(
+                request.taskId(), request.attemptId(), resolved.sourceCommit(), hierarchicalPlanId,
+                repairAttempt, artifacts.get("patch-candidate"), error, budget));
+        DelegationWorkflow child = io.temporal.workflow.Workflow.newChildWorkflowStub(
+                DelegationWorkflow.class, io.temporal.workflow.ChildWorkflowOptions.newBuilder()
+                        .setWorkflowId(TemporalIds.delegation(
+                                request.taskId(), request.attemptId(), task.nodeId()))
+                        .build());
+        DelegationWorkflow.Result result = child.run(new DelegationWorkflow.Request(
+                request.taskId(), request.attemptId(), task.nodeId(),
+                "SHORT_CODE_PATH".equals(selectedPath) ? "short-plan" : "code", "patch-repair",
+                resolved.sourceCommit(), request.requirementDigest(), 100,
+                java.util.Set.of(), task.budget(), task.inputReference()));
+        pipelineDelegations.add(result);
+        if (!"READY_FOR_ACTIVITIES".equals(result.status()) || result.artifacts().size() != 1) {
+            throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                    "Patch Repair did not produce one usable proposal", "BUSINESS_REJECTION");
+        }
+        var accepted = hierarchical.acceptPatchRepair(new HierarchicalExecutionActivities.AcceptPatchRepair(
+                request.taskId(), request.attemptId(), resolved.sourceCommit(), task,
+                result.artifacts().getFirst()));
+        artifacts.put("patch-candidate", accepted.patchCandidate());
+        reviewedSpecialistResults.add(accepted.reviewedResult());
     }
 
     private void runArchitectureAndCode(SoftwareFactoryWorkflow.SourceLocation source,

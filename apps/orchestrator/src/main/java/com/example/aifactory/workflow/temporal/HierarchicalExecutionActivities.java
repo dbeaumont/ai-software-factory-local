@@ -29,6 +29,12 @@ public interface HierarchicalExecutionActivities {
     @ActivityMethod(name = "AcceptHierarchicalDeveloperPatches")
     AcceptedDeveloperPatches acceptDeveloperPatches(AcceptDeveloperPatches request);
 
+    @ActivityMethod(name = "PrepareHierarchicalPatchRepair")
+    PatchRepairTask preparePatchRepair(PreparePatchRepair request);
+
+    @ActivityMethod(name = "AcceptHierarchicalPatchRepair")
+    AcceptedPatchRepair acceptPatchRepair(AcceptPatchRepair request);
+
     @ActivityMethod(name = "PrepareHierarchicalIndependentReview")
     PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request);
 
@@ -92,6 +98,20 @@ public interface HierarchicalExecutionActivities {
             reviewedResults = reviewedResults == null ? List.of() : List.copyOf(reviewedResults);
         }
     }
+
+    record PreparePatchRepair(String taskId, String attemptId, String sourceCommit, String delegationPlanId,
+                              int repairAttempt, PipelineStepContracts.ArtifactReference patchCandidate,
+                              PipelineStepContracts.ArtifactReference validationError,
+                              DelegationWorkflow.Budget budget) {}
+
+    record PatchRepairTask(String nodeId, String repairTaskId, DelegationWorkflow.Budget budget,
+                           A2aContracts.Part inputReference) {}
+
+    record AcceptPatchRepair(String taskId, String attemptId, String sourceCommit, PatchRepairTask task,
+                             A2aActivities.EvidenceReference resultReference) {}
+
+    record AcceptedPatchRepair(PipelineStepContracts.ArtifactReference patchCandidate,
+                               ReviewedSpecialistResult reviewedResult) {}
 
     record PrepareIndependentReview(String taskId, String attemptId, String repositoryId, String sourceCommit,
                                     Map<String, PipelineStepContracts.ArtifactReference> artifacts,

@@ -249,6 +249,94 @@ class HierarchicalExecutionActivitiesImplTest {
     }
 
     @Test
+    void materializesNativePatchRepairInputWithTheRejectedPatchAndFailure() throws Exception {
+        ObjectMapper mapper = JsonMapper.builder().build();
+        TaskMemory memory = mock(TaskMemory.class);
+        EvidenceRepository evidence = mock(EvidenceRepository.class);
+        TaskState state = taskState("Repair the bounded change");
+        String patch = "diff --git a/src/App.java b/src/App.java\n--- a/src/App.java\n+++ b/src/App.java\n";
+        state.patch = patch;
+        when(memory.find("task-1")).thenReturn(Optional.of(state));
+        String error = "patch does not apply";
+        String errorDigest = TemporalIds.sha256(error);
+        when(evidence.read(any())).thenReturn(new EvidenceRepository.RawEvidence(
+                "evidence://task-1/attempt-1/patch-validation-error/" + errorDigest,
+                "patch-validation-error", errorDigest, "COMPLETE", "INTERNAL",
+                error.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        when(evidence.store(any())).thenAnswer(invocation -> stored(invocation.getArgument(0), "patch-repair-task"));
+        var activities = activities(memory, evidence, mapper);
+        String patchDigest = com.example.aifactory.service.PatchIntegrator.digestFor(patch);
+
+        var prepared = activities.preparePatchRepair(new HierarchicalExecutionActivities.PreparePatchRepair(
+                "task-1", "attempt-1", "a".repeat(40), "plan-1", 1,
+                artifactWithDigest("patch-candidate", patchDigest),
+                artifactWithDigest("patch-validation-error", errorDigest),
+                new DelegationWorkflow.Budget(6_000, 6_000_000, 3, 360)));
+
+        assertThat(prepared.nodeId()).isEqualTo("patch-repair-1");
+        assertThat(prepared.inputReference().data()).containsEntry("contract", "patch-repair-task-v1");
+        ArgumentCaptor<EvidenceRepository.StoreRequest> stored =
+                ArgumentCaptor.forClass(EvidenceRepository.StoreRequest.class);
+        verify(evidence).store(stored.capture());
+        var document = mapper.readTree(stored.getValue().content());
+        assertThat(document.path("original_patch").asText()).isEqualTo(patch);
+        assertThat(document.path("failure_message").asText()).isEqualTo(error);
+        assertThat(document.path("target_paths").get(0).asText()).isEqualTo("src/App.java");
+    }
+
+    @Test
+    void validatesAndProjectsNativePatchRepairContent() throws Exception {
+        ObjectMapper mapper = JsonMapper.builder().build();
+        TaskMemory memory = mock(TaskMemory.class);
+        EvidenceRepository evidence = mock(EvidenceRepository.class);
+        TaskState state = taskState("Repair the bounded change");
+        when(memory.find("task-1")).thenReturn(Optional.of(state));
+        var documents = goldenDocuments(mapper);
+        String patch = "diff --git a/src/App.java b/src/App.java\n--- a/src/App.java\n+++ b/src/App.java\n"
+                + "@@ -1 +1 @@\n-old\n+new\n";
+        String patchDigest = com.example.aifactory.service.PatchIntegrator.digestFor(patch);
+        var repairTask = documents.path("patch-repair-task-v1").deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) repairTask)
+                .put("original_patch", patch).put("original_patch_digest", patchDigest);
+        byte[] taskContent = mapper.writeValueAsBytes(repairTask);
+        String taskDigest = digest(taskContent);
+        var proposal = documents.path("patch-repair-proposal-v1").deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) proposal)
+                .put("patch", patch).put("patch_digest", patchDigest);
+        ((tools.jackson.databind.node.ObjectNode) proposal.path("diff_artifact"))
+                .put("uri", "evidence://task-1/attempt-1/code-patch/" + patchDigest)
+                .put("digest", patchDigest)
+                .put("size_bytes", patch.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+        byte[] proposalContent = mapper.writeValueAsBytes(proposal);
+        String proposalDigest = digest(proposalContent);
+        when(evidence.read(any())).thenAnswer(invocation -> {
+            EvidenceRepository.ReadRequest read = invocation.getArgument(0);
+            boolean taskRead = read.uri().contains("/patch-repair-task/");
+            return new EvidenceRepository.RawEvidence(read.uri(), taskRead ? "patch-repair-task" : "agent-result",
+                    taskRead ? taskDigest : proposalDigest, "COMPLETE", "INTERNAL",
+                    taskRead ? taskContent : proposalContent);
+        });
+        when(evidence.store(any())).thenAnswer(invocation -> stored(invocation.getArgument(0), "code-patch"));
+        var activities = activities(memory, evidence, mapper);
+        var input = com.example.aifactory.a2a.A2aEvidencePartFactory.reference(
+                "repair-1", "evidence://task-1/attempt-1/patch-repair-task/" + taskDigest,
+                taskDigest, "patch-repair-task-v1", taskContent.length);
+        var task = new HierarchicalExecutionActivities.PatchRepairTask(
+                "repair-node-1", "repair-1", new DelegationWorkflow.Budget(2_000, 1_000, 2, 60), input);
+
+        var accepted = activities.acceptPatchRepair(new HierarchicalExecutionActivities.AcceptPatchRepair(
+                "task-1", "attempt-1", "a".repeat(40), task,
+                new A2aActivities.EvidenceReference("repair-proposal-1",
+                        "evidence://task-1/attempt-1/agent-result/" + proposalDigest,
+                        proposalDigest, "patch-repair-proposal-v1")));
+
+        assertThat(accepted.patchCandidate().digest()).isEqualTo(patchDigest);
+        assertThat(accepted.reviewedResult().role()).isEqualTo("patch-repair");
+        assertThat(state.patch).isEqualTo(patch);
+        verify(memory).project("hierarchical-patch-repair:" + patchDigest, state);
+    }
+
+    @Test
     void validatesAndProjectsNativeDeveloperPatchContent() throws Exception {
         ObjectMapper mapper = JsonMapper.builder().build();
         TaskMemory memory = mock(TaskMemory.class);
@@ -305,6 +393,13 @@ class HierarchicalExecutionActivitiesImplTest {
         return new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
                 "evidence://task-1/attempt-1/" + name + '/' + digest,
                 digest, 64, "COMPLETE", "ACCEPTED");
+    }
+
+    private static com.example.aifactory.service.PipelineStepContracts.ArtifactReference artifactWithDigest(
+            String name, String digest) {
+        return new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                "evidence://task-1/attempt-1/" + name + '/' + digest,
+                digest, 64, "COMPLETE", "TEST");
     }
 
     private static HierarchicalExecutionActivities.ReviewedSpecialistResult reviewed(String id, String role) {

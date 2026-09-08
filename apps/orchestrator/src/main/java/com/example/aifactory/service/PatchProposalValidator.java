@@ -23,10 +23,18 @@ public final class PatchProposalValidator {
 
     public ValidatedPatch validate(JsonNode codeTask, JsonNode proposal, String rawPatch) {
         scopes.validateDeveloper(codeTask, proposal);
+        return validateActual(proposal, rawPatch, codeTask.path("scope").path("max_patch_bytes").asLong(-1));
+    }
+
+    public ValidatedPatch validateRepair(JsonNode repairTask, JsonNode proposal, String rawPatch) {
+        scopes.validateRepair(repairTask, proposal);
+        return validateActual(proposal, rawPatch, 1_048_576);
+    }
+
+    private static ValidatedPatch validateActual(JsonNode proposal, String rawPatch, long maximumBytes) {
         String patch = PatchIntegrator.normalize(rawPatch);
         byte[] bytes = patch.getBytes(StandardCharsets.UTF_8);
         String digest = PatchIntegrator.digestFor(patch);
-        long maximumBytes = codeTask.path("scope").path("max_patch_bytes").asLong(-1);
         if (bytes.length < 1 || maximumBytes < 1 || bytes.length > maximumBytes) {
             throw invalid("actual patch byte limit exceeded");
         }

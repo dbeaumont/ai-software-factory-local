@@ -177,6 +177,8 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         private final String rejectedGate;
         private final java.util.List<String> rejectedGates = new java.util.concurrent.CopyOnWriteArrayList<>();
         private final String blockedPhase;
+        private final int invalidPatchAttempts;
+        private final AtomicInteger patchValidations = new AtomicInteger();
         private final CountDownLatch blockedStarted = new CountDownLatch(1);
         private final CountDownLatch releaseBlocked = new CountDownLatch(1);
         private final java.util.List<Cancellation> cancellations = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -184,17 +186,27 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         final java.util.List<String> roles = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         TestActivities(AtomicInteger deliveries) {
-            this(deliveries, null, null);
+            this(deliveries, null, null, 0);
+        }
+
+        TestActivities(AtomicInteger deliveries, int invalidPatchAttempts) {
+            this(deliveries, null, null, invalidPatchAttempts);
         }
 
         private TestActivities(AtomicInteger deliveries, String rejectedGate) {
-            this(deliveries, rejectedGate, null);
+            this(deliveries, rejectedGate, null, 0);
         }
 
         private TestActivities(AtomicInteger deliveries, String rejectedGate, String blockedPhase) {
+            this(deliveries, rejectedGate, blockedPhase, 0);
+        }
+
+        private TestActivities(AtomicInteger deliveries, String rejectedGate, String blockedPhase,
+                               int invalidPatchAttempts) {
             this.deliveries = deliveries;
             this.rejectedGate = rejectedGate;
             this.blockedPhase = blockedPhase;
+            this.invalidPatchAttempts = invalidPatchAttempts;
         }
 
         @Override public SourceResolutionActivities.Result resolve(SourceResolutionActivities.Request request) {
@@ -250,6 +262,11 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         }
 
         @Override public PatchValidationResult validatePatchCandidate(StepRequest request) {
+            if (patchValidations.incrementAndGet() <= invalidPatchAttempts) {
+                var error = artifact("patch-validation-error");
+                return new PatchValidationResult(false,
+                        result(request.command().step(), Map.of("patch-validation-error", error)), error);
+            }
             return new PatchValidationResult(true,
                     result(request.command().step(), Map.of("patch", artifact("patch"))), null);
         }
@@ -261,6 +278,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
                 skills.add("independent-reviewer.integration-result-v1");
             }
             if ("developer".equals(role)) skills.add("developer.code-task-v1");
+            if ("patch-repair".equals(role)) skills.add("patch-repair.patch-repair-task-v1");
             return new A2aContracts.AgentCardDescriptor(role,
                     URI.create("https://" + role + "/.well-known/agent-card.json"),
                     URI.create("https://" + role + "/a2a"), "JSONRPC", "1.0", "a".repeat(64),

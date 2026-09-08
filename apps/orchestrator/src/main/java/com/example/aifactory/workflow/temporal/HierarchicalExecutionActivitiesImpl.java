@@ -347,6 +347,136 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
         }
     }
 
+    @Override
+    public PatchRepairTask preparePatchRepair(PreparePatchRepair request) {
+        requireValid(request);
+        TaskState state = memory.find(request.taskId()).orElseThrow(
+                () -> new IllegalArgumentException("Unknown hierarchical task"));
+        requireAttemptAndCommit(state, request.attemptId(), request.sourceCommit());
+        try {
+            String patch = PatchIntegrator.normalize(state.patch);
+            String patchDigest = PatchIntegrator.digestFor(patch);
+            if (!patchDigest.equals(request.patchCandidate().digest())) {
+                throw new SecurityException("Patch repair candidate differs from the projected patch");
+            }
+            EvidenceRepository.RawEvidence failure = evidence.read(new EvidenceRepository.ReadRequest(
+                    request.taskId(), request.attemptId(), request.validationError().uri(),
+                    "workflow", "prepare-native-patch-repair"));
+            if (!request.validationError().digest().equals(failure.digest())
+                    || !"COMPLETE".equals(failure.status())) {
+                throw new SecurityException("Patch validation failure Evidence changed before repair");
+            }
+            List<String> targetPaths = changedFiles(patch).stream().sorted().toList();
+            String suffix = patchDigest.substring(0, 12);
+            String nodeId = "patch-repair-" + request.repairAttempt();
+            String repairTaskId = "repair-" + request.repairAttempt() + '-' + suffix;
+            String codeTaskId = "code-candidate-" + suffix;
+            String originalProposalId = "candidate-" + suffix;
+            String scopeDigest = TemporalIds.sha256(mapper.writeValueAsString(targetPaths));
+            Instant issuedAt = Instant.now(clock);
+            ObjectNode document = mapper.createObjectNode();
+            document.put("schema_version", "1").put("repair_task_id", repairTaskId)
+                    .put("task_id", request.taskId()).put("attempt_id", request.attemptId())
+                    .put("delegation_plan_id", request.delegationPlanId()).put("node_id", nodeId)
+                    .put("code_task_id", codeTaskId).put("source_commit", request.sourceCommit())
+                    .put("worktree_id", "worktree-" + nodeId).put("repair_attempt", request.repairAttempt())
+                    .put("original_proposal_id", originalProposalId).put("original_patch_digest", patchDigest)
+                    .put("original_patch", patch).put("failure_kind", "PATCH_INVALID")
+                    .put("failure_digest", failure.digest())
+                    .put("failure_message", boundedFailureMessage(failure.content()))
+                    .put("scope_digest", scopeDigest);
+            ArrayNode targets = document.putArray("target_paths"); targetPaths.forEach(targets::add);
+            document.putArray("conflicting_proposal_ids");
+            ArrayNode allowed = document.putArray("allowed_paths"); targetPaths.forEach(allowed::add);
+            ObjectNode budget = document.putObject("budget");
+            budget.put("max_turns", request.budget().maxTurns()).put("max_tokens", request.budget().maxTokens())
+                    .put("max_cost_micros", request.budget().maxCostMicros())
+                    .put("timeout_seconds", request.budget().timeoutSeconds());
+            document.put("issued_at", issuedAt.toString())
+                    .put("deadline", issuedAt.plusSeconds(request.budget().timeoutSeconds()).toString());
+            contracts.validate("patch-repair-task-v1", document,
+                    new MultiAgentContractValidator.ContractContext(request.taskId(), request.attemptId(),
+                            Set.of(request.delegationPlanId(), nodeId, codeTaskId, originalProposalId)));
+            byte[] content = mapper.writeValueAsBytes(document);
+            String digest = TemporalIds.sha256(new String(content, StandardCharsets.UTF_8));
+            EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
+                    request.taskId(), request.attemptId(), "patch-repair-task", "application/json",
+                    content, digest, "workflow"));
+            if (!digest.equals(stored.digest()) || !"COMPLETE".equals(stored.status())) {
+                throw new SecurityException("Stored patch repair task differs from its validated document");
+            }
+            return new PatchRepairTask(nodeId, repairTaskId, request.budget(),
+                    A2aEvidencePartFactory.reference(repairTaskId, stored.uri(), stored.digest(),
+                            "patch-repair-task-v1", stored.sizeBytes()));
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Cannot materialize native patch repair task", failure));
+        }
+    }
+
+    @Override
+    public AcceptedPatchRepair acceptPatchRepair(AcceptPatchRepair request) {
+        requireValid(request);
+        TaskState state = memory.find(request.taskId()).orElseThrow(
+                () -> new IllegalArgumentException("Unknown hierarchical task"));
+        requireAttemptAndCommit(state, request.attemptId(), request.sourceCommit());
+        try {
+            var taskReference = specialistReference(request.task().inputReference());
+            var repairTask = readPatchRepairTask(request.taskId(), request.attemptId(), taskReference);
+            var proposal = readAndValidate(request.taskId(), request.attemptId(), request.resultReference(),
+                    "patch-repair-proposal-v1", Set.of(
+                            repairTask.path("repair_task_id").asText(), repairTask.path("node_id").asText(),
+                            repairTask.path("code_task_id").asText(),
+                            repairTask.path("original_proposal_id").asText()), "accept-native-patch-repair");
+            requireRepairBinding(request, repairTask, proposal);
+            PatchProposalValidator.ValidatedPatch validated = new PatchProposalValidator(new PatchScopeValidator())
+                    .validateRepair(repairTask, proposal, proposal.path("patch").asText());
+            byte[] content = validated.content().getBytes(StandardCharsets.UTF_8);
+            String expectedUri = "evidence://" + request.taskId() + '/' + request.attemptId()
+                    + "/code-patch/" + validated.digest();
+            String declaredUri = proposal.path("diff_artifact").path("uri").asText();
+            if (!expectedUri.equals(declaredUri)) {
+                throw new SecurityException("Patch repair proposal declares a non-canonical Evidence URI");
+            }
+            EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
+                    request.taskId(), request.attemptId(), "code-patch", "text/x-diff",
+                    content, validated.digest(), "workflow"));
+            if (!validated.digest().equals(stored.digest()) || !declaredUri.equals(stored.uri())
+                    || !"COMPLETE".equals(stored.status()) || stored.sizeBytes() != content.length) {
+                throw new SecurityException("Repaired patch Evidence differs from the validated proposal");
+            }
+            EvidenceRepository.RawEvidence rawProposal = evidence.read(new EvidenceRepository.ReadRequest(
+                    request.taskId(), request.attemptId(), request.resultReference().uri(),
+                    "workflow", "project-native-patch-repair"));
+            if (!request.resultReference().digest().equals(rawProposal.digest())
+                    || !"agent-result".equals(rawProposal.type()) || !"COMPLETE".equals(rawProposal.status())) {
+                throw new SecurityException("Patch repair proposal changed before projection");
+            }
+            state.patch = validated.content();
+            String proposalId = proposal.path("repair_proposal_id").asText();
+            state.recordArtifact(proposalId, "patch-repair-proposal", rawProposal.status(),
+                    rawProposal.classification(), rawProposal.uri(), rawProposal.digest(),
+                    rawProposal.content().length, true);
+            state.recordArtifact("repaired-patch-candidate", "code-patch", stored.status(),
+                    stored.classification(), stored.uri(), stored.digest(), stored.sizeBytes(), true);
+            memory.project("hierarchical-patch-repair:" + validated.digest(), state);
+            var proposalArtifact = new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                    rawProposal.uri(), rawProposal.digest(), rawProposal.content().length,
+                    rawProposal.status(), "ACCEPTED");
+            return new AcceptedPatchRepair(
+                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                            stored.uri(), stored.digest(), stored.sizeBytes(), stored.status(), "REPAIRED"),
+                    new ReviewedSpecialistResult(proposalId, "patch-repair", proposalArtifact));
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Cannot accept native patch repair result", failure));
+        }
+    }
+
     private DeveloperTask storeDeveloperTask(PrepareDeveloperTasks request, TaskState state,
                                              tools.jackson.databind.JsonNode task,
                                              tools.jackson.databind.JsonNode recommendedScope) throws Exception {
@@ -482,6 +612,26 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                 new MultiAgentContractValidator.ContractContext(taskId, attemptId, Set.copyOf(allowedReferences)));
     }
 
+    private tools.jackson.databind.JsonNode readPatchRepairTask(
+            String taskId, String attemptId, A2aActivities.EvidenceReference reference) throws Exception {
+        if (reference == null || !"patch-repair-task-v1".equals(reference.contract())
+                || reference.uri() == null || !reference.uri().startsWith("evidence://")
+                || reference.digest() == null || !reference.digest().matches("[0-9a-f]{64}")) {
+            throw new SecurityException("Patch repair task reference is invalid");
+        }
+        EvidenceRepository.RawEvidence raw = evidence.read(new EvidenceRepository.ReadRequest(
+                taskId, attemptId, reference.uri(), "workflow", "accept-native-patch-repair"));
+        if (!reference.digest().equals(raw.digest()) || !"patch-repair-task".equals(raw.type())
+                || !"COMPLETE".equals(raw.status())) {
+            throw new SecurityException("Patch repair task changed after materialization");
+        }
+        var document = mapper.readTree(raw.content());
+        return contracts.validate("patch-repair-task-v1", document,
+                new MultiAgentContractValidator.ContractContext(taskId, attemptId, Set.of(
+                        document.path("delegation_plan_id").asText(), document.path("node_id").asText(),
+                        document.path("code_task_id").asText(), document.path("original_proposal_id").asText())));
+    }
+
     private static A2aActivities.EvidenceReference specialistReference(A2aContracts.Part part) {
         if (part == null || part.data() == null) throw new SecurityException("Developer task reference is missing");
         return new A2aActivities.EvidenceReference(String.valueOf(part.data().get("reference_id")),
@@ -501,6 +651,29 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                 || !sourceCommit.equals(proposal.path("source_commit").asText())) {
             throw new SecurityException("Developer proposal is outside its workflow identity");
         }
+    }
+
+    private static void requireRepairBinding(AcceptPatchRepair request, tools.jackson.databind.JsonNode task,
+                                             tools.jackson.databind.JsonNode proposal) {
+        for (String field : List.of("repair_task_id", "node_id", "code_task_id", "source_commit", "worktree_id",
+                "repair_attempt", "failure_kind", "failure_digest", "target_paths",
+                "conflicting_proposal_ids", "scope_digest")) {
+            if (!task.path(field).equals(proposal.path(field))) {
+                throw new SecurityException("Patch repair proposal changed its " + field);
+            }
+        }
+        if (!task.path("original_proposal_id").asText().equals(proposal.path("replaces_proposal_id").asText())
+                || !request.task().repairTaskId().equals(proposal.path("repair_task_id").asText())
+                || !request.task().nodeId().equals(proposal.path("node_id").asText())
+                || !request.sourceCommit().equals(proposal.path("source_commit").asText())) {
+            throw new SecurityException("Patch repair proposal is outside its workflow identity");
+        }
+    }
+
+    private static String boundedFailureMessage(byte[] content) {
+        String message = new String(content, StandardCharsets.UTF_8);
+        if (message.isBlank()) return "Patch candidate rejected without a diagnostic message";
+        return message.length() <= 4_000 ? message : message.substring(message.length() - 4_000);
     }
 
     private static String worktreeId(String taskId, String attemptId, String nodeId) {
@@ -629,6 +802,8 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
 
     private static void requireValid(PrepareIndependentReview request) {
         Set<String> requiredRoles = request == null ? Set.of() : request.requiredRoles();
+        java.util.LinkedHashSet<String> allowedRoles = new java.util.LinkedHashSet<>(requiredRoles);
+        allowedRoles.add("patch-repair");
         if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
                 || request.repositoryId() == null || !request.repositoryId().matches("[a-z0-9][a-z0-9-]{1,62}")
@@ -641,7 +816,7 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                 .collect(java.util.stream.Collectors.toSet()).containsAll(requiredRoles)
                 || request.reviewedResults().stream().anyMatch(result -> result.documentId() == null
                 || !result.documentId().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
-                || !requiredRoles.contains(result.role()) || result.artifact() == null)) {
+                || !allowedRoles.contains(result.role()) || result.artifact() == null)) {
             throw new IllegalArgumentException("Hierarchical independent review request is invalid");
         }
         requiredArtifactDigests(request.artifacts());
@@ -684,6 +859,41 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                 || request.results().stream().map(result -> result.task().nodeId()).distinct().count()
                 != request.results().size()) {
             throw new IllegalArgumentException("Hierarchical Developer patch acceptance is invalid");
+        }
+    }
+
+    private static void requireValid(PreparePatchRepair request) {
+        if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
+                || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || request.delegationPlanId() == null
+                || !request.delegationPlanId().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
+                || request.repairAttempt() < 1 || request.repairAttempt() > 2
+                || request.patchCandidate() == null || request.validationError() == null
+                || request.patchCandidate().digest() == null
+                || !request.patchCandidate().digest().matches("[0-9a-f]{64}")
+                || request.validationError().uri() == null
+                || !request.validationError().uri().startsWith("evidence://")
+                || request.validationError().digest() == null
+                || !request.validationError().digest().matches("[0-9a-f]{64}")
+                || request.budget() == null || request.budget().maxTurns() > 8
+                || request.budget().maxTokens() > 50_000 || request.budget().maxCostMicros() > 50_000_000
+                || request.budget().timeoutSeconds() > 1_800) {
+            throw new IllegalArgumentException("Native patch repair preparation is invalid");
+        }
+    }
+
+    private static void requireValid(AcceptPatchRepair request) {
+        if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
+                || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || request.task() == null || request.resultReference() == null
+                || !"patch-repair-proposal-v1".equals(request.resultReference().contract())
+                || request.resultReference().uri() == null
+                || !request.resultReference().uri().startsWith("evidence://")
+                || request.resultReference().digest() == null
+                || !request.resultReference().digest().matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Native patch repair acceptance is invalid");
         }
     }
 
