@@ -44,7 +44,7 @@ rotate_password() {
   local next_password
   next_password=$(openssl rand -hex 32)
   "${COMPOSE[@]}" exec -T --user git gitea gitea admin user change-password \
-    --username "$username" --password "$next_password" >/dev/null
+    --username "$username" --password "$next_password" --must-change-password=false >/dev/null
   set_config_value ".env" "$key" "$next_password"
   printf '%s' "$next_password"
 }
