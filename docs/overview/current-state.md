@@ -226,4 +226,4 @@ multi-tenancy forte, ni haute disponibilité.
 - [Modèle de déploiement des agents](../architecture/agents/deployment-model.md)
 - [Guide macOS](../development/a2a-macos.md)
 - [Guide de maintenance](../operations/maintenance.md)
-- [Plan de migration A2A terminé](../delivery/migrations/migration-agents-a2a-temporal.md)
+- [Plan archivé de migration A2A](../archive/migrations/migration-agents-a2a-temporal.md)

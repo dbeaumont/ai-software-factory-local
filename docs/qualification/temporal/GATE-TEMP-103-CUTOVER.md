@@ -37,7 +37,7 @@ Décisions admises :
 | Artefact | Image inchangée pendant les 16 étapes de qualification | `PASS` |
 
 Preuve détaillée :
-[`TEMP-102-qualification-release-2026-09-06.md`](../../evidence/temporal/TEMP-102-qualification-release-2026-09-06.md).
+[`TEMP-102-qualification-release-2026-09-06.md`](../../archive/evidence/temporal/TEMP-102-qualification-release-2026-09-06.md).
 
 ## Points à accepter explicitement
 
@@ -77,7 +77,7 @@ Ces changements ne modifient aucun objet du périmètre Temporal gelé, mais ils
 déploiement TEMP-106 reste donc interdit tant que le candidat final exact n'est pas réapprouvé.
 
 Preuve du delta :
-[`TEMP-103R-final-candidate-2026-09-06.md`](../../evidence/temporal/TEMP-103R-final-candidate-2026-09-06.md).
+[`TEMP-103R-final-candidate-2026-09-06.md`](../../archive/evidence/temporal/TEMP-103R-final-candidate-2026-09-06.md).
 
 | Rôle | Identité | Décision | Date UTC | Commit examiné | Conditions / commentaire |
 |---|---|---|---|---|---|

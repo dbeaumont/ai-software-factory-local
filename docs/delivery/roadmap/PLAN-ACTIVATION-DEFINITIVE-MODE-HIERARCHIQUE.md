@@ -229,7 +229,8 @@ refactor(policies): collapse execution modes to hierarchical routing
   restent des opérations permanentes.)_
 - [x] Supprimer les scripts exclusivement liés à cette promotion. _(`qualify-temporal-cutover.sh`,
   `verify-temporal-cutover-freeze.rb` et `monitor-temporal-cutover.sh` ont été retirés.)_
-- [ ] Conserver les preuves historiques sous `docs/archive/`.
+- [x] Conserver les preuves historiques sous `docs/archive/`. _(Les plans achevés Temporal/A2A et les preuves de
+  cutover Temporal, y compris l'inventaire V1 préalable à cette activation, sont archivés et indexés.)_
 - [ ] Vérifier avec `rg` que les anciens termes ne subsistent dans aucun chemin actif.
 
 ### Critères de sortie du lot 5

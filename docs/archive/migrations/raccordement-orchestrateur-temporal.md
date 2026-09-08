@@ -2,7 +2,7 @@
 
 > Statut : `TERMINÉ` le 2026-09-06 pour l'environnement local macOS/Docker Compose.
 >
-> Preuve de clôture : `docs/evidence/temporal/TEMP-CLOSEOUT-2026-09-06.md`.
+> Preuve de clôture : `docs/archive/evidence/temporal/TEMP-CLOSEOUT-2026-09-06.md`.
 
 ## 1. Objectif
 
@@ -553,7 +553,7 @@ est immédiatement l'unique moteur de toutes les admissions.
   et l'image immuable `sha256:ef7b416e…604e`. Tests propres, replay, sept pollers, backpressure, partition,
   huit phases de redémarrage, heartbeat, stockage, dépendances, sauvegarde/restauration, livraison exactement une
   fois observable, rotation de worker et cycle Compose sont verts. Preuve :
-  `docs/evidence/temporal/TEMP-102-qualification-release-2026-09-06.md`.)_
+  `docs/archive/evidence/temporal/TEMP-102-qualification-release-2026-09-06.md`.)_
 - [x] **TEMP-103 — Obtenir l'autorisation de coupure.** Exiger les validations produit, architecture, sécurité et
   exploitation sur la matrice de preuves complète. _(David Beaumont, autorité unique du POC local, a approuvé les
   quatre responsabilités le 2026-09-06 sur la release exacte `9698fa30aa16a43af5b2d4f56b82f1953eb95080`.
@@ -562,48 +562,48 @@ est immédiatement l'unique moteur de toutes les admissions.
   dans l'interface et attendre la fin ou l'annulation contrôlée de chaque tâche locale active. _(Le verrou durable
   PostgreSQL est fermé à la révision `2` avec le motif `temporal_cutover` ; l'API renvoie `503`, l'interface expose
   la maintenance, l'outbox ne contient aucune admission en attente et Temporal ne contient aucun workflow ouvert.
-  Les 560 tests Java sont verts. Preuve : `docs/evidence/temporal/TEMP-104-admissions-closed-2026-09-06.md`.)_
+  Les 560 tests Java sont verts. Preuve : `docs/archive/evidence/temporal/TEMP-104-admissions-closed-2026-09-06.md`.)_
 - [x] **TEMP-105 — Sauvegarder les autorités.** Sauvegarder Gitea, Evidence MCP, configuration, workspaces utiles et
   bases ; vérifier la restauration avant de poursuivre. _(La sauvegarde privée de 18M couvre Temporal, projection,
   Evidence, idempotence SCM, Gitea, workspaces et configuration. Tous les SHA-256 et les nombres d'objets ont été
   vérifiés après restauration isolée ; le verrou restauré reste fermé et aucun volume actif n'a été modifié.
-  Preuve : `docs/evidence/temporal/TEMP-105-authorities-backup-restore-2026-09-06.md`.)_
+  Preuve : `docs/archive/evidence/temporal/TEMP-105-authorities-backup-restore-2026-09-06.md`.)_
 - [x] **TEMP-107 — Retirer le chemin local.** Supprimer `DeterministicWorkflowCoordinator`, son pool de threads,
   les flags de sélection et toute route de fallback dans la release de bascule. _(Le coordinateur local et son
   traceur asynchrone ont été supprimés ; `TemporalWorkflowCoordinator` est l'unique implémentation de production,
   sans flag de sélection ni route de repli. Les 557 tests Java sont verts et le gel du périmètre Temporal reste
-  valide. Preuve : `docs/evidence/temporal/TEMP-107-local-path-removed-2026-09-06.md`.)_
+  valide. Preuve : `docs/archive/evidence/temporal/TEMP-107-local-path-removed-2026-09-06.md`.)_
 - [x] **TEMP-103R — Réautoriser l'artefact final.** Approuver explicitement le commit et les images qui incluent le
   verrou d'admission et le retrait du chemin local avant tout déploiement. _(Candidat préparé au commit
   `a589f5c4c93088650bc7f46a13655cf10b92bf94`, puis approuvé explicitement par David Beaumont pour les quatre
   responsabilités du POC local le 2026-09-06. Dossier de décision :
-  `docs/evidence/temporal/TEMP-103R-final-candidate-2026-09-06.md`.)_
+  `docs/archive/evidence/temporal/TEMP-103R-final-candidate-2026-09-06.md`.)_
 - [x] **TEMP-106 — Déployer atomiquement.** Déployer dans la même fenêtre Temporal obligatoire, workers,
   coordinateur, projection PostgreSQL, migrations, API, interface, dashboards et alertes. _(Docker Compose a
   convergé sans reconstruction vers les deux images approuvées ; l'orchestrateur est sain, Flyway V015 est appliquée,
   l'activation worker et le bootstrap SigNoz sont sortis à `0`, et le verrou est resté fermé. Preuve :
-  `docs/evidence/temporal/TEMP-106-atomic-deployment-2026-09-06.md`.)_
+  `docs/archive/evidence/temporal/TEMP-106-atomic-deployment-2026-09-06.md`.)_
 - [x] **TEMP-108 — Vérifier avant réouverture.** Contrôler schémas, namespace, Build IDs, pollers, task queues,
   readiness, projection, Evidence MCP, SigNoz et Temporal UI. _(Le namespace et ses quatre Search Attributes sont
   présents, le Build ID est courant, les sept queues ont un poller, la readiness, Evidence MCP et les interfaces
   répondent, la projection expose 120 tâches et SigNoz contient 784 métriques, 7 dashboards et 15 alertes. Preuve :
-  `docs/evidence/temporal/TEMP-108-pre-reopening-verification-2026-09-06.md`.)_
+  `docs/archive/evidence/temporal/TEMP-108-pre-reopening-verification-2026-09-06.md`.)_
 - [x] **TEMP-109 — Exécuter un smoke test de coupure.** Soumettre un ticket synthétique pendant la maintenance,
   vérifier le parcours complet et supprimer uniquement ses artefacts explicitement jetables. _(Le ticket
   `badf822f` / `AF-0125` a terminé son workflow, passé les quatre gates et créé une unique PR liée au manifeste.
   La PR est fermée, sa branche et son workspace sont supprimés ; projection, historique et 8 preuves restent
   conservés. Le verrou est refermé à la révision `4`. Preuve :
-  `docs/evidence/temporal/TEMP-109-cutover-smoke-2026-09-06.md`.)_
+  `docs/archive/evidence/temporal/TEMP-109-cutover-smoke-2026-09-06.md`.)_
 - [x] **TEMP-110 — Ouvrir toutes les admissions.** Autoriser simultanément tous les dépôts et toutes les catégories
   de tickets sur Temporal, sans pourcentage, allow-list transitoire ou double exécution. _(Le verrou global durable
   est ouvert avec le motif `normal_operation` à la révision `5` ; l'API confirme `admissionsOpen=true`, la readiness
   est verte et l'image active reste celle approuvée. Aucun mécanisme de routage partiel ou moteur local n'existe.
-  Preuve : `docs/evidence/temporal/TEMP-110-admissions-open-2026-09-06.md`.)_
+  Preuve : `docs/archive/evidence/temporal/TEMP-110-admissions-open-2026-09-06.md`.)_
 - [x] **TEMP-111 — Surveiller la fenêtre renforcée.** Maintenir l'équipe de rollback disponible et appliquer les
   seuils d'arrêt globaux, sans router une partie du trafic vers l'ancien moteur. _(Le moniteur fail-closed a observé
   19 échantillons sur 313 s : zéro admission ancienne, zéro nouvelle tâche en échec et aucun nouveau workflow en
   échec. Les contrôles finaux Temporal/SigNoz sont verts ; sauvegarde, runbook et image de rollback compatible sont
-  disponibles. Preuve : `docs/evidence/temporal/TEMP-111-strengthened-monitoring-2026-09-06.md`.)_
+  disponibles. Preuve : `docs/archive/evidence/temporal/TEMP-111-strengthened-monitoring-2026-09-06.md`.)_
 
 ### Critères de coupure
 

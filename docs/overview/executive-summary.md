@@ -122,4 +122,4 @@ déjà compatible A2A et conserve Temporal comme autorité.
 - [Architecture A2A](../architecture/a2a/README.md)
 - [Exploitation locale macOS](../development/a2a-macos.md)
 - [Guide de maintenance](../operations/maintenance.md)
-- [Plan A2A/Temporal réalisé](../delivery/migrations/migration-agents-a2a-temporal.md)
+- [Plan A2A/Temporal archivé](../archive/migrations/migration-agents-a2a-temporal.md)

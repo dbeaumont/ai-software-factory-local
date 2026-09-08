@@ -46,8 +46,8 @@
 
 - [Activation définitive du mode hiérarchique](PLAN-ACTIVATION-DEFINITIVE-MODE-HIERARCHIQUE.md) — en cours ;
   admission V2 et chemin court raccordés, chemin hiérarchique complet et promotion du build restant à qualifier.
-- [Migration Temporal](../migrations/raccordement-orchestrateur-temporal.md)
-- [Migration des agents vers A2A](../migrations/migration-agents-a2a-temporal.md)
+- [Migration Temporal archivée](../../archive/migrations/raccordement-orchestrateur-temporal.md)
+- [Migration des agents vers A2A archivée](../../archive/migrations/migration-agents-a2a-temporal.md)
 - [Retrait de la socket Docker](../migrations/retrait-docker-socket.md)
 - [Migration OpenTelemetry](../migrations/migration-opentelemetry.md)
 - [Roadmap détaillée](ameliorations-usine-logicielle-ia.md)

@@ -680,5 +680,5 @@ ni une sandbox de production : ces limites restent bloquantes pour un usage entr
 - [Catalogue des agents](docs/architecture/agents/CATALOGUE-AGENTS-V1.md)
 - [Architecture A2A et frontières de confiance](docs/architecture/a2a/README.md)
 - [Exploitation locale A2A sur macOS](docs/development/a2a-macos.md)
-- [Plan de migration A2A/Temporal](docs/delivery/migrations/migration-agents-a2a-temporal.md)
+- [Plan archivé de migration A2A/Temporal](docs/archive/migrations/migration-agents-a2a-temporal.md)
 - [Architecture, workflow et sécurité de la baseline 1.1.0](docs/archive/releases/1.1.0-archi-02-mcp/ETAT-PROTO-1.1.0.md)

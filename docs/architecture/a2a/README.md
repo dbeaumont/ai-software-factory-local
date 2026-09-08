@@ -58,5 +58,5 @@ de prompt, sortie brute, référence sensible ou jeton n’est autorisée dans l
 - [ADR A2A/Temporal](../adr/ADR-A2A-001-agents-a2a-orchestration-temporal.md)
 - [Catalogue des agents](../agents/CATALOGUE-AGENTS-V1.md)
 - [Modèle de menaces](A2A-110-threat-model.md)
-- [Plan de migration](../../delivery/migrations/migration-agents-a2a-temporal.md)
+- [Plan de migration archivé](../../archive/migrations/migration-agents-a2a-temporal.md)
 - [Rollback A2A](../../operations/runbooks/ROLLBACK-A2A.md)

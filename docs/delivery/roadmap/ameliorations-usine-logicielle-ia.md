@@ -130,7 +130,7 @@ politique de résidence ou réduire silencieusement les exigences de revue.
 ## Références
 
 - [État courant](../../overview/current-state.md)
-- [Plan A2A/Temporal réalisé](../migrations/migration-agents-a2a-temporal.md)
+- [Plan A2A/Temporal réalisé](../../archive/migrations/migration-agents-a2a-temporal.md)
 - [Plan de retrait de la socket Docker](../migrations/retrait-docker-socket.md)
 - [Stratégie OpenTelemetry](../migrations/strategie-opentelemetry.md)
 - [Exploitation GKE A2A](../../operations/A2A-GKE.md)
