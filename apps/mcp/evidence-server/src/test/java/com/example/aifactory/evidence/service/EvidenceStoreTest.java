@@ -24,7 +24,8 @@ class EvidenceStoreTest {
                 "plan", "patch", "patch-candidate", "patch-validation-error", "code-patch",
                 "metadata", "tests", "tests-deterministic", "quality", "security", "sbom", "review",
                 "a2a-input-plan", "a2a-input-generate-patch", "a2a-input-repair-patch",
-                "a2a-input-assess-tests", "a2a-input-review")) {
+                "a2a-input-assess-tests", "a2a-input-review", "specialist-task", "code-task",
+                "patch-repair-task")) {
             assertDoesNotThrow(() -> policy.requireWrite(type, "workflow"), type);
         }
         assertEquals("CONFIDENTIAL", policy.requireWrite("security", "workflow").classification());
