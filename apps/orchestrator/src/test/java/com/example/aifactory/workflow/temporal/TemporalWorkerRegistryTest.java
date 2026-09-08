@@ -70,7 +70,9 @@ class TemporalWorkerRegistryTest {
         PipelineExecutionActivities pipeline = mock(PipelineExecutionActivities.class);
         A2aActivitiesImpl a2a = mock(A2aActivitiesImpl.class);
         HierarchicalRoutingActivities routing = mock(HierarchicalRoutingActivities.class);
-        TemporalActivityAdapters adapters = new TemporalActivityAdapters(patch, source, pipeline, a2a, routing);
+        HierarchicalExecutionActivities hierarchical = mock(HierarchicalExecutionActivities.class);
+        TemporalActivityAdapters adapters = new TemporalActivityAdapters(
+                patch, source, pipeline, a2a, routing, hierarchical);
 
         assertThat(adapters.forWorker("context")).hasSize(3)
                 .anyMatch(SourceResolutionActivities.class::isInstance)
@@ -81,8 +83,9 @@ class TemporalWorkerRegistryTest {
                 .anyMatch(PatchIntegrationActivities.class::isInstance);
         assertThat(adapters.forWorker("assurance")).hasSize(1)
                 .anyMatch(PipelineExecutionActivities.class::isInstance);
-        assertThat(adapters.forWorker("evidence")).hasSize(1)
-                .anyMatch(PipelineExecutionActivities.class::isInstance);
+        assertThat(adapters.forWorker("evidence")).hasSize(2)
+                .anyMatch(PipelineExecutionActivities.class::isInstance)
+                .anyMatch(HierarchicalExecutionActivities.class::isInstance);
         assertThat(adapters.forWorker("scm")).hasSize(1)
                 .anyMatch(PipelineExecutionActivities.class::isInstance);
         assertThat(adapters.forWorker("llm")).noneMatch(DurableExecutionActivities.class::isInstance);

@@ -29,6 +29,9 @@ La livraison A reste interdite tant que les trois points suivants ne sont pas r�
 Ces corrections ferment le blocage d'admission découvert pendant l'exécution. La promotion reste néanmoins soumise
 aux critères de retrait des contrats de compatibilité, aux E2E des deux chemins et aux validations finales ci-dessous.
 
+- [x] Matérialiser les entrées `specialist-task-v1` du chemin complet dans Evidence avant toute délégation A2A,
+  avec validation de contrat et liaison à la tâche, à la tentative et au commit source.
+
 ## Terminologie et périmètre de la suppression
 
 - [x] Distinguer dans le code et la documentation les modes d'exécution historiques (`PIPELINE`,

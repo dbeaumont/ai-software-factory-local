@@ -15,13 +15,14 @@ public final class TemporalActivityAdapters {
                                     SourceResolutionActivities sourceResolution,
                                     PipelineExecutionActivities pipeline,
                                     A2aActivitiesImpl a2a,
-                                    HierarchicalRoutingActivities routing) {
+                                    HierarchicalRoutingActivities routing,
+                                    HierarchicalExecutionActivities hierarchical) {
         java.util.LinkedHashMap<String, Object[]> configured = new java.util.LinkedHashMap<>();
         configured.put("context", new Object[]{sourceResolution, pipeline, routing});
         configured.put("llm", new Object[]{pipeline});
         configured.put("sandbox", new Object[]{patchIntegration, pipeline});
         configured.put("assurance", new Object[]{pipeline});
-        configured.put("evidence", new Object[]{pipeline});
+        configured.put("evidence", new Object[]{pipeline, hierarchical});
         configured.put("scm", new Object[]{pipeline});
         configured.put("workflow", new Object[]{a2a});
         registrations = Map.copyOf(configured);
