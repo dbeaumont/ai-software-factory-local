@@ -84,14 +84,14 @@ A2A distante.
 
 ## 3. Préserver la frontière de sécurité de l'inbox
 
-- [ ] Vérifier que `PostgresA2aNotificationInbox.admit` continue à comparer le digest canonique de deux callbacks
+- [x] Vérifier que `PostgresA2aNotificationInbox.admit` continue à comparer le digest canonique de deux callbacks
   portant la même séquence.
-- [ ] Vérifier qu'un callback rejoué avec un payload modifié reste rejeté avant l'envoi du signal Temporal.
-- [ ] Vérifier qu'un callback hors ordre reste rejeté conformément au contrat actuel de l'inbox.
-- [ ] Vérifier que la nouvelle équivalence n'est utilisée que dans l'état interne du workflow Temporal.
-- [ ] Ne pas mutualiser la méthode d'équivalence avec l'inbox : les deux composants protègent des frontières
+- [x] Vérifier qu'un callback rejoué avec un payload modifié reste rejeté avant l'envoi du signal Temporal.
+- [x] Vérifier qu'un callback hors ordre reste rejeté conformément au contrat actuel de l'inbox.
+- [x] Vérifier que la nouvelle équivalence n'est utilisée que dans l'état interne du workflow Temporal.
+- [x] Ne pas mutualiser la méthode d'équivalence avec l'inbox : les deux composants protègent des frontières
   différentes.
-- [ ] Ajouter, si nécessaire, un commentaire expliquant que l'inbox compare des livraisons du même canal alors que
+- [x] Ajouter, si nécessaire, un commentaire expliquant que l'inbox compare des livraisons du même canal alors que
   l'awaiter rapproche des représentations issues de canaux différents.
 
 ## 4. Ajouter les tests unitaires de régression
@@ -145,8 +145,8 @@ A2A distante.
 ## 7. Exécuter les validations locales
 
 - [x] Exécuter les tests ciblés de `A2aTaskAwaiterTest`.
-- [ ] Exécuter les tests ciblés de `TemporalA2aNotificationReceiverTest`.
-- [ ] Exécuter les tests ciblés de l'inbox PostgreSQL.
+- [x] Exécuter les tests ciblés de `TemporalA2aNotificationReceiverTest`.
+- [x] Exécuter les tests ciblés de l'inbox PostgreSQL.
 - [ ] Exécuter la suite de tests du module `apps/orchestrator`.
 - [ ] Exécuter les contrôles de formatage et d'analyse statique applicables au module.
 - [ ] Vérifier `git diff --check`.
