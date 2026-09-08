@@ -188,10 +188,10 @@ class SoftwareFactoryExecutionWorkflowV2Test {
 
             assertThat(result.status()).isEqualTo("PR_CREATED");
             assertThat(activities.roles).containsExactly(
-                    "architecture-agent", "code-agent", "developer", "test-agent", "security-agent",
-                    "independent-reviewer");
+                    "architecture-agent", "code-agent", "developer", "test-design", "test-agent",
+                    "security-agent", "independent-reviewer");
             assertThat(hierarchical.preparedRoles).containsExactly(
-                    "architecture-agent", "code-agent", "security-agent");
+                    "architecture-agent", "code-agent", "test-design", "test-agent", "security-agent");
             assertThat(deliveries).hasValue(1);
         }
     }
@@ -250,6 +250,8 @@ class SoftwareFactoryExecutionWorkflowV2Test {
             String id = switch (request.role()) {
                 case "architecture-agent" -> "assessment-1";
                 case "code-agent" -> "integration-proposal-1";
+                case "test-design" -> "test-strategy-1";
+                case "test-agent" -> "test-assessment-1";
                 case "security-agent" -> "security-assessment-1";
                 default -> throw new IllegalArgumentException(request.role());
             };

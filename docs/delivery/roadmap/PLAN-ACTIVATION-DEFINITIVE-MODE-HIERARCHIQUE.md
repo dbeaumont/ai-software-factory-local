@@ -300,6 +300,9 @@ refactor(factory): remove shadow canary and pipeline remnants
   tests, la qualité et la sécurité restent des contrôles déterministes.
 - [x] Raccorder au chemin V2 `HIERARCHICAL_PATH` les workflows enfants A2A natifs `architecture-agent`,
   `code-agent` et `security-agent`, avec entrées/résultats Evidence validés et contrôles déterministes conservés.
+- [x] Remplacer l'étape de compatibilité Test du chemin complet par la hiérarchie A2A native
+  `test-agent -> test-design` : stratégie validée avant l'exécution déterministe, puis évaluation validée et
+  projetée à partir des preuves de test.
 - [x] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
 - [ ] Tester le redémarrage de l'orchestrateur.
 - [ ] Tester une rotation de Build ID.

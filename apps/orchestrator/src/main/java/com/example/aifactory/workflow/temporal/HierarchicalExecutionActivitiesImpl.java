@@ -20,7 +20,7 @@ import java.util.Set;
 @Component
 public final class HierarchicalExecutionActivitiesImpl implements HierarchicalExecutionActivities {
     private static final Set<String> SPECIALIST_ROLES = Set.of(
-            "architecture-agent", "code-agent", "test-agent", "security-agent");
+            "architecture-agent", "code-agent", "test-design", "test-agent", "security-agent");
     private final TaskMemory memory;
     private final EvidenceRepository evidence;
     private final MultiAgentContractValidator contracts;
@@ -132,6 +132,7 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
             String documentId = switch (request.contract()) {
                 case "architecture-assessment-v1" -> document.path("assessment_id").asText();
                 case "integration-proposal-v1" -> document.path("proposal_id").asText();
+                case "test-strategy-v1" -> document.path("strategy_id").asText();
                 case "test-assessment-v1" -> document.path("assessment_id").asText();
                 case "security-assessment-v1" -> document.path("assessment_id").asText();
                 default -> throw new IllegalArgumentException("Unsupported hierarchical result contract");
@@ -145,8 +146,8 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                         "Code Agent integration plan accepted");
                 state.plan = new String(raw.content(), StandardCharsets.UTF_8);
             }
-            if ("security-agent".equals(request.role())) {
-                state.assuranceResults.put("security-agent", mapper.convertValue(document, java.util.Map.class));
+            if (Set.of("test-agent", "security-agent").contains(request.role())) {
+                state.assuranceResults.put(request.role(), mapper.convertValue(document, java.util.Map.class));
             }
             memory.project("hierarchical-result:" + request.role() + ':' + raw.digest(), state);
             return new AcceptedSpecialistResult(documentId,
@@ -202,6 +203,7 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
         return switch (contract) {
             case "architecture-assessment-v1" -> "architecture-agent";
             case "integration-proposal-v1" -> "code-agent";
+            case "test-strategy-v1" -> "test-design";
             case "test-assessment-v1" -> "test-agent";
             case "security-assessment-v1" -> "security-agent";
             default -> "";
