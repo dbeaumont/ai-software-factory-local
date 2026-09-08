@@ -260,6 +260,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
             if ("independent-reviewer".equals(role)) {
                 skills.add("independent-reviewer.integration-result-v1");
             }
+            if ("developer".equals(role)) skills.add("developer.code-task-v1");
             return new A2aContracts.AgentCardDescriptor(role,
                     URI.create("https://" + role + "/.well-known/agent-card.json"),
                     URI.create("https://" + role + "/a2a"), "JSONRPC", "1.0", "a".repeat(64),

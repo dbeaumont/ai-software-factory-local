@@ -5,6 +5,9 @@ import com.example.aifactory.a2a.A2aEvidencePartFactory;
 import com.example.aifactory.model.TaskState;
 import com.example.aifactory.service.IndependentReviewBundle;
 import com.example.aifactory.service.MultiAgentContractValidator;
+import com.example.aifactory.service.PatchIntegrator;
+import com.example.aifactory.service.PatchProposalValidator;
+import com.example.aifactory.service.PatchScopeValidator;
 import com.example.aifactory.workflow.EvidenceRepository;
 import com.example.aifactory.workflow.TaskMemory;
 import org.springframework.stereotype.Component;
@@ -169,6 +172,275 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
     }
 
     @Override
+    public List<DeveloperTask> prepareDeveloperTasks(PrepareDeveloperTasks request) {
+        requireValid(request);
+        TaskState state = memory.find(request.taskId()).orElseThrow(
+                () -> new IllegalArgumentException("Unknown hierarchical task"));
+        requireAttemptAndCommit(state, request.attemptId(), request.sourceCommit());
+        try {
+            var architecture = readAndValidate(request.taskId(), request.attemptId(),
+                    request.architectureReference(), "architecture-assessment-v1",
+                    Set.of("specialist-architecture"), "prepare-developer-tasks");
+            var integration = readAndValidate(request.taskId(), request.attemptId(),
+                    request.integrationReference(), "integration-proposal-v1",
+                    Set.of(request.delegationPlanId(), "code", request.architectureAssessmentId()),
+                    "prepare-developer-tasks");
+            if (!request.architectureAssessmentId().equals(architecture.path("assessment_id").asText())
+                    || !request.architectureAssessmentId().equals(
+                    integration.path("architecture_assessment_id").asText())) {
+                throw new SecurityException("Developer tasks are not bound to the accepted architecture");
+            }
+            Map<String, tools.jackson.databind.JsonNode> scopes = new LinkedHashMap<>();
+            architecture.path("recommended_code_scopes").forEach(scope ->
+                    scopes.put(scope.path("scope_id").asText(), scope));
+            Map<String, tools.jackson.databind.JsonNode> tasks = new LinkedHashMap<>();
+            Set<String> taskNodes = new java.util.LinkedHashSet<>();
+            integration.path("developer_tasks").forEach(task -> {
+                tasks.put(task.path("code_task_id").asText(), task);
+                taskNodes.add(task.path("node_id").asText());
+            });
+            if (tasks.isEmpty() || tasks.size() > 4 || tasks.size() != integration.path("developer_tasks").size()) {
+                throw new SecurityException("Integration proposal must contain one to four unique Developer tasks");
+            }
+            if (taskNodes.size() != tasks.size()) throw new SecurityException("Developer task nodes must be unique");
+            List<DeveloperTask> prepared = new java.util.ArrayList<>();
+            Set<String> completedTaskIds = new java.util.LinkedHashSet<>();
+            for (tools.jackson.databind.JsonNode orderedId : integration.path("application_order")) {
+                var task = tasks.remove(orderedId.asText());
+                if (task == null) throw new SecurityException("Developer application order is incomplete or duplicated");
+                java.util.LinkedHashSet<String> dependencies = new java.util.LinkedHashSet<>();
+                task.path("depends_on_task_ids").forEach(value -> dependencies.add(value.asText()));
+                if (!completedTaskIds.containsAll(dependencies)) {
+                    throw new SecurityException("Developer application order violates task dependencies");
+                }
+                var scope = scopes.get(task.path("scope_id").asText());
+                if (scope == null) throw new SecurityException("Developer task references an unknown Code scope");
+                prepared.add(storeDeveloperTask(request, state, task, scope));
+                completedTaskIds.add(orderedId.asText());
+            }
+            if (!tasks.isEmpty()) throw new SecurityException("Developer application order omits a Code task");
+            return List.copyOf(prepared);
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Cannot materialize hierarchical Developer tasks", failure));
+        }
+    }
+
+    @Override
+    public AcceptedDeveloperPatches acceptDeveloperPatches(AcceptDeveloperPatches request) {
+        requireValid(request);
+        TaskState state = memory.find(request.taskId()).orElseThrow(
+                () -> new IllegalArgumentException("Unknown hierarchical task"));
+        requireAttemptAndCommit(state, request.attemptId(), request.sourceCommit());
+        try {
+            PatchProposalValidator validator = new PatchProposalValidator(new PatchScopeValidator());
+            StringBuilder consolidated = new StringBuilder();
+            List<ReviewedSpecialistResult> reviewed = new java.util.ArrayList<>();
+            Set<String> proposalIds = new java.util.LinkedHashSet<>();
+            for (DeveloperPatchResult result : request.results()) {
+                var inputReference = specialistReference(result.task().inputReference());
+                var codeTask = readCodeTask(request.taskId(), request.attemptId(), inputReference);
+                var proposal = readAndValidate(request.taskId(), request.attemptId(), result.resultReference(),
+                        "patch-proposal-v1", Set.of(result.task().codeTaskId(), result.task().nodeId()),
+                        "accept-developer-patch");
+                requireDeveloperBinding(result.task(), codeTask, proposal, request.sourceCommit());
+                String rawPatch = proposal.path("patch").asText();
+                PatchProposalValidator.ValidatedPatch validated = validator.validate(codeTask, proposal, rawPatch);
+                byte[] content = validated.content().getBytes(StandardCharsets.UTF_8);
+                String expectedUri = "evidence://" + request.taskId() + '/' + request.attemptId()
+                        + "/code-patch/" + validated.digest();
+                String declaredUri = proposal.path("diff_artifact").path("uri").asText();
+                if (!expectedUri.equals(declaredUri)) {
+                    throw new SecurityException("Developer patch declares a non-canonical Evidence URI");
+                }
+                EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
+                        request.taskId(), request.attemptId(), "code-patch", "text/x-diff",
+                        content, validated.digest(), "workflow"));
+                if (!validated.digest().equals(stored.digest()) || !declaredUri.equals(stored.uri())
+                        || !"COMPLETE".equals(stored.status()) || stored.sizeBytes() != content.length) {
+                    throw new SecurityException("Developer patch Evidence differs from the validated proposal");
+                }
+                consolidated.append(validated.content());
+                EvidenceRepository.RawEvidence rawProposal = evidence.read(new EvidenceRepository.ReadRequest(
+                        request.taskId(), request.attemptId(), result.resultReference().uri(),
+                        "workflow", "project-developer-patch"));
+                if (!result.resultReference().digest().equals(rawProposal.digest())
+                        || !"agent-result".equals(rawProposal.type())
+                        || !"COMPLETE".equals(rawProposal.status())) {
+                    throw new SecurityException("Developer proposal changed before projection");
+                }
+                var proposalArtifact = new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                        rawProposal.uri(), rawProposal.digest(), rawProposal.content().length,
+                        rawProposal.status(), "ACCEPTED");
+                String proposalId = proposal.path("proposal_id").asText();
+                if (!proposalIds.add(proposalId)) {
+                    throw new SecurityException("Developer patch proposal IDs must be unique");
+                }
+                reviewed.add(new ReviewedSpecialistResult(proposalId, "developer", proposalArtifact));
+                state.recordArtifact(proposalId, "developer-patch-proposal", rawProposal.status(),
+                        rawProposal.classification(), rawProposal.uri(), rawProposal.digest(),
+                        rawProposal.content().length, true);
+            }
+            String combined = PatchIntegrator.normalize(consolidated.toString());
+            byte[] content = combined.getBytes(StandardCharsets.UTF_8);
+            String digest = PatchIntegrator.digestFor(combined);
+            EvidenceRepository.StoredEvidence candidate = evidence.store(new EvidenceRepository.StoreRequest(
+                    request.taskId(), request.attemptId(), "code-patch", "text/x-diff",
+                    content, digest, "workflow"));
+            if (!digest.equals(candidate.digest()) || !"COMPLETE".equals(candidate.status())) {
+                throw new SecurityException("Consolidated Developer patch Evidence is incomplete");
+            }
+            state.patch = combined;
+            state.recordArtifact("developer-patch-candidate", "code-patch", candidate.status(),
+                    candidate.classification(), candidate.uri(), candidate.digest(), candidate.sizeBytes(), true);
+            memory.project("hierarchical-developer-patches:" + digest, state);
+            return new AcceptedDeveloperPatches(
+                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                            candidate.uri(), candidate.digest(), candidate.sizeBytes(), candidate.status(), "GENERATED"),
+                    reviewed);
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Cannot accept hierarchical Developer patches", failure));
+        }
+    }
+
+    private DeveloperTask storeDeveloperTask(PrepareDeveloperTasks request, TaskState state,
+                                             tools.jackson.databind.JsonNode task,
+                                             tools.jackson.databind.JsonNode recommendedScope) throws Exception {
+        String nodeId = task.path("node_id").asText();
+        String codeTaskId = task.path("code_task_id").asText();
+        List<String> writePaths = new java.util.ArrayList<>();
+        recommendedScope.path("write_paths").forEach(path -> writePaths.add(path.asText()));
+        if (writePaths.stream().anyMatch(path -> path.equals(".git") || path.startsWith(".git/"))) {
+            throw new SecurityException("Developer write scope targets repository metadata");
+        }
+        java.util.LinkedHashSet<String> modules = new java.util.LinkedHashSet<>();
+        writePaths.forEach(path -> modules.add(path.contains("/") ? path.substring(0, path.indexOf('/')) : path));
+        Instant issuedAt = Instant.now(clock);
+        ObjectNode document = mapper.createObjectNode();
+        document.put("schema_version", "1").put("code_task_id", codeTaskId)
+                .put("task_id", request.taskId()).put("attempt_id", request.attemptId())
+                .put("delegation_plan_id", request.delegationPlanId()).put("node_id", nodeId)
+                .put("source_commit", request.sourceCommit())
+                .put("worktree_id", worktreeId(request.taskId(), request.attemptId(), nodeId))
+                .put("architecture_assessment_id", request.architectureAssessmentId())
+                .put("objective", state.request.requirement()).put("risk_class", state.request.routingFacts().risk());
+        ObjectNode scope = document.putObject("scope");
+        scope.put("repository_id", request.repositoryId());
+        ArrayNode moduleArray = scope.putArray("modules"); modules.forEach(moduleArray::add);
+        java.util.LinkedHashSet<String> readPaths = new java.util.LinkedHashSet<>(modules);
+        readPaths.addAll(writePaths);
+        ArrayNode reads = scope.putArray("read_paths"); readPaths.forEach(reads::add);
+        ArrayNode writes = scope.putArray("write_paths"); writePaths.forEach(writes::add);
+        scope.putArray("forbidden_paths").add(".git");
+        ArrayNode rules = scope.putArray("rules");
+        writePaths.forEach(path -> rules.addObject().put("kind", "FILE").put("access", "WRITE").put("path", path));
+        scope.put("max_changed_files", writePaths.size()).put("max_patch_bytes", 900_000);
+        document.put("scope_digest", TemporalIds.sha256(mapper.writeValueAsString(scope)));
+        ArrayNode dependencies = document.putArray("dependencies");
+        task.path("depends_on_task_ids").forEach(value -> dependencies.add(value.asText()));
+        ArrayNode criteria = document.putArray("acceptance_criteria");
+        task.path("success_criteria").forEach(value -> criteria.add(value.asText()));
+        ObjectNode budget = document.putObject("budget");
+        budget.put("max_turns", request.budget().maxTurns()).put("max_tokens", request.budget().maxTokens())
+                .put("max_cost_micros", request.budget().maxCostMicros())
+                .put("timeout_seconds", request.budget().timeoutSeconds());
+        document.putArray("required_approval_ids");
+        document.put("issued_at", issuedAt.toString())
+                .put("deadline", issuedAt.plusSeconds(request.budget().timeoutSeconds()).toString());
+        contracts.validate("code-task-v1", document, new MultiAgentContractValidator.ContractContext(
+                request.taskId(), request.attemptId(),
+                Set.of(request.delegationPlanId(), nodeId, request.architectureAssessmentId())));
+        byte[] content = mapper.writeValueAsBytes(document);
+        String digest = TemporalIds.sha256(new String(content, StandardCharsets.UTF_8));
+        EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
+                request.taskId(), request.attemptId(), "code-task", "application/json",
+                content, digest, "workflow"));
+        if (!digest.equals(stored.digest()) || !"COMPLETE".equals(stored.status())) {
+            throw new SecurityException("Stored Developer task differs from its validated document");
+        }
+        A2aContracts.Part reference = A2aEvidencePartFactory.reference(
+                codeTaskId, stored.uri(), stored.digest(), "code-task-v1", stored.sizeBytes());
+        java.util.LinkedHashSet<String> dependsOn = new java.util.LinkedHashSet<>();
+        task.path("depends_on_task_ids").forEach(value -> dependsOn.add(value.asText()));
+        return new DeveloperTask(nodeId, codeTaskId, Set.copyOf(dependsOn), reference);
+    }
+
+    private tools.jackson.databind.JsonNode readAndValidate(
+            String taskId, String attemptId, A2aActivities.EvidenceReference reference,
+            String contract, Set<String> allowedReferenceIds, String purpose) throws Exception {
+        if (reference == null || !contract.equals(reference.contract())
+                || reference.uri() == null || !reference.uri().startsWith("evidence://")
+                || reference.digest() == null || !reference.digest().matches("[0-9a-f]{64}")) {
+            throw new SecurityException("Hierarchical Evidence reference is invalid");
+        }
+        EvidenceRepository.RawEvidence raw = evidence.read(new EvidenceRepository.ReadRequest(
+                taskId, attemptId, reference.uri(), "workflow", purpose));
+        if (!reference.digest().equals(raw.digest()) || !"agent-result".equals(raw.type())
+                || !"COMPLETE".equals(raw.status())) {
+            throw new SecurityException("Hierarchical Evidence changed after validation");
+        }
+        return contracts.validate(contract, mapper.readTree(raw.content()),
+                new MultiAgentContractValidator.ContractContext(taskId, attemptId, allowedReferenceIds));
+    }
+
+    private tools.jackson.databind.JsonNode readCodeTask(
+            String taskId, String attemptId, A2aActivities.EvidenceReference reference) throws Exception {
+        if (reference == null || !"code-task-v1".equals(reference.contract())
+                || reference.uri() == null || !reference.uri().startsWith("evidence://")
+                || reference.digest() == null || !reference.digest().matches("[0-9a-f]{64}")) {
+            throw new SecurityException("Developer code task reference is invalid");
+        }
+        EvidenceRepository.RawEvidence raw = evidence.read(new EvidenceRepository.ReadRequest(
+                taskId, attemptId, reference.uri(), "workflow", "accept-developer-patch"));
+        if (!reference.digest().equals(raw.digest()) || !"code-task".equals(raw.type())
+                || !"COMPLETE".equals(raw.status())) {
+            throw new SecurityException("Developer code task changed after materialization");
+        }
+        var document = mapper.readTree(raw.content());
+        return contracts.validate("code-task-v1", document,
+                new MultiAgentContractValidator.ContractContext(taskId, attemptId, Set.of(
+                        document.path("delegation_plan_id").asText(), document.path("node_id").asText(),
+                        document.path("architecture_assessment_id").asText())));
+    }
+
+    private static A2aActivities.EvidenceReference specialistReference(A2aContracts.Part part) {
+        if (part == null || part.data() == null) throw new SecurityException("Developer task reference is missing");
+        return new A2aActivities.EvidenceReference(String.valueOf(part.data().get("reference_id")),
+                String.valueOf(part.data().get("uri")), String.valueOf(part.data().get("digest")),
+                String.valueOf(part.data().get("contract")));
+    }
+
+    private static void requireDeveloperBinding(DeveloperTask task, tools.jackson.databind.JsonNode codeTask,
+                                                tools.jackson.databind.JsonNode proposal, String sourceCommit) {
+        for (String field : List.of("code_task_id", "node_id", "worktree_id", "scope_digest")) {
+            if (!codeTask.path(field).asText().equals(proposal.path(field).asText())) {
+                throw new SecurityException("Developer proposal changed its " + field);
+            }
+        }
+        if (!task.codeTaskId().equals(proposal.path("code_task_id").asText())
+                || !task.nodeId().equals(proposal.path("node_id").asText())
+                || !sourceCommit.equals(proposal.path("source_commit").asText())) {
+            throw new SecurityException("Developer proposal is outside its workflow identity");
+        }
+    }
+
+    private static String worktreeId(String taskId, String attemptId, String nodeId) {
+        return "worktree-" + nodeId + '-' + TemporalIds.sha256(
+                String.join("\u0000", taskId, attemptId, nodeId)).substring(0, 16);
+    }
+
+    private static void requireAttemptAndCommit(TaskState state, String attemptId, String sourceCommit) {
+        if (!attemptId.equals(state.workflowAttemptId) || !sourceCommit.equals(state.sourceCommit)) {
+            throw new SecurityException("Hierarchical input is outside the projected workflow attempt");
+        }
+    }
+
+    @Override
     public PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request) {
         requireValid(request);
         TaskState state = memory.find(request.taskId()).orElseThrow(
@@ -283,21 +555,50 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
 
     private static void requireValid(PrepareIndependentReview request) {
         Set<String> requiredRoles = Set.of(
-                "architecture-agent", "code-agent", "test-design", "test-agent", "security-agent");
+                "architecture-agent", "code-agent", "developer", "test-design", "test-agent", "security-agent");
         if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
                 || request.repositoryId() == null || !request.repositoryId().matches("[a-z0-9][a-z0-9-]{1,62}")
                 || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
-                || request.reviewedResults().size() != requiredRoles.size()
+                || request.reviewedResults().size() < requiredRoles.size()
+                || request.reviewedResults().size() > 9
                 || request.reviewedResults().stream().anyMatch(java.util.Objects::isNull)
                 || !request.reviewedResults().stream().map(ReviewedSpecialistResult::role)
-                .collect(java.util.stream.Collectors.toSet()).equals(requiredRoles)
+                .collect(java.util.stream.Collectors.toSet()).containsAll(requiredRoles)
                 || request.reviewedResults().stream().anyMatch(result -> result.documentId() == null
                 || !result.documentId().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
-                || !SPECIALIST_ROLES.contains(result.role()) || result.artifact() == null)) {
+                || !requiredRoles.contains(result.role()) || result.artifact() == null)) {
             throw new IllegalArgumentException("Hierarchical independent review request is invalid");
         }
         requiredArtifactDigests(request.artifacts());
+    }
+
+    private static void requireValid(PrepareDeveloperTasks request) {
+        if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
+                || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.repositoryId() == null || !request.repositoryId().matches("[a-z0-9][a-z0-9-]{1,62}")
+                || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || request.delegationPlanId() == null
+                || !request.delegationPlanId().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
+                || request.architectureAssessmentId() == null
+                || !request.architectureAssessmentId().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
+                || request.architectureReference() == null || request.integrationReference() == null
+                || request.budget() == null) {
+            throw new IllegalArgumentException("Hierarchical Developer task preparation is invalid");
+        }
+    }
+
+    private static void requireValid(AcceptDeveloperPatches request) {
+        if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
+                || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || request.results().isEmpty() || request.results().size() > 4
+                || request.results().stream().anyMatch(result -> result == null || result.task() == null
+                || result.resultReference() == null)
+                || request.results().stream().map(result -> result.task().nodeId()).distinct().count()
+                != request.results().size()) {
+            throw new IllegalArgumentException("Hierarchical Developer patch acceptance is invalid");
+        }
     }
 
     private static String roleFor(String contract) {

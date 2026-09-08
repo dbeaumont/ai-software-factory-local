@@ -261,6 +261,27 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                             request.reference().uri(), request.reference().digest(), 64, "COMPLETE", "ACCEPTED"));
         }
 
+        @Override public java.util.List<DeveloperTask> prepareDeveloperTasks(PrepareDeveloperTasks request) {
+            String digest = TemporalIds.sha256("developer-task");
+            var input = com.example.aifactory.a2a.A2aEvidencePartFactory.reference(
+                    "code-task-1", "evidence://task-1/pipeline-1/code-task/" + digest,
+                    digest, "code-task-v1", 64);
+            return java.util.List.of(new DeveloperTask(
+                    "developer-1", "code-task-1", java.util.Set.of(), input));
+        }
+
+        @Override public AcceptedDeveloperPatches acceptDeveloperPatches(AcceptDeveloperPatches request) {
+            var reference = request.results().getFirst().resultReference();
+            var artifact = new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                    "evidence://task-1/pipeline-1/code-patch/" + reference.digest(),
+                    reference.digest(), 64, "COMPLETE", "GENERATED");
+            var proposal = new ReviewedSpecialistResult(
+                    "patch-proposal-1", "developer",
+                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                            reference.uri(), reference.digest(), 64, "COMPLETE", "ACCEPTED"));
+            return new AcceptedDeveloperPatches(artifact, java.util.List.of(proposal));
+        }
+
         @Override public PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request) {
             var patch = request.artifacts().get("patch");
             var manifest = new com.example.aifactory.workflow.EvidenceRepository.StoredManifest(

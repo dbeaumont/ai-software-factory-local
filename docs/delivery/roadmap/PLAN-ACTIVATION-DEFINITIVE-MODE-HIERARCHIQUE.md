@@ -306,6 +306,9 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [x] Exécuter la revue indépendante du chemin complet via son workflow enfant A2A dédié, sur un manifeste
   hiérarchique immuable lié au patch, aux contrôles déterministes et aux résultats spécialistes validés ; l'accord
   humain final porte sur ce même manifeste.
+- [x] Remplacer la génération de patch Developer de compatibilité sur le chemin complet par un à quatre workflows
+  enfants A2A `developer.code-task-v1`, dont les scopes sont résolus depuis l'analyse Architecture, les entrées
+  sont matérialisées dans Evidence et les propositions sont vérifiées puis projetées avant le sandbox.
 - [x] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
 - [ ] Tester le redémarrage de l'orchestrateur.
 - [ ] Tester une rotation de Build ID.

@@ -22,16 +22,14 @@
   },
   "$defs": {
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
-    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "developerTask": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["code_task_id", "node_id", "scope_id", "scope_digest", "depends_on_task_ids", "success_criteria"],
+      "required": ["code_task_id", "node_id", "scope_id", "depends_on_task_ids", "success_criteria"],
       "properties": {
         "code_task_id": {"$ref": "#/$defs/id"},
         "node_id": {"$ref": "#/$defs/id"},
         "scope_id": {"$ref": "#/$defs/id"},
-        "scope_digest": {"$ref": "#/$defs/digest"},
         "depends_on_task_ids": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
         "success_criteria": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 512}}
       }

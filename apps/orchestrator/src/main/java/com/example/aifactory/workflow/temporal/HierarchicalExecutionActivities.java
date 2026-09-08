@@ -20,6 +20,12 @@ public interface HierarchicalExecutionActivities {
     @ActivityMethod(name = "AcceptHierarchicalSpecialistResult")
     AcceptedSpecialistResult acceptSpecialistResult(AcceptSpecialistResult request);
 
+    @ActivityMethod(name = "PrepareHierarchicalDeveloperTasks")
+    List<DeveloperTask> prepareDeveloperTasks(PrepareDeveloperTasks request);
+
+    @ActivityMethod(name = "AcceptHierarchicalDeveloperPatches")
+    AcceptedDeveloperPatches acceptDeveloperPatches(AcceptDeveloperPatches request);
+
     @ActivityMethod(name = "PrepareHierarchicalIndependentReview")
     PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request);
 
@@ -49,6 +55,35 @@ public interface HierarchicalExecutionActivities {
 
     record AcceptedSpecialistResult(String documentId,
                                     PipelineStepContracts.ArtifactReference artifact) {}
+
+    record PrepareDeveloperTasks(String taskId, String attemptId, String repositoryId, String sourceCommit,
+                                 String delegationPlanId, String architectureAssessmentId,
+                                 A2aActivities.EvidenceReference architectureReference,
+                                 A2aActivities.EvidenceReference integrationReference,
+                                 DelegationWorkflow.Budget budget) {}
+
+    record DeveloperTask(String nodeId, String codeTaskId, Set<String> dependsOn,
+                         A2aContracts.Part inputReference) {
+        public DeveloperTask {
+            dependsOn = dependsOn == null ? Set.of() : Set.copyOf(dependsOn);
+        }
+    }
+
+    record AcceptDeveloperPatches(String taskId, String attemptId, String sourceCommit,
+                                  List<DeveloperPatchResult> results) {
+        public AcceptDeveloperPatches {
+            results = results == null ? List.of() : List.copyOf(results);
+        }
+    }
+
+    record DeveloperPatchResult(DeveloperTask task, A2aActivities.EvidenceReference resultReference) {}
+
+    record AcceptedDeveloperPatches(PipelineStepContracts.ArtifactReference patchCandidate,
+                                    List<ReviewedSpecialistResult> reviewedResults) {
+        public AcceptedDeveloperPatches {
+            reviewedResults = reviewedResults == null ? List.of() : List.copyOf(reviewedResults);
+        }
+    }
 
     record PrepareIndependentReview(String taskId, String attemptId, String repositoryId, String sourceCommit,
                                     Map<String, PipelineStepContracts.ArtifactReference> artifacts,

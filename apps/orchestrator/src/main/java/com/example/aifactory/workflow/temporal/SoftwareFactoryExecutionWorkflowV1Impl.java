@@ -37,6 +37,7 @@ abstract class ProductionExecutionWorkflowRuntime {
     private final Map<String, A2aActivities.EvidenceReference> hierarchicalResults = new LinkedHashMap<>();
     private final List<HierarchicalExecutionActivities.ReviewedSpecialistResult> reviewedSpecialistResults =
             new java.util.ArrayList<>();
+    private String architectureAssessmentId;
     private SoftwareFactoryWorkflow.Request activeRequest;
     private SoftwareFactoryWorkflow.ApprovalRequest activeApprovalRequest;
 
@@ -64,7 +65,7 @@ abstract class ProductionExecutionWorkflowRuntime {
                 runPipelineAgent(source, request, resolved, planningRole, "PLAN", "plan",
                         Map.of("requirement", request.requirementDigest()), null, 0);
             }
-            generateAndRepairPatch(source, request, resolved);
+            generateAndRepairPatch(source, request, resolved, selectedPath, routingDecisionId);
             runStep(source, request, resolved, "apply-patch", TemporalActivityPolicies.Kind.SANDBOX,
                     Map.of("patch", artifacts.get("patch").digest()));
             if ("SHORT_CODE_PATH".equals(selectedPath)) {
@@ -287,11 +288,16 @@ abstract class ProductionExecutionWorkflowRuntime {
 
     private void generateAndRepairPatch(SoftwareFactoryWorkflow.SourceLocation source,
                                         SoftwareFactoryWorkflow.Request request,
-                                        SourceResolutionActivities.Result resolved) {
+                                        SourceResolutionActivities.Result resolved,
+                                        String selectedPath, String routingDecisionId) {
         currentStep = "generate-patch";
         PipelineExecutionActivities sandbox = pipeline(source, "sandbox", TemporalActivityPolicies.Kind.SANDBOX);
-        runPipelineAgent(source, request, resolved, "developer", "GENERATE_PATCH", "generate-patch-candidate",
-                Map.of("plan", artifacts.get("plan").digest()), null, 0);
+        if ("HIERARCHICAL_PATH".equals(selectedPath)) {
+            generateHierarchicalPatch(source, request, resolved, routingDecisionId);
+        } else {
+            runPipelineAgent(source, request, resolved, "developer", "GENERATE_PATCH", "generate-patch-candidate",
+                    Map.of("plan", artifacts.get("plan").digest()), null, 0);
+        }
         for (int repairAttempt = 0; repairAttempt <= 2; repairAttempt++) {
             var validationCommand = command(request, resolved, "validate-patch-candidate", Map.of(
                     "candidate", artifacts.get("patch-candidate").digest(),
@@ -330,6 +336,7 @@ abstract class ProductionExecutionWorkflowRuntime {
                 "architecture-agent", "architecture-assessment-v1", architecture,
                 java.util.Set.of("specialist-architecture"), false);
         artifacts.put("architecture", acceptedArchitecture.artifact());
+        architectureAssessmentId = acceptedArchitecture.documentId();
         reviewedSpecialistResults.add(reviewed("architecture-agent", acceptedArchitecture));
         hierarchicalResults.put("architecture", architecture);
 
@@ -346,6 +353,47 @@ abstract class ProductionExecutionWorkflowRuntime {
         artifacts.put("plan", acceptedCode.artifact());
         reviewedSpecialistResults.add(reviewed("code-agent", acceptedCode));
         hierarchicalResults.put("code", code);
+    }
+
+    private void generateHierarchicalPatch(SoftwareFactoryWorkflow.SourceLocation source,
+                                           SoftwareFactoryWorkflow.Request request,
+                                           SourceResolutionActivities.Result resolved,
+                                           String routingDecisionId) {
+        currentStep = "developer-tasks";
+        DelegationWorkflow.Budget budget = new DelegationWorkflow.Budget(12_000, 12_000_000, 6, 900);
+        HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
+                HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
+                        TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
+        List<HierarchicalExecutionActivities.DeveloperTask> tasks = hierarchical.prepareDeveloperTasks(
+                new HierarchicalExecutionActivities.PrepareDeveloperTasks(
+                        request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(),
+                        routingDecisionId, architectureAssessmentId, hierarchicalResults.get("architecture"),
+                        hierarchicalResults.get("code"), budget));
+        List<HierarchicalExecutionActivities.DeveloperPatchResult> patches = new java.util.ArrayList<>();
+        for (HierarchicalExecutionActivities.DeveloperTask task : tasks) {
+            currentStep = task.nodeId();
+            DelegationWorkflow child = io.temporal.workflow.Workflow.newChildWorkflowStub(
+                    DelegationWorkflow.class, io.temporal.workflow.ChildWorkflowOptions.newBuilder()
+                            .setWorkflowId(TemporalIds.delegation(
+                                    request.taskId(), request.attemptId(), task.nodeId()))
+                            .build());
+            DelegationWorkflow.Result result = child.run(new DelegationWorkflow.Request(
+                    request.taskId(), request.attemptId(), task.nodeId(), "code", "developer",
+                    resolved.sourceCommit(), request.requirementDigest(), 100,
+                    task.dependsOn(), budget, task.inputReference()));
+            pipelineDelegations.add(result);
+            if (!"READY_FOR_ACTIVITIES".equals(result.status()) || result.artifacts().size() != 1) {
+                throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                        "Developer did not produce one usable patch proposal", "BUSINESS_REJECTION");
+            }
+            patches.add(new HierarchicalExecutionActivities.DeveloperPatchResult(
+                    task, result.artifacts().getFirst()));
+        }
+        var accepted = hierarchical.acceptDeveloperPatches(
+                new HierarchicalExecutionActivities.AcceptDeveloperPatches(
+                        request.taskId(), request.attemptId(), resolved.sourceCommit(), patches));
+        artifacts.put("patch-candidate", accepted.patchCandidate());
+        reviewedSpecialistResults.addAll(accepted.reviewedResults());
     }
 
     private HierarchicalExecutionActivities.AcceptedSpecialistResult runTestDesign(
