@@ -227,6 +227,7 @@ sequenceDiagram
 - Docker Desktop ou Docker Engine avec Compose v2
 - `make`, `curl`, `git`, `bash`
 - JDK 25 et Maven 3.6.3+ pour compiler ou tester les modules Java hors Docker (les images Docker embarquent déjà Temurin 25)
+- Avec VS Code et l'extension Red Hat Java, désactiver l'auto-build (`"java.autobuild.enabled": false`) afin d'éviter qu'il ne modifie `target/classes` pendant une compilation Maven lancée dans le terminal
 - Python 3 (pour les scripts de bootstrap)
 - `jq` recommandé pour manipuler les réponses API
 - Environ 16 Go de RAM recommandés pour la stack complète
