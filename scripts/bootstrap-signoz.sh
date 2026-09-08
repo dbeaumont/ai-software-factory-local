@@ -70,29 +70,37 @@ trap cleanup EXIT
 
 auth=(-H "Authorization: Bearer $token")
 
-NEXT_SIGNOZ_PASSWORD="Aa1!$(openssl rand -hex 30)"
-password_payload=$(jq -nc --arg old "$SIGNOZ_ROOT_PASSWORD" --arg new "$NEXT_SIGNOZ_PASSWORD" \
-  '{oldPassword:$old,newPassword:$new}')
-password_status=$(curl -sS -o /tmp/signoz-password-rotation.json -w '%{http_code}' \
-  -X PUT "$SIGNOZ_BASE_URL/api/v2/users/me/factor_password" "${auth[@]}" \
-  -H 'Content-Type: application/json' --data "$password_payload")
-if [ "$password_status" = "204" ]; then
-  set_env "SIGNOZ_ROOT_PASSWORD" "$NEXT_SIGNOZ_PASSWORD"
-  SIGNOZ_ROOT_PASSWORD="$NEXT_SIGNOZ_PASSWORD"
-  chmod 600 .env
-  login_payload=$(jq -nc --arg email "$SIGNOZ_ROOT_EMAIL" --arg password "$SIGNOZ_ROOT_PASSWORD" \
-    --arg orgId "$org_id" '{email:$email,password:$password,orgId:$orgId}')
-  session=$(curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/sessions/email_password" \
-    -H 'Content-Type: application/json' --data "$login_payload")
-  token=$(printf '%s' "$session" | jq -er '.data.accessToken')
-  auth=(-H "Authorization: Bearer $token")
-  echo "Rotated SigNoz root password and saved it to .env"
-elif [ "$password_status" = "501" ]; then
-  echo "SigNoz does not support password rotation in this version; retaining SIGNOZ_ROOT_PASSWORD from .env" >&2
+# The Compose one-shot job has a read-only filesystem and receives credentials
+# through its environment; it cannot safely propagate a rotated password back
+# to the host. Password rotation is therefore attempted only by the host-side
+# `make bootstrap-signoz` invocation, where .env is present and writable.
+if [ -f .env ]; then
+  NEXT_SIGNOZ_PASSWORD="Aa1!$(openssl rand -hex 30)"
+  password_payload=$(jq -nc --arg old "$SIGNOZ_ROOT_PASSWORD" --arg new "$NEXT_SIGNOZ_PASSWORD" \
+    '{oldPassword:$old,newPassword:$new}')
+  password_status=$(curl -sS -o /tmp/signoz-password-rotation.json -w '%{http_code}' \
+    -X PUT "$SIGNOZ_BASE_URL/api/v2/users/me/factor_password" "${auth[@]}" \
+    -H 'Content-Type: application/json' --data "$password_payload")
+  if [ "$password_status" = "204" ]; then
+    set_env "SIGNOZ_ROOT_PASSWORD" "$NEXT_SIGNOZ_PASSWORD"
+    SIGNOZ_ROOT_PASSWORD="$NEXT_SIGNOZ_PASSWORD"
+    chmod 600 .env
+    login_payload=$(jq -nc --arg email "$SIGNOZ_ROOT_EMAIL" --arg password "$SIGNOZ_ROOT_PASSWORD" \
+      --arg orgId "$org_id" '{email:$email,password:$password,orgId:$orgId}')
+    session=$(curl -fsS -X POST "$SIGNOZ_BASE_URL/api/v2/sessions/email_password" \
+      -H 'Content-Type: application/json' --data "$login_payload")
+    token=$(printf '%s' "$session" | jq -er '.data.accessToken')
+    auth=(-H "Authorization: Bearer $token")
+    echo "Rotated SigNoz root password and saved it to .env"
+  elif [ "$password_status" = "501" ]; then
+    echo "SigNoz does not support root-password rotation in this version; retaining SIGNOZ_ROOT_PASSWORD from .env" >&2
+  else
+    echo "SigNoz root password rotation failed with HTTP $password_status" >&2
+    cat /tmp/signoz-password-rotation.json >&2
+    exit 1
+  fi
 else
-  echo "SigNoz root password rotation failed with HTTP $password_status" >&2
-  cat /tmp/signoz-password-rotation.json >&2
-  exit 1
+  echo "Skipping SigNoz root-password rotation in the read-only Compose provisioning job"
 fi
 
 # A valid session can be issued while the authenticated API modules are still

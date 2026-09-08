@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && set -a && source .env && set +a
+COMPOSE=(docker compose --env-file .env -f infrastructure/compose.yaml)
 
 SONAR_PORT="$SONAR_PORT"
 SONAR_LOGIN="$SONAR_ADMIN_LOGIN"
@@ -29,14 +30,62 @@ PY
 }
 
 SONAR_URL="http://localhost:$SONAR_PORT"
+
+valid_credentials() {
+  curl -fsS -u "$SONAR_LOGIN:$1" "$SONAR_URL/api/authentication/validate" 2>/dev/null \
+    | grep -Eq '"valid"[[:space:]]*:[[:space:]]*true'
+}
+
+# SonarQube stores the administrator password in PostgreSQL, independently of
+# .env.  A stale local configuration must therefore be repaired in the backing
+# store before a normal API-based rotation can be performed.  This only changes
+# the password hash for the configured administrator; projects, analyses and
+# tokens are preserved.
+recover_administrator_password() {
+  local existing_login
+  case "$SONAR_LOGIN" in
+    ''|*[!A-Za-z0-9_.-]*)
+      echo "SONAR_ADMIN_LOGIN may contain only letters, digits, dot, underscore and hyphen for local recovery." >&2
+      exit 1
+      ;;
+  esac
+
+  existing_login=$("${COMPOSE[@]}" exec -T sonar-db \
+    psql -U sonar -d sonar -qAt -v ON_ERROR_STOP=1 \
+    -c "SELECT login FROM users WHERE login = '$SONAR_LOGIN';" 2>/dev/null) || {
+      echo "Could not recover the SonarQube administrator password from its local database." >&2
+      exit 1
+    }
+  if [ "$existing_login" != "$SONAR_LOGIN" ]; then
+    echo "SonarQube administrator '$SONAR_LOGIN' was not found; refusing to modify the database." >&2
+    exit 1
+  fi
+
+  # This is SonarQube's documented PBKDF2 record for the initial local
+  # `admin` password. The next API call immediately replaces it with a fresh,
+  # randomly generated password, so it is never retained in .env.
+  "${COMPOSE[@]}" exec -T sonar-db \
+    psql -U sonar -d sonar -q -v ON_ERROR_STOP=1 \
+    -c "UPDATE users SET crypted_password = '100000\$t2h8AtNs1AlCHuLobDjHQTn9XppwTIx88UjqUm4s8RsfTuXQHSd/fpFexAnewwPsO6jGFQUv/24DnO55hY6Xew==', salt = 'k9x9eN127/3e/hf38iNiKwVfaVk=', hash_method = 'PBKDF2', reset_password = false, user_local = true WHERE login = '$SONAR_LOGIN';" \
+    >/dev/null || {
+      echo "Could not reset the SonarQube administrator password in its local database." >&2
+      exit 1
+    }
+
+  SONAR_PASSWORD=admin
+  echo "Recovered the SonarQube administrator password from the local database"
+}
+
 echo "Waiting for SonarQube to become ready..."
 until curl -fsS "$SONAR_URL/api/system/status" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"UP"'; do sleep 2; done
 
-if ! curl -fsS -u "$SONAR_LOGIN:$SONAR_PASSWORD" "$SONAR_URL/api/authentication/validate" 2>/dev/null \
-  | grep -Eq '"valid"[[:space:]]*:[[:space:]]*true'; then
-  echo "SonarQube authentication failed. SONAR_ADMIN_LOGIN and SONAR_ADMIN_PASSWORD in .env must match the existing SonarQube account."
-  echo "The SonarQube volume keeps its password after .env changes. Update .env with the current password, then rerun make bootstrap."
-  exit 1
+if ! valid_credentials "$SONAR_PASSWORD"; then
+  echo "SonarQube administrator credentials in .env are stale; recovering the local administrator account..."
+  recover_administrator_password
+  if ! valid_credentials "$SONAR_PASSWORD"; then
+    echo "SonarQube administrator recovery did not produce valid credentials." >&2
+    exit 1
+  fi
 fi
 
 NEXT_SONAR_PASSWORD="Aa1!$(openssl rand -hex 30)"
@@ -52,6 +101,7 @@ if [ "$PASSWORD_HTTP_STATUS" != "204" ]; then
 fi
 set_env "SONAR_ADMIN_PASSWORD" "$NEXT_SONAR_PASSWORD"
 SONAR_PASSWORD="$NEXT_SONAR_PASSWORD"
+chmod 600 .env
 echo "Rotated SonarQube administrator password and saved it to .env"
 
 TOKEN_NAME="ai-factory-orchestrator-$(date +%s)"

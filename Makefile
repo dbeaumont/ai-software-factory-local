@@ -314,7 +314,7 @@ bootstrap: init
 	$(log-target)
 	@echo -e "$(BLUE)[bootstrap 1/4] Creating demo repositories and refreshing the Gitea token...$(NC)"
 	./scripts/bootstrap-gitea.sh
-	@echo -e "$(BLUE)[bootstrap 2/4] Creating or validating the SonarQube token...$(NC)"
+	@echo -e "$(BLUE)[bootstrap 2/4] Rotating SonarQube credentials and creating a fresh token...$(NC)"
 	./scripts/bootstrap-sonar.sh
 	@echo -e "$(BLUE)[bootstrap 3/4] Recreating credential consumers and waiting for health...$(NC)"
 	$(COMPOSE) --profile a2a-full up -d --wait --wait-timeout 300 --no-deps --force-recreate sandbox-execution-mcp scm-delivery-mcp orchestrator
