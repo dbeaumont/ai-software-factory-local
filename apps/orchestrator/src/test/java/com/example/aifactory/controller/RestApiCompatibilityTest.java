@@ -7,6 +7,8 @@ import com.example.aifactory.model.HumanDecisionResponse;
 import com.example.aifactory.model.ManifestApprovalRequest;
 import com.example.aifactory.model.OperatorActionRequest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +21,7 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RestApiCompatibilityTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -66,6 +69,24 @@ class RestApiCompatibilityTest {
         assertThat(response.path("dagVersion").asText()).isEqualTo("hierarchical-v2");
         assertThat(response.path("globalBudget").propertyNames()).containsAll(Set.of(
                 "maxTokens", "maxCostMicros", "maxTurns", "usedTokens", "usedCostMicros", "usedTurns"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"PIPELINE", "HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY"})
+    void rejectsLegacyExecutionModesAtThePublicAdmissionBoundary(String mode) {
+        String payload = """
+                {"repositoryUrl":"https://example.test/repo.git","baseBranch":"main",
+                 "requirement":"change","llmMode":"CLOUD","executionMode":"%s",
+                 "routingFacts":{"qualification":"QUALIFIED","risk":"R1","modules":1,"domains":1,
+                 "estimatedFiles":1,"independentCodeScopes":1,"impacts":[],"materialDecisionOpen":false,
+                 "inputsComplete":true,"contradictory":false,"budgetAvailable":true}}
+                """.formatted(mode);
+
+        ObjectMapper strictMapper = tools.jackson.databind.json.JsonMapper.builder()
+                .enable(tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .build();
+        assertThatThrownBy(() -> strictMapper.readValue(payload, TaskRequest.class))
+                .isInstanceOf(tools.jackson.databind.exc.UnrecognizedPropertyException.class);
     }
 
     private static void assertRoute(Method method, Class<?> annotationType, String path, boolean accepted) {

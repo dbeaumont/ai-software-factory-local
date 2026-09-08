@@ -267,15 +267,15 @@ refactor(factory): remove shadow canary and pipeline remnants
 ### Tests unitaires
 
 - [x] Vérifier que toute nouvelle admission utilise la V2 hiérarchique.
-- [ ] Vérifier qu'aucun contrat public n'accepte `PIPELINE`, `HIERARCHICAL_SHADOW` ou `HIERARCHICAL_CANARY`.
+- [x] Vérifier qu'aucun contrat public n'accepte `PIPELINE`, `HIERARCHICAL_SHADOW` ou `HIERARCHICAL_CANARY`.
 - [x] Tester la sélection de `SHORT_CODE_PATH`.
 - [x] Vérifier que `SHORT_CODE_PATH` ne sélectionne ni `PIPELINE_BASELINE`, ni les rôles historiques Planner et
   Reviewer.
 - [x] Tester la sélection de `HIERARCHICAL_PATH`.
 - [x] Tester la sélection de `HUMAN_TRIAGE`.
-- [ ] Vérifier les décisions automatiques des risques R0 et R1.
-- [ ] Vérifier l'approbation avant effet externe pour R2.
-- [ ] Vérifier le triage ou le refus pour R3 et R4.
+- [x] Vérifier les décisions automatiques des risques R0 et R1.
+- [x] Vérifier l'approbation avant effet externe pour R2.
+- [x] Vérifier le triage ou le refus pour R3 et R4.
 - [x] Vérifier le comportement fail-closed en cas de budget absent ou d'entrée contradictoire.
 - [x] Vérifier que le kill switch refuse toute nouvelle exécution.
 

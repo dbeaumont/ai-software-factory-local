@@ -15,6 +15,9 @@ logging: &structured_logging
 spring:
   application:
     name: ai-factory-orchestrator
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
   datasource:
     url: ${AI_FACTORY_DATABASE_URL:jdbc:postgresql://orchestrator-db:5432/ai_factory}
     username: ${AI_FACTORY_DATABASE_USER:ai_factory}
