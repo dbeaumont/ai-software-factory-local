@@ -35,14 +35,14 @@ class TemporalWorkflowCoordinatorTest {
             retryReconciler);
 
     @Test
-    void startsV1OnTheWorkflowQueueAndProjectsItsRunIdentity() {
+    void startsHierarchicalV2OnTheWorkflowQueueAndProjectsItsRunIdentity() {
         TaskState task = task();
         String workflowId = TemporalIds.workflow(task.id, PipelineStepContracts.INITIAL_ATTEMPT_ID);
         when(commands.start(any(), any())).thenReturn(
                 new TemporalWorkflowCommands.ExecutionIdentity(workflowId, "run-123"));
         ArgumentCaptor<WorkflowOptions> options = ArgumentCaptor.forClass(WorkflowOptions.class);
-        ArgumentCaptor<SoftwareFactoryWorkflow.Request> request =
-                ArgumentCaptor.forClass(SoftwareFactoryWorkflow.Request.class);
+        ArgumentCaptor<SoftwareFactoryExecutionWorkflowV2.Request> request =
+                ArgumentCaptor.forClass(SoftwareFactoryExecutionWorkflowV2.Request.class);
 
         coordinator.start(task);
 
@@ -57,14 +57,14 @@ class TemporalWorkflowCoordinatorTest {
                 .isEqualTo("pipeline-1");
         assertThat(options.getValue().getTypedSearchAttributes().get(TemporalSearchAttributes.REPOSITORY_ID))
                 .isEqualTo("customer-api");
-        assertThat(options.getValue().getTypedSearchAttributes().get(TemporalSearchAttributes.EXECUTION_MODE))
-                .isEqualTo("PIPELINE");
+        assertThat(options.getValue().getTypedSearchAttributes().getUntypedValues())
+                .doesNotContainKey(TemporalSearchAttributes.EXECUTION_MODE);
         assertThat(request.getValue().attemptId()).isEqualTo("pipeline-1");
         assertThat(request.getValue().repositoryId()).isEqualTo("customer-api");
         assertThat(request.getValue().sourceCommit()).isEqualTo("UNRESOLVED");
         assertThat(request.getValue().sourceLocation().repositoryUrl()).isEqualTo(task.request.repositoryUrl());
         assertThat(request.getValue().sourceLocation().taskQueues()).isEqualTo(properties.taskQueues());
-        assertThat(task.executionMode).isEqualTo("PIPELINE");
+        assertThat(task.executionMode).isEqualTo("HIERARCHICAL_ACTIVE");
         assertThat(task.workflowRunId).isEqualTo("run-123");
         assertThat(task.dagVersion).isEqualTo("build-1");
     }
@@ -162,8 +162,8 @@ class TemporalWorkflowCoordinatorTest {
         String workflowId = TemporalIds.workflow(task.id, "pipeline-2");
         when(commands.start(any(), any())).thenReturn(
                 new TemporalWorkflowCommands.ExecutionIdentity(workflowId, "run-retry"));
-        ArgumentCaptor<SoftwareFactoryWorkflow.Request> request =
-                ArgumentCaptor.forClass(SoftwareFactoryWorkflow.Request.class);
+        ArgumentCaptor<SoftwareFactoryExecutionWorkflowV2.Request> request =
+                ArgumentCaptor.forClass(SoftwareFactoryExecutionWorkflowV2.Request.class);
 
         coordinator.retry(task, "code-1", new OperatorActionRequest("worker restarted", "operator"));
 

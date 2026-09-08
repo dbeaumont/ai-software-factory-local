@@ -15,10 +15,10 @@ final class TemporalWorkflowCommands {
         this.client = client;
     }
 
-    ExecutionIdentity start(WorkflowOptions options, SoftwareFactoryWorkflow.Request request) {
+    ExecutionIdentity start(WorkflowOptions options, SoftwareFactoryExecutionWorkflowV2.Request request) {
         TemporalPayloadGuard.requireSafeStart(options, request);
-        SoftwareFactoryExecutionWorkflowV1 workflow = client.newWorkflowStub(
-                SoftwareFactoryExecutionWorkflowV1.class, options);
+        SoftwareFactoryExecutionWorkflowV2 workflow = client.newWorkflowStub(
+                SoftwareFactoryExecutionWorkflowV2.class, options);
         try {
             WorkflowExecution execution = WorkflowClient.start(workflow::run, request);
             return new ExecutionIdentity(execution.getWorkflowId(), execution.getRunId());
@@ -43,9 +43,9 @@ final class TemporalWorkflowCommands {
         signal(workflowId, workflow -> workflow.cancel(signal));
     }
 
-    private void signal(String workflowId, java.util.function.Consumer<SoftwareFactoryExecutionWorkflowV1> signal) {
+    private void signal(String workflowId, java.util.function.Consumer<SoftwareFactoryExecutionWorkflowV2> signal) {
         try {
-            signal.accept(client.newWorkflowStub(SoftwareFactoryExecutionWorkflowV1.class, workflowId));
+            signal.accept(client.newWorkflowStub(SoftwareFactoryExecutionWorkflowV2.class, workflowId));
         } catch (RuntimeException failure) {
             TemporalCommandConflictException.Reason reason = classifySignalFailure(failure);
             if (reason == TemporalCommandConflictException.Reason.WORKFLOW_ABSENT)

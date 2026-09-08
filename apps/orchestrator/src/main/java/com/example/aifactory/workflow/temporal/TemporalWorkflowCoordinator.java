@@ -48,21 +48,19 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
         SoftwareFactoryWorkflow.SourceLocation source = new SoftwareFactoryWorkflow.SourceLocation(
                 task.request.repositoryUrl(), task.request.effectiveBranch(),
                 properties.taskQueues().get("context"), properties.taskQueues());
-        SoftwareFactoryWorkflow.Request request = new SoftwareFactoryWorkflow.Request(
+        SoftwareFactoryExecutionWorkflowV2.Request request = new SoftwareFactoryExecutionWorkflowV2.Request(
                 task.id, attemptId, ScmDeliveryGateway.repositoryId(task.request.repositoryUrl()),
-                PipelineStepContracts.UNRESOLVED_SOURCE_COMMIT, task.request.requirement(), List.of(), null,
-                List.of(), null, null, null, source, SoftwareFactoryWorkflow.WorkflowExecutionMode.PIPELINE,
-                lineage);
+                PipelineStepContracts.UNRESOLVED_SOURCE_COMMIT, task.request.requirement(), source, lineage);
         TemporalWorkflowCommands.ExecutionIdentity execution = commands.start(WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(properties.taskQueues().get("workflow"))
                 .setWorkflowIdReusePolicy(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
-                .setTypedSearchAttributes(TemporalSearchAttributes.forRequest(request))
+                .setTypedSearchAttributes(TemporalSearchAttributes.forV2Request(request))
                 .build(), request);
         if (!workflowId.equals(execution.workflowId())) {
             throw new SecurityException("Temporal started an unexpected workflow identity");
         }
-        task.bindExecution("PIPELINE", execution.runId(), properties.buildId(),
+        task.bindExecution("HIERARCHICAL_ACTIVE", execution.runId(), properties.buildId(),
                 PIPELINE_MAX_TOKENS, PIPELINE_MAX_COST_MICROS, PIPELINE_MAX_TURNS);
     }
 

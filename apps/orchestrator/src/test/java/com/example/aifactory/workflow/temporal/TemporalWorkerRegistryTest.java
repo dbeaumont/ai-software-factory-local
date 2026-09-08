@@ -41,7 +41,7 @@ class TemporalWorkerRegistryTest {
             verify(factory).newWorker(eq(queue), any(WorkerOptions.class));
         });
         verify(workers.get("workflow")).registerWorkflowImplementationTypes(
-                SoftwareFactoryExecutionWorkflowV1Impl.class,
+                SoftwareFactoryExecutionWorkflowV2Impl.class,
                 A2aDelegationWorkflowImpl.class,
                 PatchIntegrationWorkflowImpl.class,
                 A2aIndependentReviewWorkflowImpl.class);

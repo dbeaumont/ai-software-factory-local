@@ -50,7 +50,7 @@ public final class TemporalWorkerRegistry {
         REQUIRED.stream().sorted().forEach(kind -> registered.put(kind,
                 factory.newWorker(taskQueues.get(kind), options)));
         registered.get("workflow").registerWorkflowImplementationTypes(
-                SoftwareFactoryExecutionWorkflowV1Impl.class,
+                SoftwareFactoryExecutionWorkflowV2Impl.class,
                 A2aDelegationWorkflowImpl.class,
                 PatchIntegrationWorkflowImpl.class,
                 A2aIndependentReviewWorkflowImpl.class);

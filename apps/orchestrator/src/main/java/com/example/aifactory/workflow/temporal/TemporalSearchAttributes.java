@@ -14,8 +14,9 @@ final class TemporalSearchAttributes {
     static final SearchAttributeKey<String> REPOSITORY_ID = SearchAttributeKey.forKeyword("AiFactoryRepositoryId");
     static final SearchAttributeKey<String> EXECUTION_MODE = SearchAttributeKey.forKeyword("AiFactoryExecutionMode");
 
-    private static final Set<SearchAttributeKey<?>> ALLOWED = Set.of(
+    private static final Set<SearchAttributeKey<?>> V1_ALLOWED = Set.of(
             TASK_ID, ATTEMPT_ID, REPOSITORY_ID, EXECUTION_MODE);
+    private static final Set<SearchAttributeKey<?>> V2_ALLOWED = Set.of(TASK_ID, ATTEMPT_ID, REPOSITORY_ID);
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}");
     private static final Set<String> EXECUTION_MODES = Set.of("PIPELINE", "DELEGATION");
 
@@ -33,14 +34,27 @@ final class TemporalSearchAttributes {
         return attributes;
     }
 
+    static SearchAttributes forV2Request(SoftwareFactoryExecutionWorkflowV2.Request request) {
+        if (request == null) throw rejected();
+        SearchAttributes attributes = SearchAttributes.newBuilder()
+                .set(TASK_ID, request.taskId())
+                .set(ATTEMPT_ID, request.attemptId())
+                .set(REPOSITORY_ID, request.repositoryId())
+                .build();
+        requireSafe(attributes);
+        return attributes;
+    }
+
     static void requireSafe(SearchAttributes attributes) {
-        if (attributes == null || attributes.size() != ALLOWED.size()) throw rejected();
+        if (attributes == null) throw rejected();
         Map<SearchAttributeKey<?>, Object> values = attributes.getUntypedValues();
-        if (!values.keySet().equals(ALLOWED)) throw rejected();
+        if (!values.keySet().equals(V1_ALLOWED) && !values.keySet().equals(V2_ALLOWED)) throw rejected();
         requireIdentifier(attributes.get(TASK_ID));
         requireIdentifier(attributes.get(ATTEMPT_ID));
         requireIdentifier(attributes.get(REPOSITORY_ID));
-        if (!EXECUTION_MODES.contains(attributes.get(EXECUTION_MODE))) throw rejected();
+        if (values.keySet().equals(V1_ALLOWED) && !EXECUTION_MODES.contains(attributes.get(EXECUTION_MODE))) {
+            throw rejected();
+        }
     }
 
     private static void requireIdentifier(String value) {

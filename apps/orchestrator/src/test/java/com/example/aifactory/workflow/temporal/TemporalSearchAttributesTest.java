@@ -18,6 +18,15 @@ class TemporalSearchAttributesTest {
     }
 
     @Test
+    void acceptsV2WithoutTheLegacyExecutionModeAttribute() {
+        var request = new SoftwareFactoryExecutionWorkflowV2.Request(
+                "task-123", "attempt-2", "customer-api", "UNRESOLVED", "requirement", null, null);
+
+        assertThatCode(() -> TemporalSearchAttributes.requireSafe(
+                TemporalSearchAttributes.forV2Request(request))).doesNotThrowAnyException();
+    }
+
+    @Test
     void rejectsMissingAdditionalAndUnboundedValues() {
         assertThatThrownBy(() -> TemporalSearchAttributes.requireSafe(SearchAttributes.newBuilder()
                 .set(TemporalSearchAttributes.TASK_ID, "task-1").build()))

@@ -100,23 +100,26 @@ docs(architecture): adopt hierarchical-only execution
 
 ## 2. Introduire une frontière Temporal compatible
 
-- [ ] Conserver le workflow V1 et son ancien contrat tant que des historiques compatibles existent.
-- [ ] Introduire un type de workflow V2 réservé aux nouvelles admissions hiérarchiques.
-- [ ] En V2, rendre le comportement hiérarchique implicite.
-- [ ] Supprimer `WorkflowExecutionMode` du nouveau contrat V2.
-- [ ] Ne plus sérialiser un choix entre `PIPELINE` et `HIERARCHICAL_ACTIVE` dans les nouvelles entrées de workflow.
-- [ ] Définir un attribut de recherche stable, par exemple `HIERARCHICAL`, si l'exploitation en a besoin.
+- [x] Conserver le workflow V1 et son ancien contrat tant que des historiques compatibles existent.
+- [x] Introduire un type de workflow V2 réservé aux nouvelles admissions hiérarchiques.
+- [x] En V2, rendre le comportement hiérarchique implicite.
+- [x] Supprimer `WorkflowExecutionMode` du nouveau contrat V2.
+- [x] Ne plus sérialiser un choix entre `PIPELINE` et `HIERARCHICAL_ACTIVE` dans les nouvelles entrées de workflow.
+- [x] Définir un attribut de recherche stable, par exemple `HIERARCHICAL`, si l'exploitation en a besoin. _(Le type
+  immuable `SoftwareFactoryExecutionWorkflowV2` suffit à identifier cette architecture ; aucun attribut constant
+  supplémentaire n'est persisté.)_
 - [ ] Enregistrer V1 et V2 avec des Build IDs Temporal distincts.
-- [ ] Router toutes les nouvelles tâches vers V2 dans `TemporalWorkflowCoordinator`.
-- [ ] Empêcher le worker V2 de prendre en charge un historique V1 incompatible.
+- [x] Router toutes les nouvelles tâches vers V2 dans `TemporalWorkflowCoordinator`.
+- [x] Empêcher le worker V2 de prendre en charge un historique V1 incompatible. _(Le nouveau registre n'enregistre
+  que l'implémentation du type V2.)_
 - [ ] Conserver le worker V1 uniquement pour le drainage.
-- [ ] Ajouter les tests de sérialisation et de validation du contrat V2.
+- [x] Ajouter les tests de sérialisation et de validation du contrat V2.
 
 ### Critères de sortie du lot 2
 
-- [ ] Toute nouvelle admission démarre le workflow V2 hiérarchique.
-- [ ] Les historiques V1 continuent à être rejoués sans non-déterminisme.
-- [ ] Aucun nouveau workflow ne persiste une ancienne valeur de mode.
+- [x] Toute nouvelle admission démarre le workflow V2 hiérarchique.
+- [x] Les historiques V1 continuent à être rejoués sans non-déterminisme.
+- [x] Aucun nouveau workflow ne persiste une ancienne valeur de mode.
 
 ### Commit proposé
 
