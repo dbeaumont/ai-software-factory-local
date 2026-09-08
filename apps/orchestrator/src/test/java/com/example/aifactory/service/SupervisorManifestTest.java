@@ -36,6 +36,8 @@ class SupervisorManifestTest {
                 .containsExactlyElementsOf(catalogRole.mayDelegateTo());
         assertThat((List<String>) manifest.get("allowed_tools"))
                 .containsExactlyElementsOf(catalogRole.tools());
+        assertThat((List<String>) manifest.get("input_contracts"))
+                .contains("specialist-task-v1");
         assertThat((List<String>) manifest.get("output_contracts"))
                 .containsExactly("delegation-plan-v1", "supervisor-decision-v1");
         assertThat((Map<String, Object>) manifest.get("default_budget"))

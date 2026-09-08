@@ -44,7 +44,7 @@ class A2aInputSkillMappingTest {
                     assertThat(A2aMediaTypes.isSupported(media.asText())).as(media.asText()).isTrue());
         });
         assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
-        assertThat(actual).hasSize(38);
+        assertThat(actual).hasSize(39);
     }
 
     @SuppressWarnings("unchecked")

@@ -4,7 +4,7 @@
   "title": "CodeTask v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "code_task_id", "task_id", "attempt_id", "delegation_plan_id", "node_id", "source_commit", "worktree_id", "architecture_assessment_id", "objective", "risk_class", "scope", "scope_digest", "dependencies", "acceptance_criteria", "budget", "required_approval_ids", "issued_at", "deadline"],
+  "required": ["schema_version", "code_task_id", "task_id", "attempt_id", "delegation_plan_id", "node_id", "source_commit", "worktree_id", "objective", "risk_class", "scope", "scope_digest", "dependencies", "acceptance_criteria", "budget", "required_approval_ids", "issued_at", "deadline"],
   "properties": {
     "schema_version": {"const": "1"},
     "code_task_id": {"$ref": "#/$defs/id"},

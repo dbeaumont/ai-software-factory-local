@@ -102,7 +102,7 @@ public final class A2aDelegationWorkflowImpl implements DelegationWorkflow {
             case "test-agent", "test-evidence" -> "test-assessment-v1";
             case "security-agent", "security-findings", "threat-model" -> "security-assessment-v1";
             case "independent-reviewer" -> "independent-review-v1";
-            case "supervisor" -> "supervisor-decision-v1";
+            case "supervisor" -> "delegation-plan-v1";
             default -> "specialist-result-v1";
         };
     }

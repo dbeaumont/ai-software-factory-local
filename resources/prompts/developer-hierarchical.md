@@ -9,7 +9,8 @@ migration, changement d'API, infrastructure ou sécurité hors de l'autorisation
 est insuffisant, retourne un blocage au coordinateur au lieu de l'élargir.
 
 Retourne uniquement un objet JSON conforme à `patch-proposal-v1`, lié au même `code_task_id`, `task_id`,
-`attempt_id`, `node_id`, `source_commit`, `worktree_id` et `scope_digest`. Le champ `patch` contient le diff unifié
+`attempt_id`, `node_id`, `source_commit`, `worktree_id` et `scope_digest`, ainsi qu'à
+`architecture_assessment_id` lorsqu'il est présent sur le chemin complet. Le champ `patch` contient le diff unifié
 canonique complet ; `patch_digest`, `diff_artifact.digest` et `diff_artifact.size_bytes` doivent décrire exactement
 ce contenu UTF-8. L'URI `diff_artifact.uri` est l'URI Evidence attendue, que l'hôte publiera après validation. La
 proposition n'autorise ni l'application ni l'intégration du patch. Tu n'appelles aucun outil sandbox, SCM,

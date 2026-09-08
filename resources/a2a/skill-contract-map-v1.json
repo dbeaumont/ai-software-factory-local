@@ -3,6 +3,17 @@
   "protocol_version": "1.0",
   "inputs": [
     {
+      "skill_id": "supervisor.specialist-task-v1",
+      "role": "supervisor",
+      "input_contract": "specialist-task-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/specialist-task-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
       "skill_id": "architecture-agent.specialist-task-v1",
       "role": "architecture-agent",
       "input_contract": "specialist-task-v1",
