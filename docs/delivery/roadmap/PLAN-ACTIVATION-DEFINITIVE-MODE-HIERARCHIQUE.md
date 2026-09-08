@@ -8,10 +8,25 @@
   `HIERARCHICAL_CANARY` et `PIPELINE_BASELINE`.
 - [ ] Conserver la compatibilité de replay des historiques Temporal existants pendant leur drainage.
 - [ ] Remplacer le rollback fonctionnel vers `PIPELINE` par un confinement fail-closed et un rollback de build.
-- [ ] Corriger `TASK-MEMORY-EVIDENCE-OPERATIONS.md` afin qu'il décrive Temporal, PostgreSQL et Evidence MCP tels
+- [x] Corriger `TASK-MEMORY-EVIDENCE-OPERATIONS.md` afin qu'il décrive Temporal, PostgreSQL et Evidence MCP tels
   qu'ils fonctionnent actuellement.
 - [x] Ne pas confondre les anciens modes hiérarchiques avec les mécanismes `MCP_SHADOW`, qui appartiennent à une
   autre frontière et doivent faire l'objet d'une décision séparée.
+
+## Écart bloquant découvert pendant l'exécution
+
+La livraison A reste interdite tant que les trois points suivants ne sont pas résolus :
+
+- [ ] Remplacer dans `SoftwareFactoryExecutionWorkflowV2Impl` la délégation interne vers
+  `SoftwareFactoryExecutionWorkflowV1Impl` par une orchestration V2 native.
+- [ ] Raccorder `WorkflowRoutingService` au chemin de production ; il n'est actuellement consommé que par les
+  tests et ne décide donc d'aucune nouvelle admission réelle.
+- [ ] Ajouter à la frontière d'admission une source vérifiable pour les faits requis par le routage
+  (`qualification`, risque, modules, domaines, fichiers estimés, scopes indépendants, impacts, contradiction et
+  budget). `TaskRequest` ne transporte aujourd'hui que dépôt, branche, besoin et configuration LLM.
+
+Sans ces corrections, V2 masque le parcours compatible V1, et choisir un chemin à partir du seul texte du besoin
+reviendrait à fabriquer des faits de risque. Aucun build ne doit être promu sur cette base.
 
 ## Terminologie et périmètre de la suppression
 
