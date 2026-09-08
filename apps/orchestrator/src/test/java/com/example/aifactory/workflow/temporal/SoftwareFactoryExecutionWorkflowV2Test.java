@@ -1,5 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.model.TaskRoutingFacts;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowClient;
@@ -138,6 +139,63 @@ class SoftwareFactoryExecutionWorkflowV2Test {
         }
     }
 
+    @Test
+    void executesArchitectureAndCodeAsNativeHierarchicalChildren() {
+        AtomicInteger deliveries = new AtomicInteger();
+        var activities = new SoftwareFactoryExecutionWorkflowV1Test.TestActivities(deliveries);
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            var workflowWorker = environment.newWorker("test-workflow");
+            workflowWorker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryExecutionWorkflowV2Impl.class, A2aDelegationWorkflowImpl.class);
+            workflowWorker.registerActivitiesImplementations(activities);
+            var contextWorker = environment.newWorker("test-context");
+            contextWorker.registerActivitiesImplementations(activities,
+                    (HierarchicalRoutingActivities) request -> new HierarchicalRoutingActivities.Decision(
+                            "c".repeat(64), "routing-policy-v1", "1", Map.of("risk", "R1"),
+                            "hierarchical-path", "HIERARCHICAL_PATH", List.of("Cross-module scope"),
+                            List.of("supervisor", "architecture-agent", "code-agent", "test-agent",
+                                    "security-agent", "independent-reviewer"), "NONE"));
+            var hierarchical = new HierarchicalFixture();
+            for (String queue : List.of("test-llm", "test-sandbox", "test-assurance", "test-scm")) {
+                environment.newWorker(queue).registerActivitiesImplementations(activities);
+            }
+            environment.newWorker("test-evidence").registerActivitiesImplementations(activities, hierarchical);
+            environment.start();
+            SoftwareFactoryExecutionWorkflowV2 workflow = environment.getWorkflowClient().newWorkflowStub(
+                    SoftwareFactoryExecutionWorkflowV2.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId("ai-factory/task-1/pipeline-1-hierarchical")
+                            .setTaskQueue("test-workflow").build());
+            TaskRoutingFacts facts = new TaskRoutingFacts("QUALIFIED", "R1", 2, 2, 4, 1,
+                    java.util.Set.of("PUBLIC_API"), false, true, false, true);
+            var request = new SoftwareFactoryExecutionWorkflowV2.Request(
+                    "task-1", "pipeline-1", "customer-api", "UNRESOLVED", "requirement",
+                    new SoftwareFactoryWorkflow.SourceLocation(
+                            "http://gitea:3000/aiadmin/customer-api.git", "main", "test-context",
+                            Map.of("workflow", "test-workflow", "context", "test-context", "llm", "test-llm",
+                                    "sandbox", "test-sandbox", "assurance", "test-assurance",
+                                    "evidence", "test-evidence", "scm", "test-scm")), null, facts);
+
+            WorkflowClient.start(workflow::run, request);
+            long deadline = System.nanoTime() + java.time.Duration.ofSeconds(5).toNanos();
+            while (!"WAITING_APPROVAL".equals(workflow.status()) && System.nanoTime() < deadline) {
+                Thread.onSpinWait();
+            }
+            workflow.approve(new SoftwareFactoryWorkflow.ApprovalSignal(
+                    "task-1", "pipeline-1", "b".repeat(64), "c".repeat(64),
+                    "APPROVE", "operator@example.test", "2026-09-08T00:00:00Z"));
+            SoftwareFactoryWorkflow.Result result = WorkflowStub.fromTyped(workflow)
+                    .getResult(SoftwareFactoryWorkflow.Result.class);
+
+            assertThat(result.status()).isEqualTo("PR_CREATED");
+            assertThat(activities.roles).containsExactly(
+                    "architecture-agent", "code-agent", "developer", "test-agent", "security-agent",
+                    "independent-reviewer");
+            assertThat(hierarchical.preparedRoles).containsExactly(
+                    "architecture-agent", "code-agent", "security-agent");
+            assertThat(deliveries).hasValue(1);
+        }
+    }
+
     private static final class TriageProjectionActivities implements PipelineExecutionActivities {
         private final AtomicInteger sourceBindings = new AtomicInteger();
         private final AtomicInteger routingRejections = new AtomicInteger();
@@ -173,6 +231,31 @@ class SoftwareFactoryExecutionWorkflowV2Test {
         }
         private static AssertionError unsupported() {
             return new AssertionError("A triage route must not execute pipeline activities");
+        }
+    }
+
+    private static final class HierarchicalFixture implements HierarchicalExecutionActivities {
+        private final java.util.List<String> preparedRoles = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        @Override public A2aContracts.Part prepareSpecialistTask(PrepareSpecialistTask request) {
+            preparedRoles.add(request.role());
+            String digest = TemporalIds.sha256(request.role());
+            return com.example.aifactory.a2a.A2aEvidencePartFactory.reference(
+                    "specialist-" + request.nodeId(),
+                    "evidence://task-1/pipeline-1/specialist-task/" + digest,
+                    digest, "specialist-task-v1", 64);
+        }
+
+        @Override public AcceptedSpecialistResult acceptSpecialistResult(AcceptSpecialistResult request) {
+            String id = switch (request.role()) {
+                case "architecture-agent" -> "assessment-1";
+                case "code-agent" -> "integration-proposal-1";
+                case "security-agent" -> "security-assessment-1";
+                default -> throw new IllegalArgumentException(request.role());
+            };
+            return new AcceptedSpecialistResult(id,
+                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                            request.reference().uri(), request.reference().digest(), 64, "COMPLETE", "ACCEPTED"));
         }
     }
 }

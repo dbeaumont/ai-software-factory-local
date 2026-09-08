@@ -17,7 +17,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl extends ProductionExec
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
     public SoftwareFactoryWorkflow.Result run(SoftwareFactoryWorkflow.Request request) {
-        return execute(request, null, false, null);
+        return execute(request, null, false, null, null);
     }
 }
 
@@ -34,12 +34,13 @@ abstract class ProductionExecutionWorkflowRuntime {
     private final A2aTaskAwaiter a2aTasks = new A2aTaskAwaiter();
     private final A2aActivities.Stubs a2a = A2aActivities.newStubs();
     private final List<DelegationWorkflow.Result> pipelineDelegations = new java.util.ArrayList<>();
+    private final Map<String, A2aActivities.EvidenceReference> hierarchicalResults = new LinkedHashMap<>();
     private SoftwareFactoryWorkflow.Request activeRequest;
     private SoftwareFactoryWorkflow.ApprovalRequest activeApprovalRequest;
 
     protected final SoftwareFactoryWorkflow.Result execute(
             SoftwareFactoryWorkflow.Request request, SourceResolutionActivities.Result admittedSource,
-            boolean sourceAlreadyBound, String selectedPath) {
+            boolean sourceAlreadyBound, String selectedPath, String routingDecisionId) {
         requireProductionExecutionMode(request);
         SoftwareFactoryWorkflow.SourceLocation source = request == null ? null : request.sourceLocation();
         if (source == null) throw new IllegalArgumentException("Production workflow source location is required");
@@ -52,9 +53,14 @@ abstract class ProductionExecutionWorkflowRuntime {
         if (!sourceAlreadyBound) bindSource(source, request, resolved);
         try {
             throwIfCancelled();
-            String planningRole = "SHORT_CODE_PATH".equals(selectedPath) ? "supervisor" : "architecture-agent";
-            runPipelineAgent(source, request, resolved, planningRole, "PLAN", "plan",
-                    Map.of("requirement", request.requirementDigest()), null, 0);
+            if ("HIERARCHICAL_PATH".equals(selectedPath)) {
+                runArchitectureAndCode(source, request, resolved, routingDecisionId);
+            } else {
+                String planningRole = "SHORT_CODE_PATH".equals(selectedPath)
+                        ? "supervisor" : "architecture-agent";
+                runPipelineAgent(source, request, resolved, planningRole, "PLAN", "plan",
+                        Map.of("requirement", request.requirementDigest()), null, 0);
+            }
             generateAndRepairPatch(source, request, resolved);
             runStep(source, request, resolved, "apply-patch", TemporalActivityPolicies.Kind.SANDBOX,
                     Map.of("patch", artifacts.get("patch").digest()));
@@ -69,6 +75,9 @@ abstract class ProductionExecutionWorkflowRuntime {
                     Map.of("tests", artifacts.get("tests").digest()));
             runStep(source, request, resolved, "security", TemporalActivityPolicies.Kind.ASSURANCE,
                     Map.of("quality", artifacts.get("quality").digest()));
+            if ("HIERARCHICAL_PATH".equals(selectedPath)) {
+                runSecuritySpecialist(source, request, resolved, routingDecisionId);
+            }
             runPipelineAgent(source, request, resolved, "independent-reviewer", "REVIEW", "review", Map.of(
                     "plan", artifacts.get("plan").digest(), "patch", artifacts.get("patch").digest(),
                     "tests", artifacts.get("tests").digest(), "quality", artifacts.get("quality").digest(),
@@ -284,6 +293,104 @@ abstract class ProductionExecutionWorkflowRuntime {
                     validation.validationError(), repairAttempt + 1);
             throwIfCancelled();
         }
+    }
+
+    private void runArchitectureAndCode(SoftwareFactoryWorkflow.SourceLocation source,
+                                        SoftwareFactoryWorkflow.Request request,
+                                        SourceResolutionActivities.Result resolved,
+                                        String routingDecisionId) {
+        if (routingDecisionId == null || !routingDecisionId.matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")) {
+            throw new IllegalArgumentException("Hierarchical execution requires its routing decision ID");
+        }
+        var architecture = runHierarchicalSpecialist(source, request, resolved, routingDecisionId,
+                "architecture", "architecture-agent", List.of(), java.util.Set.of(),
+                java.util.Set.of("context.list_tree", "context.search_code", "context.read_file",
+                        "context.get_repository_rules", "context.get_dependencies", "context.get_symbols"),
+                List.of("Return a source-bound architecture assessment"));
+        var acceptedArchitecture = acceptHierarchicalSpecialist(source, request, resolved,
+                "architecture-agent", "architecture-assessment-v1", architecture,
+                java.util.Set.of("specialist-architecture"), false);
+        artifacts.put("architecture", acceptedArchitecture.artifact());
+        hierarchicalResults.put("architecture", architecture);
+
+        var code = runHierarchicalSpecialist(source, request, resolved, routingDecisionId,
+                "code", "code-agent", List.of(new HierarchicalExecutionActivities.InputEvidence(
+                        "SPECIALIST_RESULT", architecture.uri(), architecture.digest())), java.util.Set.of("architecture"),
+                java.util.Set.of("context.list_tree", "context.search_code", "context.get_repository_rules"),
+                List.of("Return bounded Developer tasks and their safe integration order"));
+        var acceptedCode = acceptHierarchicalSpecialist(source, request, resolved,
+                "code-agent", "integration-proposal-v1", code,
+                java.util.Set.of(routingDecisionId, "code", acceptedArchitecture.documentId()), true);
+        artifacts.put("integration-plan", acceptedCode.artifact());
+        artifacts.put("plan", acceptedCode.artifact());
+        hierarchicalResults.put("code", code);
+    }
+
+    private void runSecuritySpecialist(SoftwareFactoryWorkflow.SourceLocation source,
+                                       SoftwareFactoryWorkflow.Request request,
+                                       SourceResolutionActivities.Result resolved,
+                                       String routingDecisionId) {
+        var deterministic = artifacts.get("security");
+        var security = runHierarchicalSpecialist(source, request, resolved, routingDecisionId,
+                "security-agent", "security-agent", List.of(
+                        new HierarchicalExecutionActivities.InputEvidence("SPECIALIST_RESULT",
+                                hierarchicalResults.get("architecture").uri(),
+                                hierarchicalResults.get("architecture").digest()),
+                        new HierarchicalExecutionActivities.InputEvidence("SPECIALIST_RESULT",
+                                hierarchicalResults.get("code").uri(), hierarchicalResults.get("code").digest()),
+                        new HierarchicalExecutionActivities.InputEvidence(
+                                "EVIDENCE", deterministic.uri(), deterministic.digest())),
+                java.util.Set.of("architecture", "code"),
+                java.util.Set.of("context.search_code", "context.read_file", "context.get_dependencies",
+                        "context.get_symbols", "evidence.get_summary"),
+                List.of("Assess the deterministic security evidence without weakening its findings"));
+        var accepted = acceptHierarchicalSpecialist(source, request, resolved,
+                "security-agent", "security-assessment-v1", security, java.util.Set.of(), false);
+        artifacts.put("security-assessment", accepted.artifact());
+        hierarchicalResults.put("security", security);
+    }
+
+    private A2aActivities.EvidenceReference runHierarchicalSpecialist(
+            SoftwareFactoryWorkflow.SourceLocation source, SoftwareFactoryWorkflow.Request request,
+            SourceResolutionActivities.Result resolved, String routingDecisionId, String nodeId, String role,
+            List<HierarchicalExecutionActivities.InputEvidence> inputs, java.util.Set<String> dependsOn,
+            java.util.Set<String> allowedTools, List<String> successCriteria) {
+        currentStep = nodeId;
+        DelegationWorkflow.Budget budget = new DelegationWorkflow.Budget(10_000, 10_000_000, 6, 600);
+        HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
+                HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
+                        TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
+        A2aContracts.Part input = hierarchical.prepareSpecialistTask(
+                new HierarchicalExecutionActivities.PrepareSpecialistTask(
+                        request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(),
+                        routingDecisionId, nodeId, "supervisor", role, inputs, java.util.Set.of("."),
+                        java.util.Set.of(), allowedTools, budget, successCriteria));
+        DelegationWorkflow child = io.temporal.workflow.Workflow.newChildWorkflowStub(
+                DelegationWorkflow.class, io.temporal.workflow.ChildWorkflowOptions.newBuilder()
+                        .setWorkflowId(TemporalIds.delegation(request.taskId(), request.attemptId(), nodeId))
+                        .build());
+        DelegationWorkflow.Result result = child.run(new DelegationWorkflow.Request(
+                request.taskId(), request.attemptId(), nodeId, "supervisor", role,
+                resolved.sourceCommit(), request.requirementDigest(), 100, dependsOn, budget, input));
+        pipelineDelegations.add(result);
+        if (!"READY_FOR_ACTIVITIES".equals(result.status()) || result.artifacts().size() != 1) {
+            throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                    "Hierarchical specialist did not produce one usable result", "BUSINESS_REJECTION");
+        }
+        return result.artifacts().getFirst();
+    }
+
+    private HierarchicalExecutionActivities.AcceptedSpecialistResult acceptHierarchicalSpecialist(
+            SoftwareFactoryWorkflow.SourceLocation source, SoftwareFactoryWorkflow.Request request,
+            SourceResolutionActivities.Result resolved, String role, String contract,
+            A2aActivities.EvidenceReference reference, java.util.Set<String> allowedReferenceIds,
+            boolean activateAsCodePlan) {
+        HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
+                HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
+                        TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
+        return hierarchical.acceptSpecialistResult(new HierarchicalExecutionActivities.AcceptSpecialistResult(
+                request.taskId(), request.attemptId(), resolved.sourceCommit(), role, contract, reference,
+                allowedReferenceIds, activateAsCodePlan));
     }
 
     private void runPipelineAgent(SoftwareFactoryWorkflow.SourceLocation source,

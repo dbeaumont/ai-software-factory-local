@@ -145,6 +145,9 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                         "Code Agent integration plan accepted");
                 state.plan = new String(raw.content(), StandardCharsets.UTF_8);
             }
+            if ("security-agent".equals(request.role())) {
+                state.assuranceResults.put("security-agent", mapper.convertValue(document, java.util.Map.class));
+            }
             memory.project("hierarchical-result:" + request.role() + ':' + raw.digest(), state);
             return new AcceptedSpecialistResult(documentId,
                     new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(

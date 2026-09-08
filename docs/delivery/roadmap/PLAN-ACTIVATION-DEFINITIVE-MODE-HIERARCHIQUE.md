@@ -298,6 +298,8 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [x] Exécuter le chemin V2 `SHORT_CODE_PATH` jusqu'à l'approbation et la livraison dans l'environnement Temporal
   de test avec `supervisor`, `developer` et `independent-reviewer`, sans agent Architecture, Test ou Sécurité ; les
   tests, la qualité et la sécurité restent des contrôles déterministes.
+- [x] Raccorder au chemin V2 `HIERARCHICAL_PATH` les workflows enfants A2A natifs `architecture-agent`,
+  `code-agent` et `security-agent`, avec entrées/résultats Evidence validés et contrôles déterministes conservés.
 - [x] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
 - [ ] Tester le redémarrage de l'orchestrateur.
 - [ ] Tester une rotation de Build ID.
