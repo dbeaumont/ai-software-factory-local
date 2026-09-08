@@ -60,14 +60,21 @@ final class AgentExecutionActivitiesImpl implements AgentExecutionActivities {
         long maximumInputBytes = constraints.path("max_input_bytes").asLong(-1);
         Set<String> allowedReferences = new LinkedHashSet<>();
         constraints.path("allowed_reference_ids").forEach(value -> allowedReferences.add(value.asText()));
+        java.util.LinkedHashMap<String, String> admittedReferences = new java.util.LinkedHashMap<>();
 
         JsonNode references = envelope.path("input_references");
         if (references.isEmpty()) {
             throw new IllegalArgumentException("A2A agent execution requires a primary input reference");
         }
         for (JsonNode admitted : references) {
-            if (!allowedReferences.contains(required(admitted, "reference_id"))) {
+            String referenceId = required(admitted, "reference_id");
+            if (!allowedReferences.contains(referenceId)) {
                 throw new SecurityException("A2A input reference is outside the admitted reference set");
+            }
+            String digest = required(admitted, "digest");
+            String previous = admittedReferences.putIfAbsent(referenceId, digest);
+            if (previous != null && !previous.equals(digest)) {
+                throw new SecurityException("A2A input reference ID is bound to conflicting digests");
             }
         }
         JsonNode reference = references.get(0);
@@ -82,7 +89,7 @@ final class AgentExecutionActivitiesImpl implements AgentExecutionActivities {
         JsonNode budget = envelope.path("budget");
         AgentExecutionWorker.Result executed = worker.execute(new AgentExecutionWorker.Request(
                 command.taskId(), attemptId, role, inputReference.contract(), input, outputContract,
-                allowedReferences, new AgentLoop.Budget(budget.path("max_turns").asInt(),
+                admittedReferences, new AgentLoop.Budget(budget.path("max_turns").asInt(),
                 Duration.ofSeconds(budget.path("timeout_seconds").asLong()), budget.path("max_tokens").asInt(),
                 budget.path("max_cost_micros").asLong()), command.traceparent(), command.baggage()));
         try {

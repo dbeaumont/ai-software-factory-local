@@ -12,7 +12,6 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -98,6 +97,8 @@ class AgentExecutionWorkerTest {
         worker.execute(request("developer", "code-task-v1", injected, "patch-proposal-v1"));
 
         assertEquals(true, seen.get().getFirst().content().contains(AgentLoop.INPUT_DATA_GUARDRAIL));
+        assertTrue(seen.get().getFirst().content().contains(
+                "reference_id=`code-task-1`, digest=`cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc`"));
         assertEquals(true, seen.get().get(1).content().contains("trust=\"none\""));
         assertEquals(true, seen.get().get(1).content().contains("&lt;/untrusted_input&gt;"));
     }
@@ -138,7 +139,8 @@ class AgentExecutionWorkerTest {
     private static AgentExecutionWorker.Request request(String role, String inputContract, JsonNode input,
                                                         String outputContract) {
         return new AgentExecutionWorker.Request("task-1", "attempt-1", role, inputContract, input, outputContract,
-                Set.of(), new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000),
+                Map.of("code-task-1", "c".repeat(64)),
+                new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000),
                 "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "task.id=task-1");
     }
 

@@ -8,7 +8,7 @@ import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
-import java.util.Set;
+import java.util.Map;
 
 /** Worker-side execution service consumed by the A2A server transport. */
 public final class AgentExecutionWorker {
@@ -38,7 +38,7 @@ public final class AgentExecutionWorker {
     private Result executeLinked(Request request) {
         role.requireActiveRole(request.role());
         AgentContractValidator.Context contractContext = new AgentContractValidator.Context(
-                request.taskId(), request.attemptId(), request.allowedReferenceIds());
+                request.taskId(), request.attemptId(), request.admittedReferences().keySet());
         role.validateInput(request.inputContract(), request.input(), contractContext);
         AgentLoop loop = new AgentLoop(
                 messages -> llm.nextTurn(messages, mcp.definitions(), Math.min(request.budget().maxTokens(), 8_192)),
@@ -49,7 +49,7 @@ public final class AgentExecutionWorker {
         String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : request.input().toString();
         java.util.concurrent.Callable<AgentLoop.Result> agentLoop = () -> loop.run(
                 new AgentLoop.Actor(request.taskId(), role.identity().role()),
-                role.systemPrompt(request.inputContract()), agentInput, request.budget());
+                systemPrompt(request), agentInput, request.budget());
         AgentMcpExecutionContext mcpContext = new AgentMcpExecutionContext(
                 request.taskId(), request.attemptId(), request.input().path("source_commit").asText(),
                 Instant.now().plus(request.budget().deadline()));
@@ -84,8 +84,23 @@ public final class AgentExecutionWorker {
         return new Result(document, role.promptFingerprint(request.inputContract()), result.turns(), result.tokens(), result.costMicros());
     }
 
+    private String systemPrompt(Request request) {
+        StringBuilder prompt = new StringBuilder(role.systemPrompt(request.inputContract()));
+        if (!request.admittedReferences().isEmpty()) {
+            prompt.append("\n\n## Contexte d'admission immuable\n\n")
+                    .append("Toute citation de la sortie doit reprendre exactement un couple autorise ci-dessous. ")
+                    .append("Utilise `kind` = `EVIDENCE`. N'invente ni identifiant ni digest.\n");
+            request.admittedReferences().entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(reference -> prompt.append("- reference_id=`")
+                            .append(reference.getKey()).append("`, digest=`")
+                            .append(reference.getValue()).append("`\n"));
+        }
+        return prompt.toString();
+    }
+
     public record Request(String taskId, String attemptId, String role, String inputContract, JsonNode input,
-                          String outputContract, Set<String> allowedReferenceIds, AgentLoop.Budget budget,
+                          String outputContract, Map<String, String> admittedReferences, AgentLoop.Budget budget,
                           String traceparent, String baggage) {
         public Request {
             if (taskId == null || taskId.isBlank() || attemptId == null || attemptId.isBlank()
@@ -93,7 +108,12 @@ public final class AgentExecutionWorker {
                     || input == null || outputContract == null || outputContract.isBlank() || budget == null) {
                 throw new IllegalArgumentException("Agent execution request is incomplete");
             }
-            allowedReferenceIds = allowedReferenceIds == null ? Set.of() : Set.copyOf(allowedReferenceIds);
+            admittedReferences = admittedReferences == null ? Map.of() : Map.copyOf(admittedReferences);
+            if (admittedReferences.entrySet().stream().anyMatch(entry -> entry.getKey() == null
+                    || !entry.getKey().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
+                    || entry.getValue() == null || !entry.getValue().matches("[0-9a-f]{64}"))) {
+                throw new IllegalArgumentException("Admitted Evidence references are invalid");
+            }
         }
     }
 
