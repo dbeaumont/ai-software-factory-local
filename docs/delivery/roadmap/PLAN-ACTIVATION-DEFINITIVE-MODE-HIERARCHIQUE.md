@@ -290,7 +290,8 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [x] Exécuter la suite du runtime agent.
 - [x] Exécuter les tests de schémas et politiques.
 - [x] Exécuter les replays Temporal versionnés.
-- [ ] Exécuter les contrôles Compose et A2A.
+- [x] Exécuter les contrôles Compose et A2A. _(`make test` réussit, y compris persistance, PKI, secrets,
+  supply-chain, profils et topologies A2A.)_
 - [ ] Exécuter les contrôles de formatage et d'analyse statique.
 - [x] Vérifier `git diff --check`.
 - [ ] Examiner le diff afin d'exclure toute modification sans rapport.

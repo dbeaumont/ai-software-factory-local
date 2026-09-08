@@ -16,9 +16,10 @@ cleanup
 
 insert="INSERT INTO a2a_agent_task
   (task_id, context_id, message_id, message_digest, agent_role, skill_id, caller_subject, tenant_id,
-   delegation_id, submitted_at, task_state, version, envelope_json)
+   delegation_id, submitted_at, task_state, version, envelope_json, business_task_id, workflow_attempt_id)
   VALUES ('$task_id', 'lot7-context', '$message_id', '$digest', 'developer', 'developer.implement',
-   'lot7-test', 'lot7-tenant', 'lot7-delegation', CURRENT_TIMESTAMP, 'WORKING', 0, '{}')
+   'lot7-test', 'lot7-tenant', 'lot7-delegation', CURRENT_TIMESTAMP, 'WORKING', 0, '{}',
+   'lot7-business-task', 'attempt-1')
   ON CONFLICT (message_id) DO NOTHING;"
 "${compose[@]}" exec -T a2a-task-db psql -U ai_factory_a2a -d ai_factory_a2a -v ON_ERROR_STOP=1 -c "$insert" >/dev/null
 
