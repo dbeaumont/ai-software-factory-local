@@ -33,7 +33,7 @@ while IFS= read -r task; do
   repository=$(jq -r '.repository' <<<"$task")
   requirement=$(jq -r '.requirement' <<<"$task")
   payload=$(jq -cn --arg repositoryUrl "http://gitea:3000/${GITEA_ADMIN_USER:-aiadmin}/$repository.git" \
-    --arg requirement "$requirement" '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement,llmMode:"CLOUD"}')
+    --arg requirement "$requirement" '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement,llmMode:"CLOUD",routingFacts:{qualification:"QUALIFIED",risk:"R1",modules:1,domains:1,estimatedFiles:2,independentCodeScopes:1,impacts:[],materialDecisionOpen:false,inputsComplete:true,contradictory:false,budgetAvailable:true}}')
   state=$(curl -fsS --max-time 30 -X POST "$api/api/tasks" -H 'Content-Type: application/json' --data "$payload")
   task_id=$(jq -r '.id' <<<"$state")
   echo "$variant $case_id submitted as $task_id"

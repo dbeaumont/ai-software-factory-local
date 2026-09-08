@@ -43,7 +43,7 @@ AI_FACTORY_TEMPORAL_MAX_TASK_QUEUE_ACTIVITIES_PER_SECOND=$constrained_rate \
 ./scripts/wait-compose-job.sh temporal-worker-activation 120 >/dev/null
 
 payload=$(jq -cn --arg repositoryUrl "$repository_url" \
-  '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:"Temporal backpressure qualification: add one concise test comment without changing behavior."}')
+  '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:"Temporal backpressure qualification: add one concise test comment without changing behavior.",routingFacts:{qualification:"QUALIFIED",risk:"R1",modules:1,domains:1,estimatedFiles:1,independentCodeScopes:1,impacts:[],materialDecisionOpen:false,inputsComplete:true,contradictory:false,budgetAvailable:true}}')
 started_ms=$(python3 -c 'import time; print(round(time.time() * 1000))')
 pids=()
 for sequence in $(seq 1 "$ticket_count"); do

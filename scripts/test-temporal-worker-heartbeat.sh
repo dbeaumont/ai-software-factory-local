@@ -133,7 +133,7 @@ runner_paused=true
 testing_reached=false
 for qualification_attempt in $(seq 1 "$qualification_attempts"); do
   payload=$(jq -cn --arg repositoryUrl "$repository_url" --arg requirement "$requirement Attempt: $qualification_attempt." \
-    '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement}')
+    '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement,routingFacts:{qualification:"QUALIFIED",risk:"R1",modules:1,domains:1,estimatedFiles:2,independentCodeScopes:1,impacts:[],materialDecisionOpen:false,inputsComplete:true,contradictory:false,budgetAvailable:true}}')
   curl -fsS --max-time 30 -X POST "http://127.0.0.1:${orchestrator_port}/api/tasks" \
     -H 'Content-Type: application/json' --data "$payload" >"$response_file"
   task_id=$(jq -er '.id' "$response_file")

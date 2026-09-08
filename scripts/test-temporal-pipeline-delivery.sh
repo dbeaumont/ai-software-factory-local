@@ -103,7 +103,7 @@ pull_count_before=$(jq 'length' "$pulls_file")
 waiting_reached=false
 for qualification_attempt in $(seq 1 "$qualification_attempts"); do
   payload=$(jq -cn --arg repositoryUrl "$repository_url" --arg requirement "$requirement Attempt: $qualification_attempt." \
-    '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement}')
+    '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement,routingFacts:{qualification:"QUALIFIED",risk:"R1",modules:1,domains:1,estimatedFiles:2,independentCodeScopes:1,impacts:[],materialDecisionOpen:false,inputsComplete:true,contradictory:false,budgetAvailable:true}}')
   if [ "$cutover_smoke" = true ]; then
     admit_cutover_smoke
   else

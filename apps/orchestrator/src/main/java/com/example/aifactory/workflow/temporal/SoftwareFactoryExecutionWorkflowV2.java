@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.a2a.A2aContracts;
+import com.example.aifactory.model.TaskRoutingFacts;
 import io.temporal.workflow.QueryMethod;
 import io.temporal.workflow.SignalMethod;
 import io.temporal.workflow.WorkflowInterface;
@@ -45,13 +46,15 @@ public interface SoftwareFactoryExecutionWorkflowV2 {
     /** The execution strategy is deliberately absent: V2 is hierarchical by contract. */
     record Request(String taskId, String attemptId, String repositoryId, String sourceCommit,
                    String requirementDigest, SoftwareFactoryWorkflow.SourceLocation sourceLocation,
-                   SoftwareFactoryWorkflow.AttemptLineage attemptLineage) {
+                   SoftwareFactoryWorkflow.AttemptLineage attemptLineage,
+                   TaskRoutingFacts routingFacts) {
         public Request {
             if (requirementDigest == null || requirementDigest.isBlank()) {
                 throw new IllegalArgumentException("Workflow requirement is required");
             }
             requirementDigest = requirementDigest.matches("[0-9a-f]{64}")
                     ? requirementDigest : TemporalIds.sha256(requirementDigest);
+            if (routingFacts == null) throw new IllegalArgumentException("Workflow routing facts are required");
         }
 
         SoftwareFactoryWorkflow.Request hierarchicalRequest() {

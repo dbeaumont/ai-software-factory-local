@@ -46,12 +46,17 @@ class RestApiCompatibilityTest {
     void preservesRequestAndTaskViewJsonFields() throws Exception {
         TaskRequest request = mapper.readValue("""
                 {"repositoryUrl":"https://example.test/repo.git","baseBranch":"main",
-                 "requirement":"change","llmMode":"CLOUD"}
+                 "requirement":"change","llmMode":"CLOUD","routingFacts":{
+                   "qualification":"QUALIFIED","risk":"R1","modules":1,"domains":1,
+                   "estimatedFiles":1,"independentCodeScopes":1,"impacts":[],
+                   "materialDecisionOpen":false,"inputsComplete":true,"contradictory":false,
+                   "budgetAvailable":true}}
                 """, TaskRequest.class);
         JsonNode response = mapper.valueToTree(new TaskState("task-1", "AF-0001", request).view());
 
         assertThat(response.propertyNames()).containsAll(Set.of(
                 "id", "ticketNumber", "status", "repositoryUrl", "baseBranch", "requirement", "llmMode",
+                "routingFacts",
                 "workspace", "sourceCommit", "model", "plan", "patch", "testSummary", "qualitySummary",
                 "securitySummary", "review", "pullRequestUrl", "error", "steps", "createdAt", "updatedAt",
                 "workflowRunId", "dagVersion", "globalBudget"));

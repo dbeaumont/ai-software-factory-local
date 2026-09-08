@@ -47,7 +47,7 @@ done
 [ "$unready" = true ] || { echo "Readiness stayed open during the Temporal network partition." >&2; exit 1; }
 
 payload=$(jq -cn --arg repositoryUrl "$repository_url" \
-  '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:"Temporal partition admission must fail closed."}')
+  '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:"Temporal partition admission must fail closed.",routingFacts:{qualification:"QUALIFIED",risk:"R1",modules:1,domains:1,estimatedFiles:1,independentCodeScopes:1,impacts:[],materialDecisionOpen:false,inputsComplete:true,contradictory:false,budgetAvailable:true}}')
 admission_status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' -X POST \
   "http://127.0.0.1:${orchestrator_port}/api/tasks" -H 'Content-Type: application/json' --data "$payload" || true)
 [ "$admission_status" = 503 ] || {

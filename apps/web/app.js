@@ -970,7 +970,20 @@ form.addEventListener('submit', async (event) => {
         repositoryUrl: data.repository,
         baseBranch: data.branch,
         requirement: buildRequirement(data),
-        llmMode: 'CLOUD'
+        llmMode: 'CLOUD',
+        routingFacts: {
+          qualification: data.qualification,
+          risk: data.risk,
+          modules: Number(data.modules),
+          domains: Number(data.domains),
+          estimatedFiles: Number(data.estimatedFiles),
+          independentCodeScopes: Number(data.independentCodeScopes),
+          impacts: (data.impacts || '').split(',').map((value) => value.trim()).filter(Boolean),
+          materialDecisionOpen: data.materialDecisionOpen === 'on',
+          inputsComplete: data.inputsComplete === 'on',
+          contradictory: data.contradictory === 'on',
+          budgetAvailable: data.budgetAvailable === 'on'
+        }
       })
     });
     const task = await readApiResponse(response);

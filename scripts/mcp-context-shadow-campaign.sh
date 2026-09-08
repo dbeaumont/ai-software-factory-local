@@ -103,7 +103,7 @@ while IFS= read -r task; do
   payload=$(jq -cn \
     --arg repositoryUrl "http://gitea:3000/$user/$repository.git" \
     --arg requirement "$requirement" \
-    '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement,llmMode:"CLOUD"}')
+    '{repositoryUrl:$repositoryUrl,baseBranch:"main",requirement:$requirement,llmMode:"CLOUD",routingFacts:{qualification:"QUALIFIED",risk:"R1",modules:1,domains:1,estimatedFiles:2,independentCodeScopes:1,impacts:[],materialDecisionOpen:false,inputsComplete:true,contradictory:false,budgetAvailable:true}}')
   response=$(curl -fsS --max-time 30 -X POST "$api/api/tasks" \
     -H 'Content-Type: application/json' --data "$payload")
   task_id=$(jq -r '.id' <<<"$response")

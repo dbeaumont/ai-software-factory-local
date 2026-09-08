@@ -1,5 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.model.TaskRoutingFacts;
 import io.temporal.common.SearchAttributeKey;
 import io.temporal.common.SearchAttributes;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,8 @@ class TemporalSearchAttributesTest {
     @Test
     void acceptsV2WithoutTheLegacyExecutionModeAttribute() {
         var request = new SoftwareFactoryExecutionWorkflowV2.Request(
-                "task-123", "attempt-2", "customer-api", "UNRESOLVED", "requirement", null, null);
+                "task-123", "attempt-2", "customer-api", "UNRESOLVED", "requirement", null, null,
+                TaskRoutingFacts.qualifiedLowRiskFixture());
 
         assertThatCode(() -> TemporalSearchAttributes.requireSafe(
                 TemporalSearchAttributes.forV2Request(request))).doesNotThrowAnyException();

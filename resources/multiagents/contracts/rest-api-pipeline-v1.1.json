@@ -8,9 +8,9 @@
     {"controller": "TaskController", "handler": "approve", "method": "POST", "path": "/api/tasks/{id}/approve", "responseStatus": 202},
     {"controller": "FactoryController", "handler": "capabilities", "method": "GET", "path": "/api/capabilities", "responseStatus": 200}
   ],
-  "taskRequestFields": ["repositoryUrl", "baseBranch", "requirement", "llmMode"],
+  "taskRequestFields": ["repositoryUrl", "baseBranch", "requirement", "llmMode", "routingFacts"],
   "taskViewFields": [
-    "id", "ticketNumber", "status", "repositoryUrl", "baseBranch", "requirement", "llmMode",
+    "id", "ticketNumber", "status", "repositoryUrl", "baseBranch", "requirement", "llmMode", "routingFacts",
     "workspace", "sourceCommit", "model", "promptFingerprints", "plan", "patch", "testSummary",
     "qualitySummary", "securitySummary", "assuranceResults", "evaluationMetrics", "review", "pendingEffect",
     "pullRequestUrl", "error", "steps", "createdAt", "updatedAt"

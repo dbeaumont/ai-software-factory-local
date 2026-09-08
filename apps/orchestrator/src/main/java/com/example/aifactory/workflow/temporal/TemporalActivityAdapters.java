@@ -14,9 +14,10 @@ public final class TemporalActivityAdapters {
     public TemporalActivityAdapters(PatchIntegrationActivities patchIntegration,
                                     SourceResolutionActivities sourceResolution,
                                     PipelineExecutionActivities pipeline,
-                                    A2aActivitiesImpl a2a) {
+                                    A2aActivitiesImpl a2a,
+                                    HierarchicalRoutingActivities routing) {
         java.util.LinkedHashMap<String, Object[]> configured = new java.util.LinkedHashMap<>();
-        configured.put("context", new Object[]{sourceResolution, pipeline});
+        configured.put("context", new Object[]{sourceResolution, pipeline, routing});
         configured.put("llm", new Object[]{pipeline});
         configured.put("sandbox", new Object[]{patchIntegration, pipeline});
         configured.put("assurance", new Object[]{pipeline});

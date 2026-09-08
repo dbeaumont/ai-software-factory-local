@@ -50,7 +50,8 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
                 properties.taskQueues().get("context"), properties.taskQueues());
         SoftwareFactoryExecutionWorkflowV2.Request request = new SoftwareFactoryExecutionWorkflowV2.Request(
                 task.id, attemptId, ScmDeliveryGateway.repositoryId(task.request.repositoryUrl()),
-                PipelineStepContracts.UNRESOLVED_SOURCE_COMMIT, task.request.requirement(), source, lineage);
+                PipelineStepContracts.UNRESOLVED_SOURCE_COMMIT, task.request.requirement(), source, lineage,
+                task.request.routingFacts());
         TemporalWorkflowCommands.ExecutionIdentity execution = commands.start(WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(properties.taskQueues().get("workflow"))

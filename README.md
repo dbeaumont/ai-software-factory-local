@@ -284,7 +284,13 @@ curl -s -X POST http://localhost:8080/api/tasks \
     "repositoryUrl":"http://gitea:3000/aiadmin/customer-api.git",
     "baseBranch":"main",
     "requirement":"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.",
-    "llmMode":"CLOUD"
+    "llmMode":"CLOUD",
+    "routingFacts":{
+      "qualification":"QUALIFIED", "risk":"R1", "modules":1, "domains":1,
+      "estimatedFiles":2, "independentCodeScopes":1, "impacts":[],
+      "materialDecisionOpen":false, "inputsComplete":true,
+      "contradictory":false, "budgetAvailable":true
+    }
   }'
 ```
 

@@ -11,6 +11,7 @@ public record TaskView(
         String baseBranch,
         String requirement,
         LlmMode llmMode,
+        TaskRoutingFacts routingFacts,
         String workspace,
         String sourceCommit,
         String model,

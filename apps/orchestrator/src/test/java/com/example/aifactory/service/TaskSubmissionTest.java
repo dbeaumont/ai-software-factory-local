@@ -67,6 +67,21 @@ class TaskSubmissionTest {
     }
 
     @Test
+    void rejectsAnAdmissionWithoutExplicitRoutingFactsBeforeExternalChecks() {
+        when(properties.cloudEnabled()).thenReturn(true);
+        TaskRequest incomplete = new TaskRequest(
+                request.repositoryUrl(), request.baseBranch(), request.requirement(), request.llmMode(), null);
+
+        assertThatThrownBy(() -> service.create(incomplete).block(Duration.ofSeconds(1)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("routingFacts is required");
+
+        verify(admissionGate, never()).verifyActive();
+        verify(llm, never()).cloudAvailabilityAsync();
+        assertThat(memory.list()).isEmpty();
+    }
+
+    @Test
     void canAdmitATaskFromAReactorNonBlockingThread() {
         when(admissionGate.verifyActive()).thenReturn(Mono.empty());
         AtomicBoolean admittedOnNonBlockingThread = new AtomicBoolean();

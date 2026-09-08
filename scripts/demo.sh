@@ -9,7 +9,7 @@ REPO="http://gitea:3000/$USER/customer-api.git"
 
 curl -fsS -X POST "http://localhost:$PORT/api/tasks" \
   -H 'Content-Type: application/json' \
-  -d "{\"repositoryUrl\":\"$REPO\",\"baseBranch\":\"main\",\"requirement\":\"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.\"}" \
+  -d "{\"repositoryUrl\":\"$REPO\",\"baseBranch\":\"main\",\"requirement\":\"Add GET /customers/{id}. Return HTTP 404 when the customer does not exist. Add automated tests.\",\"routingFacts\":{\"qualification\":\"QUALIFIED\",\"risk\":\"R1\",\"modules\":1,\"domains\":1,\"estimatedFiles\":2,\"independentCodeScopes\":1,\"impacts\":[],\"materialDecisionOpen\":false,\"inputsComplete\":true,\"contradictory\":false,\"budgetAvailable\":true}}" \
   | tee /tmp/ai-factory-task.json
 
 echo

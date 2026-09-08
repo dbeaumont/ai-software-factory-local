@@ -89,7 +89,8 @@ public class TaskState {
 
     public synchronized TaskView view() {
         return new TaskView(id, ticketNumber, status, request.repositoryUrl(), request.effectiveBranch(), request.requirement(),
-                request.effectiveLlmMode(), workspace, sourceCommit, model, Map.copyOf(promptFingerprints), plan, patch,
+                request.effectiveLlmMode(), request.routingFacts(), workspace, sourceCommit, model,
+                Map.copyOf(promptFingerprints), plan, patch,
                 testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), evaluationMetrics(),
                 review, pendingEffect,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt,

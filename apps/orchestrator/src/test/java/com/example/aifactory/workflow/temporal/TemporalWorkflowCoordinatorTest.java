@@ -62,6 +62,7 @@ class TemporalWorkflowCoordinatorTest {
         assertThat(request.getValue().attemptId()).isEqualTo("attempt-1");
         assertThat(request.getValue().repositoryId()).isEqualTo("customer-api");
         assertThat(request.getValue().sourceCommit()).isEqualTo("UNRESOLVED");
+        assertThat(request.getValue().routingFacts()).isEqualTo(task.request.routingFacts());
         assertThat(request.getValue().sourceLocation().repositoryUrl()).isEqualTo(task.request.repositoryUrl());
         assertThat(request.getValue().sourceLocation().taskQueues()).isEqualTo(properties.taskQueues());
         assertThat(task.workflowRunId).isEqualTo("run-123");

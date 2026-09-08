@@ -21,6 +21,10 @@
       .topnav-submenu a { display: block; padding: 10px 14px; white-space: nowrap; }
       .topnav-submenu a:hover { background: var(--blue-soft); }
       .projection-warning { margin: 12px 0; padding: 9px; border-left: 3px solid #f5a623; color: var(--amber); background: #fff7d6; font-size: 12px; line-height: 1.45; }
+      select { width: 100%; border: 2px solid var(--line); border-radius: 3px; padding: 9px 10px; color: var(--navy); background: #fff; font: inherit; }
+      .routing-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; margin-bottom: 12px; }
+      .routing-checks label { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 500; }
+      .routing-checks input { width: auto; }
       .tools-launcher { position: relative; display: flex; align-items: stretch; }
       .tools-launcher summary { display: grid; width: 52px; place-items: center; color: var(--navy); cursor: pointer; list-style: none; }
       .tools-launcher summary::-webkit-details-marker { display: none; }
@@ -72,6 +76,14 @@
             <article class="form-card execution-card">
               <div class="card-heading compact"><div><p class="eyebrow">EXÉCUTION</p><h2>Où et comment traiter ce ticket</h2></div></div>
               <div class="form-grid"><div class="field"><label for="repository">Dépôt cible <em>*</em></label><input id="repository" name="repository" type="url" value="http://gitea:3000/aiadmin/customer-api.git" required /></div><div class="field"><label for="branch">Branche de référence <em>*</em></label><input id="branch" name="branch" type="text" value="main" required /></div></div>
+              <details class="advanced-details" open><summary>Faits de routage vérifiables</summary><div class="advanced-content">
+                <div class="form-grid"><div class="field"><label for="qualification">Qualification <em>*</em></label><select id="qualification" name="qualification" required><option value="QUALIFIED">Qualifié</option><option value="UNQUALIFIED">Non qualifié</option></select></div><div class="field"><label for="risk">Risque <em>*</em></label><select id="risk" name="risk" required><option value="R0">R0</option><option value="R1" selected>R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option></select></div></div>
+                <div class="form-grid"><div class="field"><label for="modules">Modules concernés <em>*</em></label><input id="modules" name="modules" type="number" min="0" value="1" required /></div><div class="field"><label for="domains">Domaines concernés <em>*</em></label><input id="domains" name="domains" type="number" min="0" value="1" required /></div></div>
+                <div class="form-grid"><div class="field"><label for="estimated-files">Fichiers estimés <em>*</em></label><input id="estimated-files" name="estimatedFiles" type="number" min="0" value="1" required /></div><div class="field"><label for="independent-scopes">Scopes de code indépendants <em>*</em></label><input id="independent-scopes" name="independentCodeScopes" type="number" min="0" value="1" required /></div></div>
+                <div class="field"><label for="impacts">Impacts connus <span>séparés par des virgules</span></label><input id="impacts" name="impacts" type="text" placeholder="public-contract, security, data-migration" /></div>
+                <div class="routing-checks"><label><input name="materialDecisionOpen" type="checkbox" /> Décision structurante encore ouverte</label><label><input name="contradictory" type="checkbox" /> Faits contradictoires</label><label><input name="inputsComplete" type="checkbox" checked /> Entrées complètes</label><label><input name="budgetAvailable" type="checkbox" checked /> Budget approuvé disponible</label></div>
+                <p class="hint">Ces faits sont conservés avec la tâche et la décision de routage Temporal.</p>
+              </div></details>
               <section class="llm-choice cloud-selected" aria-labelledby="llm-mode-label"><div class="llm-choice-heading"><div><p class="eyebrow">MOTEUR IA</p><h3 id="llm-mode-label">LLM cloud via LiteLLM</h3></div></div><p id="llm-mode-description" class="llm-description">Le ticket sera traité par le modèle cloud configuré dans LiteLLM.</p><p class="cloud-warning">Le contexte du dépôt et cette spécification seront transmis au fournisseur LLM configuré. N'utilisez que des données autorisées à sortir de votre environnement.</p><p id="cloud-unavailable" class="cloud-warning" role="alert" hidden></p></section>
             </article>
             <div class="form-actions"><p id="form-message" class="form-message" aria-live="polite"></p><button id="debug-fill-button" class="debug-fill-button" type="button">Préremplir le modèle</button><button id="submit-button" type="submit">Créer le ticket <span aria-hidden="true">→</span></button></div>

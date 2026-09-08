@@ -73,6 +73,8 @@ public class TaskService {
             throw new IllegalArgumentException("repositoryUrl is required");
         if (request.requirement() == null || request.requirement().isBlank())
             throw new IllegalArgumentException("requirement is required");
+        if (request.routingFacts() == null)
+            throw new IllegalArgumentException("routingFacts is required");
         if (!props.cloudEnabled()) throw new IllegalArgumentException("Cloud LLM is disabled by configuration");
     }
 

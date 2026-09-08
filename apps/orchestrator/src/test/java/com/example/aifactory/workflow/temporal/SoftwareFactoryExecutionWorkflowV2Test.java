@@ -1,5 +1,6 @@
 package com.example.aifactory.workflow.temporal;
 
+import com.example.aifactory.model.TaskRoutingFacts;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
@@ -21,7 +22,7 @@ class SoftwareFactoryExecutionWorkflowV2Test {
         var request = new SoftwareFactoryExecutionWorkflowV2.Request(
                 "task-1", "attempt-1", "customer-api", "UNRESOLVED", "requirement",
                 new SoftwareFactoryWorkflow.SourceLocation("http://gitea/repo.git", "main", "context", Map.of()),
-                null);
+                null, TaskRoutingFacts.qualifiedLowRiskFixture());
 
         assertThat(request.requirementDigest()).matches("[0-9a-f]{64}");
         assertThat(request.hierarchicalRequest().executionMode())

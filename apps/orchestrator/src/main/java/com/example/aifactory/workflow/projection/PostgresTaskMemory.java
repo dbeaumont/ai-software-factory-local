@@ -315,7 +315,10 @@ public class PostgresTaskMemory implements TaskMemory {
         TaskView view = snapshot.view();
         TaskState state = new TaskState(view.id(), view.ticketNumber(), new TaskRequest(
                 view.repositoryUrl(), view.baseBranch(), view.requirement(),
-                view.llmMode() == null ? LlmMode.CLOUD : view.llmMode()), view.createdAt());
+                view.llmMode() == null ? LlmMode.CLOUD : view.llmMode(),
+                view.routingFacts() == null
+                        ? com.example.aifactory.model.TaskRoutingFacts.qualifiedLowRiskFixture()
+                        : view.routingFacts()), view.createdAt());
         state.status = view.status();
         state.workspace = view.workspace();
         state.sourceCommit = view.sourceCommit();
