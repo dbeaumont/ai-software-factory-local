@@ -5,7 +5,9 @@ import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.common.WorkflowExecutionHistory;
 import io.temporal.testing.TestWorkflowEnvironment;
+import io.temporal.testing.WorkflowReplayer;
 import io.temporal.worker.Worker;
 import io.temporal.workflow.QueryMethod;
 import io.temporal.workflow.SignalMethod;
@@ -168,6 +170,7 @@ class A2aTaskAwaiterTest {
     void reconciledTerminalTransitionAcceptsTheEquivalentCallbackAndSchedulesFollowUpOnce() throws Exception {
         AtomicInteger getTaskCalls = new AtomicInteger();
         AtomicInteger followUpCalls = new AtomicInteger();
+        WorkflowExecutionHistory history;
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             Worker worker = environment.newWorker("a2a-cross-channel-test");
             worker.registerWorkflowImplementationTypes(CrossChannelHarnessImpl.class);
@@ -190,7 +193,9 @@ class A2aTaskAwaiterTest {
 
             assertThat(environment.getWorkflowClient().newUntypedWorkflowStub(execution.getWorkflowId())
                     .getResult(String.class)).isEqualTo("COMPLETED:2:result");
+            history = environment.getWorkflowClient().fetchHistory(execution.getWorkflowId());
         }
+        WorkflowReplayer.replayWorkflowExecution(history, CrossChannelHarnessImpl.class);
         assertThat(getTaskCalls).hasValue(1);
         assertThat(followUpCalls).hasValue(1);
     }

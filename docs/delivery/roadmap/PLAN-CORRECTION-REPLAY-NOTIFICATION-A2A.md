@@ -128,17 +128,21 @@ A2A distante.
 
 ## 6. Tester le replay de l'historique réel
 
+> Blocage constaté le 2026-09-08 : Temporal ne retrouve plus le workflow ni le run incidentés, et la base de
+> projection courante ne contient plus `fbece50e`. L'export réel est donc indisponible dans cet environnement.
+> Le scénario synthétique équivalent est rejoué par `A2aTaskAwaiterTest`, mais ne remplace pas cette preuve réelle.
+
 - [ ] Exporter l'historique JSON complet du run avant toute opération de rétablissement.
 - [ ] Stocker la copie de travail hors des sources versionnées si elle contient des identifiants ou données
   d'incident non destinés au dépôt.
-- [ ] Ajouter un test de replay avec le worker et le code corrigés, ou utiliser l'outil de replay Temporal déjà
+- [x] Ajouter un test de replay avec le worker et le code corrigés, ou utiliser l'outil de replay Temporal déjà
   adopté par le projet.
 - [ ] Vérifier que le replay franchit l'événement `56`, signal `a2aTaskUpdate`, sans
   `Divergent A2A workflow notification replay`.
-- [ ] Vérifier qu'aucune commande Temporal nouvelle ou différente n'est produite pour les événements déjà
+- [x] Vérifier qu'aucune commande Temporal nouvelle ou différente n'est produite pour les événements déjà
   complétés.
-- [ ] Vérifier que l'activité de validation déjà planifiée n'est pas dupliquée.
-- [ ] Vérifier si `Workflow.getVersion()` est réellement inutile pour ce changement.
+- [x] Vérifier que l'activité de validation déjà planifiée n'est pas dupliquée.
+- [x] Vérifier si `Workflow.getVersion()` est réellement inutile pour ce changement.
 - [ ] Si le replay révèle une incompatibilité avec un historique déjà complété, arrêter la livraison et concevoir
   un chemin versionné avant de déployer.
 
