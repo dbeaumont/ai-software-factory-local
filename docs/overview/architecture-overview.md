@@ -87,7 +87,7 @@ sequenceDiagram
   participant R as Runtime agent
   participant E as Evidence MCP
 
-  O->>T: Démarrer SoftwareFactoryExecutionWorkflowV1
+  O->>T: Démarrer SoftwareFactoryExecutionWorkflowV2
   T->>E: Publier l'entrée référencée
   T->>C: Activité SendMessage
   C->>R: A2A 1.0 JSON-RPC / HTTPS

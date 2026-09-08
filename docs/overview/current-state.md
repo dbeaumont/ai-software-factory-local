@@ -1,6 +1,6 @@
 # État courant de l'AI Factory locale
 
-> Revue documentaire du 8 septembre 2026 sur la branche `features/multiagents`. Le code, les contrats et la
+> Revue documentaire du 9 septembre 2026 sur la branche `features/multiagents`. Le code, les contrats et la
 > configuration Compose restent les sources de vérité exécutables.
 
 ## 1. Résumé
@@ -11,9 +11,11 @@ structurés et vérifiés. Chaque invocation d'agent traverse A2A 1.0 vers l'un 
 contrôles déterministes restent des activités hôte. Les accès aux outils passent par cinq serveurs MCP et
 l'exécution locale du code utilise des runners Compose statiques sans socket Docker.
 
-Le chemin court V2 est raccordé de bout en bout dans le moteur Temporal : Supervisor minimal, Developer, contrôles
-déterministes et revue indépendante. Le chemin complet est sélectionné par la politique, mais son assemblage natif
-des contrats `specialist-task-v1`, Code et Sécurité reste le chantier actif avant promotion du nouveau build.
+Le chemin court V2 est raccordé de bout en bout dans le moteur Temporal : plan minimal du Supervisor, Developer,
+contrôles déterministes et revue indépendante. Le chemin complet exécute nativement Architecture, Code, un à
+quatre Developers, Test Design, Test, Sécurité et la revue indépendante. Les deux chemins matérialisent et valident
+leurs contrats dans Evidence ; une réparation de patch éventuelle passe elle aussi par un workflow enfant A2A
+natif avant une nouvelle validation sandbox.
 
 La sortie métier est une Pull Request brouillon Gitea, créée seulement après les gates déterministes et une
 approbation humaine valide.
@@ -209,7 +211,7 @@ multi-tenancy forte, ni haute disponibilité.
 
 ## 11. Limites restantes
 
-- assemblage et qualification bout en bout du chemin V2 `HIERARCHICAL_PATH` avec les contrats spécialistes natifs ;
+- qualification bout en bout des chemins V2 `SHORT_CODE_PATH` et `HIERARCHICAL_PATH` sur la stack Compose ;
 - construction, rotation et observation du Build ID portant la frontière V2 définitive ;
 - qualification de la topologie GKE sur un cluster réel ;
 - Workload Identity, Secret Manager, politique réseau et stockage managé ;

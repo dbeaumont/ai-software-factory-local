@@ -46,7 +46,7 @@ délégation et les gates Temporal.
 API / UI
    |
    v
-SoftwareFactoryExecutionWorkflowV1 (Temporal, contrôle métier)
+SoftwareFactoryExecutionWorkflowV2 (Temporal, contrôle métier)
    |
    +--> activités A2A de résolution, envoi, réconciliation et annulation
            |

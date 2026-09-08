@@ -453,10 +453,12 @@ docs(operations): align task projection guide with active runtime
 - [x] Mettre à jour `docs/overview/current-state.md`.
 - [x] Mettre à jour `docs/delivery/roadmap/README.md`.
 - [x] Marquer `ADR-MAH-005` et `ADR-MAH-008` comme remplacées par la décision hiérarchique définitive.
-- [ ] Retirer des documents actifs toute affirmation présentant `PIPELINE_BASELINE` comme un chemin standard du
-  mode multi-agent hiérarchique ou comme un fallback de `HIERARCHICAL_ACTIVE`.
-- [ ] Décrire explicitement `SHORT_CODE_PATH` et `HIERARCHICAL_PATH` comme les deux chemins exécutables de la
-  nouvelle architecture, avec `HUMAN_TRIAGE` comme décision de sécurité.
+- [x] Retirer des documents actifs toute affirmation présentant `PIPELINE_BASELINE` comme un chemin standard du
+  mode multi-agent hiérarchique ou comme un fallback de `HIERARCHICAL_ACTIVE`. _(Les occurrences conservées sont
+  limitées aux ADR remplacées, preuves historiques, archives et au présent plan de retrait.)_
+- [x] Décrire explicitement `SHORT_CODE_PATH` et `HIERARCHICAL_PATH` comme les deux chemins exécutables de la
+  nouvelle architecture, avec `HUMAN_TRIAGE` comme décision de sécurité. _(`current-state.md` décrit les deux
+  assemblages V2 natifs et leurs contrôles déterministes.)_
 - [ ] Mettre à jour les runbooks de confinement et rollback.
 - [ ] Référencer les tests de replay et les scénarios bout en bout.
 - [ ] Enregistrer les Build IDs V1 et V2, dates de promotion et date de drainage.
