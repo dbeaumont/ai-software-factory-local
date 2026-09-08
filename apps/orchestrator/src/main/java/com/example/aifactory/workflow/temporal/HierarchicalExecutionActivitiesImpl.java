@@ -99,13 +99,61 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                 throw new SecurityException("Stored specialist task differs from its validated document");
             }
             return A2aEvidencePartFactory.reference(
-                    request.nodeId() + "-input", stored.uri(), stored.digest(),
+                    "specialist-" + request.nodeId(), stored.uri(), stored.digest(),
                     "specialist-task-v1", stored.sizeBytes());
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
         } catch (Exception failure) {
             throw TemporalFailureClassifier.toApplicationFailure(
                     new IllegalStateException("Cannot materialize hierarchical specialist task", failure));
+        }
+    }
+
+    @Override
+    public AcceptedSpecialistResult acceptSpecialistResult(AcceptSpecialistResult request) {
+        requireValid(request);
+        TaskState state = memory.find(request.taskId()).orElseThrow(
+                () -> new IllegalArgumentException("Unknown hierarchical task"));
+        if (!request.attemptId().equals(state.workflowAttemptId)
+                || !request.sourceCommit().equals(state.sourceCommit)) {
+            throw new SecurityException("Hierarchical result is outside the projected workflow attempt");
+        }
+        try {
+            EvidenceRepository.RawEvidence raw = evidence.read(new EvidenceRepository.ReadRequest(
+                    request.taskId(), request.attemptId(), request.reference().uri(),
+                    "workflow", "hierarchical-specialist-result"));
+            if (!request.reference().digest().equals(raw.digest())
+                    || !"agent-result".equals(raw.type()) || !"COMPLETE".equals(raw.status())) {
+                throw new SecurityException("Hierarchical specialist result changed after A2A validation");
+            }
+            var document = contracts.validate(request.contract(), mapper.readTree(raw.content()),
+                    new MultiAgentContractValidator.ContractContext(
+                            request.taskId(), request.attemptId(), request.allowedReferenceIds()));
+            String documentId = switch (request.contract()) {
+                case "architecture-assessment-v1" -> document.path("assessment_id").asText();
+                case "integration-proposal-v1" -> document.path("proposal_id").asText();
+                case "test-assessment-v1" -> document.path("assessment_id").asText();
+                case "security-assessment-v1" -> document.path("assessment_id").asText();
+                default -> throw new IllegalArgumentException("Unsupported hierarchical result contract");
+            };
+            if (documentId.isBlank()) throw new SecurityException("Hierarchical result lacks its document ID");
+            String artifactId = request.role().replace("-agent", "") + "-result";
+            state.recordArtifact(artifactId, artifactId, raw.status(), raw.classification(), raw.uri(),
+                    raw.digest(), raw.content().length, true);
+            if (request.activateAsCodePlan()) {
+                state.transition(com.example.aifactory.model.TaskStatus.PLANNING,
+                        "Code Agent integration plan accepted");
+                state.plan = new String(raw.content(), StandardCharsets.UTF_8);
+            }
+            memory.project("hierarchical-result:" + request.role() + ':' + raw.digest(), state);
+            return new AcceptedSpecialistResult(documentId,
+                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                            raw.uri(), raw.digest(), raw.content().length, raw.status(), "ACCEPTED"));
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Cannot accept hierarchical specialist result", failure));
         }
     }
 
@@ -131,5 +179,29 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                 throw new IllegalArgumentException("Hierarchical specialist input evidence is invalid");
             }
         });
+    }
+
+    private static void requireValid(AcceptSpecialistResult request) {
+        if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
+                || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || !SPECIALIST_ROLES.contains(request.role()) || request.contract() == null
+                || request.reference() == null || !request.role().equals(roleFor(request.contract()))
+                || !request.contract().equals(request.reference().contract())
+                || request.reference().uri() == null || !request.reference().uri().startsWith("evidence://")
+                || request.reference().digest() == null
+                || !request.reference().digest().matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Hierarchical specialist result request is invalid");
+        }
+    }
+
+    private static String roleFor(String contract) {
+        return switch (contract) {
+            case "architecture-assessment-v1" -> "architecture-agent";
+            case "integration-proposal-v1" -> "code-agent";
+            case "test-assessment-v1" -> "test-agent";
+            case "security-assessment-v1" -> "security-agent";
+            default -> "";
+        };
     }
 }

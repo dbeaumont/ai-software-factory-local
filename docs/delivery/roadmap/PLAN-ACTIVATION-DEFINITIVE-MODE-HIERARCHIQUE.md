@@ -31,6 +31,8 @@ aux critères de retrait des contrats de compatibilité, aux E2E des deux chemin
 
 - [x] Matérialiser les entrées `specialist-task-v1` du chemin complet dans Evidence avant toute délégation A2A,
   avec validation de contrat et liaison à la tâche, à la tentative et au commit source.
+- [x] Valider côté hôte les résultats spécialistes relus depuis Evidence et projeter
+  l'`integration-proposal-v1` du Code Agent comme plan d'exécution de la phase Code.
 
 ## Terminologie et périmètre de la suppression
 

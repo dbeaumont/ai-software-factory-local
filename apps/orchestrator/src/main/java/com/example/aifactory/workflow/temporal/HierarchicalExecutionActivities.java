@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.a2a.A2aContracts;
+import com.example.aifactory.service.PipelineStepContracts;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
@@ -12,6 +13,9 @@ import java.util.Set;
 public interface HierarchicalExecutionActivities {
     @ActivityMethod(name = "PrepareHierarchicalSpecialistTask")
     A2aContracts.Part prepareSpecialistTask(PrepareSpecialistTask request);
+
+    @ActivityMethod(name = "AcceptHierarchicalSpecialistResult")
+    AcceptedSpecialistResult acceptSpecialistResult(AcceptSpecialistResult request);
 
     record PrepareSpecialistTask(String taskId, String attemptId, String repositoryId, String sourceCommit,
                                  String delegationPlanId, String nodeId, String parentRole, String role,
@@ -28,4 +32,15 @@ public interface HierarchicalExecutionActivities {
     }
 
     record InputEvidence(String kind, String uri, String digest) {}
+
+    record AcceptSpecialistResult(String taskId, String attemptId, String sourceCommit, String role,
+                                  String contract, A2aActivities.EvidenceReference reference,
+                                  Set<String> allowedReferenceIds, boolean activateAsCodePlan) {
+        public AcceptSpecialistResult {
+            allowedReferenceIds = allowedReferenceIds == null ? Set.of() : Set.copyOf(allowedReferenceIds);
+        }
+    }
+
+    record AcceptedSpecialistResult(String documentId,
+                                    PipelineStepContracts.ArtifactReference artifact) {}
 }
