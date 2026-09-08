@@ -1,40 +1,30 @@
-# Runbook — rollback du mode multi-agent hiérarchique
+# Runbook — confinement et rollback multi-agent
 
 ## Objectif
 
-Ramener les nouvelles admissions vers `PIPELINE`, empêcher tout effet hiérarchique non réconcilié et préserver
-l'historique nécessaire à l'enquête. La politique autoritative est
+Fermer les nouvelles admissions, empêcher tout effet non réconcilié et restaurer un build Temporal compatible.
+Il n'existe aucun fallback vers un ancien parcours métier. La politique autoritative est
 [`rollback-policy-v1.yaml`](../../../resources/multiagents/policies/rollback-policy-v1.yaml).
 
 ## Déclenchement immédiat
 
-Déclencher automatiquement le rollback pour tout effet non autorisé ou dupliqué, escalade de permission/scope,
-fuite de secret, accès cross-task, preuve ou approbation invalide, contrat invalide accepté ou révocation de la
-qualification. Les seuils SLO, échecs, coût, saturation et non-progression Temporal définis dans la politique
-déclenchent également le retour sûr.
+Déclencher le confinement pour tout effet non autorisé ou dupliqué, escalade de permission ou de scope, fuite de
+secret, accès inter-tâches, preuve ou approbation invalide, contrat invalide accepté ou révocation de
+qualification. Les seuils de SLO, coût, saturation et non-progression Temporal définis dans la politique sont
+également bloquants.
 
-En cas de doute sur l'état d'un effet, le considérer comme potentiellement exécuté et le réconcilier par clé
-d'idempotence. Ne jamais le répéter pour « vérifier ».
+Une issue inconnue est considérée comme potentiellement exécutée. La réconcilier par sa clé d'idempotence auprès
+du système propriétaire ; ne jamais répéter l'effet pour le vérifier.
 
 ## Confinement immédiat
 
-- ouvrir l'incident et noter le commit, les versions/digests, le mode et les tâches en vol ;
-- ramener le plafond des nouvelles admissions à `PIPELINE`, la qualification à `INCOMPLETE` et le canary à zéro ;
-- activer le kill switch du rôle, mode, outil ou serveur affecté ;
-- préserver historiques Temporal, workspaces, journaux et preuves.
-
-## Procédure opérateur
-
-1. Créer l'incident, noter l'heure, le déclencheur, le mode et les tâches potentiellement affectées.
-2. Abaisser le plafond d'admission à `PIPELINE`, passer la qualification à `INCOMPLETE` et le canary à zéro.
-3. Bloquer les nouveaux workflows hiérarchiques et geler leurs effets externes non confirmés.
-4. Suspendre ou annuler les activités enfants ; ne supprimer ni historique Temporal, ni workspace, ni preuve.
-5. Router les nouvelles tâches vers le pipeline figé et surveiller sa capacité.
-6. Classer chaque tentative en vol selon la table ci-dessous et consigner la décision.
-7. Vérifier l'intégrité des manifestes, digests, approbations, journaux et clés d'idempotence.
-8. Identifier la cause, les versions exactes et le premier/dernier événement affecté.
-9. Corriger sur une nouvelle version, ajouter le test de régression et répéter le rollback en environnement isolé.
-10. Reprendre uniquement en `HIERARCHICAL_SHADOW` après les approbations requises.
+1. Ouvrir l'incident et relever l'heure, le commit, les digests d'images, le Build ID et les tâches en vol.
+2. Fermer les admissions avec `make admissions-close`.
+3. Activer `global.disabled=true` dans le fichier du kill switch si des appels MCP doivent être bloqués, ou cibler
+   le rôle, l'outil ou le serveur affecté.
+4. Arrêter les nouvelles délégations et geler les effets externes non confirmés.
+5. Préserver historiques Temporal, projections PostgreSQL, références Evidence, workspaces et journaux.
+6. Inventorier les workflows ouverts, leurs Build IDs, phases, activités et effets à issue inconnue.
 
 ## Tentatives en vol
 
@@ -44,45 +34,47 @@ d'idempotence. Ne jamais le répéter pour « vérifier ».
 | décision humaine attendue | suspendre ; invalider si le digest change |
 | effet demandé, résultat inconnu | interroger le système cible avec la clé d'idempotence |
 | effet confirmé | enregistrer, ne jamais répéter |
-| shadow | annuler sans modifier le résultat de référence |
+| historique incompatible | conserver ou restaurer le worker épinglé à son Build ID |
 
-Tout rejeu par le pipeline crée une nouvelle tentative liée au même ticket et au même commit source. Il ne
-réutilise pas implicitement les décisions ou approbations de la tentative hiérarchique.
+Une reprise fonctionnelle crée un nouvel `attempt_id` lié au même ticket. Elle ne réutilise pas implicitement une
+décision ou approbation antérieure.
 
 ## Diagnostic
 
 ```bash
-docker compose -f infrastructure/compose.yaml ps
-docker compose -f infrastructure/compose.yaml logs --tail=200 orchestrator temporal
+docker compose --env-file .env -f infrastructure/compose.yaml --profile a2a-full ps -a
+docker compose --env-file .env -f infrastructure/compose.yaml logs --tail=200 orchestrator temporal
 curl -fsS "http://localhost:${ORCHESTRATOR_PORT:-8088}/actuator/health"
+make admissions-status
 ```
 
-Déterminer le premier événement fautif, les tâches et effets concernés, puis vérifier journal chaîné, historique
-Temporal, digests, manifestes, approbations et clés d'idempotence. Une issue inconnue reste inconnue jusqu'à sa
-réconciliation auprès du système cible.
+Déterminer le premier événement fautif, les tâches et effets concernés, puis vérifier le journal chaîné,
+l'historique Temporal, les digests, manifestes, approbations et clés d'idempotence.
 
-## Rétablissement
+## Rollback de build
 
-Le rétablissement suit la section « Reprise » ci-dessous. La version corrigée repart obligatoirement en
-`HIERARCHICAL_SHADOW`; le pipeline reste l'autorité jusqu'à une nouvelle qualification.
-
-## Vérification et clôture
-
-- aucune nouvelle admission hiérarchique ;
-- canary à zéro et qualification `INCOMPLETE` ;
-- aucune opération SCM/IAM/donnée/déploiement en attente sans propriétaire ;
-- nouvelles tâches servies par `PIPELINE` ;
-- preuves et historiques lisibles, digests cohérents ;
-- alertes, métriques et incident reliés aux tâches affectées.
+1. Identifier le dernier digest d'image et Build ID qualifiés pour tous les historiques concernés.
+2. Vérifier le replay avec `make temporal-replay` avant restauration.
+3. Redéployer l'image immuable précédente sans supprimer les volumes.
+4. Conserver simultanément les Build IDs nécessaires au drainage.
+5. Vérifier les pollers, la readiness, les projections et les dépendances MCP/A2A.
+6. Garder les admissions fermées si aucun build compatible ne peut reprendre tous les historiques ouverts.
 
 ## Reprise
 
-La reprise exige cause racine, périmètre d'impact, correction versionnée, tests de régression, répétition réussie
-du rollback et rapport de qualification courant. Exploitation approuve toujours ; Sécurité et Produit approuvent
-selon l'impact. Le retour direct à `HIERARCHICAL_ACTIVE` est interdit.
+La reprise exige une cause racine, un périmètre d'impact, tous les effets réconciliés, une correction versionnée,
+des tests de régression et un exercice de restauration réussi. Exploitation approuve toujours ; Sécurité et
+Produit approuvent selon l'impact.
 
-## Escalade
+1. Déployer le build corrigé avec un nouveau Build ID.
+2. Rejouer les historiques versionnés et vérifier les workflows épinglés.
+3. Vérifier l'absence de duplication A2A, Evidence et SCM.
+4. Retirer les coupe-circuits ciblés, en conservant les admissions fermées.
+5. Rouvrir avec `make admissions-open` seulement après réussite de la barrière de readiness.
+6. Observer au moins deux cycles complets de réconciliation.
 
-Exploitation pilote le rollback. Sécurité est obligatoire pour permission, secret, isolation, preuve ou effet
-suspect ; Produit l'est pour impact fonctionnel ou client. Un état non déterminé, un effet non réconcilié ou une
-preuve non vérifiable interdit la clôture et la remontée de mode.
+## Clôture
+
+Archiver la chronologie, les Build IDs, les tâches et effets concernés, les résultats de réconciliation, les
+preuves de correction, de replay et de restauration, ainsi que les approbations. Un état inconnu, une preuve
+invérifiable ou un effet non réconcilié interdit la clôture.

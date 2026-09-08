@@ -35,7 +35,8 @@ invalide le verdict précédent pour la nouvelle combinaison.
 7. Implémenter la façade hôte et la validation qui lie rôle, parent, scope, budget et contrat.
 8. Ajouter les tests de manifeste, contrat, permissions, frontières d'effet, injection et échec fermé.
 9. Ajouter des cas représentatifs et adversariaux aux suites d'évaluation.
-10. Laisser le rôle absent de `enabled-roles` ; l'observer d'abord en shadow via `evaluation-roles`.
+10. Laisser le rôle absent de `enabled-roles` ; l'évaluer hors admission avec des fixtures et historiques
+    versionnés.
 
 Critère de revue : le diff doit rendre visible le propriétaire, les outils ajoutés, les données lues, les
 contrats, les limites et le plan de retrait. Une extension d'outil sensible requiert Platform et Sécurité.
@@ -58,10 +59,10 @@ déjà utilisé par une exécution durable.
 
 ## 3. Évaluer
 
-La qualification commence en `HIERARCHICAL_SHADOW`, sans autorité sur la décision du pipeline :
+La qualification s'exécute hors admission et sans autorité sur une tâche réelle :
 
 1. Exécuter les cas simples, multi-domaines, adversariaux et de reprise.
-2. Comparer le même ticket et le même commit entre baseline et candidat.
+2. Comparer le même ticket et le même commit entre version de référence et candidat.
 3. Collecter réussite des gates, qualité du patch, incidents, routage inutile, délégations, replans,
    contradictions, interventions humaines, tokens, coût, latence et ressources.
 4. Refuser le verdict si une paire, une preuve ou la télémétrie fournisseur est absente.
@@ -75,24 +76,25 @@ Contrôles locaux minimaux : `AgentCatalogTest`, `AgentRoleIsolationTest`, `Tool
 
 ## 4. Promouvoir
 
-La promotion est progressive et réversible :
+La promotion est explicite et réversible par rollback de build :
 
 1. archiver le verdict `QUALIFIED`, les approbations et les digests évalués ;
-2. ajouter le rôle à `evaluation-roles` pour le shadow ;
-3. après gate de qualification, ajouter explicitement le rôle à `enabled-roles` et fournir
+2. vérifier le rôle sur les fixtures, replays Temporal et scénarios bout en bout hors admission ;
+3. après la gate de qualification, ajouter explicitement le rôle à `enabled-roles` et fournir
    `qualification-verdict=QUALIFIED` ;
-4. limiter le canary aux dépôts, risques et pourcentages autorisés ;
-5. observer chaque palier sans erreur de contrat, dérive de coût, violation de scope ou gate contourné ;
-6. promouvoir vers `HIERARCHICAL_ACTIVE` uniquement après la fenêtre et les approbations prévues ;
-7. conserver `PIPELINE` et le kill switch pendant toute la période de retour arrière.
+4. déployer un Build ID immuable après replay de tous les historiques concernés ;
+5. observer sans erreur de contrat, dérive de coût, violation de scope ou gate contourné ;
+6. fermer les admissions et restaurer le Build ID qualifié précédent en cas d'incident ;
+7. conserver le kill switch, les preuves et les workers requis par le drainage.
 
 `AgentActivationGuard` vérifie le rôle et le verdict au point d'exécution. Une configuration inconnue ou
 partielle échoue fermée.
 
 ## 5. Retirer ou suspendre
 
-Une suspension urgente utilise d'abord le kill switch du rôle, puis remet sa qualification à `INCOMPLETE` et
-route les nouvelles tâches vers `PIPELINE`. Elle ne supprime aucun artefact nécessaire à une reprise.
+Une suspension urgente utilise d'abord le kill switch du rôle, puis remet sa qualification à `INCOMPLETE`. Les
+admissions sont fermées si aucune route sûre ne subsiste. Aucun ancien parcours métier n'est réactivé et aucun
+artefact nécessaire à une reprise n'est supprimé.
 
 Le retrait définitif suit ensuite cette séquence :
 
@@ -104,11 +106,11 @@ Le retrait définitif suit ensuite cette séquence :
 6. supprimer le code mort et les routes de délégation dans une version ultérieure ;
 7. archiver l'ADR de retrait, les métriques, incidents, approbations et la preuve de drainage.
 
-Le rôle historique `planner` ou `reviewer` ne peut être retiré tant que des tâches `PIPELINE` ou leurs reprises
-dépendent encore de son contrat de compatibilité.
+Un rôle ou alias historique peut être retiré uniquement après drainage des workflows et expiration des preuves
+qui dépendent encore de son contrat de compatibilité.
 
 ## Responsabilité finale
 
 Le propriétaire du rôle répond de sa qualité métier. Platform répond de l'isolation, de la disponibilité et de
 l'application des politiques. Sécurité valide toute extension de capacité sensible. Produit et Risk valident
-l'acceptabilité et l'indépendance des décisions. Exploitation contrôle le canary, le drainage et le rollback.
+l'acceptabilité et l'indépendance des décisions. Exploitation contrôle les admissions, le drainage et le rollback.

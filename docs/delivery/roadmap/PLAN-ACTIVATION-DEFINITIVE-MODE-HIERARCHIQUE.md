@@ -226,18 +226,18 @@ refactor(factory): remove shadow canary and pipeline remnants
 
 ## 6. Adapter le kill switch et le rollback
 
-- [ ] Remplacer `modes.disabled` par un commutateur global d'admission ou d'exécution.
-- [ ] Prévoir des commutateurs ciblés par rôle ou capacité si nécessaire.
-- [ ] Fermer les nouvelles admissions lors d'un incident bloquant.
+- [x] Remplacer `modes.disabled` par un commutateur global d'admission ou d'exécution.
+- [x] Prévoir des commutateurs ciblés par rôle ou capacité si nécessaire.
+- [x] Fermer les nouvelles admissions lors d'un incident bloquant.
 - [ ] Arrêter les nouvelles délégations hiérarchiques.
 - [ ] Geler les effets externes non confirmés.
-- [ ] Réconcilier les effets à issue inconnue avant toute répétition.
-- [ ] Préserver les historiques Temporal, projections et Evidence.
-- [ ] Restaurer un build compatible lorsque le code courant ne peut pas reprendre un historique.
-- [ ] Interdire tout fallback automatique vers un ancien mode métier.
-- [ ] Mettre à jour `ROLLBACK-MULTI-AGENTS.md`.
-- [ ] Mettre à jour `CANARY-KILL-SWITCH-INCIDENT.md` ou l'archiver si son contenu n'est plus applicable.
-- [ ] Mettre à jour la documentation du cycle de vie des agents.
+- [x] Réconcilier les effets à issue inconnue avant toute répétition.
+- [x] Préserver les historiques Temporal, projections et Evidence.
+- [x] Restaurer un build compatible lorsque le code courant ne peut pas reprendre un historique.
+- [x] Interdire tout fallback automatique vers un ancien mode métier.
+- [x] Mettre à jour `ROLLBACK-MULTI-AGENTS.md`.
+- [x] Mettre à jour `CANARY-KILL-SWITCH-INCIDENT.md` ou l'archiver si son contenu n'est plus applicable.
+- [x] Mettre à jour la documentation du cycle de vie des agents.
 
 ### Critères de sortie du lot 6
 
