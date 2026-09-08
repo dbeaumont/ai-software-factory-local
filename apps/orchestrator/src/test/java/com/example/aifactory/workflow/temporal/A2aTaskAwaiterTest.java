@@ -1,11 +1,15 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.a2a.A2aContracts;
+import io.temporal.activity.ActivityInterface;
+import io.temporal.activity.ActivityOptions;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
+import io.temporal.workflow.QueryMethod;
 import io.temporal.workflow.SignalMethod;
+import io.temporal.workflow.Workflow;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import org.junit.jupiter.api.Test;
@@ -15,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -159,6 +164,79 @@ class A2aTaskAwaiterTest {
         }
     }
 
+    @Test
+    void reconciledTerminalTransitionAcceptsTheEquivalentCallbackAndSchedulesFollowUpOnce() throws Exception {
+        AtomicInteger getTaskCalls = new AtomicInteger();
+        AtomicInteger followUpCalls = new AtomicInteger();
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("a2a-cross-channel-test");
+            worker.registerWorkflowImplementationTypes(CrossChannelHarnessImpl.class);
+            worker.registerActivitiesImplementations(
+                    (A2aActivities.GetTask) query -> {
+                        getTaskCalls.incrementAndGet();
+                        return completedSnapshotWithArtifact("result");
+                    },
+                    (FollowUpActivity) () -> followUpCalls.incrementAndGet());
+            environment.start();
+            CrossChannelHarness workflow = environment.getWorkflowClient().newWorkflowStub(
+                    CrossChannelHarness.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId("a2a-cross-channel-1")
+                            .setTaskQueue("a2a-cross-channel-test").build());
+            var execution = WorkflowClient.start(workflow::run);
+
+            waitUntilReconciled(workflow);
+            workflow.update(notification("developer", "context-1", 2, A2aContracts.TaskState.COMPLETED,
+                    "2026-09-06T12:00:02.003Z", artifacts("result"), Map.of()));
+
+            assertThat(environment.getWorkflowClient().newUntypedWorkflowStub(execution.getWorkflowId())
+                    .getResult(String.class)).isEqualTo("COMPLETED:2:result");
+        }
+        assertThat(getTaskCalls).hasValue(1);
+        assertThat(followUpCalls).hasValue(1);
+    }
+
+    @Test
+    void reconciledTerminalTransitionStillFailsItsWorkflowTaskForDivergentArtifacts() throws Exception {
+        try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            Worker worker = environment.newWorker("a2a-cross-channel-negative-test");
+            worker.registerWorkflowImplementationTypes(CrossChannelHarnessImpl.class);
+            worker.registerActivitiesImplementations(
+                    (A2aActivities.GetTask) query -> completedSnapshotWithArtifact("result"),
+                    (FollowUpActivity) () -> { });
+            environment.start();
+            CrossChannelHarness workflow = environment.getWorkflowClient().newWorkflowStub(
+                    CrossChannelHarness.class, WorkflowOptions.newBuilder()
+                            .setWorkflowId("a2a-cross-channel-negative-1")
+                            .setTaskQueue("a2a-cross-channel-negative-test").build());
+            WorkflowClient.start(workflow::run);
+
+            waitUntilReconciled(workflow);
+            workflow.update(notification("developer", "context-1", 2, A2aContracts.TaskState.COMPLETED,
+                    "2026-09-06T12:00:02.003Z", artifacts("tampered"), Map.of()));
+
+            String history = waitForHistory(environment, "a2a-cross-channel-negative-1",
+                    "Divergent A2A workflow notification replay");
+            assertThat(history).contains("WORKFLOW_TASK_FAILED", "Divergent A2A workflow notification replay");
+        }
+    }
+
+    private static String waitForHistory(TestWorkflowEnvironment environment, String workflowId,
+                                         String expected) throws InterruptedException {
+        String history = "";
+        for (int attempt = 0; attempt < 100 && !history.contains(expected); attempt++) {
+            history = environment.getWorkflowClient().fetchHistory(workflowId).toJson(false);
+            if (!history.contains(expected)) Thread.sleep(20);
+        }
+        return history;
+    }
+
+    private static void waitUntilReconciled(CrossChannelHarness workflow) throws InterruptedException {
+        for (int attempt = 0; attempt < 100 && !workflow.reconciled(); attempt++) {
+            Thread.sleep(20);
+        }
+        assertThat(workflow.reconciled()).isTrue();
+    }
+
     private static A2aContracts.Notification notification(long sequence, A2aContracts.TaskState state) {
         return notification("developer", "context-1", sequence, state, "2026-09-06T12:00:00Z",
                 List.of(), Map.of());
@@ -233,19 +311,74 @@ class A2aTaskAwaiterTest {
         }
     }
 
+    @WorkflowInterface
+    public interface CrossChannelHarness {
+        @WorkflowMethod String run();
+        @SignalMethod void update(A2aContracts.Notification notification);
+        @QueryMethod boolean reconciled();
+    }
+
+    @ActivityInterface
+    public interface FollowUpActivity {
+        void record();
+    }
+
+    public static final class CrossChannelHarnessImpl implements CrossChannelHarness {
+        private final A2aTaskAwaiter awaiter = new A2aTaskAwaiter();
+        private boolean reconciled;
+        private boolean callbackProcessed;
+
+        @Override
+        public String run() {
+            A2aActivities.GetTask getTask = Workflow.newActivityStub(A2aActivities.GetTask.class,
+                    TemporalActivityPolicies.forKind(TemporalActivityPolicies.Kind.A2A_GET));
+            awaiter.seed("developer", submittedSnapshot());
+            awaiter.applyReconciliation("developer", getTask.getTask(
+                    new A2aContracts.TaskQuery("developer", "agent-task-1", 50)));
+            A2aContracts.Notification terminal = awaiter.awaitNext(
+                    "agent-task-1", 1, Duration.ofMinutes(1)).notification();
+            reconciled = true;
+            Workflow.await(() -> callbackProcessed);
+            FollowUpActivity followUp = Workflow.newActivityStub(FollowUpActivity.class,
+                    ActivityOptions.newBuilder().setStartToCloseTimeout(Duration.ofSeconds(5)).build());
+            followUp.record();
+            return terminal.state().name() + ':' + terminal.sequence() + ':'
+                    + terminal.artifacts().getFirst().parts().getFirst().text();
+        }
+
+        @Override
+        public void update(A2aContracts.Notification notification) {
+            awaiter.accept(notification);
+            callbackProcessed = true;
+        }
+
+        @Override
+        public boolean reconciled() {
+            return reconciled;
+        }
+    }
+
     private static A2aContracts.TaskSnapshot submittedSnapshot() {
         return new A2aContracts.TaskSnapshot("agent-task-1", "context-1", A2aContracts.TaskState.SUBMITTED,
                 Instant.parse("2026-09-06T12:00:00Z"), List.of(), Map.of("sequence", 0));
     }
 
     private static A2aContracts.TaskSnapshot completedSnapshot() {
+        return completedSnapshot(List.of());
+    }
+
+    private static A2aContracts.TaskSnapshot completedSnapshotWithArtifact(String text) {
+        return completedSnapshot(artifacts(text));
+    }
+
+    private static A2aContracts.TaskSnapshot completedSnapshot(List<A2aContracts.Artifact> artifacts) {
         List<Map<String, Object>> transitions = List.of(
                 Map.of("sequence", 1, "state", "TASK_STATE_WORKING",
                         "occurredAt", "2026-09-06T12:00:01Z"),
                 Map.of("sequence", 2, "state", "TASK_STATE_COMPLETED",
                         "occurredAt", "2026-09-06T12:00:02Z"));
         return new A2aContracts.TaskSnapshot("agent-task-1", "context-1", A2aContracts.TaskState.COMPLETED,
-                Instant.parse("2026-09-06T12:00:02Z"), List.of(),
+                Instant.parse("2026-09-06T12:00:02Z"), artifacts,
                 Map.of("sequence", 2, "transitions", transitions));
     }
 }

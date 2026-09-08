@@ -115,16 +115,16 @@ A2A distante.
 
 ## 5. Ajouter un scénario Temporal embarqué
 
-- [ ] Créer un workflow de test qui initialise une tâche en `SUBMITTED/0`.
-- [ ] Faire retourner par l'activité simulée `GetTask` un snapshot `COMPLETED/2` contenant les transitions
+- [x] Créer un workflow de test qui initialise une tâche en `SUBMITTED/0`.
+- [x] Faire retourner par l'activité simulée `GetTask` un snapshot `COMPLETED/2` contenant les transitions
   `WORKING/1` puis `COMPLETED/2`.
-- [ ] Laisser `applyReconciliation` installer la transition terminale synthétique avec `source=getTask`.
-- [ ] Envoyer ensuite un signal `a2aTaskUpdate` `COMPLETED/2` portant un timestamp différent et des metadata vides.
-- [ ] Vérifier que le Workflow Task traitant le signal se termine sans exception.
-- [ ] Vérifier que le workflow ne réexécute pas l'activité A2A distante.
-- [ ] Vérifier que le résultat terminal et les artefacts restent ceux déjà réconciliés.
-- [ ] Vérifier que l'activité suivante n'est planifiée qu'une fois.
-- [ ] Ajouter un scénario négatif où le signal `COMPLETED/2` contient un artefact différent et doit encore échouer.
+- [x] Laisser `applyReconciliation` installer la transition terminale synthétique avec `source=getTask`.
+- [x] Envoyer ensuite un signal `a2aTaskUpdate` `COMPLETED/2` portant un timestamp différent et des metadata vides.
+- [x] Vérifier que le Workflow Task traitant le signal se termine sans exception.
+- [x] Vérifier que le workflow ne réexécute pas l'activité A2A distante.
+- [x] Vérifier que le résultat terminal et les artefacts restent ceux déjà réconciliés.
+- [x] Vérifier que l'activité suivante n'est planifiée qu'une fois.
+- [x] Ajouter un scénario négatif où le signal `COMPLETED/2` contient un artefact différent et doit encore échouer.
 
 ## 6. Tester le replay de l'historique réel
 
