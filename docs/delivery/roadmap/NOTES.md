@@ -47,3 +47,5 @@
   - Reprise d'un codebase existant pour le mettre à niveau (failles, obsolescences)
 - Exposer l'usine derrière un serveur MCP 
   - Cas d'usage : pour que Figma puisse déclencher des livraison d'ihm (que l'usine irait capter via le MCP Figma de Jesson)
+
+- [ ] LangChain pour le harnessing end 2 end ?
