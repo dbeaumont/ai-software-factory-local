@@ -10,21 +10,21 @@
 - [ ] Remplacer le rollback fonctionnel vers `PIPELINE` par un confinement fail-closed et un rollback de build.
 - [ ] Corriger `TASK-MEMORY-EVIDENCE-OPERATIONS.md` afin qu'il décrive Temporal, PostgreSQL et Evidence MCP tels
   qu'ils fonctionnent actuellement.
-- [ ] Ne pas confondre les anciens modes hiérarchiques avec les mécanismes `MCP_SHADOW`, qui appartiennent à une
+- [x] Ne pas confondre les anciens modes hiérarchiques avec les mécanismes `MCP_SHADOW`, qui appartiennent à une
   autre frontière et doivent faire l'objet d'une décision séparée.
 
 ## Terminologie et périmètre de la suppression
 
-- [ ] Distinguer dans le code et la documentation les modes d'exécution historiques (`PIPELINE`,
+- [x] Distinguer dans le code et la documentation les modes d'exécution historiques (`PIPELINE`,
   `HIERARCHICAL_SHADOW`, `HIERARCHICAL_CANARY`, `HIERARCHICAL_ACTIVE`) des décisions de routage
   (`PIPELINE_BASELINE`, `SHORT_CODE_PATH`, `HIERARCHICAL_PATH`, `HUMAN_TRIAGE`).
-- [ ] Documenter `PIPELINE_BASELINE` comme le chemin historique Planner → Developer → Tester → Reviewer, antérieur
+- [x] Documenter `PIPELINE_BASELINE` comme le chemin historique Planner → Developer → Tester → Reviewer, antérieur
   à l'architecture multi-agent hiérarchique et conservé uniquement pour migration, comparaison et rollback.
-- [ ] Documenter `SHORT_CODE_PATH` comme le chemin standard optimisé de la nouvelle architecture pour les tâches
+- [x] Documenter `SHORT_CODE_PATH` comme le chemin standard optimisé de la nouvelle architecture pour les tâches
   simples, avec Supervisor minimal, agent Code, contrôles déterministes et revue indépendante.
-- [ ] Documenter `HIERARCHICAL_PATH` comme le chemin complet de la nouvelle architecture pour les tâches complexes
+- [x] Documenter `HIERARCHICAL_PATH` comme le chemin complet de la nouvelle architecture pour les tâches complexes
   ou transverses.
-- [ ] Ne pas assimiler la suppression de `PIPELINE_BASELINE` à la suppression du traitement optimisé des tâches
+- [x] Ne pas assimiler la suppression de `PIPELINE_BASELINE` à la suppression du traitement optimisé des tâches
   simples : ce traitement reste assuré par `SHORT_CODE_PATH`.
 
 ## Point de vigilance sur `TaskMemory`
@@ -39,29 +39,29 @@
 
 ## 0. Figer la décision d'architecture
 
-- [ ] Créer une ADR consacrant le parcours hiérarchique comme unique parcours des nouvelles exécutions.
-- [ ] Décider si le concept de mode disparaît complètement ou reste temporairement représenté par
+- [x] Créer une ADR consacrant le parcours hiérarchique comme unique parcours des nouvelles exécutions.
+- [x] Décider si le concept de mode disparaît complètement ou reste temporairement représenté par
   `HIERARCHICAL_ACTIVE`.
-- [ ] Conserver comme décisions de routage métier uniquement :
-  - [ ] `SHORT_CODE_PATH` ;
-  - [ ] `HIERARCHICAL_PATH` ;
-  - [ ] `HUMAN_TRIAGE`.
-- [ ] Décider que `PIPELINE_BASELINE` ne constitue plus un chemin autorisé ni un fallback.
-- [ ] Remplacer explicitement les décisions de `ADR-MAH-005` et `ADR-MAH-008` qui maintiennent la baseline ou un
+- [x] Conserver comme décisions de routage métier uniquement :
+  - [x] `SHORT_CODE_PATH` ;
+  - [x] `HIERARCHICAL_PATH` ;
+  - [x] `HUMAN_TRIAGE`.
+- [x] Décider que `PIPELINE_BASELINE` ne constitue plus un chemin autorisé ni un fallback.
+- [x] Remplacer explicitement les décisions de `ADR-MAH-005` et `ADR-MAH-008` qui maintiennent la baseline ou un
   chemin de secours `PIPELINE`.
-- [ ] Résoudre l'incohérence actuelle entre `ADR-MAH-005`, qui mentionne encore un chemin de secours contrôlé en
+- [x] Résoudre l'incohérence actuelle entre `ADR-MAH-005`, qui mentionne encore un chemin de secours contrôlé en
   `HIERARCHICAL_ACTIVE`, et `routing-policy-v1.yaml`, qui n'autorise déjà plus `PIPELINE_BASELINE` dans ce mode.
-- [ ] Définir le confinement cible : fermeture des admissions, gel des effets externes et réconciliation des effets
+- [x] Définir le confinement cible : fermeture des admissions, gel des effets externes et réconciliation des effets
   à issue inconnue.
-- [ ] Définir le rollback cible comme la restauration d'un build Temporal compatible, sans réactivation implicite
+- [x] Définir le rollback cible comme la restauration d'un build Temporal compatible, sans réactivation implicite
   d'un ancien mode métier.
 - [ ] Faire approuver l'ADR par Architecture, Exploitation et Sécurité.
 
 ### Critères de sortie du lot 0
 
-- [ ] La cible ne contient qu'un seul parcours d'exécution autoritatif.
-- [ ] Le traitement des workflows historiques est explicitement séparé du traitement des nouvelles admissions.
-- [ ] Le rollback ne dépend plus de `PIPELINE`, `SHADOW` ou `CANARY`.
+- [x] La cible ne contient qu'un seul parcours d'exécution autoritatif.
+- [x] Le traitement des workflows historiques est explicitement séparé du traitement des nouvelles admissions.
+- [x] Le rollback ne dépend plus de `PIPELINE`, `SHADOW` ou `CANARY`.
 
 ### Commit proposé
 

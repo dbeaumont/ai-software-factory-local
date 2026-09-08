@@ -1,10 +1,13 @@
 # ADR-MAH-005 — Modes d'exécution et bascule progressive
 
-- Statut : accepté pour le prototype de migration
+- Statut : remplacé par [`ADR-MAH-010`](ADR-MAH-010-hierarchical-only-execution.md)
 - Date : 2026-09-02
 - Portée : admission, exécution, évaluation et rollback des tâches
 
 ## Contexte
+
+> Cette ADR documente la phase de promotion historique. Elle ne définit plus le comportement des nouvelles
+> admissions.
 
 La dernière campagne d'outils agentiques a reçu un verdict `REJECTED`. La nouvelle architecture ne peut donc pas
 remplacer directement le pipeline existant. Plusieurs modes explicites sont nécessaires pour observer, comparer,

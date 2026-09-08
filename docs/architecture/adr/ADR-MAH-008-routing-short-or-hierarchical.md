@@ -1,10 +1,13 @@
 # ADR-MAH-008 — Routage entre chemin court et hiérarchique
 
-- Statut : accepté pour le prototype de migration
+- Statut : remplacé par [`ADR-MAH-010`](ADR-MAH-010-hierarchical-only-execution.md)
 - Date : 2026-09-02
 - Portée : admission d'une tâche et sélection du workflow effectif
 
 ## Contexte
+
+> Cette ADR documente le routage de la phase de promotion. La politique définitive et la suppression de
+> `PIPELINE_BASELINE` sont décrites dans `ADR-MAH-010`.
 
 L'architecture multi-agent apporte de la valeur pour les changements ambigus ou multi-domaines, mais multiplie
 coût et latence sur les demandes simples. Le routage ne peut pas être laissé au Supervisor, car il pourrait
