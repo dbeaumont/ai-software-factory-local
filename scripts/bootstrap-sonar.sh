@@ -39,7 +39,7 @@ if ! curl -fsS -u "$SONAR_LOGIN:$SONAR_PASSWORD" "$SONAR_URL/api/authentication/
   exit 1
 fi
 
-NEXT_SONAR_PASSWORD=$(openssl rand -hex 32)
+NEXT_SONAR_PASSWORD="Aa1!$(openssl rand -hex 30)"
 PASSWORD_RESPONSE=$(curl -sS -w '\n%{http_code}' -u "$SONAR_LOGIN:$SONAR_PASSWORD" \
   -X POST --data-urlencode "login=$SONAR_LOGIN" \
   --data-urlencode "previousPassword=$SONAR_PASSWORD" \
