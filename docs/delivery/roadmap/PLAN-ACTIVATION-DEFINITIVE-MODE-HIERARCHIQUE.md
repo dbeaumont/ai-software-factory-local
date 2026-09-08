@@ -250,28 +250,28 @@ refactor(factory): remove shadow canary and pipeline remnants
 
 ### Tests unitaires
 
-- [ ] Vérifier que toute nouvelle admission utilise la V2 hiérarchique.
+- [x] Vérifier que toute nouvelle admission utilise la V2 hiérarchique.
 - [ ] Vérifier qu'aucun contrat public n'accepte `PIPELINE`, `HIERARCHICAL_SHADOW` ou `HIERARCHICAL_CANARY`.
-- [ ] Tester la sélection de `SHORT_CODE_PATH`.
-- [ ] Vérifier que `SHORT_CODE_PATH` ne sélectionne ni `PIPELINE_BASELINE`, ni les rôles historiques Planner et
+- [x] Tester la sélection de `SHORT_CODE_PATH`.
+- [x] Vérifier que `SHORT_CODE_PATH` ne sélectionne ni `PIPELINE_BASELINE`, ni les rôles historiques Planner et
   Reviewer.
-- [ ] Tester la sélection de `HIERARCHICAL_PATH`.
-- [ ] Tester la sélection de `HUMAN_TRIAGE`.
+- [x] Tester la sélection de `HIERARCHICAL_PATH`.
+- [x] Tester la sélection de `HUMAN_TRIAGE`.
 - [ ] Vérifier les décisions automatiques des risques R0 et R1.
 - [ ] Vérifier l'approbation avant effet externe pour R2.
 - [ ] Vérifier le triage ou le refus pour R3 et R4.
-- [ ] Vérifier le comportement fail-closed en cas de budget absent ou d'entrée contradictoire.
+- [x] Vérifier le comportement fail-closed en cas de budget absent ou d'entrée contradictoire.
 - [x] Vérifier que le kill switch refuse toute nouvelle exécution.
 
 ### Tests Temporal
 
-- [ ] Rejouer les historiques V1 avec le worker V1.
+- [x] Rejouer les historiques V1 avec le worker V1.
 - [ ] Rejouer les historiques V2 avec le worker V2.
-- [ ] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
+- [x] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
 - [ ] Tester le redémarrage de l'orchestrateur.
 - [ ] Tester une rotation de Build ID.
 - [x] Vérifier l'absence de duplication de tâches A2A.
-- [ ] Vérifier l'absence de duplication des effets SCM.
+- [x] Vérifier l'absence de duplication des effets SCM.
 
 ### Tests bout en bout
 
@@ -286,13 +286,13 @@ refactor(factory): remove shadow canary and pipeline remnants
 
 ### Validations globales
 
-- [ ] Exécuter la suite orchestrateur.
-- [ ] Exécuter la suite du runtime agent.
-- [ ] Exécuter les tests de schémas et politiques.
-- [ ] Exécuter les replays Temporal versionnés.
+- [x] Exécuter la suite orchestrateur. _(569 tests réussis hors sandbox le 2026-09-08.)_
+- [x] Exécuter la suite du runtime agent.
+- [x] Exécuter les tests de schémas et politiques.
+- [x] Exécuter les replays Temporal versionnés.
 - [ ] Exécuter les contrôles Compose et A2A.
 - [ ] Exécuter les contrôles de formatage et d'analyse statique.
-- [ ] Vérifier `git diff --check`.
+- [x] Vérifier `git diff --check`.
 - [ ] Examiner le diff afin d'exclure toute modification sans rapport.
 
 ### Commit proposé
