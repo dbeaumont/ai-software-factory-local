@@ -165,6 +165,7 @@ class AgentExecutionWorkerTest {
         AtomicReference<List<AgentLoop.Message>> seen = new AtomicReference<>();
         AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("supervisor", mapper),
                 (messages, tools, tokens) -> {
+                    assertTrue(tools.isEmpty());
                     seen.set(messages);
                     return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
                             fixtures.path("delegation-plan-v1").toString(), List.of(), 1, 1, 0);
@@ -181,6 +182,29 @@ class AgentExecutionWorkerTest {
         assertTrue(systemPrompt.contains("`risk_class` = `R1`"));
         assertTrue(systemPrompt.contains("utilise `risks` = `[]`"));
         assertTrue(systemPrompt.contains("`scope.repository_id` vaut `customer-api`"));
+    }
+
+    @Test
+    void rejectsATaskToolOutsideTheRoleManifestBeforeCallingTheModel() throws Exception {
+        JsonNode fixtures = fixtures();
+        tools.jackson.databind.node.ObjectNode input =
+                (tools.jackson.databind.node.ObjectNode) fixtures.path("specialist-task-v1").deepCopy();
+        input.put("role", "architecture-agent");
+        input.putArray("allowed_tools").add("evidence.read");
+        AtomicInteger calls = new AtomicInteger();
+        AgentExecutionWorker worker = new AgentExecutionWorker(
+                RoleScopedAgentContext.load("architecture-agent", mapper),
+                (messages, tools, tokens) -> {
+                    calls.incrementAndGet();
+                    return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
+                            fixtures.path("architecture-assessment-v1").toString(), List.of(), 1, 1, 0);
+                }, new NoTools());
+
+        assertThrows(SecurityException.class, () -> worker.execute(new AgentExecutionWorker.Request(
+                "task-1", "attempt-1", "architecture-agent", "specialist-task-v1", input,
+                "architecture-assessment-v1", Map.of("specialist-task-1", "c".repeat(64)),
+                new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000), null, null)));
+        assertEquals(0, calls.get());
     }
 
     @Test

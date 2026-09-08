@@ -8,7 +8,10 @@ import com.example.aifactory.agentcore.RoleScopedAgentContext;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Worker-side execution service consumed by the A2A server transport. */
 public final class AgentExecutionWorker {
@@ -40,10 +43,13 @@ public final class AgentExecutionWorker {
         AgentContractValidator.Context contractContext = new AgentContractValidator.Context(
                 request.taskId(), request.attemptId(), request.admittedReferences().keySet());
         role.validateInput(request.inputContract(), request.input(), contractContext);
+        Set<String> allowedTools = allowedTools(request);
+        List<LlmCompletionPort.ToolDefinition> toolDefinitions = mcp.definitions().stream()
+                .filter(definition -> allowedTools.contains(definition.name())).toList();
         AgentLoop loop = new AgentLoop(
-                messages -> llm.nextTurn(messages, mcp.definitions(), Math.min(request.budget().maxTokens(), 8_192)),
+                messages -> llm.nextTurn(messages, toolDefinitions, Math.min(request.budget().maxTokens(), 8_192)),
                 call -> mcp.call(call.name(), call.arguments()),
-                (actor, tool) -> role.allowedTools().contains(tool),
+                (actor, tool) -> allowedTools.contains(tool),
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
         boolean pipelineCompatibility = "pipeline-agent-task-v1".equals(request.inputContract());
         String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : request.input().toString();
@@ -97,6 +103,17 @@ public final class AgentExecutionWorker {
             document = role.validateOutput(request.outputContract(), result.finalResult(), contractContext);
         }
         return new Result(document, role.promptFingerprint(request.inputContract()), result.turns(), result.tokens(), result.costMicros());
+    }
+
+    private Set<String> allowedTools(Request request) {
+        JsonNode taskTools = request.input().path("allowed_tools");
+        if (!taskTools.isArray()) return role.allowedTools();
+        LinkedHashSet<String> allowed = new LinkedHashSet<>();
+        taskTools.forEach(tool -> allowed.add(tool.asText()));
+        if (!role.allowedTools().containsAll(allowed)) {
+            throw new SecurityException("Specialist task grants a tool outside the role manifest");
+        }
+        return Set.copyOf(allowed);
     }
 
     private String systemPrompt(Request request) {

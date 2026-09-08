@@ -409,8 +409,7 @@ abstract class ProductionExecutionWorkflowRuntime {
         }
         var plan = runHierarchicalSpecialist(source, request, resolved, routingDecisionId,
                 "short-plan", "supervisor", "supervisor", "supervisor", List.of(), java.util.Set.of(),
-                java.util.Set.of("context.list_tree", "context.search_code", "context.get_repository_rules",
-                        "context.get_dependencies", "evidence.get_summary"),
+                java.util.Set.of(),
                 List.of("Return exactly one bounded Developer node for the short path"));
         var accepted = acceptHierarchicalSpecialist(source, request, resolved,
                 "supervisor", "delegation-plan-v1", plan,
