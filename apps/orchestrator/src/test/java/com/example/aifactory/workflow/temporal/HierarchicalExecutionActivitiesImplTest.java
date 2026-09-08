@@ -141,7 +141,9 @@ class HierarchicalExecutionActivitiesImplTest {
 
         var prepared = activities.prepareIndependentReview(
                 new HierarchicalExecutionActivities.PrepareIndependentReview(
-                        "task-1", "attempt-1", "customer-api", "a".repeat(40), artifacts, results));
+                        "task-1", "attempt-1", "customer-api", "a".repeat(40), artifacts, results,
+                        Set.of("architecture-agent", "code-agent", "developer", "test-design",
+                                "test-agent", "security-agent")));
 
         assertThat(prepared.bundle().consolidatedPatch().changedFiles()).containsExactly("src/Main.java");
         assertThat(prepared.bundle().reviewedResults()).extracting(
@@ -201,6 +203,52 @@ class HierarchicalExecutionActivitiesImplTest {
     }
 
     @Test
+    void materializesOneDeveloperTaskFromTheAcceptedShortSupervisorPlan() throws Exception {
+        ObjectMapper mapper = JsonMapper.builder().build();
+        TaskMemory memory = mock(TaskMemory.class);
+        EvidenceRepository evidence = mock(EvidenceRepository.class);
+        TaskState state = taskState("Implement the bounded change");
+        when(memory.find("task-1")).thenReturn(Optional.of(state));
+        var plan = goldenDocuments(mapper).path("delegation-plan-v1").deepCopy();
+        var planObject = (tools.jackson.databind.node.ObjectNode) plan;
+        planObject.put("plan_id", "short-plan-1");
+        ((tools.jackson.databind.node.ObjectNode) plan.path("citations").get(0))
+                .put("reference_id", "specialist-short-plan");
+        var node = (tools.jackson.databind.node.ObjectNode) plan.path("nodes").get(0);
+        node.put("node_id", "developer-1").put("role", "developer")
+                .put("objective", "Implement the bounded change");
+        ((tools.jackson.databind.node.ArrayNode) node.path("scope").path("read_paths")).removeAll().add("src");
+        ((tools.jackson.databind.node.ArrayNode) node.path("scope").path("write_paths"))
+                .removeAll().add("src/App.java");
+        byte[] planContent = mapper.writeValueAsBytes(plan);
+        String planDigest = digest(planContent);
+        when(evidence.read(any())).thenReturn(new EvidenceRepository.RawEvidence(
+                "evidence://task-1/attempt-1/agent-result/" + planDigest,
+                "agent-result", planDigest, "COMPLETE", "INTERNAL", planContent));
+        when(evidence.store(any())).thenAnswer(invocation -> stored(invocation.getArgument(0), "code-task"));
+        var activities = activities(memory, evidence, mapper);
+
+        var prepared = activities.prepareShortDeveloperTasks(
+                new HierarchicalExecutionActivities.PrepareShortDeveloperTasks(
+                        "task-1", "attempt-1", "customer-api", "a".repeat(40), "short-plan-1",
+                        reference("agent-result", planDigest, "delegation-plan-v1"),
+                        new DelegationWorkflow.Budget(12_000, 12_000_000, 6, 900)));
+
+        assertThat(prepared).singleElement().satisfies(task -> {
+            assertThat(task.nodeId()).isEqualTo("developer-1");
+            assertThat(task.codeTaskId()).isEqualTo("code-developer-1");
+            assertThat(task.budget()).isEqualTo(new DelegationWorkflow.Budget(1_000, 1_000, 2, 60));
+        });
+        ArgumentCaptor<EvidenceRepository.StoreRequest> stored =
+                ArgumentCaptor.forClass(EvidenceRepository.StoreRequest.class);
+        verify(evidence).store(stored.capture());
+        var codeTask = mapper.readTree(stored.getValue().content());
+        assertThat(codeTask.has("architecture_assessment_id")).isFalse();
+        assertThat(codeTask.path("delegation_plan_id").asText()).isEqualTo("short-plan-1");
+        assertThat(codeTask.path("scope").path("write_paths").get(0).asText()).isEqualTo("src/App.java");
+    }
+
+    @Test
     void validatesAndProjectsNativeDeveloperPatchContent() throws Exception {
         ObjectMapper mapper = JsonMapper.builder().build();
         TaskMemory memory = mock(TaskMemory.class);
@@ -234,7 +282,8 @@ class HierarchicalExecutionActivitiesImplTest {
                 "code-1", "evidence://task-1/attempt-1/code-task/" + codeTaskDigest,
                 codeTaskDigest, "code-task-v1", codeTaskContent.length);
         var task = new HierarchicalExecutionActivities.DeveloperTask(
-                "node-1", "code-1", Set.of(), input);
+                "node-1", "code-1", Set.of(),
+                new DelegationWorkflow.Budget(12_000, 12_000_000, 6, 900), input);
 
         var accepted = activities.acceptDeveloperPatches(new HierarchicalExecutionActivities.AcceptDeveloperPatches(
                 "task-1", "attempt-1", "a".repeat(40), List.of(

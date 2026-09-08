@@ -30,7 +30,10 @@ import java.util.regex.Pattern;
 public final class HierarchicalExecutionActivitiesImpl implements HierarchicalExecutionActivities {
     private static final Pattern DIFF_HEADER = Pattern.compile("diff --git a/([^\\s]+) b/([^\\s]+)");
     private static final Set<String> SPECIALIST_ROLES = Set.of(
-            "architecture-agent", "code-agent", "test-design", "test-agent", "security-agent");
+            "supervisor", "architecture-agent", "code-agent", "test-design", "test-agent", "security-agent");
+    private static final Set<String> FULL_REVIEW_ROLES = Set.of(
+            "architecture-agent", "code-agent", "developer", "test-design", "test-agent", "security-agent");
+    private static final Set<String> SHORT_REVIEW_ROLES = Set.of("supervisor", "developer");
     private final TaskMemory memory;
     private final EvidenceRepository evidence;
     private final MultiAgentContractValidator contracts;
@@ -140,6 +143,7 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                     new MultiAgentContractValidator.ContractContext(
                             request.taskId(), request.attemptId(), request.allowedReferenceIds()));
             String documentId = switch (request.contract()) {
+                case "delegation-plan-v1" -> document.path("plan_id").asText();
                 case "architecture-assessment-v1" -> document.path("assessment_id").asText();
                 case "integration-proposal-v1" -> document.path("proposal_id").asText();
                 case "test-strategy-v1" -> document.path("strategy_id").asText();
@@ -153,7 +157,7 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                     raw.digest(), raw.content().length, true);
             if (request.activateAsCodePlan()) {
                 state.transition(com.example.aifactory.model.TaskStatus.PLANNING,
-                        "Code Agent integration plan accepted");
+                        "Hierarchical execution plan accepted");
                 state.plan = new String(raw.content(), StandardCharsets.UTF_8);
             }
             if (Set.of("test-agent", "security-agent").contains(request.role())) {
@@ -225,6 +229,41 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
         } catch (Exception failure) {
             throw TemporalFailureClassifier.toApplicationFailure(
                     new IllegalStateException("Cannot materialize hierarchical Developer tasks", failure));
+        }
+    }
+
+    @Override
+    public List<DeveloperTask> prepareShortDeveloperTasks(PrepareShortDeveloperTasks request) {
+        requireValid(request);
+        TaskState state = memory.find(request.taskId()).orElseThrow(
+                () -> new IllegalArgumentException("Unknown hierarchical task"));
+        requireAttemptAndCommit(state, request.attemptId(), request.sourceCommit());
+        try {
+            var plan = readAndValidate(request.taskId(), request.attemptId(), request.planReference(),
+                    "delegation-plan-v1", Set.of("specialist-short-plan"), "prepare-short-developer-task");
+            if (!request.delegationPlanId().equals(plan.path("plan_id").asText())
+                    || !request.sourceCommit().equals(plan.path("source_commit").asText())
+                    || !state.request.routingFacts().risk().equals(plan.path("risk_class").asText())) {
+                throw new SecurityException("Short Developer task is not bound to the accepted Supervisor plan");
+            }
+            if (plan.path("nodes").size() != 1 || !"developer".equals(plan.path("nodes").get(0).path("role").asText())) {
+                throw new SecurityException("Short path Supervisor plan must contain exactly one Developer node");
+            }
+            var node = plan.path("nodes").get(0);
+            if (!node.path("parent_node_id").isNull() || !node.path("depends_on").isEmpty()
+                    || !request.repositoryId().equals(node.path("scope").path("repository_id").asText())) {
+                throw new SecurityException("Short path Developer node exceeds its repository or dependency boundary");
+            }
+            DelegationWorkflow.Budget nodeBudget = boundedBudget(node.path("budget"), request.budget());
+            return List.of(storeDeveloperTask(request.taskId(), request.attemptId(), request.repositoryId(),
+                    request.sourceCommit(), request.delegationPlanId(), null, nodeBudget, state,
+                    node.path("node_id").asText(), "code-" + node.path("node_id").asText(), node,
+                    node.path("scope"), "depends_on", "success_criteria"));
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Cannot materialize short-path Developer task", failure));
         }
     }
 
@@ -311,10 +350,22 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
     private DeveloperTask storeDeveloperTask(PrepareDeveloperTasks request, TaskState state,
                                              tools.jackson.databind.JsonNode task,
                                              tools.jackson.databind.JsonNode recommendedScope) throws Exception {
-        String nodeId = task.path("node_id").asText();
-        String codeTaskId = task.path("code_task_id").asText();
+        return storeDeveloperTask(request.taskId(), request.attemptId(), request.repositoryId(),
+                request.sourceCommit(), request.delegationPlanId(), request.architectureAssessmentId(),
+                request.budget(), state, task.path("node_id").asText(), task.path("code_task_id").asText(),
+                task, recommendedScope, "depends_on_task_ids", "success_criteria");
+    }
+
+    private DeveloperTask storeDeveloperTask(String taskId, String attemptId, String repositoryId,
+                                             String sourceCommit, String delegationPlanId,
+                                             String architectureAssessmentId, DelegationWorkflow.Budget taskBudget,
+                                             TaskState state, String nodeId, String codeTaskId,
+                                             tools.jackson.databind.JsonNode task,
+                                             tools.jackson.databind.JsonNode recommendedScope,
+                                             String dependenciesField, String criteriaField) throws Exception {
         List<String> writePaths = new java.util.ArrayList<>();
         recommendedScope.path("write_paths").forEach(path -> writePaths.add(path.asText()));
+        if (writePaths.isEmpty()) throw new SecurityException("Developer write scope must not be empty");
         if (writePaths.stream().anyMatch(path -> path.equals(".git") || path.startsWith(".git/"))) {
             throw new SecurityException("Developer write scope targets repository metadata");
         }
@@ -323,16 +374,20 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
         Instant issuedAt = Instant.now(clock);
         ObjectNode document = mapper.createObjectNode();
         document.put("schema_version", "1").put("code_task_id", codeTaskId)
-                .put("task_id", request.taskId()).put("attempt_id", request.attemptId())
-                .put("delegation_plan_id", request.delegationPlanId()).put("node_id", nodeId)
-                .put("source_commit", request.sourceCommit())
-                .put("worktree_id", worktreeId(request.taskId(), request.attemptId(), nodeId))
-                .put("architecture_assessment_id", request.architectureAssessmentId())
-                .put("objective", state.request.requirement()).put("risk_class", state.request.routingFacts().risk());
+                .put("task_id", taskId).put("attempt_id", attemptId)
+                .put("delegation_plan_id", delegationPlanId).put("node_id", nodeId)
+                .put("source_commit", sourceCommit)
+                .put("worktree_id", worktreeId(taskId, attemptId, nodeId))
+                .put("objective", task.path("objective").asText(state.request.requirement()))
+                .put("risk_class", state.request.routingFacts().risk());
+        if (architectureAssessmentId != null) {
+            document.put("architecture_assessment_id", architectureAssessmentId);
+        }
         ObjectNode scope = document.putObject("scope");
-        scope.put("repository_id", request.repositoryId());
+        scope.put("repository_id", repositoryId);
         ArrayNode moduleArray = scope.putArray("modules"); modules.forEach(moduleArray::add);
         java.util.LinkedHashSet<String> readPaths = new java.util.LinkedHashSet<>(modules);
+        recommendedScope.path("read_paths").forEach(path -> readPaths.add(path.asText()));
         readPaths.addAll(writePaths);
         ArrayNode reads = scope.putArray("read_paths"); readPaths.forEach(reads::add);
         ArrayNode writes = scope.putArray("write_paths"); writePaths.forEach(writes::add);
@@ -342,23 +397,25 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
         scope.put("max_changed_files", writePaths.size()).put("max_patch_bytes", 900_000);
         document.put("scope_digest", TemporalIds.sha256(mapper.writeValueAsString(scope)));
         ArrayNode dependencies = document.putArray("dependencies");
-        task.path("depends_on_task_ids").forEach(value -> dependencies.add(value.asText()));
+        task.path(dependenciesField).forEach(value -> dependencies.add(value.asText()));
         ArrayNode criteria = document.putArray("acceptance_criteria");
-        task.path("success_criteria").forEach(value -> criteria.add(value.asText()));
+        task.path(criteriaField).forEach(value -> criteria.add(value.asText()));
         ObjectNode budget = document.putObject("budget");
-        budget.put("max_turns", request.budget().maxTurns()).put("max_tokens", request.budget().maxTokens())
-                .put("max_cost_micros", request.budget().maxCostMicros())
-                .put("timeout_seconds", request.budget().timeoutSeconds());
+        budget.put("max_turns", taskBudget.maxTurns()).put("max_tokens", taskBudget.maxTokens())
+                .put("max_cost_micros", taskBudget.maxCostMicros())
+                .put("timeout_seconds", taskBudget.timeoutSeconds());
         document.putArray("required_approval_ids");
         document.put("issued_at", issuedAt.toString())
-                .put("deadline", issuedAt.plusSeconds(request.budget().timeoutSeconds()).toString());
+                .put("deadline", issuedAt.plusSeconds(taskBudget.timeoutSeconds()).toString());
+        java.util.LinkedHashSet<String> allowedReferences = new java.util.LinkedHashSet<>(
+                Set.of(delegationPlanId, nodeId));
+        if (architectureAssessmentId != null) allowedReferences.add(architectureAssessmentId);
         contracts.validate("code-task-v1", document, new MultiAgentContractValidator.ContractContext(
-                request.taskId(), request.attemptId(),
-                Set.of(request.delegationPlanId(), nodeId, request.architectureAssessmentId())));
+                taskId, attemptId, Set.copyOf(allowedReferences)));
         byte[] content = mapper.writeValueAsBytes(document);
         String digest = TemporalIds.sha256(new String(content, StandardCharsets.UTF_8));
         EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
-                request.taskId(), request.attemptId(), "code-task", "application/json",
+                taskId, attemptId, "code-task", "application/json",
                 content, digest, "workflow"));
         if (!digest.equals(stored.digest()) || !"COMPLETE".equals(stored.status())) {
             throw new SecurityException("Stored Developer task differs from its validated document");
@@ -366,8 +423,22 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
         A2aContracts.Part reference = A2aEvidencePartFactory.reference(
                 codeTaskId, stored.uri(), stored.digest(), "code-task-v1", stored.sizeBytes());
         java.util.LinkedHashSet<String> dependsOn = new java.util.LinkedHashSet<>();
-        task.path("depends_on_task_ids").forEach(value -> dependsOn.add(value.asText()));
-        return new DeveloperTask(nodeId, codeTaskId, Set.copyOf(dependsOn), reference);
+        task.path(dependenciesField).forEach(value -> dependsOn.add(value.asText()));
+        return new DeveloperTask(nodeId, codeTaskId, Set.copyOf(dependsOn), taskBudget, reference);
+    }
+
+    private static DelegationWorkflow.Budget boundedBudget(
+            tools.jackson.databind.JsonNode budget, DelegationWorkflow.Budget ceiling) {
+        DelegationWorkflow.Budget requested = new DelegationWorkflow.Budget(
+                budget.path("max_tokens").asLong(), budget.path("max_cost_micros").asLong(),
+                budget.path("max_turns").asInt(), budget.path("timeout_seconds").asLong());
+        if (requested.maxTokens() > ceiling.maxTokens()
+                || requested.maxCostMicros() > ceiling.maxCostMicros()
+                || requested.maxTurns() > ceiling.maxTurns()
+                || requested.timeoutSeconds() > ceiling.timeoutSeconds()) {
+            throw new SecurityException("Supervisor Developer budget exceeds the host ceiling");
+        }
+        return requested;
     }
 
     private tools.jackson.databind.JsonNode readAndValidate(
@@ -402,10 +473,13 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
             throw new SecurityException("Developer code task changed after materialization");
         }
         var document = mapper.readTree(raw.content());
+        java.util.LinkedHashSet<String> allowedReferences = new java.util.LinkedHashSet<>(Set.of(
+                document.path("delegation_plan_id").asText(), document.path("node_id").asText()));
+        if (document.hasNonNull("architecture_assessment_id")) {
+            allowedReferences.add(document.path("architecture_assessment_id").asText());
+        }
         return contracts.validate("code-task-v1", document,
-                new MultiAgentContractValidator.ContractContext(taskId, attemptId, Set.of(
-                        document.path("delegation_plan_id").asText(), document.path("node_id").asText(),
-                        document.path("architecture_assessment_id").asText())));
+                new MultiAgentContractValidator.ContractContext(taskId, attemptId, Set.copyOf(allowedReferences)));
     }
 
     private static A2aActivities.EvidenceReference specialistReference(A2aContracts.Part part) {
@@ -554,12 +628,12 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
     }
 
     private static void requireValid(PrepareIndependentReview request) {
-        Set<String> requiredRoles = Set.of(
-                "architecture-agent", "code-agent", "developer", "test-design", "test-agent", "security-agent");
+        Set<String> requiredRoles = request == null ? Set.of() : request.requiredRoles();
         if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
                 || request.repositoryId() == null || !request.repositoryId().matches("[a-z0-9][a-z0-9-]{1,62}")
                 || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || !(FULL_REVIEW_ROLES.equals(requiredRoles) || SHORT_REVIEW_ROLES.equals(requiredRoles))
                 || request.reviewedResults().size() < requiredRoles.size()
                 || request.reviewedResults().size() > 9
                 || request.reviewedResults().stream().anyMatch(java.util.Objects::isNull)
@@ -588,6 +662,18 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
         }
     }
 
+    private static void requireValid(PrepareShortDeveloperTasks request) {
+        if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
+                || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.repositoryId() == null || !request.repositoryId().matches("[a-z0-9][a-z0-9-]{1,62}")
+                || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || request.delegationPlanId() == null
+                || !request.delegationPlanId().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
+                || request.planReference() == null || request.budget() == null) {
+            throw new IllegalArgumentException("Short-path Developer task preparation is invalid");
+        }
+    }
+
     private static void requireValid(AcceptDeveloperPatches request) {
         if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
@@ -603,6 +689,7 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
 
     private static String roleFor(String contract) {
         return switch (contract) {
+            case "delegation-plan-v1" -> "supervisor";
             case "architecture-assessment-v1" -> "architecture-agent";
             case "integration-proposal-v1" -> "code-agent";
             case "test-strategy-v1" -> "test-design";

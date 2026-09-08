@@ -38,6 +38,7 @@ abstract class ProductionExecutionWorkflowRuntime {
     private final List<HierarchicalExecutionActivities.ReviewedSpecialistResult> reviewedSpecialistResults =
             new java.util.ArrayList<>();
     private String architectureAssessmentId;
+    private String hierarchicalPlanId;
     private SoftwareFactoryWorkflow.Request activeRequest;
     private SoftwareFactoryWorkflow.ApprovalRequest activeApprovalRequest;
 
@@ -59,10 +60,10 @@ abstract class ProductionExecutionWorkflowRuntime {
             throwIfCancelled();
             if ("HIERARCHICAL_PATH".equals(selectedPath)) {
                 runArchitectureAndCode(source, request, resolved, routingDecisionId);
+            } else if ("SHORT_CODE_PATH".equals(selectedPath)) {
+                runShortPlan(source, request, resolved, routingDecisionId);
             } else {
-                String planningRole = "SHORT_CODE_PATH".equals(selectedPath)
-                        ? "supervisor" : "architecture-agent";
-                runPipelineAgent(source, request, resolved, planningRole, "PLAN", "plan",
+                runPipelineAgent(source, request, resolved, "architecture-agent", "PLAN", "plan",
                         Map.of("requirement", request.requirementDigest()), null, 0);
             }
             generateAndRepairPatch(source, request, resolved, selectedPath, routingDecisionId);
@@ -84,13 +85,15 @@ abstract class ProductionExecutionWorkflowRuntime {
                     Map.of("tests", artifacts.get("tests").digest()));
             runStep(source, request, resolved, "security", TemporalActivityPolicies.Kind.ASSURANCE,
                     Map.of("quality", artifacts.get("quality").digest()));
-            if ("HIERARCHICAL_PATH".equals(selectedPath)) {
-                runSecuritySpecialist(source, request, resolved, routingDecisionId);
+            if (selectedPath != null) {
+                if ("HIERARCHICAL_PATH".equals(selectedPath)) {
+                    runSecuritySpecialist(source, request, resolved, routingDecisionId);
+                }
                 currentStep = "prepare-delivery";
                 pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
                         new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
                                 resolved.sourceCommit()));
-                var preparedReview = prepareIndependentReview(source, request, resolved);
+                var preparedReview = prepareIndependentReview(source, request, resolved, selectedPath);
                 storedManifest = preparedReview.manifest();
                 runIndependentReview(request, resolved, preparedReview.bundle());
             } else {
@@ -292,8 +295,8 @@ abstract class ProductionExecutionWorkflowRuntime {
                                         String selectedPath, String routingDecisionId) {
         currentStep = "generate-patch";
         PipelineExecutionActivities sandbox = pipeline(source, "sandbox", TemporalActivityPolicies.Kind.SANDBOX);
-        if ("HIERARCHICAL_PATH".equals(selectedPath)) {
-            generateHierarchicalPatch(source, request, resolved, routingDecisionId);
+        if (selectedPath != null) {
+            generateHierarchicalPatch(source, request, resolved, selectedPath, routingDecisionId);
         } else {
             runPipelineAgent(source, request, resolved, "developer", "GENERATE_PATCH", "generate-patch-candidate",
                     Map.of("plan", artifacts.get("plan").digest()), null, 0);
@@ -327,6 +330,7 @@ abstract class ProductionExecutionWorkflowRuntime {
         if (routingDecisionId == null || !routingDecisionId.matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")) {
             throw new IllegalArgumentException("Hierarchical execution requires its routing decision ID");
         }
+        hierarchicalPlanId = routingDecisionId;
         var architecture = runHierarchicalSpecialist(source, request, resolved, routingDecisionId,
                 "architecture", "supervisor", "supervisor", "architecture-agent", List.of(), java.util.Set.of(),
                 java.util.Set.of("context.list_tree", "context.search_code", "context.read_file",
@@ -355,20 +359,50 @@ abstract class ProductionExecutionWorkflowRuntime {
         hierarchicalResults.put("code", code);
     }
 
+    private void runShortPlan(SoftwareFactoryWorkflow.SourceLocation source,
+                              SoftwareFactoryWorkflow.Request request,
+                              SourceResolutionActivities.Result resolved,
+                              String routingDecisionId) {
+        if (routingDecisionId == null || !routingDecisionId.matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")) {
+            throw new IllegalArgumentException("Short hierarchical execution requires its routing decision ID");
+        }
+        var plan = runHierarchicalSpecialist(source, request, resolved, routingDecisionId,
+                "short-plan", "supervisor", "supervisor", "supervisor", List.of(), java.util.Set.of(),
+                java.util.Set.of("context.list_tree", "context.search_code", "context.get_repository_rules",
+                        "context.get_dependencies", "evidence.get_summary"),
+                List.of("Return exactly one bounded Developer node for the short path"));
+        var accepted = acceptHierarchicalSpecialist(source, request, resolved,
+                "supervisor", "delegation-plan-v1", plan,
+                java.util.Set.of("specialist-short-plan"), true);
+        hierarchicalPlanId = accepted.documentId();
+        artifacts.put("plan", accepted.artifact());
+        reviewedSpecialistResults.add(reviewed("supervisor", accepted));
+        hierarchicalResults.put("short-plan", plan);
+    }
+
     private void generateHierarchicalPatch(SoftwareFactoryWorkflow.SourceLocation source,
                                            SoftwareFactoryWorkflow.Request request,
                                            SourceResolutionActivities.Result resolved,
+                                           String selectedPath,
                                            String routingDecisionId) {
         currentStep = "developer-tasks";
         DelegationWorkflow.Budget budget = new DelegationWorkflow.Budget(12_000, 12_000_000, 6, 900);
         HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
                 HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
                         TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
-        List<HierarchicalExecutionActivities.DeveloperTask> tasks = hierarchical.prepareDeveloperTasks(
-                new HierarchicalExecutionActivities.PrepareDeveloperTasks(
-                        request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(),
-                        routingDecisionId, architectureAssessmentId, hierarchicalResults.get("architecture"),
-                        hierarchicalResults.get("code"), budget));
+        List<HierarchicalExecutionActivities.DeveloperTask> tasks;
+        if ("SHORT_CODE_PATH".equals(selectedPath)) {
+            tasks = hierarchical.prepareShortDeveloperTasks(
+                    new HierarchicalExecutionActivities.PrepareShortDeveloperTasks(
+                            request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(),
+                            hierarchicalPlanId, hierarchicalResults.get("short-plan"), budget));
+        } else {
+            tasks = hierarchical.prepareDeveloperTasks(
+                    new HierarchicalExecutionActivities.PrepareDeveloperTasks(
+                            request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(),
+                            routingDecisionId, architectureAssessmentId, hierarchicalResults.get("architecture"),
+                            hierarchicalResults.get("code"), budget));
+        }
         List<HierarchicalExecutionActivities.DeveloperPatchResult> patches = new java.util.ArrayList<>();
         for (HierarchicalExecutionActivities.DeveloperTask task : tasks) {
             currentStep = task.nodeId();
@@ -378,9 +412,10 @@ abstract class ProductionExecutionWorkflowRuntime {
                                     request.taskId(), request.attemptId(), task.nodeId()))
                             .build());
             DelegationWorkflow.Result result = child.run(new DelegationWorkflow.Request(
-                    request.taskId(), request.attemptId(), task.nodeId(), "code", "developer",
+                    request.taskId(), request.attemptId(), task.nodeId(),
+                    "SHORT_CODE_PATH".equals(selectedPath) ? "short-plan" : "code", "developer",
                     resolved.sourceCommit(), request.requirementDigest(), 100,
-                    task.dependsOn(), budget, task.inputReference()));
+                    task.dependsOn(), task.budget(), task.inputReference()));
             pipelineDelegations.add(result);
             if (!"READY_FOR_ACTIVITIES".equals(result.status()) || result.artifacts().size() != 1) {
                 throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
@@ -467,13 +502,16 @@ abstract class ProductionExecutionWorkflowRuntime {
 
     private HierarchicalExecutionActivities.PreparedIndependentReview prepareIndependentReview(
             SoftwareFactoryWorkflow.SourceLocation source, SoftwareFactoryWorkflow.Request request,
-            SourceResolutionActivities.Result resolved) {
+            SourceResolutionActivities.Result resolved, String selectedPath) {
         HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
                 HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
                         TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
         return hierarchical.prepareIndependentReview(new HierarchicalExecutionActivities.PrepareIndependentReview(
                 request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(),
-                artifacts, reviewedSpecialistResults));
+                artifacts, reviewedSpecialistResults, "SHORT_CODE_PATH".equals(selectedPath)
+                ? java.util.Set.of("supervisor", "developer")
+                : java.util.Set.of("architecture-agent", "code-agent", "developer", "test-design",
+                        "test-agent", "security-agent")));
     }
 
     private void runIndependentReview(SoftwareFactoryWorkflow.Request request,

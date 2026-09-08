@@ -42,7 +42,7 @@ aux critères de retrait des contrats de compatibilité, aux E2E des deux chemin
 - [x] Documenter `PIPELINE_BASELINE` comme le chemin historique Planner → Developer → Tester → Reviewer, antérieur
   à l'architecture multi-agent hiérarchique et conservé uniquement pour migration, comparaison et rollback.
 - [x] Documenter `SHORT_CODE_PATH` comme le chemin standard optimisé de la nouvelle architecture pour les tâches
-  simples, avec Supervisor minimal, agent Code, contrôles déterministes et revue indépendante.
+  simples, avec plan minimal du Supervisor, Developer borné, contrôles déterministes et revue indépendante.
 - [x] Documenter `HIERARCHICAL_PATH` comme le chemin complet de la nouvelle architecture pour les tâches complexes
   ou transverses.
 - [x] Ne pas assimiler la suppression de `PIPELINE_BASELINE` à la suppression du traitement optimisé des tâches
@@ -296,8 +296,9 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [x] Rejouer les historiques V2 avec le worker V2. _(Une histoire V2 `HUMAN_TRIAGE`, incluant résolution source
   et décision de routage, est capturée puis rejouée par le test Temporal.)_
 - [x] Exécuter le chemin V2 `SHORT_CODE_PATH` jusqu'à l'approbation et la livraison dans l'environnement Temporal
-  de test avec `supervisor`, `developer` et `independent-reviewer`, sans agent Architecture, Test ou Sécurité ; les
-  tests, la qualité et la sécurité restent des contrôles déterministes.
+  de test avec les workflows enfants A2A natifs `supervisor`, `developer` et `independent-reviewer`, sans agent
+  Architecture, Test ou Sécurité ; le plan Supervisor et la tâche Developer sont matérialisés et validés dans
+  Evidence, tandis que les tests, la qualité et la sécurité restent des contrôles déterministes.
 - [x] Raccorder au chemin V2 `HIERARCHICAL_PATH` les workflows enfants A2A natifs `architecture-agent`,
   `code-agent` et `security-agent`, avec entrées/résultats Evidence validés et contrôles déterministes conservés.
 - [x] Remplacer l'étape de compatibilité Test du chemin complet par la hiérarchie A2A native

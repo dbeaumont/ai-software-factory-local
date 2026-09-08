@@ -23,6 +23,9 @@ public interface HierarchicalExecutionActivities {
     @ActivityMethod(name = "PrepareHierarchicalDeveloperTasks")
     List<DeveloperTask> prepareDeveloperTasks(PrepareDeveloperTasks request);
 
+    @ActivityMethod(name = "PrepareHierarchicalShortDeveloperTasks")
+    List<DeveloperTask> prepareShortDeveloperTasks(PrepareShortDeveloperTasks request);
+
     @ActivityMethod(name = "AcceptHierarchicalDeveloperPatches")
     AcceptedDeveloperPatches acceptDeveloperPatches(AcceptDeveloperPatches request);
 
@@ -62,7 +65,12 @@ public interface HierarchicalExecutionActivities {
                                  A2aActivities.EvidenceReference integrationReference,
                                  DelegationWorkflow.Budget budget) {}
 
+    record PrepareShortDeveloperTasks(String taskId, String attemptId, String repositoryId, String sourceCommit,
+                                      String delegationPlanId, A2aActivities.EvidenceReference planReference,
+                                      DelegationWorkflow.Budget budget) {}
+
     record DeveloperTask(String nodeId, String codeTaskId, Set<String> dependsOn,
+                         DelegationWorkflow.Budget budget,
                          A2aContracts.Part inputReference) {
         public DeveloperTask {
             dependsOn = dependsOn == null ? Set.of() : Set.copyOf(dependsOn);
@@ -87,10 +95,12 @@ public interface HierarchicalExecutionActivities {
 
     record PrepareIndependentReview(String taskId, String attemptId, String repositoryId, String sourceCommit,
                                     Map<String, PipelineStepContracts.ArtifactReference> artifacts,
-                                    List<ReviewedSpecialistResult> reviewedResults) {
+                                    List<ReviewedSpecialistResult> reviewedResults,
+                                    Set<String> requiredRoles) {
         public PrepareIndependentReview {
             artifacts = artifacts == null ? Map.of() : Map.copyOf(artifacts);
             reviewedResults = reviewedResults == null ? List.of() : List.copyOf(reviewedResults);
+            requiredRoles = requiredRoles == null ? Set.of() : Set.copyOf(requiredRoles);
         }
     }
 

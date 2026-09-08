@@ -94,7 +94,9 @@ class SoftwareFactoryExecutionWorkflowV2Test {
         var activities = new SoftwareFactoryExecutionWorkflowV1Test.TestActivities(deliveries);
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             var workflowWorker = environment.newWorker("test-workflow");
-            workflowWorker.registerWorkflowImplementationTypes(SoftwareFactoryExecutionWorkflowV2Impl.class);
+            workflowWorker.registerWorkflowImplementationTypes(
+                    SoftwareFactoryExecutionWorkflowV2Impl.class, A2aDelegationWorkflowImpl.class,
+                    A2aIndependentReviewWorkflowImpl.class);
             workflowWorker.registerActivitiesImplementations(activities);
             var contextWorker = environment.newWorker("test-context");
             contextWorker.registerActivitiesImplementations(activities,
@@ -102,10 +104,11 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                             "c".repeat(64), "routing-policy-v1", "1", Map.of("risk", "R1"),
                             "short-code-path", "SHORT_CODE_PATH", List.of("Bounded scope"),
                             List.of("supervisor", "developer", "independent-reviewer"), "NONE"));
-            for (String queue : List.of("test-llm", "test-sandbox", "test-assurance",
-                    "test-evidence", "test-scm")) {
+            var hierarchical = new HierarchicalFixture();
+            for (String queue : List.of("test-llm", "test-sandbox", "test-assurance", "test-scm")) {
                 environment.newWorker(queue).registerActivitiesImplementations(activities);
             }
+            environment.newWorker("test-evidence").registerActivitiesImplementations(activities, hierarchical);
             environment.start();
             SoftwareFactoryExecutionWorkflowV2 workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryExecutionWorkflowV2.class, WorkflowOptions.newBuilder()
@@ -135,6 +138,7 @@ class SoftwareFactoryExecutionWorkflowV2Test {
             assertThat(activities.roles).containsExactly(
                     "supervisor", "developer", "independent-reviewer");
             assertThat(activities.roles).doesNotContain("architecture-agent", "security-agent");
+            assertThat(hierarchical.preparedRoles).containsExactly("supervisor");
             assertThat(deliveries).hasValue(1);
         }
     }
@@ -249,6 +253,7 @@ class SoftwareFactoryExecutionWorkflowV2Test {
 
         @Override public AcceptedSpecialistResult acceptSpecialistResult(AcceptSpecialistResult request) {
             String id = switch (request.role()) {
+                case "supervisor" -> "short-plan-1";
                 case "architecture-agent" -> "assessment-1";
                 case "code-agent" -> "integration-proposal-1";
                 case "test-design" -> "test-strategy-1";
@@ -267,7 +272,19 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                     "code-task-1", "evidence://task-1/pipeline-1/code-task/" + digest,
                     digest, "code-task-v1", 64);
             return java.util.List.of(new DeveloperTask(
-                    "developer-1", "code-task-1", java.util.Set.of(), input));
+                    "developer-1", "code-task-1", java.util.Set.of(),
+                    new DelegationWorkflow.Budget(12_000, 12_000_000, 6, 900), input));
+        }
+
+        @Override public java.util.List<DeveloperTask> prepareShortDeveloperTasks(
+                PrepareShortDeveloperTasks request) {
+            String digest = TemporalIds.sha256("short-developer-task");
+            var input = com.example.aifactory.a2a.A2aEvidencePartFactory.reference(
+                    "code-developer-1", "evidence://task-1/pipeline-1/code-task/" + digest,
+                    digest, "code-task-v1", 64);
+            return java.util.List.of(new DeveloperTask(
+                    "developer-1", "code-developer-1", java.util.Set.of(),
+                    new DelegationWorkflow.Budget(10_000, 10_000_000, 6, 600), input));
         }
 
         @Override public AcceptedDeveloperPatches acceptDeveloperPatches(AcceptDeveloperPatches request) {
