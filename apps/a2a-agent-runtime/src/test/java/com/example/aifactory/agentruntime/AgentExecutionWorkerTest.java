@@ -117,6 +117,55 @@ class AgentExecutionWorkerTest {
     }
 
     @Test
+    void bindsSupervisorPlanIdentityRiskAndShortPathShapeInTheSystemPrompt() throws Exception {
+        JsonNode fixtures = fixtures();
+        tools.jackson.databind.node.ObjectNode input = mapper.createObjectNode();
+        input.put("schema_version", "1");
+        input.put("specialist_task_id", "specialist-short-plan");
+        input.put("task_id", "task-1");
+        input.put("attempt_id", "attempt-1");
+        input.put("delegation_plan_id", "routing-1");
+        input.put("node_id", "short-plan");
+        input.put("parent_role", "supervisor");
+        input.put("role", "supervisor");
+        input.put("source_commit", "a".repeat(40));
+        input.put("risk_class", "R1");
+        input.put("objective", "Produce one bounded task");
+        input.putArray("inputs");
+        tools.jackson.databind.node.ObjectNode scope = input.putObject("scope");
+        scope.put("repository_id", "customer-api");
+        scope.putArray("read_paths").add(".");
+        scope.putArray("write_paths");
+        input.putArray("allowed_tools");
+        input.putObject("budget").put("max_turns", 2).put("max_tokens", 1_000)
+                .put("max_cost_micros", 1_000).put("timeout_seconds", 60).put("max_tool_calls", 2);
+        input.putArray("success_criteria").add("One task produced");
+        input.put("stop_condition", "BLOCKED_OR_ESCALATE");
+        input.putArray("required_approval_ids");
+        input.put("deadline", "2026-09-09T00:01:00Z");
+        input.put("issued_at", "2026-09-09T00:00:00Z");
+        AtomicReference<List<AgentLoop.Message>> seen = new AtomicReference<>();
+        AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("supervisor", mapper),
+                (messages, tools, tokens) -> {
+                    seen.set(messages);
+                    return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
+                            fixtures.path("delegation-plan-v1").toString(), List.of(), 1, 1, 0);
+                }, new NoTools());
+
+        assertThrows(com.example.aifactory.agentcore.AgentContractValidator.ContractValidationException.class,
+                () -> worker.execute(new AgentExecutionWorker.Request(
+                        "task-1", "attempt-1", "supervisor", "specialist-task-v1", input,
+                        "delegation-plan-v1", Map.of("specialist-short-plan", "c".repeat(64)),
+                        new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000), null, null)));
+
+        String systemPrompt = seen.get().getFirst().content();
+        assertTrue(systemPrompt.contains("`plan_id` = `routing-1`"));
+        assertTrue(systemPrompt.contains("`risk_class` = `R1`"));
+        assertTrue(systemPrompt.contains("utilise `risks` = `[]`"));
+        assertTrue(systemPrompt.contains("`scope.repository_id` vaut `customer-api`"));
+    }
+
+    @Test
     void retriesCleanlyAfterLlmOutageWithoutDuplicatingAnExternalEffect() throws Exception {
         JsonNode fixtures = fixtures();
         AtomicInteger attempts = new AtomicInteger();

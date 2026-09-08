@@ -76,6 +76,20 @@ class AgentCoreTest {
     }
 
     @Test
+    void rejectsADelegationPlanCitationOutsideTheAdmittedEvidenceSet() throws Exception {
+        AgentContractValidator validator = new AgentContractValidator(new ObjectMapper(), new AgentCatalog());
+        try (InputStream input = getClass().getClassLoader()
+                .getResourceAsStream("multiagents/fixtures/golden-contracts-v1.json")) {
+            JsonNode document = new ObjectMapper().readTree(input)
+                    .path("documents").path("delegation-plan-v1");
+            assertThrows(AgentContractValidator.ContractValidationException.class,
+                    () -> validator.validate("delegation-plan-v1", document,
+                            new AgentContractValidator.Context(
+                                    "task-1", "attempt-1", Set.of("other-reference"))));
+        }
+    }
+
+    @Test
     void loopTreatsToolOutputAsUntrustedAndEnforcesAuthorization() {
         AgentLoop.ToolCall call = new AgentLoop.ToolCall("call-1", "context.read_file", Map.of());
         AgentLoop.Model model = new AgentLoop.Model() {

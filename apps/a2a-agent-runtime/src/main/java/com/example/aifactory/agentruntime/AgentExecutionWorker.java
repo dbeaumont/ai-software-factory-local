@@ -86,6 +86,24 @@ public final class AgentExecutionWorker {
 
     private String systemPrompt(Request request) {
         StringBuilder prompt = new StringBuilder(role.systemPrompt(request.inputContract()));
+        if ("delegation-plan-v1".equals(request.outputContract())) {
+            JsonNode input = request.input();
+            prompt.append("\n\n## Binding immuable du plan de delegation\n\n")
+                    .append("Recopie exactement les valeurs d'entree suivantes dans la sortie :\n")
+                    .append("- `plan_id` = `").append(input.path("delegation_plan_id").asText()).append("`\n")
+                    .append("- `task_id` = `").append(request.taskId()).append("`\n")
+                    .append("- `attempt_id` = `").append(request.attemptId()).append("`\n")
+                    .append("- `source_commit` = `").append(input.path("source_commit").asText()).append("`\n")
+                    .append("- `risk_class` = `").append(input.path("risk_class").asText()).append("`\n")
+                    .append("Toute valeur `risks[].level` est exclusivement l'une de `R0`, `R1`, `R2`, `R3`, `R4`.\n");
+            if ("short-plan".equals(input.path("node_id").asText())) {
+                prompt.append("Pour ce chemin court, utilise `risks` = `[]` et produis exactement un noeud : ")
+                        .append("son `role` vaut `developer`, son `parent_node_id` vaut `null`, ")
+                        .append("son `depends_on` vaut `[]` et son `scope.repository_id` vaut `")
+                        .append(input.path("scope").path("repository_id").asText()).append("`.\n")
+                        .append("Chaque plafond du `budget` du noeud doit etre inferieur ou egal au plafond homonyme de l'entree.\n");
+            }
+        }
         if (!request.admittedReferences().isEmpty()) {
             prompt.append("\n\n## Contexte d'admission immuable\n\n")
                     .append("Toute citation de la sortie doit reprendre exactement un couple autorise ci-dessous. ")
