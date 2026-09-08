@@ -42,31 +42,12 @@ classes:
       - irreversible-external-effect
       - outside-authorized-scope
 
-modeMatrix:
-  PIPELINE:
-    R0: AUTO
-    R1: AUTO
-    R2: HUMAN_BEFORE_EXTERNAL_EFFECT
-    R3: HUMAN_BEFORE_CODE
-    R4: DENY
-  HIERARCHICAL_SHADOW:
-    R0: SHADOW_ANALYSIS_ONLY
-    R1: SHADOW_ANALYSIS_ONLY
-    R2: SHADOW_ANALYSIS_ONLY
-    R3: SHADOW_ANALYSIS_ONLY_NO_PATCH
-    R4: DENY
-  HIERARCHICAL_CANARY:
-    R0: AUTO
-    R1: AUTO
-    R2: HUMAN_TRIAGE
-    R3: HUMAN_TRIAGE
-    R4: DENY
-  HIERARCHICAL_ACTIVE:
-    R0: AUTO
-    R1: AUTO
-    R2: HUMAN_BEFORE_EXTERNAL_EFFECT
-    R3: HUMAN_BEFORE_CODE
-    R4: DENY
+decisions:
+  R0: AUTO
+  R1: AUTO
+  R2: HUMAN_BEFORE_EXTERNAL_EFFECT
+  R3: HUMAN_BEFORE_CODE
+  R4: DENY
 
 gates:
   BEFORE_CODE:
@@ -94,7 +75,7 @@ approval:
     - attempt_id
     - source_commit
     - risk_class
-    - effective_mode
+    - execution_path
     - scope
     - action
     - object_digest

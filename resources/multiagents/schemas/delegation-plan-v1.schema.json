@@ -4,14 +4,13 @@
   "title": "DelegationPlan v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "plan_id", "task_id", "attempt_id", "source_commit", "mode", "risk_class", "root_role", "citations", "assumptions", "risks", "nodes", "created_at"],
+  "required": ["schema_version", "plan_id", "task_id", "attempt_id", "source_commit", "risk_class", "root_role", "citations", "assumptions", "risks", "nodes", "created_at"],
   "properties": {
     "schema_version": {"const": "1"},
     "plan_id": {"$ref": "#/$defs/id"},
     "task_id": {"$ref": "#/$defs/id"},
     "attempt_id": {"$ref": "#/$defs/id"},
     "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
-    "mode": {"enum": ["HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY", "HIERARCHICAL_ACTIVE"]},
     "risk_class": {"enum": ["R0", "R1", "R2", "R3", "R4"]},
     "root_role": {"const": "supervisor"},
     "citations": {

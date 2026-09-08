@@ -61,9 +61,9 @@ class HierarchicalPathPlannerTest {
     private static HierarchicalPathPlanner.Input input(String risk, int modules, int domains,
                                                        int independentScopes, Set<String> impacts,
                                                        boolean materialDecisionOpen) {
-        return new HierarchicalPathPlanner.Input("HIERARCHICAL_ACTIVE", "QUALIFIED", risk,
+        return new HierarchicalPathPlanner.Input("QUALIFIED", risk,
                 modules, domains, independentScopes, impacts, materialDecisionOpen,
-                true, true, true, false, true);
+                true, false, true);
     }
 
     private static Path fixturePath() {

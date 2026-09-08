@@ -1,7 +1,7 @@
 version: "1"
 policyId: hierarchical-rollback-v1
-safeMode: PIPELINE
-defaultOnUnknownState: DISABLE_HIERARCHICAL_AND_FREEZE_EFFECTS
+safeState: FREEZE_ADMISSIONS
+defaultOnUnknownState: FREEZE_ADMISSIONS_AND_EXTERNAL_EFFECTS
 
 immediateTriggers:
   - id: unauthorized-external-effect
@@ -46,18 +46,15 @@ thresholdTriggers:
     maximumUtilization: 0.90
   temporalNonProgress:
     duration: PT5M
-    action: STOP_NEW_HIERARCHICAL_ADMISSIONS
+    action: FREEZE_ADMISSIONS
 
 automaticActions:
   order:
-    - set effective admission ceiling to PIPELINE
-    - set hierarchical qualification to INCOMPLETE
-    - set hierarchical canary percentage to zero
-    - stop new hierarchical workflow starts
-    - freeze uncommitted external effects for hierarchical attempts
+    - freeze new task admissions
+    - stop new workflow and delegation starts
+    - freeze uncommitted external effects
     - cancel or suspend child activities without deleting evidence
     - preserve manifests, histories, logs and idempotency keys
-    - route newly admitted tasks to PIPELINE
     - emit a security and operations incident
   never:
     - bypass a human approval
@@ -71,11 +68,9 @@ inFlightReconciliation:
   awaitingHumanDecision: SUSPEND_AND_INVALIDATE_ON_DIGEST_CHANGE
   effectRequestedUnknownOutcome: RECONCILE_BY_IDEMPOTENCY_KEY
   effectConfirmed: RECORD_ONLY_NEVER_REPEAT
-  shadowAttempt: CANCEL_WITHOUT_BASELINE_IMPACT
-  newAttemptRequiredForPipelineReplay: true
+  newAttemptRequiredForFunctionalReplay: true
 
 recovery:
-  minimumMode: HIERARCHICAL_SHADOW
   requiredEvidence:
     - incident root cause and affected task set
     - integrity check of evidence and state
@@ -86,8 +81,8 @@ recovery:
     operations: always
     security: for security, isolation, permission, secret or evidence incidents
     product: for behavior, scope or customer-impacting incidents
-  progressiveOnly: true
-  directReturnToActiveForbidden: true
+  restoreCompatibleBuildOnly: true
+  reopenAdmissionsAfterVerificationOnly: true
 
 audit:
   requiredFields:
@@ -96,8 +91,8 @@ audit:
     - trigger_id
     - source
     - affected_tasks
-    - previous_mode
-    - effective_safe_mode
+    - previous_build_id
+    - effective_safe_state
     - frozen_effects
     - in_flight_decisions
     - actor

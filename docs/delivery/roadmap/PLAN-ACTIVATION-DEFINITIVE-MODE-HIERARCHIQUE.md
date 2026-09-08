@@ -161,31 +161,32 @@ refactor(orchestrator): remove legacy execution-mode routing
 
 ## 4. Nettoyer les contrats et politiques
 
-- [ ] Mettre à jour `routing-policy-v1.yaml` :
-  - [ ] supprimer `modeCeilings` ;
-  - [ ] supprimer `PIPELINE_BASELINE` ;
-  - [ ] supprimer les contraintes propres au canary ;
-  - [ ] conserver qualification, risque, budget et triage humain.
-- [ ] Mettre à jour `risk-policy-v1.yaml` :
-  - [ ] supprimer les matrices par mode ;
-  - [ ] conserver `AUTO`, `HUMAN_BEFORE_CODE`, `HUMAN_BEFORE_EXTERNAL_EFFECT` et `DENY`.
-- [ ] Mettre à jour `rollback-policy-v1.yaml` :
-  - [ ] supprimer `safeMode: PIPELINE` ;
-  - [ ] supprimer le retour obligatoire par `HIERARCHICAL_SHADOW` ;
-  - [ ] définir `FREEZE_ADMISSIONS` comme état de sécurité ;
-  - [ ] conserver la réconciliation par clé d'idempotence.
-- [ ] Mettre à jour `delegation-plan-v1.schema.json` :
-  - [ ] supprimer le champ `mode`, de préférence ;
+- [x] Mettre à jour `routing-policy-v1.yaml` :
+  - [x] supprimer `modeCeilings` ;
+  - [x] supprimer `PIPELINE_BASELINE` ;
+  - [x] supprimer les contraintes propres au canary ;
+  - [x] conserver qualification, risque, budget et triage humain.
+- [x] Mettre à jour `risk-policy-v1.yaml` :
+  - [x] supprimer les matrices par mode ;
+  - [x] conserver `AUTO`, `HUMAN_BEFORE_CODE`, `HUMAN_BEFORE_EXTERNAL_EFFECT` et `DENY`.
+- [x] Mettre à jour `rollback-policy-v1.yaml` :
+  - [x] supprimer `safeMode: PIPELINE` ;
+  - [x] supprimer le retour obligatoire par `HIERARCHICAL_SHADOW` ;
+  - [x] définir `FREEZE_ADMISSIONS` comme état de sécurité ;
+  - [x] conserver la réconciliation par clé d'idempotence.
+- [x] Mettre à jour `delegation-plan-v1.schema.json` :
+  - [x] supprimer le champ `mode`, de préférence ;
   - [ ] ou limiter temporairement sa valeur à `HIERARCHICAL_ACTIVE` pendant la transition.
-- [ ] Mettre à jour les golden contracts et fixtures correspondants.
+- [x] Mettre à jour les golden contracts et fixtures correspondants.
 - [ ] Retirer les rôles ou alias de compatibilité `planner` et `reviewer` après vérification de leurs consommateurs.
-- [ ] Vérifier séparément les usages de `MCP_SHADOW` avant toute suppression.
+- [x] Vérifier séparément les usages de `MCP_SHADOW` avant toute suppression. _(Frontière MCP indépendante,
+  inchangée par ce lot.)_
 
 ### Critères de sortie du lot 4
 
-- [ ] Aucune politique active ne propose un ancien mode ou un fallback pipeline.
-- [ ] Les schémas refusent les anciennes valeurs pour toute nouvelle donnée.
-- [ ] Les anciennes données restent lisibles par le chemin de compatibilité V1.
+- [x] Aucune politique active ne propose un ancien mode ou un fallback pipeline.
+- [x] Les schémas refusent les anciennes valeurs pour toute nouvelle donnée.
+- [x] Les anciennes données restent lisibles par le chemin de compatibilité V1.
 
 ### Commit proposé
 

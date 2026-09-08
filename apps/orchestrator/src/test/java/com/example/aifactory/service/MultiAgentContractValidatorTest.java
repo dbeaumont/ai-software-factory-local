@@ -117,6 +117,11 @@ class MultiAgentContractValidatorTest {
                 new MultiAgentContractValidator.ContractContext("task-1", "attempt-1", Set.of("another-ref"))))
                 .hasMessageContaining("citation outside task");
 
+        var legacyMode = plan.deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) legacyMode).put("mode", "HIERARCHICAL_ACTIVE");
+        assertThatThrownBy(() -> validator.validate("delegation-plan-v1", legacyMode))
+                .hasMessageContaining("violates");
+
         for (String required : java.util.List.of("budget", "success_criteria")) {
             var missing = plan.deepCopy();
             ((tools.jackson.databind.node.ObjectNode) missing.path("nodes").get(0)).remove(required);

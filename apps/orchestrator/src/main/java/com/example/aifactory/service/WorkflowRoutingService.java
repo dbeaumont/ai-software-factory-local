@@ -52,10 +52,9 @@ public final class WorkflowRoutingService {
             return triage("human-triage", "The risk class requires human triage before routing.");
         }
         var hierarchical = hierarchicalPath.plan(new HierarchicalPathPlanner.Input(
-                "HIERARCHICAL_ACTIVE", input.qualification(), input.risk(), input.modules(), input.domains(),
+                input.qualification(), input.risk(), input.modules(), input.domains(),
                 input.independentCodeScopes(), input.impacts(), input.materialDecisionOpen(),
-                input.repositoryAllowlisted(), input.stableCanaryBucket(), input.inputsComplete(),
-                input.contradictory(), input.budgetAvailable()));
+                input.inputsComplete(), input.contradictory(), input.budgetAvailable()));
         if (hierarchical.isPresent()) {
             HierarchicalPathPlanner.Plan plan = hierarchical.orElseThrow();
             List<String> agents = new ArrayList<>();
@@ -66,9 +65,8 @@ public final class WorkflowRoutingService {
                     agents, plan.humanGate());
         }
         var shortPlan = shortPath.plan(new ShortCodePathPlanner.Input(
-                "HIERARCHICAL_ACTIVE", input.qualification(), input.risk(), input.modules(), input.domains(),
-                input.estimatedFiles(), input.impacts(), input.repositoryAllowlisted(),
-                input.stableCanaryBucket(), input.inputsComplete(), input.contradictory(),
+                input.qualification(), input.risk(), input.modules(), input.domains(),
+                input.estimatedFiles(), input.impacts(), input.inputsComplete(), input.contradictory(),
                 input.budgetAvailable()));
         if (shortPlan.isPresent()) {
             ShortCodePathPlanner.Plan plan = shortPlan.orElseThrow();
@@ -100,8 +98,6 @@ public final class WorkflowRoutingService {
         values.put("impacts", input.impacts().stream().sorted().reduce((left, right) -> left + "," + right)
                 .orElse(""));
         values.put("material_decision_open", Boolean.toString(input.materialDecisionOpen()));
-        values.put("repository_allowlisted", Boolean.toString(input.repositoryAllowlisted()));
-        values.put("stable_canary_bucket", Boolean.toString(input.stableCanaryBucket()));
         values.put("inputs_complete", Boolean.toString(input.inputsComplete()));
         values.put("contradictory", Boolean.toString(input.contradictory()));
         values.put("budget_available", Boolean.toString(input.budgetAvailable()));
@@ -141,8 +137,7 @@ public final class WorkflowRoutingService {
     public record Input(String taskId, String sourceCommit, String qualification,
                         String repositoryId, String risk, int modules, int domains, int estimatedFiles,
                         int independentCodeScopes, Set<String> impacts, boolean materialDecisionOpen,
-                        boolean repositoryAllowlisted, boolean stableCanaryBucket, boolean inputsComplete,
-                        boolean contradictory, boolean budgetAvailable) {
+                        boolean inputsComplete, boolean contradictory, boolean budgetAvailable) {
         public Input {
             impacts = impacts == null ? Set.of() : Set.copyOf(impacts);
         }

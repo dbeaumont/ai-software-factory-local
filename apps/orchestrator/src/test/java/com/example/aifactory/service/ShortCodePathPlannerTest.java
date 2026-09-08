@@ -35,27 +35,24 @@ class ShortCodePathPlannerTest {
     }
 
     @Test
-    void refusesShortPathWhenRiskScopeImpactOrModeExceedsTheHostPolicy() {
+    void refusesShortPathWhenRiskScopeImpactOrQualificationExceedsTheHostPolicy() {
         assertThat(planner.plan(input("R2", 1, 1, 2, Set.of()))).isEmpty();
         assertThat(planner.plan(input("R1", 2, 1, 2, Set.of()))).isEmpty();
         assertThat(planner.plan(input("R1", 1, 2, 2, Set.of()))).isEmpty();
         assertThat(planner.plan(input("R1", 1, 1, 9, Set.of()))).isEmpty();
         assertThat(planner.plan(input("R1", 1, 1, 2, Set.of("authentication")))).isEmpty();
         assertThat(planner.plan(new ShortCodePathPlanner.Input(
-                "HIERARCHICAL_SHADOW", "QUALIFIED", "R1", 1, 1, 2, Set.of(),
-                true, true, true, false, true))).isEmpty();
+                "UNQUALIFIED", "R1", 1, 1, 2, Set.of(), true, false, true))).isEmpty();
         assertThat(planner.plan(new ShortCodePathPlanner.Input(
-                "HIERARCHICAL_CANARY", "QUALIFIED", "R1", 1, 1, 2, Set.of(),
-                false, true, true, false, true))).isEmpty();
+                "QUALIFIED", "R1", 1, 1, 2, Set.of(), false, false, true))).isEmpty();
         assertThat(planner.plan(new ShortCodePathPlanner.Input(
-                "HIERARCHICAL_ACTIVE", "UNQUALIFIED", "R1", 1, 1, 2, Set.of(),
-                true, true, true, false, true))).isEmpty();
+                "QUALIFIED", "R1", 1, 1, 2, Set.of(), true, true, true))).isEmpty();
     }
 
     private static ShortCodePathPlanner.Input input(String risk, int modules, int domains, int files,
                                                     Set<String> impacts) {
-        return new ShortCodePathPlanner.Input("HIERARCHICAL_ACTIVE", "QUALIFIED", risk,
-                modules, domains, files, impacts, true, true, true, false, true);
+        return new ShortCodePathPlanner.Input("QUALIFIED", risk,
+                modules, domains, files, impacts, true, false, true);
     }
 
     private static Path fixturePath() {

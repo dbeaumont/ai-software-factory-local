@@ -33,7 +33,6 @@ public final class HierarchicalPathPlanner {
     private final int minIndependentCodeScopes;
     private final Set<String> triggeringImpacts;
     private final boolean materialDecisionTriggers;
-    private final Map<String, Map<String, Object>> modeCeilings;
 
     public HierarchicalPathPlanner() {
         Map<String, Object> policy = load();
@@ -47,29 +46,11 @@ public final class HierarchicalPathPlanner {
         minIndependentCodeScopes = number(selection, "independentCodeScopes");
         triggeringImpacts = strings(selection, "impacts");
         materialDecisionTriggers = Boolean.TRUE.equals(selection.get("materialDecisionOpen"));
-        Map<String, Object> rawModes = map(policy.get("modeCeilings"), "modeCeilings");
-        java.util.LinkedHashMap<String, Map<String, Object>> parsedModes = new java.util.LinkedHashMap<>();
-        rawModes.forEach((mode, value) -> parsedModes.put(mode, map(value, "mode " + mode)));
-        modeCeilings = Map.copyOf(parsedModes);
     }
 
     public Optional<Plan> plan(Input input) {
         if (!eligibleInput(input)) return Optional.empty();
-        Map<String, Object> ceiling = modeCeilings.get(input.mode());
-        if (ceiling == null || !strings(ceiling, "allowedPaths").contains("HIERARCHICAL_PATH")
-                || "PIPELINE_BASELINE".equals(ceiling.get("authoritativePath"))) {
-            return Optional.empty();
-        }
-        if (ceiling.containsKey("requiresQualification")
-                && !ceiling.get("requiresQualification").toString().equals(input.qualification())) {
-            return Optional.empty();
-        }
-        if (Boolean.TRUE.equals(ceiling.get("requiresRepositoryAllowlist")) && !input.repositoryAllowlisted()) {
-            return Optional.empty();
-        }
-        if (Boolean.TRUE.equals(ceiling.get("requiresStableCanaryBucket")) && !input.stableCanaryBucket()) {
-            return Optional.empty();
-        }
+        if (!"QUALIFIED".equals(input.qualification())) return Optional.empty();
         boolean triggered = input.modules() >= minModules || input.domains() >= minDomains
                 || input.independentCodeScopes() >= minIndependentCodeScopes
                 || input.impacts().stream().anyMatch(triggeringImpacts::contains)
@@ -81,7 +62,7 @@ public final class HierarchicalPathPlanner {
     }
 
     private static boolean eligibleInput(Input input) {
-        return input != null && input.mode() != null && input.qualification() != null && input.risk() != null
+        return input != null && input.qualification() != null && input.risk() != null
                 && input.modules() >= 0 && input.domains() >= 0 && input.independentCodeScopes() >= 0
                 && input.inputsComplete() && !input.contradictory() && input.budgetAvailable();
     }
@@ -122,10 +103,9 @@ public final class HierarchicalPathPlanner {
         return Set.copyOf(strings);
     }
 
-    public record Input(String mode, String qualification, String risk, int modules, int domains,
+    public record Input(String qualification, String risk, int modules, int domains,
                         int independentCodeScopes, Set<String> impacts, boolean materialDecisionOpen,
-                        boolean repositoryAllowlisted, boolean stableCanaryBucket, boolean inputsComplete,
-                        boolean contradictory, boolean budgetAvailable) {
+                        boolean inputsComplete, boolean contradictory, boolean budgetAvailable) {
         public Input {
             impacts = impacts == null ? Set.of() : Set.copyOf(impacts);
         }

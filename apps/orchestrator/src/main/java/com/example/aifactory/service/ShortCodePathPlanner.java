@@ -27,7 +27,6 @@ public final class ShortCodePathPlanner {
     private final int maxDomains;
     private final int maxEstimatedFiles;
     private final Set<String> forbiddenImpacts;
-    private final Map<String, Map<String, Object>> modeCeilings;
 
     public ShortCodePathPlanner() {
         Map<String, Object> policy = load();
@@ -39,33 +38,15 @@ public final class ShortCodePathPlanner {
         maxDomains = number(shortPath, "maxDomains");
         maxEstimatedFiles = number(shortPath, "maxEstimatedFiles");
         forbiddenImpacts = strings(shortPath, "forbiddenImpacts");
-        Map<String, Object> rawModes = map(policy.get("modeCeilings"), "modeCeilings");
-        java.util.LinkedHashMap<String, Map<String, Object>> parsedModes = new java.util.LinkedHashMap<>();
-        rawModes.forEach((mode, value) -> parsedModes.put(mode, map(value, "mode " + mode)));
-        modeCeilings = Map.copyOf(parsedModes);
     }
 
     public Optional<Plan> plan(Input input) {
-        if (input == null || input.mode() == null || input.qualification() == null || input.risk() == null
+        if (input == null || input.qualification() == null || input.risk() == null
                 || input.modules() < 0 || input.domains() < 0 || input.estimatedFiles() < 0
                 || !input.inputsComplete() || input.contradictory() || !input.budgetAvailable()) {
             return Optional.empty();
         }
-        Map<String, Object> ceiling = modeCeilings.get(input.mode());
-        if (ceiling == null || !strings(ceiling, "allowedPaths").contains("SHORT_CODE_PATH")
-                || "PIPELINE_BASELINE".equals(ceiling.get("authoritativePath"))) {
-            return Optional.empty();
-        }
-        if (ceiling.containsKey("requiresQualification")
-                && !ceiling.get("requiresQualification").toString().equals(input.qualification())) {
-            return Optional.empty();
-        }
-        if (Boolean.TRUE.equals(ceiling.get("requiresRepositoryAllowlist")) && !input.repositoryAllowlisted()) {
-            return Optional.empty();
-        }
-        if (Boolean.TRUE.equals(ceiling.get("requiresStableCanaryBucket")) && !input.stableCanaryBucket()) {
-            return Optional.empty();
-        }
+        if (!"QUALIFIED".equals(input.qualification())) return Optional.empty();
         if (!allowedRisks.contains(input.risk()) || input.modules() > maxModules || input.domains() > maxDomains
                 || input.estimatedFiles() > maxEstimatedFiles
                 || input.impacts().stream().anyMatch(forbiddenImpacts::contains)) {
@@ -119,9 +100,8 @@ public final class ShortCodePathPlanner {
         return Set.copyOf(strings);
     }
 
-    public record Input(String mode, String qualification, String risk, int modules, int domains,
-                        int estimatedFiles, Set<String> impacts, boolean repositoryAllowlisted,
-                        boolean stableCanaryBucket, boolean inputsComplete, boolean contradictory,
+    public record Input(String qualification, String risk, int modules, int domains,
+                        int estimatedFiles, Set<String> impacts, boolean inputsComplete, boolean contradictory,
                         boolean budgetAvailable) {
         public Input {
             impacts = impacts == null ? Set.of() : Set.copyOf(impacts);

@@ -36,7 +36,7 @@ class WorkflowRoutingServiceTest {
     void recordsConservativeFailClosedReasonsWithoutABaselineFallback() {
         RoutingDecision incomplete = routing.decide(new WorkflowRoutingService.Input(
                 "missing-task", "a".repeat(40), "QUALIFIED", "repo", "R1",
-                1, 1, 1, 1, Set.of(), false, true, true, false, false, true));
+                1, 1, 1, 1, Set.of(), false, false, false, true));
 
         assertThat(incomplete.selectedPath()).isEqualTo("HUMAN_TRIAGE");
         assertThat(incomplete.matchedRule()).isEqualTo("human-triage");
@@ -61,6 +61,6 @@ class WorkflowRoutingServiceTest {
                                                       Set<String> impacts, boolean materialDecisionOpen) {
         return new WorkflowRoutingService.Input(taskId, "a".repeat(40), "QUALIFIED", "sample-repo",
                 risk, modules, domains, files, independentScopes, impacts, materialDecisionOpen,
-                true, true, true, false, true);
+                true, false, true);
     }
 }

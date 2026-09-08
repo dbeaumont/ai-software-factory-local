@@ -2,21 +2,6 @@ version: "1"
 policyId: hierarchical-routing-v1
 defaultDecision: HUMAN_TRIAGE
 
-modeCeilings:
-  PIPELINE:
-    allowedPaths: [PIPELINE_BASELINE]
-  HIERARCHICAL_SHADOW:
-    allowedPaths: [PIPELINE_BASELINE, SHORT_CODE_PATH, HIERARCHICAL_PATH]
-    authoritativePath: PIPELINE_BASELINE
-  HIERARCHICAL_CANARY:
-    allowedPaths: [PIPELINE_BASELINE, SHORT_CODE_PATH, HIERARCHICAL_PATH, HUMAN_TRIAGE]
-    requiresQualification: QUALIFIED
-    requiresRepositoryAllowlist: true
-    requiresStableCanaryBucket: true
-  HIERARCHICAL_ACTIVE:
-    allowedPaths: [SHORT_CODE_PATH, HIERARCHICAL_PATH, HUMAN_TRIAGE]
-    requiresQualification: QUALIFIED
-
 shortCodePath:
   allowedRisks: [R0, R1]
   maxModules: 1
@@ -64,10 +49,8 @@ humanTriage:
   selectOnBudgetUnavailable: true
 
 precedence:
-  - mode-ceiling
   - qualification
   - human-triage
-  - canary-eligibility
   - hierarchical-path
   - short-code-path
   - default-decision
@@ -78,8 +61,6 @@ audit:
     - policy_version
     - task_id
     - source_commit
-    - requested_mode
-    - effective_mode
     - normalized_inputs
     - matched_rule
     - selected_path
