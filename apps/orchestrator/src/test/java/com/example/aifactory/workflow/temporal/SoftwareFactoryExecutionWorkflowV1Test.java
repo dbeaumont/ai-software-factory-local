@@ -255,10 +255,15 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         }
 
         @Override public A2aContracts.AgentCardDescriptor resolveAgent(String role) {
+            java.util.List<String> skills = new java.util.ArrayList<>(List.of(
+                    role + ".pipeline-agent-task-v1", role + ".specialist-task-v1"));
+            if ("independent-reviewer".equals(role)) {
+                skills.add("independent-reviewer.integration-result-v1");
+            }
             return new A2aContracts.AgentCardDescriptor(role,
                     URI.create("https://" + role + "/.well-known/agent-card.json"),
                     URI.create("https://" + role + "/a2a"), "JSONRPC", "1.0", "a".repeat(64),
-                    List.of(role + ".pipeline-agent-task-v1", role + ".specialist-task-v1"), false, true);
+                    List.copyOf(skills), false, true);
         }
 
         @Override public A2aContracts.TaskSnapshot reconcileDispatch(A2aActivities.DispatchRequest request) {

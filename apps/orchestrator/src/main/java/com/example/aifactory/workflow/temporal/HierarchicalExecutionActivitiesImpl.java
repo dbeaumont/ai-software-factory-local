@@ -3,6 +3,7 @@ package com.example.aifactory.workflow.temporal;
 import com.example.aifactory.a2a.A2aContracts;
 import com.example.aifactory.a2a.A2aEvidencePartFactory;
 import com.example.aifactory.model.TaskState;
+import com.example.aifactory.service.IndependentReviewBundle;
 import com.example.aifactory.service.MultiAgentContractValidator;
 import com.example.aifactory.workflow.EvidenceRepository;
 import com.example.aifactory.workflow.TaskMemory;
@@ -14,11 +15,17 @@ import tools.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Evidence-backed implementation of the hierarchical specialist input boundary. */
 @Component
 public final class HierarchicalExecutionActivitiesImpl implements HierarchicalExecutionActivities {
+    private static final Pattern DIFF_HEADER = Pattern.compile("diff --git a/([^\\s]+) b/([^\\s]+)");
     private static final Set<String> SPECIALIST_ROLES = Set.of(
             "architecture-agent", "code-agent", "test-design", "test-agent", "security-agent");
     private final TaskMemory memory;
@@ -161,6 +168,81 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
         }
     }
 
+    @Override
+    public PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request) {
+        requireValid(request);
+        TaskState state = memory.find(request.taskId()).orElseThrow(
+                () -> new IllegalArgumentException("Unknown hierarchical task"));
+        if (!request.attemptId().equals(state.workflowAttemptId)
+                || !request.sourceCommit().equals(state.sourceCommit)) {
+            throw new SecurityException("Independent review input is outside the projected workflow attempt");
+        }
+        try {
+            if (state.pendingEffect == null) {
+                throw new SecurityException("Independent review requires a prepared external effect");
+            }
+            List<String> changedFiles = changedFiles(state.patch);
+            List<IndependentReviewBundle.ResultReference> reviewedResults = request.reviewedResults().stream()
+                    .map(result -> new IndependentReviewBundle.ResultReference(result.documentId(), result.role(),
+                            result.artifact().uri(), result.artifact().digest()))
+                    .toList();
+            Map<String, EvidenceRepository.EvidenceReference> references = new LinkedHashMap<>();
+            Map<String, String> digests = new LinkedHashMap<>();
+            request.artifacts().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+                var artifact = entry.getValue();
+                references.put(entry.getKey(), new EvidenceRepository.EvidenceReference(
+                        artifact.uri(), artifact.digest(), artifact.status()));
+                digests.put(entry.getKey(), artifact.digest());
+            });
+            EvidenceRepository.PolicyDecision policy = new EvidenceRepository.PolicyDecision(
+                    "1", request.taskId(), request.attemptId(), "hierarchical-gates", "1", "ALLOW",
+                    List.of("pre-review-gates-passed"), Map.copyOf(digests), Instant.now(clock));
+            EvidenceRepository.StoredManifest manifest = evidence.createManifest(
+                    new EvidenceRepository.ManifestRequest(request.taskId(), request.attemptId(),
+                            request.repositoryId(), request.sourceCommit(), request.artifacts().get("patch").digest(),
+                            Map.copyOf(references), policy, "workflow"));
+            if (!"COMPLETE".equals(manifest.status())) {
+                throw new SecurityException("Hierarchical review manifest is incomplete");
+            }
+            var patch = request.artifacts().get("patch");
+            IndependentReviewBundle bundle = new IndependentReviewBundle(
+                    request.taskId(), request.attemptId(), request.sourceCommit(),
+                    new IndependentReviewBundle.ConsolidatedPatch(
+                            "integrated-patch", patch.uri(), patch.digest(), changedFiles),
+                    new IndependentReviewBundle.FinalManifest(
+                            manifest.manifestId(), manifest.uri(), manifest.digest()),
+                    reviewedResults, List.of(), Map.copyOf(requiredArtifactDigests(request.artifacts())));
+            bundle.requireProductionArtifactBinding(request.artifacts());
+            state.bindApprovalManifest(manifest.manifestId(), manifest.uri(), manifest.digest());
+            memory.project("hierarchical-review-manifest:" + manifest.digest(), state);
+            return new PreparedIndependentReview(bundle, manifest);
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        }
+    }
+
+    private static Map<String, String> requiredArtifactDigests(
+            Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts) {
+        Map<String, String> required = new LinkedHashMap<>();
+        for (String name : List.of("plan", "patch", "tests", "quality", "security")) {
+            var artifact = artifacts.get(name);
+            if (artifact == null) throw new SecurityException("Hierarchical review is missing evidence: " + name);
+            required.put(name, artifact.digest());
+        }
+        return required;
+    }
+
+    private static List<String> changedFiles(String patch) {
+        if (patch == null) throw new SecurityException("Hierarchical review is missing the integrated patch");
+        java.util.LinkedHashSet<String> paths = new java.util.LinkedHashSet<>();
+        for (String line : patch.split("\\n")) {
+            Matcher matcher = DIFF_HEADER.matcher(line);
+            if (matcher.matches()) paths.add(matcher.group(2));
+        }
+        if (paths.isEmpty()) throw new SecurityException("Integrated patch contains no reviewable file");
+        return List.copyOf(paths);
+    }
+
     private static void requireValid(PrepareSpecialistTask request) {
         if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
                 || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
@@ -197,6 +279,25 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                 || !request.reference().digest().matches("[0-9a-f]{64}")) {
             throw new IllegalArgumentException("Hierarchical specialist result request is invalid");
         }
+    }
+
+    private static void requireValid(PrepareIndependentReview request) {
+        Set<String> requiredRoles = Set.of(
+                "architecture-agent", "code-agent", "test-design", "test-agent", "security-agent");
+        if (request == null || request.taskId() == null || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
+                || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.repositoryId() == null || !request.repositoryId().matches("[a-z0-9][a-z0-9-]{1,62}")
+                || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || request.reviewedResults().size() != requiredRoles.size()
+                || request.reviewedResults().stream().anyMatch(java.util.Objects::isNull)
+                || !request.reviewedResults().stream().map(ReviewedSpecialistResult::role)
+                .collect(java.util.stream.Collectors.toSet()).equals(requiredRoles)
+                || request.reviewedResults().stream().anyMatch(result -> result.documentId() == null
+                || !result.documentId().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
+                || !SPECIALIST_ROLES.contains(result.role()) || result.artifact() == null)) {
+            throw new IllegalArgumentException("Hierarchical independent review request is invalid");
+        }
+        requiredArtifactDigests(request.artifacts());
     }
 
     private static String roleFor(String contract) {

@@ -303,6 +303,9 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [x] Remplacer l'étape de compatibilité Test du chemin complet par la hiérarchie A2A native
   `test-agent -> test-design` : stratégie validée avant l'exécution déterministe, puis évaluation validée et
   projetée à partir des preuves de test.
+- [x] Exécuter la revue indépendante du chemin complet via son workflow enfant A2A dédié, sur un manifeste
+  hiérarchique immuable lié au patch, aux contrôles déterministes et aux résultats spécialistes validés ; l'accord
+  humain final porte sur ce même manifeste.
 - [x] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
 - [ ] Tester le redémarrage de l'orchestrateur.
 - [ ] Tester une rotation de Build ID.

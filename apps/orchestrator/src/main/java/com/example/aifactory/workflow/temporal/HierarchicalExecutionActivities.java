@@ -1,11 +1,14 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.a2a.A2aContracts;
+import com.example.aifactory.service.IndependentReviewBundle;
 import com.example.aifactory.service.PipelineStepContracts;
+import com.example.aifactory.workflow.EvidenceRepository;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Materializes immutable, contract-valid inputs before a hierarchical A2A delegation starts. */
@@ -16,6 +19,9 @@ public interface HierarchicalExecutionActivities {
 
     @ActivityMethod(name = "AcceptHierarchicalSpecialistResult")
     AcceptedSpecialistResult acceptSpecialistResult(AcceptSpecialistResult request);
+
+    @ActivityMethod(name = "PrepareHierarchicalIndependentReview")
+    PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request);
 
     record PrepareSpecialistTask(String taskId, String attemptId, String repositoryId, String sourceCommit,
                                  String delegationPlanId, String nodeId, String parentRole, String role,
@@ -43,4 +49,19 @@ public interface HierarchicalExecutionActivities {
 
     record AcceptedSpecialistResult(String documentId,
                                     PipelineStepContracts.ArtifactReference artifact) {}
+
+    record PrepareIndependentReview(String taskId, String attemptId, String repositoryId, String sourceCommit,
+                                    Map<String, PipelineStepContracts.ArtifactReference> artifacts,
+                                    List<ReviewedSpecialistResult> reviewedResults) {
+        public PrepareIndependentReview {
+            artifacts = artifacts == null ? Map.of() : Map.copyOf(artifacts);
+            reviewedResults = reviewedResults == null ? List.of() : List.copyOf(reviewedResults);
+        }
+    }
+
+    record ReviewedSpecialistResult(String documentId, String role,
+                                    PipelineStepContracts.ArtifactReference artifact) {}
+
+    record PreparedIndependentReview(IndependentReviewBundle bundle,
+                                     EvidenceRepository.StoredManifest manifest) {}
 }

@@ -146,7 +146,8 @@ class SoftwareFactoryExecutionWorkflowV2Test {
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
             var workflowWorker = environment.newWorker("test-workflow");
             workflowWorker.registerWorkflowImplementationTypes(
-                    SoftwareFactoryExecutionWorkflowV2Impl.class, A2aDelegationWorkflowImpl.class);
+                    SoftwareFactoryExecutionWorkflowV2Impl.class, A2aDelegationWorkflowImpl.class,
+                    A2aIndependentReviewWorkflowImpl.class);
             workflowWorker.registerActivitiesImplementations(activities);
             var contextWorker = environment.newWorker("test-context");
             contextWorker.registerActivitiesImplementations(activities,
@@ -258,6 +259,31 @@ class SoftwareFactoryExecutionWorkflowV2Test {
             return new AcceptedSpecialistResult(id,
                     new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
                             request.reference().uri(), request.reference().digest(), 64, "COMPLETE", "ACCEPTED"));
+        }
+
+        @Override public PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request) {
+            var patch = request.artifacts().get("patch");
+            var manifest = new com.example.aifactory.workflow.EvidenceRepository.StoredManifest(
+                    "b".repeat(64), "evidence://task-1/pipeline-1/manifest/" + "b".repeat(64),
+                    "c".repeat(64), "COMPLETE", "CONFIDENTIAL",
+                    java.time.Instant.parse("2027-09-08T00:00:00Z"),
+                    java.time.Instant.parse("2026-09-08T00:00:00Z"));
+            var results = request.reviewedResults().stream().map(result ->
+                    new com.example.aifactory.service.IndependentReviewBundle.ResultReference(
+                            result.documentId(), result.role(), result.artifact().uri(), result.artifact().digest()))
+                    .toList();
+            var digests = new java.util.LinkedHashMap<String, String>();
+            for (String name : java.util.List.of("plan", "patch", "tests", "quality", "security")) {
+                digests.put(name, request.artifacts().get(name).digest());
+            }
+            var bundle = new com.example.aifactory.service.IndependentReviewBundle(
+                    request.taskId(), request.attemptId(), request.sourceCommit(),
+                    new com.example.aifactory.service.IndependentReviewBundle.ConsolidatedPatch(
+                            "integrated-patch", patch.uri(), patch.digest(), java.util.List.of("src/Main.java")),
+                    new com.example.aifactory.service.IndependentReviewBundle.FinalManifest(
+                            manifest.manifestId(), manifest.uri(), manifest.digest()),
+                    results, java.util.List.of(), java.util.Map.copyOf(digests));
+            return new PreparedIndependentReview(bundle, manifest);
         }
     }
 }

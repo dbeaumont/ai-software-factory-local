@@ -35,6 +35,8 @@ abstract class ProductionExecutionWorkflowRuntime {
     private final A2aActivities.Stubs a2a = A2aActivities.newStubs();
     private final List<DelegationWorkflow.Result> pipelineDelegations = new java.util.ArrayList<>();
     private final Map<String, A2aActivities.EvidenceReference> hierarchicalResults = new LinkedHashMap<>();
+    private final List<HierarchicalExecutionActivities.ReviewedSpecialistResult> reviewedSpecialistResults =
+            new java.util.ArrayList<>();
     private SoftwareFactoryWorkflow.Request activeRequest;
     private SoftwareFactoryWorkflow.ApprovalRequest activeApprovalRequest;
 
@@ -51,6 +53,7 @@ abstract class ProductionExecutionWorkflowRuntime {
         }
         phase = "SOURCE_RESOLVED";
         if (!sourceAlreadyBound) bindSource(source, request, resolved);
+        com.example.aifactory.workflow.EvidenceRepository.StoredManifest storedManifest = null;
         try {
             throwIfCancelled();
             if ("HIERARCHICAL_PATH".equals(selectedPath)) {
@@ -82,15 +85,23 @@ abstract class ProductionExecutionWorkflowRuntime {
                     Map.of("quality", artifacts.get("quality").digest()));
             if ("HIERARCHICAL_PATH".equals(selectedPath)) {
                 runSecuritySpecialist(source, request, resolved, routingDecisionId);
+                currentStep = "prepare-delivery";
+                pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
+                        new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
+                                resolved.sourceCommit()));
+                var preparedReview = prepareIndependentReview(source, request, resolved);
+                storedManifest = preparedReview.manifest();
+                runIndependentReview(request, resolved, preparedReview.bundle());
+            } else {
+                runPipelineAgent(source, request, resolved, "independent-reviewer", "REVIEW", "review", Map.of(
+                        "plan", artifacts.get("plan").digest(), "patch", artifacts.get("patch").digest(),
+                        "tests", artifacts.get("tests").digest(), "quality", artifacts.get("quality").digest(),
+                        "security", artifacts.get("security").digest()), null, 0);
+                currentStep = "prepare-delivery";
+                pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
+                        new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
+                                resolved.sourceCommit()));
             }
-            runPipelineAgent(source, request, resolved, "independent-reviewer", "REVIEW", "review", Map.of(
-                    "plan", artifacts.get("plan").digest(), "patch", artifacts.get("patch").digest(),
-                    "tests", artifacts.get("tests").digest(), "quality", artifacts.get("quality").digest(),
-                    "security", artifacts.get("security").digest()), null, 0);
-            currentStep = "prepare-delivery";
-            pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
-                    new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
-                            resolved.sourceCommit()));
             throwIfCancelled();
         } catch (RuntimeException failure) {
             if (failure instanceof RequestedCancellation) {
@@ -109,9 +120,12 @@ abstract class ProductionExecutionWorkflowRuntime {
                     resolved.sourceCommit(), phase, chronology, pipelineDelegations, Map.of(),
                     null, null, null, null);
         }
-        var storedManifest = pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE)
-                .createApprovalManifest(new PipelineExecutionActivities.ApprovalManifestRequest(
-                        request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(), artifacts));
+        if (storedManifest == null) {
+            storedManifest = pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE)
+                    .createApprovalManifest(new PipelineExecutionActivities.ApprovalManifestRequest(
+                            request.taskId(), request.attemptId(), request.repositoryId(),
+                            resolved.sourceCommit(), artifacts));
+        }
         SoftwareFactoryWorkflow.ApprovalRequest approvalRequest = new SoftwareFactoryWorkflow.ApprovalRequest(
                 storedManifest.manifestId(), storedManifest.uri(), storedManifest.digest());
         activeRequest = request;
@@ -316,6 +330,7 @@ abstract class ProductionExecutionWorkflowRuntime {
                 "architecture-agent", "architecture-assessment-v1", architecture,
                 java.util.Set.of("specialist-architecture"), false);
         artifacts.put("architecture", acceptedArchitecture.artifact());
+        reviewedSpecialistResults.add(reviewed("architecture-agent", acceptedArchitecture));
         hierarchicalResults.put("architecture", architecture);
 
         var code = runHierarchicalSpecialist(source, request, resolved, routingDecisionId,
@@ -329,6 +344,7 @@ abstract class ProductionExecutionWorkflowRuntime {
                 java.util.Set.of(routingDecisionId, "code", acceptedArchitecture.documentId()), true);
         artifacts.put("integration-plan", acceptedCode.artifact());
         artifacts.put("plan", acceptedCode.artifact());
+        reviewedSpecialistResults.add(reviewed("code-agent", acceptedCode));
         hierarchicalResults.put("code", code);
     }
 
@@ -347,6 +363,7 @@ abstract class ProductionExecutionWorkflowRuntime {
         var accepted = acceptHierarchicalSpecialist(source, request, resolved,
                 "test-design", "test-strategy-v1", strategy, java.util.Set.of(), false);
         artifacts.put("test-strategy", accepted.artifact());
+        reviewedSpecialistResults.add(reviewed("test-design", accepted));
         hierarchicalResults.put("test-design", strategy);
         return accepted;
     }
@@ -371,6 +388,7 @@ abstract class ProductionExecutionWorkflowRuntime {
                 "test-agent", "test-assessment-v1", assessment,
                 java.util.Set.of(strategy.documentId()), false);
         artifacts.put("test-assessment", accepted.artifact());
+        reviewedSpecialistResults.add(reviewed("test-agent", accepted));
         hierarchicalResults.put("tests", assessment);
     }
 
@@ -395,7 +413,45 @@ abstract class ProductionExecutionWorkflowRuntime {
         var accepted = acceptHierarchicalSpecialist(source, request, resolved,
                 "security-agent", "security-assessment-v1", security, java.util.Set.of(), false);
         artifacts.put("security-assessment", accepted.artifact());
+        reviewedSpecialistResults.add(reviewed("security-agent", accepted));
         hierarchicalResults.put("security", security);
+    }
+
+    private HierarchicalExecutionActivities.PreparedIndependentReview prepareIndependentReview(
+            SoftwareFactoryWorkflow.SourceLocation source, SoftwareFactoryWorkflow.Request request,
+            SourceResolutionActivities.Result resolved) {
+        HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
+                HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
+                        TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
+        return hierarchical.prepareIndependentReview(new HierarchicalExecutionActivities.PrepareIndependentReview(
+                request.taskId(), request.attemptId(), request.repositoryId(), resolved.sourceCommit(),
+                artifacts, reviewedSpecialistResults));
+    }
+
+    private void runIndependentReview(SoftwareFactoryWorkflow.Request request,
+                                      SourceResolutionActivities.Result resolved,
+                                      com.example.aifactory.service.IndependentReviewBundle bundle) {
+        currentStep = "independent-review";
+        IndependentReviewWorkflow child = io.temporal.workflow.Workflow.newChildWorkflowStub(
+                IndependentReviewWorkflow.class, io.temporal.workflow.ChildWorkflowOptions.newBuilder()
+                        .setWorkflowId(TemporalIds.delegation(
+                                request.taskId(), request.attemptId(), "independent-review"))
+                        .build());
+        IndependentReviewWorkflow.Result result = child.run(new IndependentReviewWorkflow.Request(
+                request.taskId(), request.attemptId(), "independent-review", resolved.sourceCommit(),
+                bundle, new DelegationWorkflow.Budget(10_000, 10_000_000, 6, 600)));
+        pipelineDelegations.add(new DelegationWorkflow.Result(
+                result.reviewId(), result.role(), result.status()));
+        if (!"READY_FOR_ACTIVITIES".equals(result.status())) {
+            throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                    "Independent review did not accept the hierarchical result", "BUSINESS_REJECTION");
+        }
+    }
+
+    private static HierarchicalExecutionActivities.ReviewedSpecialistResult reviewed(
+            String role, HierarchicalExecutionActivities.AcceptedSpecialistResult result) {
+        return new HierarchicalExecutionActivities.ReviewedSpecialistResult(
+                result.documentId(), role, result.artifact());
     }
 
     private A2aActivities.EvidenceReference runHierarchicalSpecialist(
