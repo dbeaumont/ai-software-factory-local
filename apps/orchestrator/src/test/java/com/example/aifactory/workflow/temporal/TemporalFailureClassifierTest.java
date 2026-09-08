@@ -37,8 +37,10 @@ class TemporalFailureClassifierTest {
         assertThat(contract.getType()).isEqualTo("CONTRACT_ERROR");
         assertThat(contract.isNonRetryable()).isTrue();
         assertThat(contract.getMessage()).doesNotContain("unsafe payload detail");
+        assertThat(contract.getCause()).isNull();
         assertThat(dependency.getType()).isEqualTo("DEPENDENCY_UNAVAILABLE");
         assertThat(dependency.isNonRetryable()).isFalse();
+        assertThat(dependency.getCause()).isNull();
     }
 
     @Test

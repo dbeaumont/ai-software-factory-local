@@ -55,8 +55,8 @@ public final class TemporalFailureClassifier {
         Classification classification = classify(failure);
         String message = "Activity failed: " + classification.type().name().toLowerCase(Locale.ROOT);
         return classification.retryable()
-                ? ApplicationFailure.newFailureWithCause(message, classification.type().name(), failure)
-                : ApplicationFailure.newNonRetryableFailureWithCause(message, classification.type().name(), failure);
+                ? ApplicationFailure.newFailure(message, classification.type().name())
+                : ApplicationFailure.newNonRetryableFailure(message, classification.type().name());
     }
 
     public enum Type {
