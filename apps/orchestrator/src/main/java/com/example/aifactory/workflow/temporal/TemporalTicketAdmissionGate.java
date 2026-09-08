@@ -1,6 +1,7 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.config.TemporalProperties;
+import com.example.aifactory.service.OperationalKillSwitch;
 import com.example.aifactory.service.TicketAdmissionGate;
 import io.temporal.api.workflowservice.v1.DescribeNamespaceRequest;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -19,18 +20,27 @@ public final class TemporalTicketAdmissionGate implements TicketAdmissionGate {
     private final WorkerFactory factory;
     private final TemporalWorkerRegistry registry;
     private final TemporalProperties properties;
+    private final OperationalKillSwitch killSwitch;
 
     public TemporalTicketAdmissionGate(WorkflowServiceStubs service, WorkerFactory factory,
-                                       TemporalWorkerRegistry registry, TemporalProperties properties) {
+                                       TemporalWorkerRegistry registry, TemporalProperties properties,
+                                       OperationalKillSwitch killSwitch) {
         this.service = service;
         this.factory = factory;
         this.registry = registry;
         this.properties = properties;
+        this.killSwitch = killSwitch;
     }
 
     @Override
     public Mono<Void> verifyActive() {
         return Mono.fromCallable(() -> {
+                    OperationalKillSwitch.Decision admission = killSwitch.decision(
+                            "temporal", "workflow.start", "workflow");
+                    if (!admission.allowed()) {
+                        throw new TemporalAdmissionUnavailableException(
+                                "Factory admissions are suspended by " + admission.reason());
+                    }
                     if (!factory.isStarted() || factory.isShutdown()
                             || registry.workers().size() != REQUIRED_WORKERS) {
                         throw new TemporalAdmissionUnavailableException(

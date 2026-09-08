@@ -7,11 +7,18 @@ import com.example.aifactory.a2a.A2aMediaTypes;
 import com.example.aifactory.a2a.A2aExecutionContext;
 import com.example.aifactory.a2a.A2aTaskAssociationStore;
 import com.example.aifactory.a2a.AgentCardResolver;
+import com.example.aifactory.a2a.A2aClientMetrics;
+import com.example.aifactory.a2a.A2aSpanLinks;
+import com.example.aifactory.config.KillSwitchProperties;
+import com.example.aifactory.service.OperationalKillSwitch;
 import io.temporal.activity.ActivityOptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class A2aActivitiesTest {
+    @TempDir
+    Path tempDirectory;
 
     @Test
     void delegatesEachRemoteOperationAndValidatesBoundEvidenceReferences() {
@@ -136,6 +145,39 @@ class A2aActivitiesTest {
                 .doesNotContainNull();
     }
 
+    @Test
+    void globalKillSwitchStopsNewDelegationsBeforeTheRemoteEffect() throws Exception {
+        Path control = tempDirectory.resolve("kill-switch.properties");
+        Files.writeString(control, "revision=incident-2\nglobal.disabled=true\n");
+        java.util.concurrent.atomic.AtomicInteger sends = new java.util.concurrent.atomic.AtomicInteger();
+        A2aClient client = new A2aClient() {
+            @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> send(
+                    A2aContracts.SendCommand command) {
+                sends.incrementAndGet();
+                return CompletableFuture.failedStage(new AssertionError("send must remain frozen"));
+            }
+            @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> getTask(
+                    A2aContracts.TaskQuery query) { return CompletableFuture.failedStage(new AssertionError()); }
+            @Override public java.util.concurrent.CompletionStage<A2aContracts.TaskSnapshot> cancelTask(
+                    A2aContracts.TaskQuery query) { return CompletableFuture.failedStage(new AssertionError()); }
+            @Override public java.util.concurrent.CompletionStage<java.util.Optional<A2aContracts.TaskSnapshot>>
+            findTaskByMessageId(String role, String messageId) {
+                return CompletableFuture.failedStage(new AssertionError());
+            }
+        };
+        A2aTaskAssociationStore associations = new InMemoryAssociationStore();
+        A2aActivitiesImpl activities = new A2aActivitiesImpl(
+                role -> CompletableFuture.failedStage(new AssertionError()), client,
+                new A2aContractMapping(new ObjectMapper()), associations, A2aClientMetrics.disabled(),
+                A2aSpanLinks.global(), new OperationalKillSwitch(new KillSwitchProperties(control.toString())));
+
+        assertThatThrownBy(() -> activities.dispatchTask(new A2aActivities.DispatchRequest(
+                execution(), "b".repeat(64), command())))
+                .isInstanceOf(io.temporal.failure.ApplicationFailure.class)
+                .hasMessageContaining("global_kill_switch");
+        assertThat(sends).hasValue(0);
+    }
+
     private static ActivityOptions policy(TemporalActivityPolicies.Kind kind) {
         return TemporalActivityPolicies.forKind(kind);
     }
@@ -165,5 +207,20 @@ class A2aActivitiesTest {
                 Instant.parse("2026-09-06T12:00:00Z"),
                 List.of(new A2aContracts.Artifact("artifact-1", "developer-result", List.of(part), Map.of())),
                 Map.of());
+    }
+
+    private static final class InMemoryAssociationStore implements A2aTaskAssociationStore {
+        @Override public void prepareDelegation(A2aExecutionContext execution, DispatchIntent intent) { }
+        @Override public void record(A2aExecutionContext execution, String messageId, String cardDigest,
+                                     String taskId, String contextId) { }
+        @Override public java.util.Optional<Association> findByDelegation(String delegationId) {
+            return java.util.Optional.empty();
+        }
+        @Override public java.util.Optional<Association> findByMessageId(String role, String messageId) {
+            return java.util.Optional.empty();
+        }
+        @Override public java.util.Optional<Association> findByA2aTaskId(String role, String taskId) {
+            return java.util.Optional.empty();
+        }
     }
 }

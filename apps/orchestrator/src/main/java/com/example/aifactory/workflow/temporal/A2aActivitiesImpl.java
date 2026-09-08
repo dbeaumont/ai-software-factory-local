@@ -11,6 +11,7 @@ import com.example.aifactory.a2a.A2aClientMetrics;
 import com.example.aifactory.a2a.A2aSpanLinks;
 import com.example.aifactory.a2a.AgentCardResolver;
 import com.example.aifactory.a2a.A2aEvidenceUriPolicy;
+import com.example.aifactory.service.OperationalKillSwitch;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     private final A2aTaskAssociationStore associations;
     private final A2aClientMetrics metrics;
     private final A2aSpanLinks spanLinks;
+    private final OperationalKillSwitch killSwitch;
 
     public A2aActivitiesImpl(AgentCardResolver cards, A2aClient client, A2aContractMapping contracts,
                              A2aTaskAssociationStore associations) {
@@ -42,12 +44,19 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     public A2aActivitiesImpl(AgentCardResolver cards, A2aClient client, A2aContractMapping contracts,
                              A2aTaskAssociationStore associations, A2aClientMetrics metrics,
                              A2aSpanLinks spanLinks) {
+        this(cards, client, contracts, associations, metrics, spanLinks, null);
+    }
+
+    public A2aActivitiesImpl(AgentCardResolver cards, A2aClient client, A2aContractMapping contracts,
+                             A2aTaskAssociationStore associations, A2aClientMetrics metrics,
+                             A2aSpanLinks spanLinks, OperationalKillSwitch killSwitch) {
         this.cards = cards;
         this.client = client;
         this.contracts = contracts;
         this.associations = associations;
         this.metrics = metrics;
         this.spanLinks = spanLinks;
+        this.killSwitch = killSwitch;
     }
 
     @Override
@@ -66,6 +75,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
     @Override
     public A2aContracts.TaskSnapshot dispatchTask(A2aActivities.DispatchRequest request) {
         requireDispatch(request);
+        requireDelegationAllowed(request.command().agentRole(), "a2a.dispatch");
         associations.prepareDelegation(request.execution(), dispatchIntent(request));
         return dispatchPrepared(request);
     }
@@ -133,6 +143,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
                     task.taskId(), task.contextId());
             return task;
         }
+        requireDelegationAllowed(request.command().agentRole(), "a2a.dispatch");
         metrics.reconciliation(request.command().agentRole(), "dispatch");
         return dispatchPrepared(request);
     }
@@ -152,6 +163,7 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
             metrics.divergence(request.command().agentRole());
             throw new SecurityException("A2A continuation changed task correlation");
         }
+        requireDelegationAllowed(request.command().agentRole(), "a2a.continue");
         A2aContracts.TaskSnapshot result = spanLinks.call("ai.factory.a2a.continue", "temporal-to-a2a", null,
                 Map.of("ai_factory.task.id", request.execution().taskId(),
                         "temporal.workflow.id", request.execution().workflowId(),
@@ -217,6 +229,15 @@ public final class A2aActivitiesImpl implements A2aActivities.ResolveAgent, A2aA
             Throwable cause = failure.getCause();
             if (cause instanceof RuntimeException runtime) throw runtime;
             throw new IllegalStateException("A2A activity failed", cause);
+        }
+    }
+
+    private void requireDelegationAllowed(String role, String operation) {
+        if (killSwitch == null) return;
+        OperationalKillSwitch.Decision decision = killSwitch.decision("a2a", operation, role);
+        if (!decision.allowed()) {
+            throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                    "A2A delegation is suspended by " + decision.reason(), "OPERATION_DISABLED");
         }
     }
 

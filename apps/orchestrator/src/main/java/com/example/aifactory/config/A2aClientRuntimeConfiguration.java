@@ -7,6 +7,7 @@ import com.example.aifactory.a2a.A2aClientMetrics;
 import com.example.aifactory.a2a.A2aContractMapping;
 import com.example.aifactory.a2a.A2aJsonRpcHttpTransport;
 import com.example.aifactory.a2a.A2aScopedOAuth2Client;
+import com.example.aifactory.a2a.A2aSpanLinks;
 import com.example.aifactory.a2a.A2aTaskAssociationStore;
 import com.example.aifactory.a2a.AgentCardResolver;
 import com.example.aifactory.a2a.AllowListedAgentRegistry;
@@ -84,8 +85,10 @@ public class A2aClientRuntimeConfiguration {
     @Bean
     A2aActivitiesImpl a2aActivities(AgentCardResolver cards, A2aClient client,
                                     A2aContractMapping contracts, A2aTaskAssociationStore associations,
-                                    A2aClientMetrics metrics) {
-        return new A2aActivitiesImpl(cards, client, contracts, associations, metrics);
+                                    A2aClientMetrics metrics,
+                                    com.example.aifactory.service.OperationalKillSwitch killSwitch) {
+        return new A2aActivitiesImpl(cards, client, contracts, associations, metrics,
+                A2aSpanLinks.global(), killSwitch);
     }
 
     private static CompletionStage<CachingAgentCardResolver.FetchResponse> fetch(

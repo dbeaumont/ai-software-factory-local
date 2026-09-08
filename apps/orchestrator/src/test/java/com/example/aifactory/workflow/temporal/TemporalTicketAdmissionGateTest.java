@@ -1,14 +1,19 @@
 package com.example.aifactory.workflow.temporal;
 
 import com.example.aifactory.config.TemporalProperties;
+import com.example.aifactory.config.KillSwitchProperties;
+import com.example.aifactory.service.OperationalKillSwitch;
 import io.temporal.api.workflowservice.v1.WorkflowServiceGrpc;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -23,6 +28,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TemporalTicketAdmissionGateTest {
+    @TempDir
+    Path tempDirectory;
+
     @Test
     void probesNamespaceOffTheReactorNonBlockingThread() {
         Fixture fixture = fixture();
@@ -49,7 +57,24 @@ class TemporalTicketAdmissionGateTest {
         verify(fixture.stub, never()).describeNamespace(any());
     }
 
+    @Test
+    void refusesBeforeNetworkWhenTheGlobalKillSwitchIsActive() throws Exception {
+        Path control = tempDirectory.resolve("kill-switch.properties");
+        Files.writeString(control, "revision=incident-1\nglobal.disabled=true\n");
+        Fixture fixture = fixture(new OperationalKillSwitch(new KillSwitchProperties(control.toString())));
+        when(fixture.factory.isStarted()).thenReturn(true);
+
+        assertThatThrownBy(() -> fixture.gate.verifyActive().block(Duration.ofSeconds(2)))
+                .isInstanceOf(TemporalAdmissionUnavailableException.class)
+                .hasMessageContaining("global_kill_switch");
+        verify(fixture.stub, never()).describeNamespace(any());
+    }
+
     private static Fixture fixture() {
+        return fixture(new OperationalKillSwitch(new KillSwitchProperties(null)));
+    }
+
+    private static Fixture fixture(OperationalKillSwitch killSwitch) {
         WorkerFactory factory = mock(WorkerFactory.class);
         Map<String, String> queues = queues();
         when(factory.newWorker(any(), any())).thenReturn(mock(Worker.class));
@@ -62,7 +87,8 @@ class TemporalTicketAdmissionGateTest {
         TemporalProperties properties = new TemporalProperties("temporal:7233", "ai-factory-local",
                 Duration.ofDays(7), "deployment", "build", queues, TemporalProperties.Capacity.defaults(),
                 new TemporalProperties.Security(false, "", "", "", ""));
-        return new Fixture(factory, stub, new TemporalTicketAdmissionGate(service, factory, registry, properties));
+        return new Fixture(factory, stub, new TemporalTicketAdmissionGate(service, factory, registry, properties,
+                killSwitch));
     }
 
     private static Map<String, String> queues() {

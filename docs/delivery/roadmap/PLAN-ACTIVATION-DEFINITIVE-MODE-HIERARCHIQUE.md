@@ -229,8 +229,8 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [x] Remplacer `modes.disabled` par un commutateur global d'admission ou d'exécution.
 - [x] Prévoir des commutateurs ciblés par rôle ou capacité si nécessaire.
 - [x] Fermer les nouvelles admissions lors d'un incident bloquant.
-- [ ] Arrêter les nouvelles délégations hiérarchiques.
-- [ ] Geler les effets externes non confirmés.
+- [x] Arrêter les nouvelles délégations hiérarchiques.
+- [x] Geler les effets externes non confirmés.
 - [x] Réconcilier les effets à issue inconnue avant toute répétition.
 - [x] Préserver les historiques Temporal, projections et Evidence.
 - [x] Restaurer un build compatible lorsque le code courant ne peut pas reprendre un historique.
@@ -241,9 +241,10 @@ refactor(factory): remove shadow canary and pipeline remnants
 
 ### Critères de sortie du lot 6
 
-- [ ] Le kill switch bloque proprement la fabrique sans exécuter un ancien pipeline.
+- [x] Le kill switch bloque proprement la fabrique sans exécuter un ancien pipeline.
 - [ ] Le rollback d'un build est testé avec un historique réel ou une fixture versionnée représentative.
-- [ ] Aucun effet externe n'est dupliqué pendant le confinement ou la reprise.
+- [x] Aucun effet externe n'est dupliqué pendant le confinement ou la reprise. _(La réconciliation A2A consulte
+  l'association durable ou la tâche distante avant toute nouvelle émission.)_
 
 ## 7. Ajouter et adapter les tests
 
@@ -260,7 +261,7 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [ ] Vérifier l'approbation avant effet externe pour R2.
 - [ ] Vérifier le triage ou le refus pour R3 et R4.
 - [ ] Vérifier le comportement fail-closed en cas de budget absent ou d'entrée contradictoire.
-- [ ] Vérifier que le kill switch refuse toute nouvelle exécution.
+- [x] Vérifier que le kill switch refuse toute nouvelle exécution.
 
 ### Tests Temporal
 
@@ -269,7 +270,7 @@ refactor(factory): remove shadow canary and pipeline remnants
 - [ ] Vérifier qu'un worker V2 ne prend pas un historique V1 incompatible.
 - [ ] Tester le redémarrage de l'orchestrateur.
 - [ ] Tester une rotation de Build ID.
-- [ ] Vérifier l'absence de duplication de tâches A2A.
+- [x] Vérifier l'absence de duplication de tâches A2A.
 - [ ] Vérifier l'absence de duplication des effets SCM.
 
 ### Tests bout en bout
