@@ -51,7 +51,9 @@ make admissions-status
 Déterminer le premier événement fautif, les tâches et effets concernés, puis vérifier le journal chaîné,
 l'historique Temporal, les digests, manifestes, approbations et clés d'idempotence.
 
-## Rollback de build
+## Rétablissement
+
+### Rollback de build
 
 1. Identifier le dernier digest d'image et Build ID qualifiés pour tous les historiques concernés.
 2. Vérifier le replay avec `make temporal-replay` avant restauration.
@@ -60,7 +62,7 @@ l'historique Temporal, les digests, manifestes, approbations et clés d'idempote
 5. Vérifier les pollers, la readiness, les projections et les dépendances MCP/A2A.
 6. Garder les admissions fermées si aucun build compatible ne peut reprendre tous les historiques ouverts.
 
-## Reprise
+### Reprise contrôlée
 
 La reprise exige une cause racine, un périmètre d'impact, tous les effets réconciliés, une correction versionnée,
 des tests de régression et un exercice de restauration réussi. Exploitation approuve toujours ; Sécurité et
@@ -73,8 +75,15 @@ Produit approuvent selon l'impact.
 5. Rouvrir avec `make admissions-open` seulement après réussite de la barrière de readiness.
 6. Observer au moins deux cycles complets de réconciliation.
 
-## Clôture
+## Vérification et clôture
 
 Archiver la chronologie, les Build IDs, les tâches et effets concernés, les résultats de réconciliation, les
 preuves de correction, de replay et de restauration, ainsi que les approbations. Un état inconnu, une preuve
 invérifiable ou un effet non réconcilié interdit la clôture.
+
+## Escalade
+
+Escalader immédiatement à Exploitation si Temporal, PostgreSQL ou Evidence MCP ne peut pas être réconcilié ; à
+Sécurité pour toute fuite, altération de preuve, élévation de privilège ou effet externe non autorisé ; et au
+Produit lorsqu'une décision métier ou une approbation doit être invalidée. Conserver les admissions fermées
+jusqu'à la décision conjointe correspondant à l'impact.

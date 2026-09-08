@@ -69,7 +69,7 @@ class OpenTelemetryParityTest {
     }
 
     @Test
-    void mapsAllSixHistoricalDashboardsAndAddsCollectorCoverage() throws Exception {
+    void mapsAllSixHistoricalDashboardsAndAddsCurrentRuntimeCoverage() throws Exception {
         Path root = repositoryRoot();
         JsonNode baseline = mapper.readTree(Files.readString(root.resolve(
                 "docs/evidence/observability/prometheus-grafana-baseline-2026-09-05.json")));
@@ -89,9 +89,10 @@ class OpenTelemetryParityTest {
                     .isGreaterThanOrEqualTo(source.path("expressions").size());
         }
         assertThat(Files.list(dashboards).filter(Files::isRegularFile).count())
-                .isEqualTo(baseline.path("dashboards").size() + 2L);
+                .isEqualTo(baseline.path("dashboards").size() + 3L);
         assertThat(dashboards.resolve("collector.json")).exists();
         assertThat(dashboards.resolve("a2a.json")).exists();
+        assertThat(dashboards.resolve("temporal.json")).exists();
     }
 
     private static Duration parseDuration(String value) {

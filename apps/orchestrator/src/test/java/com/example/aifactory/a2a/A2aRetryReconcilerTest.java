@@ -59,9 +59,9 @@ class A2aRetryReconcilerTest {
     @Test
     void rejectsAnUnboundEvidenceReferenceBeforeConsideringARetry() {
         A2aContracts.Part unbound = new A2aContracts.Part(A2aMediaTypes.EVIDENCE_REFERENCE, null,
-                Map.of("schema_version", "1", "uri", "evidence://other/pipeline-1/output/" + DIGEST,
+                Map.of("schema_version", "1", "uri", "evidence://other/attempt-1/output/" + DIGEST,
                         "digest", DIGEST, "contract", "code-patch-v1"),
-                URI.create("evidence://other/pipeline-1/output/" + DIGEST));
+                URI.create("evidence://other/attempt-1/output/" + DIGEST));
         arrange(A2aContracts.TaskState.FAILED,
                 List.of(new A2aContracts.Artifact("artifact-1", "output", List.of(unbound), Map.of())));
 
@@ -98,7 +98,7 @@ class A2aRetryReconcilerTest {
     }
 
     private static A2aContracts.Artifact evidenceArtifact() {
-        String uri = "evidence://task-1/pipeline-1/output/" + DIGEST;
+        String uri = "evidence://task-1/attempt-1/output/" + DIGEST;
         A2aContracts.Part part = new A2aContracts.Part(A2aMediaTypes.EVIDENCE_REFERENCE, null,
                 Map.of("schema_version", "1", "uri", uri, "digest", DIGEST,
                         "contract", "code-patch-v1"), URI.create(uri));
@@ -110,8 +110,8 @@ class A2aRetryReconcilerTest {
     }
 
     private static A2aTaskAssociationStore.Association association() {
-        return new A2aTaskAssociationStore.Association("code-1", "task-1", "pipeline-1",
-                "ai-factory-task-v1/task-1/pipeline-1", "parent-run", "source-commit", "message-1",
+        return new A2aTaskAssociationStore.Association("code-1", "task-1", "attempt-1",
+                "ai-factory/task-1/attempt-1", "parent-run", "source-commit", "message-1",
                 "developer", "a".repeat(64), "a2a-task-1", "context-1");
     }
 
