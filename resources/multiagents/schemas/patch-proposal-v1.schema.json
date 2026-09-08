@@ -4,7 +4,7 @@
   "title": "PatchProposal v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "proposal_id", "code_task_id", "task_id", "attempt_id", "node_id", "source_commit", "worktree_id", "scope_digest", "patch_digest", "files_touched", "diff_artifact", "summary", "created_at"],
+  "required": ["schema_version", "proposal_id", "code_task_id", "task_id", "attempt_id", "node_id", "source_commit", "worktree_id", "scope_digest", "patch_digest", "patch", "files_touched", "diff_artifact", "summary", "created_at"],
   "properties": {
     "schema_version": {"const": "1"},
     "proposal_id": {"$ref": "#/$defs/id"},
@@ -16,6 +16,7 @@
     "worktree_id": {"type": "string", "pattern": "^worktree-[A-Za-z0-9_-]{1,64}-[0-9a-f]{16}$"},
     "scope_digest": {"$ref": "#/$defs/digest"},
     "patch_digest": {"$ref": "#/$defs/digest"},
+    "patch": {"type": "string", "minLength": 1, "maxLength": 900000, "pattern": "^diff --git "},
     "files_touched": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/fileChange"}},
     "diff_artifact": {"$ref": "#/$defs/diffArtifact"},
     "summary": {"type": "string", "minLength": 1, "maxLength": 4000},
