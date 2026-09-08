@@ -1,23 +1,24 @@
-# Exploitation de Task Memory et Evidence MCP
+# Exploitation de Temporal, de la projection de tâche et d'Evidence MCP
 
-> Statut : procédure cible du mode durable. Dans le chemin actif, `TaskMemory` utilise encore l'adaptateur mémoire,
-> Temporal est désactivé et la projection PostgreSQL n'est pas câblée. Ne pas appliquer cette procédure comme si
-> ces trois sources étaient déjà opérationnelles en production.
+> Statut : architecture active. Temporal, la projection PostgreSQL et Evidence MCP sont obligatoires dans le
+> chemin d'exécution. Une indisponibilité de l'une de ces autorités ferme le traitement concerné en échec sûr.
 
 ## Sources d'autorité
 
 | Donnée | Autorité | Usage |
 |---|---|---|
-| État, timers, signaux, DAG et chronologie | Historique Temporal | Reprise du workflow et décisions de coordination |
+| Ordre, état, timers, retries, annulations, signaux, DAG et chronologie | Historique Temporal | Reprise du workflow et décisions de coordination |
 | Vue API/UI | Projection PostgreSQL | Lecture rapide, reconstruisible, sans contenu sensible |
 | Plans, patches, rapports, reviews et manifeste | Evidence MCP | Artefacts immuables, digests, classification et audit |
 | Travail temporaire | Workspace ou worktree | Calcul recréable, jamais preuve ni source de reprise |
 | Code livré | SCM | Commit et Pull Request après approbation |
 
-`TaskMemory` est le port applicatif de consultation et de transition des tâches. L'adaptateur mémoire sert au
-prototype et aux tests ; il ne devient pas une nouvelle source d'autorité. Le modèle PostgreSQL cible conserve
-la projection et les métadonnées corrélées, tandis que Temporal et Evidence MCP restent nécessaires pour une
-reconstruction vérifiable.
+`TaskMemory` est le nom historique du port applicatif interne utilisé par `TaskService`,
+`TemporalAdmissionReconciler` et `PipelineExecutionActivitiesImpl`. Son implémentation Spring active est
+`PostgresTaskMemory` : elle conserve la projection et les métadonnées corrélées dans PostgreSQL, mais ne devient
+pas une source d'autorité du workflow. `InMemoryTaskMemory` n'est pas un bean Spring ; il est réservé aux tests
+et aux scénarios de migration historique. Temporal et Evidence MCP restent nécessaires pour une reconstruction
+vérifiable.
 
 ## Écriture normale
 
@@ -30,6 +31,11 @@ reconstruction vérifiable.
 5. Avant approbation, `evidence.create_manifest` assemble l'ensemble exact de preuves et de décisions de
    politique. L'approbation porte sur `manifest_id` et son digest.
 
+L'admission est elle-même durable : `PostgresTaskMemory.admit` écrit atomiquement la tâche et une intention dans
+`task_admission_outbox`. `TemporalAdmissionReconciler` démarre ensuite le workflow avec son identifiant
+déterministe, puis marque l'intention `STARTED`. Un échec conserve l'intention et planifie une nouvelle tentative
+bornée, sans recopier le message d'exception ni le contenu de la requête.
+
 Une écriture partielle, un statut autre que `COMPLETE`, une référence étrangère à la tâche/tentative ou un
 digest divergent bloque la consolidation et la livraison.
 
@@ -38,9 +44,13 @@ digest divergent bloque la consolidation et la livraison.
 - Les agents ordinaires reçoivent des résumés bornés par `evidence.get_summary`, sans contenu brut.
 - `evidence.read` est réservé au workflow, à l'Independent Reviewer et aux usages humains audités.
 - Toute lecture brute indique acteur, tâche, tentative et motif ; l'adaptateur recalcule le digest localement.
-- Autorisations, refus, approbations et changements de mode sont inscrits dans un journal chaîné et vérifiable.
+- Autorisations, refus, approbations et décisions de parcours sont inscrits dans un journal chaîné et vérifiable.
 - Les logs, traces et métriques ne doivent contenir ni contenu d'artefact, ni prompt complet, ni secret.
 - Une URI seule ne fait pas preuve : tâche, tentative, commit, classification, statut et digest sont revérifiés.
+- `TaskMemory.projectionStatus` expose la position, le dernier événement, l'instant de projection et
+  `potentiallyStale`. Ce dernier devient vrai lorsque l'âge de la projection dépasse
+  `ai-factory.temporal.projection-stale-after` (30 secondes par défaut) ; il déclenche un diagnostic de
+  réconciliation, jamais une réexécution métier implicite.
 
 ## Rétention et purge
 
@@ -55,7 +65,7 @@ La politique exécutable est `resources/multiagents/policies/artifact-lifecycle-
 
 Les artefacts `trivy`, `review`, `approval` et `manifest` sont `CONFIDENTIAL`; les autres familles sont
 `INTERNAL`. Le chiffrement AES-256-GCM lie en AAD la version de schéma, la tâche, la tentative, le type et le
-digest. En cible, les clés viennent de Secret Manager ; elles ne sont jamais stockées avec l'artefact.
+digest. Les clés viennent du gestionnaire de secrets et ne sont jamais stockées avec l'artefact.
 
 Ordre obligatoire d'une purge : vérifier l'absence de legal hold, purger le contenu chiffré dans Evidence MCP,
 écrire une tombstone limitée au digest, attendre le délai de grâce de 30 jours, puis purger les métadonnées de
@@ -85,8 +95,8 @@ restaurer dans un environnement isolé. Une copie de PostgreSQL seule n'est pas 
 5. Recréer un schéma de projection vide avec les migrations correspondant au code restauré.
 6. Lancer `ProjectionRebuilder` depuis les événements Temporal et les résumés Evidence MCP revérifiés.
 7. Comparer compteurs de tâches, runs, délégations, décisions, budgets et preuves avec les sources.
-8. Reprendre d'abord les workflows en attente humaine, puis un canary interne ; rouvrir les soumissions après
-   validation Exploitation et Sécurité.
+8. Reprendre d'abord les workflows en attente humaine, observer une fenêtre interne bornée, puis rouvrir les
+   soumissions après validation Exploitation et Sécurité.
 
 La reconstruction remplace la projection de façon atomique. Une preuve manquante ou altérée conserve la
 projection précédente et classe la tâche en échec fermé ; elle n'est jamais régénérée silencieusement avec un

@@ -29,12 +29,12 @@
 
 ## Point de vigilance sur `TaskMemory`
 
-- [ ] Confirmer que `TaskMemory` reste le port interne utilisé par `TaskService`, `TemporalAdmissionReconciler` et
+- [x] Confirmer que `TaskMemory` reste le port interne utilisé par `TaskService`, `TemporalAdmissionReconciler` et
   `PipelineExecutionActivitiesImpl`.
-- [ ] Confirmer que `PostgresTaskMemory` est l'implémentation Spring active de ce port.
-- [ ] Confirmer que `InMemoryTaskMemory` est limité aux tests et aux outils de migration historiques.
-- [ ] Corriger la documentation en supprimant l'affirmation selon laquelle l'adaptateur mémoire est actif.
-- [ ] Ne pas supprimer toute mention de `TaskMemory` sans ouvrir un chantier distinct de renommage ou de
+- [x] Confirmer que `PostgresTaskMemory` est l'implémentation Spring active de ce port.
+- [x] Confirmer que `InMemoryTaskMemory` est limité aux tests et aux outils de migration historiques.
+- [x] Corriger la documentation en supprimant l'affirmation selon laquelle l'adaptateur mémoire est actif.
+- [x] Ne pas supprimer toute mention de `TaskMemory` sans ouvrir un chantier distinct de renommage ou de
   suppression du port applicatif.
 
 ## 0. Figer la décision d'architecture
@@ -302,22 +302,22 @@ test(factory): qualify hierarchical-only execution
 
 ## 8. Corriger `TASK-MEMORY-EVIDENCE-OPERATIONS.md`
 
-- [ ] Remplacer le statut de « procédure cible » par une description de l'architecture active.
-- [ ] Indiquer que Temporal est actif et obligatoire.
-- [ ] Indiquer que Temporal gouverne ordre, timers, retries, annulations et signaux.
-- [ ] Indiquer que PostgreSQL est la projection métier active et reconstruisible.
-- [ ] Indiquer qu'Evidence MCP est actif et constitue l'autorité des contenus et digests.
-- [ ] Supprimer l'affirmation selon laquelle la projection PostgreSQL n'est pas câblée.
-- [ ] Supprimer l'affirmation selon laquelle l'adaptateur mémoire est actif.
-- [ ] Présenter `PostgresTaskMemory` comme l'implémentation active du port interne `TaskMemory`.
-- [ ] Présenter `InMemoryTaskMemory` comme un composant de test ou de migration historique uniquement.
-- [ ] Documenter l'outbox d'admission Temporal.
-- [ ] Documenter la détection des projections `potentiallyStale`.
-- [ ] Actualiser les procédures de sauvegarde, restauration et reconstruction.
-- [ ] Retirer les formulations futures pour les composants déjà livrés.
-- [ ] Vérifier tous les liens et noms de classes cités.
-- [ ] Rechercher les mêmes affirmations obsolètes dans les autres documents actifs.
-- [ ] Corriger ou archiver les documents actifs qui contredisent le nouvel état courant.
+- [x] Remplacer le statut de « procédure cible » par une description de l'architecture active.
+- [x] Indiquer que Temporal est actif et obligatoire.
+- [x] Indiquer que Temporal gouverne ordre, timers, retries, annulations et signaux.
+- [x] Indiquer que PostgreSQL est la projection métier active et reconstruisible.
+- [x] Indiquer qu'Evidence MCP est actif et constitue l'autorité des contenus et digests.
+- [x] Supprimer l'affirmation selon laquelle la projection PostgreSQL n'est pas câblée.
+- [x] Supprimer l'affirmation selon laquelle l'adaptateur mémoire est actif.
+- [x] Présenter `PostgresTaskMemory` comme l'implémentation active du port interne `TaskMemory`.
+- [x] Présenter `InMemoryTaskMemory` comme un composant de test ou de migration historique uniquement.
+- [x] Documenter l'outbox d'admission Temporal.
+- [x] Documenter la détection des projections `potentiallyStale`.
+- [x] Actualiser les procédures de sauvegarde, restauration et reconstruction.
+- [x] Retirer les formulations futures pour les composants déjà livrés.
+- [x] Vérifier tous les liens et noms de classes cités.
+- [x] Rechercher les mêmes affirmations obsolètes dans les autres documents actifs.
+- [x] Corriger ou archiver les documents actifs qui contredisent le nouvel état courant.
 
 ### Option distincte si le port `TaskMemory` doit réellement disparaître
 
@@ -334,10 +334,10 @@ test(factory): qualify hierarchical-only execution
 
 ### Critères de sortie du lot 8
 
-- [ ] Le document ne présente plus Temporal comme désactivé.
-- [ ] Le document ne présente plus l'adaptateur mémoire comme actif.
-- [ ] Le document distingue clairement autorité Temporal, projection PostgreSQL et Evidence MCP.
-- [ ] Toute mention conservée de `TaskMemory` correspond à son utilisation réelle dans le code.
+- [x] Le document ne présente plus Temporal comme désactivé.
+- [x] Le document ne présente plus l'adaptateur mémoire comme actif.
+- [x] Le document distingue clairement autorité Temporal, projection PostgreSQL et Evidence MCP.
+- [x] Toute mention conservée de `TaskMemory` correspond à son utilisation réelle dans le code.
 
 ### Commit proposé
 

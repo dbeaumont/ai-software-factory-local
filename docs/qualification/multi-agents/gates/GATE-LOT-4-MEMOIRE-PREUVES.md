@@ -4,8 +4,9 @@
 - Date : 2026-09-02
 - Branche : `features/multiagents`
 
-> Portée du verdict : schémas, reconstruction et scénarios automatisés. L'adaptateur actif de `TaskMemory` reste
-> en mémoire ; la projection PostgreSQL et l'Evidence MCP ne sont pas intégrés de bout en bout au pipeline public.
+> Portée du verdict : schémas, reconstruction et scénarios automatisés. Depuis l'activation du stockage durable,
+> `PostgresTaskMemory` est l'implémentation Spring du port interne `TaskMemory`, la projection PostgreSQL est
+> active et les contenus sont stockés par `McpEvidenceRepository` via Evidence MCP.
 
 ## Critère
 
@@ -33,7 +34,8 @@ dans PostgreSQL.
 - les clés étrangères composites empêchent les références entre tentatives ou commits différents ;
 - les transitions utilisent un verrou optimiste et une fonction atomique ;
 - la projection UI n'expose que des statuts, budgets, compteurs et métadonnées de preuve ;
-- une tâche legacy active reste sur le pipeline historique, seules les tâches terminales sont importées ;
+- une tâche legacy active reste prise en charge par son worker Temporal V1 compatible ; seules les tâches
+  terminales sont importées ;
 - un import legacy divergent est rejeté, tandis qu'un import strictement identique est idempotent ;
 - la vue complète d'une tâche legacy n'est relue qu'après vérification du digest Evidence MCP.
 
