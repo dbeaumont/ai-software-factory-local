@@ -24,8 +24,8 @@ pendant l'exécution. Une classe ne peut jamais diminuer au sein d'une tentative
 
 | Classe | Définition | Exemples | Traitement maximal |
 |---|---|---|---|
-| `R0` | Analyse ou changement sans comportement de production | documentation, commentaires, fixtures isolées | automatique selon le mode |
-| `R1` | Changement local, réversible, sans frontière sensible | correctif borné dans un module, tests associés | automatique selon le mode |
+| `R0` | Analyse ou changement sans comportement de production | documentation, commentaires, fixtures isolées | automatique |
+| `R1` | Changement local, réversible, sans frontière sensible | correctif borné dans un module, tests associés | automatique |
 | `R2` | Changement transverse ou de contrat maîtrisé | contrat compatible, dépendance approuvée, schéma strictement additif | hiérarchique actif avec gate avant effet |
 | `R3` | Changement sensible exigeant une décision experte | authentification, autorisation, secret, IAM, réseau, migration de données, CI/CD | décision humaine avant Code |
 | `R4` | Action irréversible, directe en production ou hors mandat | suppression de données, déploiement direct, élargissement de privilège non borné | refusée par l'automatisation |
@@ -33,17 +33,14 @@ pendant l'exécution. Une classe ne peut jamais diminuer au sein d'une tentative
 Un critère de classe supérieure prévaut. Une information requise absente ou contradictoire entraîne
 `HUMAN_TRIAGE`, jamais une classification optimiste.
 
-## Matrice par mode
+## Matrice de décision
 
-| Mode | `R0` | `R1` | `R2` | `R3` | `R4` |
-|---|---|---|---|---|---|
-| `PIPELINE` | automatique | automatique | décision avant effet | décision avant Code | refus |
-| `HIERARCHICAL_SHADOW` | analyse | analyse | analyse | analyse sans patch ni effet | refus |
-| `HIERARCHICAL_CANARY` | automatique | automatique | triage humain | triage humain | refus |
-| `HIERARCHICAL_ACTIVE` | automatique | automatique | décision avant effet | décision avant Code | refus |
+| `R0` | `R1` | `R2` | `R3` | `R4` |
+|---|---|---|---|---|
+| automatique | automatique | décision avant effet externe | décision avant Code | refus |
 
-L'autorisation d'analyser en shadow ne constitue pas une autorisation de produire, d'appliquer ou de livrer un
-patch. Les entrées sensibles restent soumises aux mêmes règles de minimisation et de redaction.
+Les entrées sensibles restent soumises aux mêmes règles de minimisation et de redaction, quel que soit le
+parcours retenu.
 
 ## Portes humaines
 
@@ -71,7 +68,7 @@ approbations distinctes si les objets approuvés diffèrent.
 
 ## Objet d'approbation
 
-Une approbation est limitée à `task_id`, tentative, commit source, classe, mode, scope, action, digest de l'objet
+Une approbation est limitée à `task_id`, tentative, commit source, classe, parcours, scope, action, digest de l'objet
 présenté, identité et rôle de l'approbateur, décision, justification et expiration. Tout changement de digest,
 scope, classe ou tentative invalide l'approbation. L'absence, l'expiration ou l'ambiguïté vaut refus.
 
@@ -91,5 +88,5 @@ classer provoquent un arrêt fermé et audité.
 
 - le risque devient une décision déterministe et explicable ;
 - une approbation générale de ticket ne vaut pas autorisation illimitée ;
-- le multi-agent peut analyser plus largement en shadow sans acquérir de capacité d'effet ;
+- l'analyse multi-agent n'acquiert jamais de capacité d'effet détenue par le workflow ;
 - les contrats des lots suivants doivent transporter classe, impacts, gates et références d'approbation.

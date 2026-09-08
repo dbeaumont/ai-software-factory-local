@@ -9,11 +9,11 @@
 Le Planner actuel produit à la fois une analyse du dépôt, une qualification de risque, une liste d'impacts et un
 plan d'implémentation. Dans la cible hiérarchique, ces responsabilités sont réparties entre le Supervisor, le
 périmètre Architecture et le coordinateur Code. Renommer directement Planner en Supervisor préserverait un
-contrat trop large et risquerait de modifier le comportement du pipeline de référence.
+contrat trop large et risquerait de modifier le comportement des historiques déjà persistés.
 
 ## Décision
 
-1. Le rôle `planner` reste inchangé comme rôle de compatibilité du mode `PIPELINE`.
+1. Le rôle `planner` est exclu des nouvelles admissions et conservé uniquement pour le replay V1.
 2. Un nouveau rôle `supervisor` porte la décomposition, le routage, la consolidation et le replan borné.
 3. Un nouveau rôle `architecture-agent` porte l'analyse d'impact, les contraintes et la proposition de scopes.
 4. Le Supervisor ne produit pas le patch et ne remplace pas les gates déterministes.
@@ -33,13 +33,12 @@ contrat trop large et risquerait de modifier le comportement du pipeline de réf
 | Ordonner le travail | Supervisor via un DAG validé |
 | Définir les décisions humaines | Supervisor consolide les demandes des spécialistes |
 
-## Stratégie de transition
+## État de la transition
 
-1. Conserver `planner.md` et son contrat tant que `PIPELINE` existe.
-2. Introduire `supervisor.md` et `architecture-agent.md` en mode shadow.
-3. Comparer leurs sorties aux sections correspondantes de Planner sans influencer la baseline.
-4. Activer les nouveaux rôles uniquement après validation des contrats et campagne A/B.
-5. Retirer Planner seulement lorsque le mode `PIPELINE` historique est officiellement supprimé.
+1. `supervisor.md` et `architecture-agent.md` sont les rôles actifs de la nouvelle architecture.
+2. Leurs contrats et responsabilités sont qualifiés indépendamment du Planner historique.
+3. `planner.md` et son contrat restent isolés avec les ressources V1 tant que leur replay est requis.
+4. Retirer Planner dès que la V1 est drainée et sa période de rétention satisfaite.
 
 ## Conséquences
 
@@ -51,6 +50,6 @@ contrat trop large et risquerait de modifier le comportement du pipeline de réf
 ## Alternatives écartées
 
 - **Renommer Planner en Supervisor** : responsabilités et contrats resteraient confondus.
-- **Transformer Planner en Architecture Agent immédiatement** : le mode pipeline perdrait son planificateur.
+- **Transformer Planner en Architecture Agent immédiatement** : les historiques V1 perdraient leur planificateur.
 - **Utiliser un seul agent pour planification et architecture** : réduit l'intérêt de la spécialisation et rend
   l'arbitrage moins explicite.

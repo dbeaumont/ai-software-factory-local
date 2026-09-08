@@ -5,10 +5,11 @@ adressables exclusivement avec **A2A 1.0**. Temporal est l'unique moteur de work
 attend les résultats, applique les retries et porte les gates. Aucun runtime agent local ou fallback direct ne
 subsiste dans l'orchestrateur.
 
-Le mode `PIPELINE` reste disponible comme parcours métier séquentiel, mais ses étapes Planner, Developer,
-PatchRepair, Tester et Reviewer sont elles aussi des tâches A2A. Le mode métier ne sélectionne jamais le transport.
+Toutes les nouvelles admissions utilisent le workflow Temporal V2. Le routage métier autorise uniquement le
+chemin court, le chemin hiérarchique complet ou le triage humain ; aucun ancien parcours ne sert de fallback.
+Le contrat V1 est conservé hors admission uniquement pour le replay d'historiques compatibles.
 
-Le chemin court historique reste :
+Les contrôles de livraison restent :
 
 `requirement -> plan -> patch -> validation du diff -> réparation si besoin -> sandbox -> tests -> SonarQube -> SBOM Syft -> scan Trivy -> review IA -> approbation humaine -> pull request Gitea`
 
@@ -50,7 +51,7 @@ La stack actuelle contient :
 | Point d'entrée HTTP | `reverse-proxy` Nginx (port 8080) |
 | Interface de saisie & suivi | `factory-web` (SPA HTML/JS/CSS servie par Nginx) |
 | Orchestration | Spring Boot 4.1 / Spring AI 2.0 / Java 25 (`orchestrator`) |
-| Workflow | Temporal obligatoire ; workflow V1 et workers spécialisés actifs |
+| Workflow | Temporal obligatoire ; V2 pour les admissions, V1 conservée uniquement pour replay compatible |
 | Agents A2A | Quatorze rôles autonomes avec Agent Cards signées et task queues dédiées |
 | Transport agent | A2A 1.0 JSON-RPC, mTLS et OAuth2 sur réseau privé |
 | Mémoire de tâche | Projection PostgreSQL active, reconstruisible depuis Temporal et Evidence MCP |

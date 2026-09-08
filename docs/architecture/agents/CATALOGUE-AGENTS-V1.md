@@ -135,12 +135,13 @@ modifie jamais rétroactivement une délégation ou un workflow déjà épinglé
 - une délégation ne modifie ni le rôle, ni les outils, ni les plafonds du catalogue ;
 - le Supervisor propose un DAG mais l'hôte le valide avant exécution ;
 - le Reviewer indépendant ne peut ni déléguer, ni replanifier, ni produire un patch ;
-- Planner et Reviewer historiques restent des alias de compatibilité du mode `PIPELINE`.
+- Planner et Reviewer historiques sont exclus des nouvelles admissions et conservés uniquement avec les
+  ressources de replay V1 jusqu'au retrait de ce contrat.
 
 ## Activation
 
 La présence d'un rôle au catalogue ne l'active pas. Chaque rôle doit disposer de son prompt, contrat, tests de
-permissions, évaluation de qualité et autorisation de mode avant d'être ajouté à une configuration active.
+permissions, évaluation de qualité et autorisation explicite avant d'être ajouté à une configuration active.
 
 ## Sources normatives
 
@@ -149,7 +150,7 @@ permissions, évaluation de qualité et autorisation de mode avant d'être ajout
 - permissions MCP effectives : `resources/mcp/policies/tool-permissions-v1.yaml` ;
 - schémas inter-agents : `resources/multiagents/schemas/contract-catalog-v1.json` ;
 - limites cumulées : `resources/multiagents/policies/hierarchical-budget-policy-v1.yaml` ;
-- seuils de promotion : `resources/multiagents/policies/qualification-thresholds-v1.yaml` et configuration
+- seuils de qualification : `resources/multiagents/policies/qualification-thresholds-v1.yaml` et configuration
   `ai-factory.agent-tools` de l'orchestrateur.
 
 En cas de divergence, l'hôte refuse l'activation ou l'appel. Aucune source documentaire ne peut élargir une

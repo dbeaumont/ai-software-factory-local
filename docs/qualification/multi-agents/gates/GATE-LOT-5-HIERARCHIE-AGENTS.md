@@ -24,8 +24,8 @@ d'autonomie, un contrat de sortie, une allowlist d'outils, un budget et une couv
 | Sécurité | `security-agent`, `threat-model`, `security-findings` | `security-assessment-v1`, `vulnerability-result-v1` | `SecurityAgentsTest`, `SecurityFindingsInputValidatorTest`, `SecurityDecisionValidatorTest` |
 | Revue indépendante | `independent-reviewer` | `independent-review-v1` | `IndependentReviewerAgentTest`, `IndependentReviewerBoundaryTest`, `SoftwareFactoryWorkflowTest` |
 
-Les rôles historiques `planner` et `reviewer` ne font pas partie de la hiérarchie cible : le catalogue les
-déclare uniquement comme rôles de compatibilité du mode `PIPELINE`.
+Les rôles historiques Planner et Reviewer ne font pas partie de la hiérarchie active. Ils restent isolés dans
+les ressources de compatibilité nécessaires au replay V1 jusqu'au retrait de ce contrat.
 
 ## Invariants vérifiés
 

@@ -127,11 +127,11 @@ flux réseau de longue durée n'est conservé dans une activité Temporal.
 - les callbacks, URLs de carte et références Evidence sont strictement allow-listés ;
 - aucun secret n'entre dans un message, artefact, historique A2A, input Temporal, trace ou journal.
 
-## Compatibilité avec les modes métier
+## Indépendance du routage métier
 
-Le protocole de communication ne sélectionne pas le mode métier. `PIPELINE` et `HIERARCHICAL_ACTIVE`, lorsqu'ils
-sont autorisés par les politiques existantes, restent des stratégies exécutées à l'intérieur de Temporal. Toute
-invocation d'un rôle d'agent utilise A2A quel que soit le mode ; aucun mode ne réactive les appels Java directs.
+Le protocole de communication ne sélectionne pas le parcours métier. `SHORT_CODE_PATH`, `HIERARCHICAL_PATH` et
+`HUMAN_TRIAGE` restent des décisions de l'hôte exécutées à l'intérieur de Temporal. Toute invocation d'un rôle
+d'agent utilise A2A quel que soit le parcours ; aucune décision ne réactive les appels Java directs.
 
 ## Conséquences
 

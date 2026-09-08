@@ -3,7 +3,7 @@
 ## Principe
 
 Le modèle propose ; l'hôte décide. Le Supervisor peut proposer un DAG ou un replan, mais il ne choisit ni le
-mode effectif, ni l'autorité d'une conclusion, ni la résolution silencieuse d'une contradiction. Chaque étape
+parcours effectif, ni l'autorité d'une conclusion, ni la résolution silencieuse d'une contradiction. Chaque étape
 est liée à une politique versionnée et produit une trace reproductible.
 
 ```mermaid
@@ -12,7 +12,6 @@ flowchart TD
   R -->|simple| S[SHORT_CODE_PATH]
   R -->|multi-domaine| H[HIERARCHICAL_PATH]
   R -->|doute, R3/R4 ou entrée manquante| U[HUMAN_TRIAGE]
-  R -->|mode pipeline ou repli| P[PIPELINE_BASELINE]
   H --> D[DAG Supervisor validé par l'hôte]
   D --> X[Exécution et résultats spécialisés]
   X --> C{Contradictions ?}
@@ -30,20 +29,18 @@ flowchart TD
 
 ## Routage
 
-La politique `resources/multiagents/policies/routing-policy-v1.yaml` est évaluée dans cet ordre : plafond du
-mode, qualification, triage humain, éligibilité canary, chemin hiérarchique, chemin court, défaut. Le défaut est
-`HUMAN_TRIAGE`, jamais l'activation autonome.
+La politique `resources/multiagents/policies/routing-policy-v1.yaml` est évaluée dans cet ordre : qualification,
+triage humain, chemin hiérarchique, chemin court, défaut. Le défaut est `HUMAN_TRIAGE`, jamais l'activation
+autonome.
 
 | Chemin | Conditions principales | Autorité |
 |---|---|---|
-| `PIPELINE_BASELINE` | mode `PIPELINE`, repli ou shadow de référence | résultat opérationnel de la baseline |
 | `SHORT_CODE_PATH` | R0/R1, un module, un domaine, au plus 8 fichiers estimés, aucun impact interdit | hôte ; gates inchangés |
 | `HIERARCHICAL_PATH` | R0–R2 et complexité multi-module, multi-domaine, scopes indépendants ou impact matériel | hôte après qualification |
 | `HUMAN_TRIAGE` | R3/R4, donnée requise absente/contradictoire, budget indisponible ou aucune règle sûre | humain propriétaire |
 
-En shadow, le chemin hiérarchique est observé mais `PIPELINE_BASELINE` reste autoritatif. En canary, la
-qualification, l'allowlist du dépôt et un bucket stable sont obligatoires. La décision journalise politique,
-version, tâche, commit, mode demandé/effectif, faits normalisés, règle, chemin et raisons.
+La décision journalise politique, version, tâche, commit, faits normalisés, règle, chemin, raisons, agents et
+porte humaine. Aucun chemin historique ou de repli n'est accepté par cette politique.
 
 ## Replan borné
 

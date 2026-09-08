@@ -10,13 +10,13 @@ archivage des attestations ; la présence de ce document seule ne vaut pas forma
 
 À l'issue du tronc commun, chaque participant doit pouvoir expliquer :
 
-- la différence entre `PIPELINE`, shadow, canary et active ;
+- la différence entre `SHORT_CODE_PATH`, `HIERARCHICAL_PATH` et `HUMAN_TRIAGE` ;
 - pourquoi le Supervisor propose alors que le workflow décide et porte les effets ;
 - la hiérarchie des agents et l'indépendance du Reviewer ;
 - le rôle de Temporal, Task Memory, Evidence MCP et de la projection PostgreSQL ;
 - les contrats, scopes, budgets, gates déterministes et permissions deny-by-default ;
 - le lien entre manifeste, digest, revue indépendante, approbation humaine et PR ;
-- les critères d'arrêt, le kill switch et le retour obligatoire par le shadow après incident.
+- les critères d'arrêt, le kill switch, le confinement fail-closed et le rollback de build après incident.
 
 Exercice commun : à partir d'un ticket R2 multi-domaine, identifier le chemin, les spécialistes, les preuves,
 les effets réservés au workflow et trois conditions imposant un échec fermé.
@@ -51,7 +51,7 @@ incidents d'isolation/secret/preuve et approbation de reprise correspondante.
 Exercice : détecter une tentative d'escalade d'outil, actionner un kill switch de rôle, préserver les preuves,
 révoquer une approbation liée à un digest divergent et définir les conditions de reprise.
 
-Validation : confinement au niveau correct, aucun effet répété, secrets renouvelés et retour en shadow.
+Validation : confinement au niveau correct, aucun effet répété, secrets renouvelés et reprise contrôlée.
 
 ### Développement et Quality Engineering — 60 minutes
 
@@ -65,33 +65,33 @@ Validation : aucun fichier hors scope, même commit source, digests vérifiés e
 
 ### Exploitation — 75 minutes
 
-Responsabilités : Temporal/workers, task queues, versions épinglées, SLO, canary, capacité, kill switch, rollback,
+Responsabilités : Temporal/workers, task queues, versions épinglées, SLO, capacité, kill switch, rollback,
 restauration et réconciliation des effets par idempotence.
 
 Exercice : simuler une indisponibilité Temporal et une preuve altérée ; geler les admissions, classer les effets
-en vol, restaurer les services, reconstruire la projection et reprendre en shadow.
+en vol, restaurer les services, reconstruire la projection et reprendre après validation.
 
 Validation : aucun historique/preuve supprimé, aucun effet dupliqué, files en drainage et approbations obtenues.
 
 ## Exercice transverse de crise — 90 minutes
 
-Scénario : un canary Code parallèle déclenche une collision, un job sandbox répond tardivement et le digest d'une
+Scénario : une délégation Code parallèle déclenche une collision, un job sandbox répond tardivement et le digest d'une
 preuve ne correspond plus au manifeste approuvé.
 
 Résultats attendus :
 
 1. Développement identifie la collision et bloque l'intégration.
 2. Sécurité classe la divergence de preuve et demande le confinement.
-3. Exploitation met le canary à zéro, active le kill switch adapté et réconcilie le job par `execution_id`.
+3. Exploitation ferme les admissions, active le kill switch adapté et réconcilie le job par `execution_id`.
 4. Architecture vérifie scope, contrat et besoin de replan.
 5. Produit constate l'invalidité de l'approbation et ne la réutilise pas.
-6. L'équipe conserve les artefacts, crée une nouvelle tentative et ne reprend qu'en shadow.
+6. L'équipe conserve les artefacts, crée une nouvelle tentative et ne reprend qu'après la barrière de readiness.
 
 ## Critères de réussite
 
 Chaque fonction doit obtenir au moins 80 % au questionnaire commun, réussir son exercice métier et participer à
 l'exercice transverse. Toute erreur consistant à contourner un gate, élargir une permission pendant l'incident,
-répéter un effet inconnu, supprimer une preuve ou reprendre directement en active est éliminatoire et impose une
+répéter un effet inconnu, supprimer une preuve ou reprendre sans validation est éliminatoire et impose une
 nouvelle session.
 
 ## Preuves à archiver

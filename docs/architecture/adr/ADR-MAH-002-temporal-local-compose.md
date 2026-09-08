@@ -17,8 +17,8 @@ d'un service externe. Le dépôt utilise déjà Docker Compose pour l'orchestrat
 3. Temporal Server et ses workers communiquent sur un réseau privé `workflow-internal`.
 4. Le port gRPC Temporal n'est pas exposé publiquement par le reverse proxy.
 5. Temporal UI est un service de diagnostic développeur, publié uniquement sur une adresse loopback configurable.
-6. Le démarrage de l'orchestrateur en mode `PIPELINE` ne dépend pas de Temporal.
-7. Les modes `HIERARCHICAL_*` échouent au démarrage ou à l'admission si Temporal n'est pas prêt.
+6. Le démarrage de l'orchestrateur et toute admission dépendent de Temporal.
+7. L'admission échoue de manière fermée si Temporal ou ses workers obligatoires ne sont pas prêts.
 8. Les images, schémas de base et paramètres de rétention sont épinglés dans la configuration du prototype.
 
 ## Services locaux prévus
@@ -44,8 +44,9 @@ d'un service externe. Le dépôt utilise déjà Docker Compose pour l'orchestrat
 
 - le profil local consomme des ressources supplémentaires ;
 - l'UI Temporal ne devient pas une interface opérateur de l'usine ;
-- les tests de parité du mode `PIPELINE` restent exécutables sans démarrer Temporal ;
-- l'ajout de Temporal au Compose sera réalisé après introduction du port `WorkflowCoordinator`.
+- les tests unitaires peuvent employer le serveur Temporal de test officiel du SDK ;
+- le Compose actif inclut Temporal et le port `WorkflowCoordinator` est implémenté par
+  `TemporalWorkflowCoordinator`.
 
 ## Alternatives écartées
 
