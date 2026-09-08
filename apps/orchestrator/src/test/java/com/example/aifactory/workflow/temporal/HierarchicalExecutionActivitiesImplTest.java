@@ -29,6 +29,19 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class HierarchicalExecutionActivitiesImplTest {
+
+    @Test
+    void springSelectsTheProductionConstructor() {
+        ObjectMapper mapper = new ObjectMapper();
+        new org.springframework.boot.test.context.runner.ApplicationContextRunner()
+                .withBean(TaskMemory.class, () -> mock(TaskMemory.class))
+                .withBean(EvidenceRepository.class, () -> mock(EvidenceRepository.class))
+                .withBean(MultiAgentContractValidator.class, () -> new MultiAgentContractValidator(mapper))
+                .withBean(ObjectMapper.class, () -> mapper)
+                .withBean(HierarchicalExecutionActivitiesImpl.class)
+                .run(context -> org.assertj.core.api.Assertions.assertThat(context)
+                        .hasSingleBean(HierarchicalExecutionActivitiesImpl.class));
+    }
     @Test
     void persistsAValidatedAndAttemptBoundSpecialistTask() throws Exception {
         ObjectMapper mapper = JsonMapper.builder().build();

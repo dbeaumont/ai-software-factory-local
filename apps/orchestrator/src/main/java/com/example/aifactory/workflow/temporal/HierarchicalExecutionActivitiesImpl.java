@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /** Evidence-backed implementation of the hierarchical specialist input boundary. */
 @Component
@@ -40,8 +41,9 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
     private final ObjectMapper mapper;
     private final Clock clock;
 
+    @Autowired
     public HierarchicalExecutionActivitiesImpl(TaskMemory memory, EvidenceRepository evidence,
-                                               MultiAgentContractValidator contracts, ObjectMapper mapper) {
+                                                MultiAgentContractValidator contracts, ObjectMapper mapper) {
         this(memory, evidence, contracts, mapper, Clock.systemUTC());
     }
 
