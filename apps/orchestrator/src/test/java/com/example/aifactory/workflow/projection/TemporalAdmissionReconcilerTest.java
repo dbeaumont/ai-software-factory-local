@@ -19,7 +19,7 @@ class TemporalAdmissionReconcilerTest {
         RecordingMemory memory = new RecordingMemory(task);
         WorkflowCoordinator coordinator = new WorkflowCoordinator() {
             @Override public void start(TaskState state) {
-                state.bindExecution("PIPELINE", "run-recovered", "build-1", 1, 0, 1);
+                state.bindExecution("run-recovered", "build-1", 1, 0, 1);
             }
             @Override public void resumeAfterApproval(TaskState state) {}
         };

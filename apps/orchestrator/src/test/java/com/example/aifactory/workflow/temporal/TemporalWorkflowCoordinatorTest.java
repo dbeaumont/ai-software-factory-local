@@ -54,17 +54,16 @@ class TemporalWorkflowCoordinatorTest {
         assertThat(options.getValue().getTypedSearchAttributes().get(TemporalSearchAttributes.TASK_ID))
                 .isEqualTo("task-1");
         assertThat(options.getValue().getTypedSearchAttributes().get(TemporalSearchAttributes.ATTEMPT_ID))
-                .isEqualTo("pipeline-1");
+                .isEqualTo("attempt-1");
         assertThat(options.getValue().getTypedSearchAttributes().get(TemporalSearchAttributes.REPOSITORY_ID))
                 .isEqualTo("customer-api");
         assertThat(options.getValue().getTypedSearchAttributes().getUntypedValues())
                 .doesNotContainKey(TemporalSearchAttributes.EXECUTION_MODE);
-        assertThat(request.getValue().attemptId()).isEqualTo("pipeline-1");
+        assertThat(request.getValue().attemptId()).isEqualTo("attempt-1");
         assertThat(request.getValue().repositoryId()).isEqualTo("customer-api");
         assertThat(request.getValue().sourceCommit()).isEqualTo("UNRESOLVED");
         assertThat(request.getValue().sourceLocation().repositoryUrl()).isEqualTo(task.request.repositoryUrl());
         assertThat(request.getValue().sourceLocation().taskQueues()).isEqualTo(properties.taskQueues());
-        assertThat(task.executionMode).isEqualTo("HIERARCHICAL_ACTIVE");
         assertThat(task.workflowRunId).isEqualTo("run-123");
         assertThat(task.dagVersion).isEqualTo("build-1");
     }
@@ -159,7 +158,7 @@ class TemporalWorkflowCoordinatorTest {
         TaskState task = task();
         task.recordDelegation("code-1", "supervisor", "code-agent", java.util.List.of(),
                 "FAILED", "TIMEOUT");
-        String workflowId = TemporalIds.workflow(task.id, "pipeline-2");
+        String workflowId = TemporalIds.workflow(task.id, "attempt-2");
         when(commands.start(any(), any())).thenReturn(
                 new TemporalWorkflowCommands.ExecutionIdentity(workflowId, "run-retry"));
         ArgumentCaptor<SoftwareFactoryExecutionWorkflowV2.Request> request =
@@ -169,11 +168,11 @@ class TemporalWorkflowCoordinatorTest {
 
         verify(retryReconciler).requireSafeRetry(task, "code-1");
         verify(commands).start(any(), request.capture());
-        assertThat(request.getValue().attemptId()).isEqualTo("pipeline-2");
-        assertThat(request.getValue().attemptLineage().previousAttemptId()).isEqualTo("pipeline-1");
+        assertThat(request.getValue().attemptId()).isEqualTo("attempt-2");
+        assertThat(request.getValue().attemptLineage().previousAttemptId()).isEqualTo("attempt-1");
         assertThat(request.getValue().attemptLineage().reasonDigest()).isEqualTo(
                 TemporalIds.sha256("worker restarted"));
-        assertThat(task.workflowAttemptId).isEqualTo("pipeline-2");
+        assertThat(task.workflowAttemptId).isEqualTo("attempt-2");
         assertThat(task.workflowRunId).isEqualTo("run-retry");
         assertThat(task.delegations.get("code-1").status()).isEqualTo("RETRY_REQUESTED");
     }

@@ -283,7 +283,6 @@ public class PostgresTaskMemory implements TaskMemory {
             throw new SecurityException("Legacy task snapshot identity diverged");
         }
         TaskState state = restoreState(new ProjectionSnapshot(view, record.attemptId(), null), 0);
-        state.executionMode = "LEGACY_LOCAL";
         state.workflowRunId = null;
         state.dagVersion = "legacy-local-v1";
         return state;
@@ -328,7 +327,7 @@ public class PostgresTaskMemory implements TaskMemory {
         state.review = view.review(); state.pendingEffect = view.pendingEffect();
         state.pullRequestUrl = view.pullRequestUrl(); state.error = view.error();
         state.steps.addAll(view.steps()); state.updatedAt = view.updatedAt();
-        state.executionMode = view.executionMode(); state.workflowRunId = view.workflowRunId();
+        state.workflowRunId = view.workflowRunId();
         state.dagVersion = view.dagVersion();
         if (view.globalBudget() != null) {
             state.globalMaxTokens = view.globalBudget().maxTokens();

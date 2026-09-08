@@ -261,7 +261,8 @@ public class PipelineStepService {
         byte[] sbomContent = Files.readAllBytes(sbom);
         var sbomArtifact = persist(command, "sbom", "application/vnd.cyclonedx+json", sbomContent, "COMPLETE");
         Map<String, Object> sbomResult = Map.of("schema_version", "1", "task_id", state.id,
-                "attempt_id", "pipeline-1", "source_commit", state.sourceCommit, "format", "CYCLONEDX_JSON",
+                "attempt_id", PipelineStepContracts.INITIAL_ATTEMPT_ID,
+                "source_commit", state.sourceCommit, "format", "CYCLONEDX_JSON",
                 "uri", sbomArtifact.uri(), "digest", sbomArtifact.digest(),
                 "status", "COMPLETE");
         var result = PipelineStepContracts.Result.from(command, state.sourceCommit,

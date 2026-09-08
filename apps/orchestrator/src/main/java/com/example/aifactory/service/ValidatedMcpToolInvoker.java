@@ -20,8 +20,11 @@ public class ValidatedMcpToolInvoker implements McpToolInvoker {
 
     @Override
     public JsonNode call(String serverName, String toolName, Map<String, Object> arguments) {
-        OperationalKillSwitch.Decision decision = killSwitch.decision(serverName, toolName, "workflow",
-                String.valueOf(arguments.getOrDefault("execution_mode", "PIPELINE")));
+        if (arguments.containsKey("execution_mode")) {
+            throw new McpInvocationException("INVALID_ARGUMENT", false,
+                    "execution_mode is no longer accepted");
+        }
+        OperationalKillSwitch.Decision decision = killSwitch.decision(serverName, toolName, "workflow");
         if (!decision.allowed()) {
             throw new McpInvocationException("KILL_SWITCH", false,
                     "MCP invocation disabled by operations: " + decision.reason());

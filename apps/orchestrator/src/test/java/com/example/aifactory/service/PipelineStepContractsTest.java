@@ -20,8 +20,8 @@ class PipelineStepContractsTest {
 
         assertThat(command.schemaVersion()).isEqualTo(1);
         assertThat(command.taskId()).isEqualTo("task-1");
-        assertThat(command.attemptId()).isEqualTo("pipeline-1");
-        assertThat(command.workflowId()).isEqualTo("ai-factory/task-1/pipeline-1");
+        assertThat(command.attemptId()).isEqualTo("attempt-1");
+        assertThat(command.workflowId()).isEqualTo("ai-factory/task-1/attempt-1");
         assertThat(command.repositoryId()).isNotBlank();
         assertThat(command.sourceCommit()).isEqualTo("a".repeat(40));
         assertThat(command.inputDigests().get("requirement")).matches("[0-9a-f]{64}");

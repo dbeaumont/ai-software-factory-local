@@ -26,7 +26,7 @@ public class AssuranceGateway {
     public JsonNode requireQualityGate(String taskId, String sourceCommit, String qualityEvidence) {
         if (!properties.enabled()) throw new IllegalStateException("assurance MCP is disabled");
         if (qualityEvidence == null) throw new IllegalStateException("quality evidence is absent");
-        String attemptId = "pipeline-1";
+        String attemptId = PipelineStepContracts.INITIAL_ATTEMPT_ID;
         Map<String, Object> arguments = new LinkedHashMap<>();
         arguments.put("schema_version", "1");
         arguments.put("task_id", taskId);

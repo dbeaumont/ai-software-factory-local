@@ -43,12 +43,11 @@ public class TaskState {
     public final List<AgentStep> steps = new ArrayList<>();
     public final Instant createdAt;
     public Instant updatedAt = Instant.now();
-    public String executionMode = "PIPELINE";
-    public String workflowAttemptId = "pipeline-1";
+    public String workflowAttemptId = "attempt-1";
     private int workflowAttemptSequence = 1;
     public long projectionVersion;
     public String workflowRunId;
-    public String dagVersion = "pipeline-v1";
+    public String dagVersion = "hierarchical-v2";
     public Long globalMaxTokens;
     public Long globalMaxCostMicros;
     public Integer globalMaxTurns;
@@ -94,7 +93,7 @@ public class TaskState {
                 testSummary, qualitySummary, securitySummary, Map.copyOf(assuranceResults), evaluationMetrics(),
                 review, pendingEffect,
                 pullRequestUrl, error, List.copyOf(steps), createdAt, updatedAt,
-                executionMode, workflowAttemptId, workflowRunId, dagVersion,
+                workflowAttemptId, workflowRunId, dagVersion,
                 new TaskView.GlobalBudget(globalMaxTokens, globalMaxCostMicros, globalMaxTurns,
                         llmTokens, llmCostMicros, agentTurns), List.copyOf(delegations.values()),
                 artifacts.values().stream().map(ArtifactMetadata::project).toList(),
@@ -102,14 +101,12 @@ public class TaskState {
                 List.copyOf(humanActions.values()));
     }
 
-    public synchronized void bindExecution(String mode, String runId, String version,
+    public synchronized void bindExecution(String runId, String version,
                                            long maxTokens, long maxCostMicros, int maxTurns) {
-        if (mode == null || !List.of("PIPELINE", "HIERARCHICAL_SHADOW", "HIERARCHICAL_CANARY",
-                "HIERARCHICAL_ACTIVE").contains(mode) || runId == null || runId.isBlank()
+        if (runId == null || runId.isBlank()
                 || version == null || version.isBlank() || maxTokens < 1 || maxCostMicros < 0 || maxTurns < 1) {
             throw new IllegalArgumentException("Task execution metadata is invalid");
         }
-        executionMode = mode;
         workflowRunId = runId;
         dagVersion = version;
         globalMaxTokens = maxTokens;
@@ -339,7 +336,7 @@ public class TaskState {
     public synchronized RetryAttempt prepareTemporalRetry(String delegationId, String reason, String actor) {
         requireDelegationRetry(delegationId, reason, actor);
         String previousAttemptId = workflowAttemptId;
-        String nextAttemptId = "pipeline-" + (++workflowAttemptSequence);
+        String nextAttemptId = "attempt-" + (++workflowAttemptSequence);
         requestDelegationRetry(delegationId, reason, actor);
         workflowAttemptId = nextAttemptId;
         status = TaskStatus.QUEUED;
@@ -368,13 +365,14 @@ public class TaskState {
     }
 
     public synchronized void restoreProjectionMetadata(String attemptId, long version, Instant expiresAt) {
-        if (attemptId == null || !(attemptId.matches("pipeline-[1-9][0-9]*")
+        if (attemptId == null || !(attemptId.matches("attempt-[1-9][0-9]*")
+                || attemptId.matches("pipeline-[1-9][0-9]*")
                 || attemptId.matches("legacy-[A-Za-z0-9_-]{1,64}")) || version < 0) {
             throw new IllegalArgumentException("Task projection metadata is invalid");
         }
         workflowAttemptId = attemptId;
-        if (attemptId.startsWith("pipeline-")) {
-            workflowAttemptSequence = Integer.parseInt(attemptId.substring("pipeline-".length()));
+        if (attemptId.startsWith("attempt-") || attemptId.startsWith("pipeline-")) {
+            workflowAttemptSequence = Integer.parseInt(attemptId.substring(attemptId.indexOf('-') + 1));
         }
         projectionVersion = version;
         approvalExpiresAt = expiresAt;

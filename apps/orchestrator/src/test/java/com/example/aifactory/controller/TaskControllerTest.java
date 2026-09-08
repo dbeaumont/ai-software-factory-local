@@ -40,7 +40,7 @@ class TaskControllerTest {
         A2aTaskAssociationStore associations = mock(A2aTaskAssociationStore.class);
         TaskState state = new TaskState("task-1", "AF-0001",
                 new TaskRequest("http://gitea:3000/aiadmin/customer-api.git", "main", "change", LlmMode.CLOUD));
-        state.bindExecution("HIERARCHICAL_ACTIVE", "run-1", "dag-v1", 10_000, 100_000, 20);
+        state.bindExecution("run-1", "dag-v1", 10_000, 100_000, 20);
         state.recordDelegation("delegation-1", "workflow", "developer", java.util.List.of(),
                 "COMPLETED", null);
         state.recordArtifact("artifact-1", "patch", "COMPLETE", "INTERNAL",

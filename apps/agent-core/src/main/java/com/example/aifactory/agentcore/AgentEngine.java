@@ -36,8 +36,8 @@ public final class AgentEngine {
         AgentLoop loop = new AgentLoop(model, tools,
                 (actor, tool) -> invocation.allowedTools().contains(tool),
                 AgentLoop.SafetyLimits.defaults(), usage);
-        AgentLoop.Result result = loop.run(new AgentLoop.Actor(invocation.taskId(), invocation.role(),
-                        invocation.executionMode()), prompts.load(invocation.promptName()),
+        AgentLoop.Result result = loop.run(new AgentLoop.Actor(invocation.taskId(), invocation.role()),
+                prompts.load(invocation.promptName()),
                 invocation.untrustedInput(), invocation.budget());
         JsonNode document = contracts.validate(invocation.outputContract(), result.finalResult(),
                 new AgentContractValidator.Context(invocation.taskId(), invocation.attemptId(),
@@ -58,7 +58,7 @@ public final class AgentEngine {
     public record Invocation(String taskId, String attemptId, String sourceCommit, String role,
                              String promptName, String outputContract, Set<String> allowedTools,
                              Set<String> allowedReferenceIds, String untrustedInput, AgentLoop.Budget budget,
-                             String executionMode, ExecutionIdentity identity) {
+                             ExecutionIdentity identity) {
         public Invocation {
             if (taskId == null || taskId.isBlank() || attemptId == null || attemptId.isBlank()
                     || sourceCommit == null || !sourceCommit.matches("[0-9a-f]{40}")

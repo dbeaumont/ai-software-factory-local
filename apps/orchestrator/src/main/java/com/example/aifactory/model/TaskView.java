@@ -29,7 +29,6 @@ public record TaskView(
         List<AgentStep> steps,
         Instant createdAt,
         Instant updatedAt,
-        String executionMode,
         String workflowAttemptId,
         String workflowRunId,
         String dagVersion,

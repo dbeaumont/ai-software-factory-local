@@ -54,11 +54,11 @@ class RestApiCompatibilityTest {
                 "id", "ticketNumber", "status", "repositoryUrl", "baseBranch", "requirement", "llmMode",
                 "workspace", "sourceCommit", "model", "plan", "patch", "testSummary", "qualitySummary",
                 "securitySummary", "review", "pullRequestUrl", "error", "steps", "createdAt", "updatedAt",
-                "executionMode", "workflowRunId", "dagVersion", "globalBudget"));
+                "workflowRunId", "dagVersion", "globalBudget"));
         assertThat(response.propertyNames()).contains(
                 "delegations", "artifacts", "contradictions", "decisions", "humanActions");
-        assertThat(response.path("executionMode").asText()).isEqualTo("PIPELINE");
-        assertThat(response.path("dagVersion").asText()).isEqualTo("pipeline-v1");
+        assertThat(response.has("executionMode")).isFalse();
+        assertThat(response.path("dagVersion").asText()).isEqualTo("hierarchical-v2");
         assertThat(response.path("globalBudget").propertyNames()).containsAll(Set.of(
                 "maxTokens", "maxCostMicros", "maxTurns", "usedTokens", "usedCostMicros", "usedTurns"));
     }

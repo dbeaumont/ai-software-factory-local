@@ -129,7 +129,7 @@ class PostgresTaskMemoryTest {
         task.sourceCommit = "a".repeat(40);
         task.workspace = "/workspace/task-1";
         task.transition(TaskStatus.PLANNING, "Plan created");
-        task.bindExecution("PIPELINE", "run-1", "pipeline-v1", 20_000, 50_000, 12);
+        task.bindExecution("run-1", "hierarchical-v2", 20_000, 50_000, 12);
         task.recordDelegation("developer-1", null, "developer", List.of(), "COMPLETED", null,
                 120, 2, 300, 450, List.of("context.list_tree"));
         task.recordArtifact("plan", "plan", "COMPLETE", "INTERNAL",
@@ -140,7 +140,7 @@ class PostgresTaskMemoryTest {
 
         assertThat(restored).isNotSameAs(task);
         assertThat(restored.view()).usingRecursiveComparison().isEqualTo(task.view());
-        assertThat(restored.workflowAttemptId).isEqualTo("pipeline-1");
+        assertThat(restored.workflowAttemptId).isEqualTo("attempt-1");
         assertThat(restored.projectionVersion).isZero();
         assertThat(memory.list()).extracting(value -> value.id).containsExactly("task-1");
         assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE task_id = 'task-1'", String.class))
@@ -185,7 +185,7 @@ class PostgresTaskMemoryTest {
                 String.class, task.id)).isEqualTo("PENDING");
 
         String runId = "3d45f820-11d4-4e5a-b6bc-c60d498847e9";
-        task.bindExecution("PIPELINE", runId, "pipeline-v1", 20_000, 50_000, 12);
+        task.bindExecution(runId, "hierarchical-v2", 20_000, 50_000, 12);
         memory.workflowStarted(task);
 
         assertThat(memory.pendingAdmissions(10)).isEmpty();
@@ -242,7 +242,7 @@ class PostgresTaskMemoryTest {
                 memory.projectionStatus(task.id).orElseThrow();
 
         assertThat(status.taskId()).isEqualTo(task.id);
-        assertThat(status.attemptId()).isEqualTo("pipeline-1");
+        assertThat(status.attemptId()).isEqualTo("attempt-1");
         assertThat(status.position()).isZero();
         assertThat(status.ageMillis()).isGreaterThanOrEqualTo(59_000);
         assertThat(status.potentiallyStale()).isTrue();
@@ -271,7 +271,7 @@ class PostgresTaskMemoryTest {
         TaskState restored = memory.find(legacy.id).orElseThrow();
 
         assertThat(restored.status).isEqualTo(TaskStatus.PR_CREATED);
-        assertThat(restored.executionMode).isEqualTo("LEGACY_LOCAL");
+        assertThat(restored.dagVersion).isEqualTo("legacy-local-v1");
         assertThat(restored.workflowAttemptId).isEqualTo("legacy-" + legacy.id);
         assertThat(restored.workflowRunId).isNull();
         assertThat(memory.list()).extracting(value -> value.id).containsExactly(legacy.id);

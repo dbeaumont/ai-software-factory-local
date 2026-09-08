@@ -60,7 +60,7 @@ public final class TemporalWorkflowCoordinator implements WorkflowCoordinator {
         if (!workflowId.equals(execution.workflowId())) {
             throw new SecurityException("Temporal started an unexpected workflow identity");
         }
-        task.bindExecution("HIERARCHICAL_ACTIVE", execution.runId(), properties.buildId(),
+        task.bindExecution(execution.runId(), properties.buildId(),
                 PIPELINE_MAX_TOKENS, PIPELINE_MAX_COST_MICROS, PIPELINE_MAX_TURNS);
     }
 

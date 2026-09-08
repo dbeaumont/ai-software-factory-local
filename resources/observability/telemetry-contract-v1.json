@@ -35,8 +35,8 @@
     "link_count": 32
   },
   "spans": [
-    {"name": "ai.task.execute", "low_cardinality_attributes": ["ai.execution.mode", "ai.outcome"]},
-    {"name": "ai.workflow.execute", "low_cardinality_attributes": ["ai.execution.mode", "ai.outcome"]},
+    {"name": "ai.task.execute", "low_cardinality_attributes": ["ai.execution.path", "ai.outcome"]},
+    {"name": "ai.workflow.execute", "low_cardinality_attributes": ["ai.execution.path", "ai.outcome"]},
     {"name": "ai.agent.execute", "low_cardinality_attributes": ["ai.agent.role", "ai.outcome", "ai.stop_condition"]},
     {"name": "gen_ai.chat", "low_cardinality_attributes": ["gen_ai.system", "gen_ai.request.model", "ai.agent.role", "ai.outcome"]},
     {"name": "mcp.call", "low_cardinality_attributes": ["mcp.server.name", "mcp.tool.name", "ai.outcome", "error.type"]},
@@ -90,7 +90,7 @@
   ],
   "attribute_policy": {
     "allowed_low_cardinality": [
-      "ai.execution.mode", "ai.agent.role", "ai.operation", "ai.outcome", "ai.stop_condition",
+      "ai.execution.path", "ai.agent.role", "ai.operation", "ai.outcome", "ai.stop_condition",
       "ai.sandbox.profile", "ai.queue.perimeter", "cost.status", "direction", "error.type", "event", "source",
       "gen_ai.system", "gen_ai.request.model", "gen_ai.response.model", "mcp.server.name", "mcp.tool.name",
       "temporal.namespace", "temporal.task_queue", "temporal.workflow.type", "temporal.activity.type",
@@ -101,7 +101,7 @@
       "ai.sandbox.execution.id", "temporal.workflow.id", "temporal.run.id", "scm.pull_request.id"
     ],
     "bounded_values": {
-      "ai.execution.mode": ["PIPELINE", "TEMPORAL", "HIERARCHICAL", "unknown"],
+      "ai.execution.path": ["SHORT_CODE_PATH", "HIERARCHICAL_PATH", "HUMAN_TRIAGE", "unknown"],
       "ai.agent.role": [
         "workflow", "supervisor", "architecture-agent", "impact-analysis", "dependencies-contracts",
         "code-agent", "developer", "patch-repair", "test-agent", "test-design", "test-evidence",

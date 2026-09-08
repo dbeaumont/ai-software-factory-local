@@ -38,7 +38,7 @@ class McpSandboxServiceTest {
         assertTrue(invoker.pollCalls.get() >= 2);
         assertEquals("task-1", invoker.startArguments.get("task_id"));
         assertEquals("a".repeat(40), invoker.startArguments.get("source_commit"));
-        assertEquals("pipeline-1", invoker.startArguments.get("attempt_id"));
+        assertEquals("attempt-1", invoker.startArguments.get("attempt_id"));
         assertTrue(invoker.startArguments.containsKey("traceparent"));
         assertTrue(invoker.startArguments.containsKey("deadline"));
         assertTrue(invoker.startArguments.containsKey("idempotency_key"));

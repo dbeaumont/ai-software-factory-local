@@ -112,7 +112,7 @@ public final class AgentAbEvaluator {
         return values.isEmpty() ? 0 : (double) values.stream().filter(predicate).count() / values.size();
     }
 
-    public enum Variant { BASELINE, CANDIDATE, PIPELINE, AGENTIC_SIMPLE, HIERARCHICAL_SHADOW }
+    public enum Variant { BASELINE, CANDIDATE, SHORT_CODE_PATH, HIERARCHICAL_PATH }
 
     public record Observation(String caseId, Variant variant, boolean firstPatchSuccess, int repairs,
                               boolean testsPassed, boolean humanAccepted, long tokens,

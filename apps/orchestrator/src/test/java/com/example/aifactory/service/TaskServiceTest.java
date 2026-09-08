@@ -149,7 +149,7 @@ class TaskServiceTest {
                         SecurityAuditJournal.EventType.COMMAND_ACCEPTED,
                         SecurityAuditJournal.EventType.APPROVAL);
         assertThat(journal.list()).extracting(SecurityAuditJournal.Entry::objectReference)
-                .allMatch(reference -> reference.startsWith("pipeline-1/APPROVE/"));
+                .allMatch(reference -> reference.startsWith("attempt-1/APPROVE/"));
         assertThat(journal.verifyIntegrity()).isTrue();
     }
 

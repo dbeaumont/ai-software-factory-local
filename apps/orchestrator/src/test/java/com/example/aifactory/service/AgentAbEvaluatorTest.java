@@ -31,28 +31,28 @@ class AgentAbEvaluatorTest {
     }
 
     @Test
-    void collectsHierarchicalShadowAsAnExplicitPairedVariant() {
+    void comparesTheTwoActiveHierarchicalRoutesAsExplicitVariants() {
         List<AgentAbEvaluator.Observation> observations = new ArrayList<>();
         for (int i = 1; i <= 20; i++) {
             String caseId = "SHADOW-%03d".formatted(i);
-            observations.add(observation(caseId, AgentAbEvaluator.Variant.BASELINE, false));
-            observations.add(observation(caseId, AgentAbEvaluator.Variant.HIERARCHICAL_SHADOW, false));
+            observations.add(observation(caseId, AgentAbEvaluator.Variant.SHORT_CODE_PATH, false));
+            observations.add(observation(caseId, AgentAbEvaluator.Variant.HIERARCHICAL_PATH, false));
         }
 
         AgentAbEvaluator.Report report = evaluator.evaluate(observations, thresholds,
-                AgentAbEvaluator.Variant.BASELINE, AgentAbEvaluator.Variant.HIERARCHICAL_SHADOW);
+                AgentAbEvaluator.Variant.SHORT_CODE_PATH, AgentAbEvaluator.Variant.HIERARCHICAL_PATH);
 
         assertEquals("QUALIFIED", report.verdict());
         assertEquals(20, report.pairedCases());
     }
 
     @Test
-    void comparesPipelineSimpleAgentAndHierarchyOnTheSameTicketsAndCommits() {
+    void comparesBaselineShortAndHierarchicalEvaluationCohortsOnTheSameTicketsAndCommits() {
         List<AgentAbEvaluator.CampaignObservation> observations = new ArrayList<>();
         Set<AgentAbEvaluator.Variant> variants = Set.of(
-                AgentAbEvaluator.Variant.PIPELINE,
-                AgentAbEvaluator.Variant.AGENTIC_SIMPLE,
-                AgentAbEvaluator.Variant.HIERARCHICAL_SHADOW);
+                AgentAbEvaluator.Variant.BASELINE,
+                AgentAbEvaluator.Variant.SHORT_CODE_PATH,
+                AgentAbEvaluator.Variant.HIERARCHICAL_PATH);
         for (int i = 1; i <= 20; i++) {
             String id = "TRI-%03d".formatted(i);
             for (AgentAbEvaluator.Variant variant : variants) {

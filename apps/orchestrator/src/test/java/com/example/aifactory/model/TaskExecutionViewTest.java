@@ -10,13 +10,12 @@ class TaskExecutionViewTest {
     void exposesHierarchicalModeWorkflowDagVersionAndGlobalBudget() {
         TaskState state = new TaskState("task-1", "AF-0001",
                 new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
-        state.bindExecution("HIERARCHICAL_ACTIVE", "run-123", "dag-v4", 80_000, 80_000_000, 60);
+        state.bindExecution("run-123", "dag-v4", 80_000, 80_000_000, 60);
         state.recordAgentUsage(3, 1_200, 45_000);
 
         TaskView view = state.view();
 
-        assertThat(view.executionMode()).isEqualTo("HIERARCHICAL_ACTIVE");
-        assertThat(view.workflowAttemptId()).isEqualTo("pipeline-1");
+        assertThat(view.workflowAttemptId()).isEqualTo("attempt-1");
         assertThat(view.workflowRunId()).isEqualTo("run-123");
         assertThat(view.dagVersion()).isEqualTo("dag-v4");
         assertThat(view.globalBudget()).isEqualTo(
@@ -28,7 +27,7 @@ class TaskExecutionViewTest {
         TaskState state = new TaskState("task-1", "AF-0001",
                 new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
 
-        assertThatThrownBy(() -> state.bindExecution("HIERARCHICAL_ACTIVE", "", "dag-v4",
+        assertThatThrownBy(() -> state.bindExecution("", "dag-v4",
                 80_000, 80_000_000, 60)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -185,7 +184,7 @@ class TaskExecutionViewTest {
     void authorizesOnlyRetryableDelegationFailures() {
         TaskState state = new TaskState("task-1", "AF-0001",
                 new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
-        state.bindExecution("HIERARCHICAL_ACTIVE", "run-1", "dag-v4", 10_000, 1_000_000, 20);
+        state.bindExecution("run-1", "dag-v4", 10_000, 1_000_000, 20);
         state.recordDelegation("code-1", "supervisor", "code-agent", java.util.List.of(),
                 "FAILED", "TIMEOUT");
         state.recordDelegation("security-1", "supervisor", "security-agent", java.util.List.of(),

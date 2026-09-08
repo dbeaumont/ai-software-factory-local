@@ -84,8 +84,7 @@ final class AgentExecutionActivitiesImpl implements AgentExecutionActivities {
                 command.taskId(), attemptId, role, inputReference.contract(), input, outputContract,
                 allowedReferences, new AgentLoop.Budget(budget.path("max_turns").asInt(),
                 Duration.ofSeconds(budget.path("timeout_seconds").asLong()), budget.path("max_tokens").asInt(),
-                budget.path("max_cost_micros").asLong()), "HIERARCHICAL_ACTIVE",
-                command.traceparent(), command.baggage()));
+                budget.path("max_cost_micros").asLong()), command.traceparent(), command.baggage()));
         try {
             byte[] content = mapper.writeValueAsBytes(executed.document());
             return new Result(attemptId, outputContract, allowedReferences,

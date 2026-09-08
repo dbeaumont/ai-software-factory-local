@@ -94,7 +94,7 @@
                 <a id="task-repository-link" target="_blank" rel="noreferrer">Gitea</a>
               </nav>
               <div id="operator-actions" class="operator-actions" hidden><button id="cancel-task-button" type="button">Annuler</button></div>
-              <div class="pipeline-summary"><span id="pipeline-progress">0/9 opérations terminées</span><span>PIPELINE</span></div>
+              <div class="pipeline-summary"><span id="pipeline-progress">0/9 opérations terminées</span><span>MULTI-AGENT</span></div>
               <div class="progress-line"><span id="progress-bar"></span></div>
               <div id="steps" class="pipeline-stages"></div>
               <section id="delegation-graph" class="delegation-graph" aria-labelledby="delegation-graph-title" hidden><div class="delegation-graph-heading"><h3 id="delegation-graph-title">DAG multi-agent</h3><span id="delegation-count"></span></div><div class="delegation-legend" aria-label="Périmètres des agents"><span class="perimeter-architecture">Architecture</span><span class="perimeter-code">Code</span><span class="perimeter-tests">Tests</span><span class="perimeter-security">Sécurité</span><span class="perimeter-review">Revue indépendante</span></div><div id="delegation-tree" class="delegation-tree"></div></section>
@@ -112,7 +112,7 @@
       </section>
       <section id="executions-view" class="app-view executions-view" hidden>
         <div class="executions-heading"><div><p class="issue-key">AI SOFTWARE FACTORY <span>·</span> SUIVI</p><h1>Exécutions</h1><p>Les tickets traités par l'usine, classés par dernière activité.</p></div><button id="refresh-executions" type="button">Actualiser</button></div>
-        <section class="executions-card" aria-labelledby="executions-list-title"><div class="executions-table-header"><span id="executions-list-title">Ticket</span><span>Mode</span><span>Étape active</span><span>Dernière activité</span><span>État</span></div><div id="execution-list" class="execution-list"></div><p id="execution-empty" class="execution-empty" hidden>Aucune exécution n'est disponible.</p></section>
+        <section class="executions-card" aria-labelledby="executions-list-title"><div class="executions-table-header"><span id="executions-list-title">Ticket</span><span>Parcours</span><span>Étape active</span><span>Dernière activité</span><span>État</span></div><div id="execution-list" class="execution-list"></div><p id="execution-empty" class="execution-empty" hidden>Aucune exécution n'est disponible.</p></section>
       </section>
     </main>
     <dialog id="proposal-dialog" class="proposal-dialog" aria-labelledby="proposal-title"><div class="proposal-dialog-header"><div><p class="eyebrow">REVUE AVANT APPROBATION</p><h2 id="proposal-title">Changements proposés</h2></div><button id="proposal-close-button" class="proposal-close-button" type="button" aria-label="Fermer">×</button></div><section class="proposal-section"><h3>Diff généré</h3><pre id="proposal-patch"></pre></section><details class="proposal-details"><summary>Plan d'implémentation</summary><pre id="proposal-plan"></pre></details><details class="proposal-details"><summary>Résultats des tests et contrôles</summary><pre id="proposal-tests"></pre><pre id="proposal-quality"></pre><pre id="proposal-security"></pre></details><details class="proposal-details"><summary>Revue IA</summary><pre id="proposal-review"></pre></details></dialog>

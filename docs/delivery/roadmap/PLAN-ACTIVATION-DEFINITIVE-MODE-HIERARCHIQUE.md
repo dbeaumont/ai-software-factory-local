@@ -196,15 +196,16 @@ refactor(policies): collapse execution modes to hierarchical routing
 
 ## 5. Nettoyer les reliquats applicatifs
 
-- [ ] Supprimer les validations multi-modes dans `TaskState`.
-- [ ] Supprimer la valeur initiale `PIPELINE` de `TaskState`.
-- [ ] Retirer les anciens modes de `OperationalKillSwitch`.
-- [ ] Retirer `HIERARCHICAL_SHADOW` de `AgentAbEvaluator` si aucune campagne active ne l'utilise encore.
-- [ ] Retirer `HIERARCHICAL_SHADOW` des modes acceptés par `AgentLoop`.
-- [ ] Retirer le fallback `PIPELINE` de `ValidatedMcpToolInvoker`.
-- [ ] Mettre à jour les métriques et le contrat de télémétrie des modes d'exécution.
-- [ ] Remplacer le libellé `PIPELINE` dans l'interface web.
-- [ ] Supprimer les variables de configuration exclusivement liées au shadow ou au canary hiérarchique.
+- [x] Supprimer les validations multi-modes dans `TaskState`.
+- [x] Supprimer la valeur initiale `PIPELINE` de `TaskState`.
+- [x] Retirer les anciens modes de `OperationalKillSwitch`.
+- [x] Retirer `HIERARCHICAL_SHADOW` de `AgentAbEvaluator` si aucune campagne active ne l'utilise encore.
+- [x] Retirer `HIERARCHICAL_SHADOW` des modes acceptés par `AgentLoop`.
+- [x] Retirer le fallback `PIPELINE` de `ValidatedMcpToolInvoker`.
+- [x] Mettre à jour les métriques et le contrat de télémétrie des modes d'exécution.
+- [x] Remplacer le libellé `PIPELINE` dans l'interface web.
+- [x] Supprimer les variables de configuration exclusivement liées au shadow ou au canary hiérarchique. _(Aucune
+  variable correspondante n'était câblée dans la configuration active.)_
 - [ ] Supprimer les commandes Makefile exclusivement liées à cette promotion.
 - [ ] Supprimer les scripts exclusivement liés à cette promotion.
 - [ ] Conserver les preuves historiques sous `docs/archive/`.

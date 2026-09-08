@@ -48,7 +48,7 @@ public final class AgentExecutionWorker {
         boolean pipelineCompatibility = "pipeline-agent-task-v1".equals(request.inputContract());
         String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : request.input().toString();
         java.util.concurrent.Callable<AgentLoop.Result> agentLoop = () -> loop.run(
-                new AgentLoop.Actor(request.taskId(), role.identity().role(), request.executionMode()),
+                new AgentLoop.Actor(request.taskId(), role.identity().role()),
                 role.systemPrompt(request.inputContract()), agentInput, request.budget());
         AgentMcpExecutionContext mcpContext = new AgentMcpExecutionContext(
                 request.taskId(), request.attemptId(), request.input().path("source_commit").asText(),
@@ -86,12 +86,13 @@ public final class AgentExecutionWorker {
 
     public record Request(String taskId, String attemptId, String role, String inputContract, JsonNode input,
                           String outputContract, Set<String> allowedReferenceIds, AgentLoop.Budget budget,
-                          String executionMode, String traceparent, String baggage) {
+                          String traceparent, String baggage) {
         public Request {
             if (taskId == null || taskId.isBlank() || attemptId == null || attemptId.isBlank()
                     || role == null || role.isBlank() || inputContract == null || inputContract.isBlank()
-                    || input == null || outputContract == null || outputContract.isBlank() || budget == null
-                    || executionMode == null) throw new IllegalArgumentException("Agent execution request is incomplete");
+                    || input == null || outputContract == null || outputContract.isBlank() || budget == null) {
+                throw new IllegalArgumentException("Agent execution request is incomplete");
+            }
             allowedReferenceIds = allowedReferenceIds == null ? Set.of() : Set.copyOf(allowedReferenceIds);
         }
     }

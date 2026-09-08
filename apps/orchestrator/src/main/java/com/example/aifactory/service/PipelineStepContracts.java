@@ -12,7 +12,7 @@ import java.util.TreeMap;
 /** Versioned, size-bounded payloads crossing a pipeline step boundary. */
 public final class PipelineStepContracts {
     public static final int SCHEMA_VERSION = 1;
-    public static final String INITIAL_ATTEMPT_ID = "pipeline-1";
+    public static final String INITIAL_ATTEMPT_ID = "attempt-1";
     public static final String UNRESOLVED_SOURCE_COMMIT = "UNRESOLVED";
 
     private PipelineStepContracts() {}

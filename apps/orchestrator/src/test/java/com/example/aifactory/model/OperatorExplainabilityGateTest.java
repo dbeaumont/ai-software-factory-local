@@ -12,7 +12,7 @@ class OperatorExplainabilityGateTest {
     void exposesEnoughLinkedFactsToExplainACompleteHierarchicalTrajectory() {
         TaskState state = new TaskState("task-10", "AF-0010",
                 new TaskRequest("https://example.test/repo.git", "main", "change", LlmMode.CLOUD));
-        state.bindExecution("HIERARCHICAL_ACTIVE", "run-10", "dag-v4", 80_000, 50_000_000, 60);
+        state.bindExecution("run-10", "dag-v4", 80_000, 50_000_000, 60);
         state.recordAgentUsage(7, 7_500, 125_000);
         state.recordDelegation("supervisor", null, "supervisor", List.of(), "SUCCESS", "CONSOLIDATED",
                 8_000, 2, 1_500, 25_000, List.of("evidence.create_manifest"));
@@ -40,7 +40,6 @@ class OperatorExplainabilityGateTest {
         state.bindApprovalManifest("c".repeat(64), "evidence://task-10/final-manifest", "d".repeat(64));
 
         TaskView view = state.view();
-        assertThat(view.executionMode()).isEqualTo("HIERARCHICAL_ACTIVE");
         assertThat(view.workflowRunId()).isEqualTo("run-10");
         assertThat(view.delegations()).extracting(TaskView.DelegationView::role).contains(
                 "supervisor", "architecture-agent", "code-agent", "test-agent", "security-agent",
