@@ -54,7 +54,9 @@ public final class AgentContractValidator {
         if (schema == null) throw new ContractValidationException(contract, "unknown contract");
         List<Error> errors = schema.validate(document);
         if (!errors.isEmpty()) {
-            throw new ContractValidationException(contract, "schema violation: " + errors.getFirst().getKeyword());
+            Error error = errors.getFirst();
+            throw new ContractValidationException(contract, "schema violation: " + error.getKeyword()
+                    + " at " + error.getInstanceLocation());
         }
         require(document, "task_id", context.taskId(), contract);
         require(document, "attempt_id", context.attemptId(), contract);

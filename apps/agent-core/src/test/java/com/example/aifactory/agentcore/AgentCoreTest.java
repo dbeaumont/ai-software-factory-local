@@ -64,6 +64,14 @@ class AgentCoreTest {
                 validator.validate(contract, document,
                         new AgentContractValidator.Context("task-1", "attempt-1", references));
             });
+            tools.jackson.databind.node.ObjectNode invalidPlan =
+                    (tools.jackson.databind.node.ObjectNode) documents.path("delegation-plan-v1").deepCopy();
+            invalidPlan.put("root_role", "workflow");
+            AgentContractValidator.ContractValidationException invalid = assertThrows(
+                    AgentContractValidator.ContractValidationException.class,
+                    () -> validator.validate("delegation-plan-v1", invalidPlan,
+                            new AgentContractValidator.Context("task-1", "attempt-1", Set.of())));
+            assertTrue(invalid.getMessage().contains("const at /root_role"), invalid.getMessage());
         }
     }
 
