@@ -22,6 +22,11 @@ Comparer `workflowId/runId/delegationId/messageId/taskId/contextId`, digests et 
 lectures autorisées. Temporal gouverne l'orchestration ; le task store A2A gouverne l'état protocolaire ; Evidence
 gouverne les artefacts. Toute discordance est une preuve, pas une invitation à écraser une valeur.
 
+Pour une même séquence, une divergence réelle existe si `agentRole`, `taskId`, `contextId`, `state` ou la liste
+complète des artefacts diffère. La comparaison des artefacts inclut leur contenu et leurs metadata. En revanche,
+une différence limitée à `occurredAt` ou aux metadata de provenance entre `tasks/get` et callback est une variation
+de transport normale ; l'inbox conserve malgré tout sa comparaison stricte du digest entre deux callbacks.
+
 ## Rétablissement
 
 Pour une issue inconnue, rechercher la tâche par `messageId`, rattacher seulement une corrélation identique et

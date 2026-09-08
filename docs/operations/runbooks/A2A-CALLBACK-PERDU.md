@@ -19,13 +19,15 @@ docker compose --env-file .env -f infrastructure/compose.yaml --profile a2a-full
 ```
 
 Comparer sequence, timestamp, signature, URL de callback, DNS/TLS, code HTTP, retries et état courant obtenu par
-`tasks/get`. Une notification en double avec la même sequence est normale et doit être dédupliquée.
+`tasks/get`. Un doublon inter-canaux est normal lorsque `agentRole`, `taskId`, `contextId`, `sequence`, `state` et
+les artefacts complets sont identiques. `occurredAt` et la provenance dans les metadata peuvent différer entre le
+task store, la réconciliation `tasks/get` et l'outbox ; ces deux écarts ne suffisent pas à établir une divergence.
 
 ## Rétablissement
 
 Réparer le transport ou la clé HMAC, puis laisser l'outbox durable reprendre. Si les retries sont épuisés,
 réconcilier par `tasks/get`; ne créer aucune nouvelle tâche. La projection Temporal n'accepte qu'une sequence plus
-récente et une corrélation inchangée.
+récente et une corrélation inchangée. Ne pas recréer une tâche distante déjà retrouvée en état terminal.
 
 ## Vérification et clôture
 

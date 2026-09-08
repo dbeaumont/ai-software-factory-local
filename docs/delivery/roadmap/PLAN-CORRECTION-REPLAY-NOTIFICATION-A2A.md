@@ -14,10 +14,10 @@ A2A distante.
 
 - [x] Modifier uniquement la déduplication inter-canaux dans `A2aTaskAwaiter`.
 - [x] Conserver la validation stricte des callbacks dans `PostgresA2aNotificationInbox`.
-- [ ] Ajouter les tests unitaires, Temporal embarqués et de replay nécessaires.
+- [x] Ajouter les tests unitaires, Temporal embarqués et de replay nécessaires.
 - [ ] Vérifier la compatibilité du changement avec l'historique réel en échec.
 - [ ] Déployer une nouvelle version de l'orchestrateur et laisser Temporal reprendre le workflow.
-- [ ] Mettre à jour la documentation d'exploitation après validation.
+- [x] Mettre à jour la documentation d'exploitation après validation.
 
 ## Hors périmètre
 
@@ -148,14 +148,18 @@ A2A distante.
 
 ## 7. Exécuter les validations locales
 
+> Bilan du 2026-09-08 : tous les tests ciblés sont verts. La suite complète a exécuté 564 tests, mais reste rouge
+> sur `OpenTelemetryParityTest` (`expected: 8`, `but was: 9`), échec hors périmètre présent dans l'état courant du
+> dépôt. Les deux erreurs de socket imposées par le sandbox ont été rejouées hors sandbox et sont vertes.
+
 - [x] Exécuter les tests ciblés de `A2aTaskAwaiterTest`.
 - [x] Exécuter les tests ciblés de `TemporalA2aNotificationReceiverTest`.
 - [x] Exécuter les tests ciblés de l'inbox PostgreSQL.
-- [ ] Exécuter la suite de tests du module `apps/orchestrator`.
-- [ ] Exécuter les contrôles de formatage et d'analyse statique applicables au module.
-- [ ] Vérifier `git diff --check`.
-- [ ] Examiner le diff pour confirmer qu'aucun fichier sans rapport n'a été modifié.
-- [ ] Conserver dans le compte rendu les commandes exécutées, leurs résultats et les éventuels tests non exécutés.
+- [x] Exécuter la suite de tests du module `apps/orchestrator`.
+- [x] Exécuter les contrôles de formatage et d'analyse statique applicables au module.
+- [x] Vérifier `git diff --check`.
+- [x] Examiner le diff pour confirmer qu'aucun fichier sans rapport n'a été modifié.
+- [x] Conserver dans le compte rendu les commandes exécutées, leurs résultats et les éventuels tests non exécutés.
 
 ## 8. Préparer la livraison
 
@@ -195,15 +199,15 @@ A2A distante.
 
 ## 11. Documentation et traçabilité
 
-- [ ] Mettre à jour `docs/operations/runbooks/A2A-CALLBACK-PERDU.md` pour préciser qu'un doublon inter-canaux est
+- [x] Mettre à jour `docs/operations/runbooks/A2A-CALLBACK-PERDU.md` pour préciser qu'un doublon inter-canaux est
   normal lorsque son identité métier est identique.
-- [ ] Mettre à jour `docs/operations/runbooks/A2A-DIVERGENCE-ETAT.md` avec les champs définissant une divergence
+- [x] Mettre à jour `docs/operations/runbooks/A2A-DIVERGENCE-ETAT.md` avec les champs définissant une divergence
   réelle.
-- [ ] Documenter que `occurredAt` et la provenance ne suffisent pas à conclure à une divergence entre `GetTask` et
+- [x] Documenter que `occurredAt` et la provenance ne suffisent pas à conclure à une divergence entre `GetTask` et
   callback.
-- [ ] Référencer le test de régression et le test de replay dans la preuve de correction.
+- [x] Référencer le test de régression et le test de replay dans la preuve de correction.
 - [ ] Enregistrer le workflow, le run, les séquences observées et le build corrigé dans le dossier d'incident.
-- [ ] Ne pas versionner de payload contenant un secret, un jeton ou une donnée non nécessaire à la preuve.
+- [x] Ne pas versionner de payload contenant un secret, un jeton ou une donnée non nécessaire à la preuve.
 
 ## 12. Stratégie de rollback
 
@@ -216,16 +220,16 @@ A2A distante.
 
 ## Critères d'acceptation finaux
 
-- [ ] Un doublon inter-canaux de même identité métier est accepté malgré un `occurredAt` ou des `metadata`
+- [x] Un doublon inter-canaux de même identité métier est accepté malgré un `occurredAt` ou des `metadata`
   différents.
-- [ ] Une différence d'état, de contexte, de rôle ou d'artefacts à séquence identique reste rejetée.
-- [ ] L'inbox PostgreSQL conserve sa comparaison stricte du digest des callbacks.
+- [x] Une différence d'état, de contexte, de rôle ou d'artefacts à séquence identique reste rejetée.
+- [x] L'inbox PostgreSQL conserve sa comparaison stricte du digest des callbacks.
 - [ ] Tous les tests ciblés et la suite orchestrateur réussissent.
 - [ ] Le replay de l'historique réel réussit sans non-déterminisme.
 - [ ] Le workflow `fbece50e` reprend sans nouvelle tâche A2A et sans effet externe dupliqué.
 - [ ] La projection applicative converge de nouveau avec l'état Temporal.
 - [ ] Deux fenêtres de surveillance s'écoulent sans nouvelle erreur équivalente.
-- [ ] Les runbooks et la preuve de correction sont à jour.
+- [x] Les runbooks et la preuve de correction sont à jour.
 
 ## Définition de terminé
 
