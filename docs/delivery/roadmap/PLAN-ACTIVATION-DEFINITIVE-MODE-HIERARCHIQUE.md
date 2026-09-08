@@ -224,8 +224,11 @@ refactor(policies): collapse execution modes to hierarchical routing
 - [x] Remplacer le libellé `PIPELINE` dans l'interface web.
 - [x] Supprimer les variables de configuration exclusivement liées au shadow ou au canary hiérarchique. _(Aucune
   variable correspondante n'était câblée dans la configuration active.)_
-- [ ] Supprimer les commandes Makefile exclusivement liées à cette promotion.
-- [ ] Supprimer les scripts exclusivement liés à cette promotion.
+- [x] Supprimer les commandes Makefile exclusivement liées à cette promotion. _(Les cibles de baseline, gel,
+  qualification et surveillance `temporal-cutover-*` ont été retirées ; admissions, sauvegarde et restauration
+  restent des opérations permanentes.)_
+- [x] Supprimer les scripts exclusivement liés à cette promotion. _(`qualify-temporal-cutover.sh`,
+  `verify-temporal-cutover-freeze.rb` et `monitor-temporal-cutover.sh` ont été retirés.)_
 - [ ] Conserver les preuves historiques sous `docs/archive/`.
 - [ ] Vérifier avec `rg` que les anciens termes ne subsistent dans aucun chemin actif.
 

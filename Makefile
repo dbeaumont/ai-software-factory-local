@@ -18,7 +18,7 @@ define log-target
 	@echo -e "$(CYAN)[target: $@]$(NC)"
 endef
 
-.PHONY: help init factory-core-up verify-ready a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-worker-drainage a2a-rollback-gate a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state a2a-up-role a2a-up-full monitor-a2a-cutover a2a-evidence-manifest check-a2a-evidence-manifest check-a2a-cutover-approval test-a2a-temporal test-a2a-compose-integration test-a2a-compose-failures test-a2a-security test-a2a-performance test-a2a-e2e-parity test-a2a-rollback-load test-a2a-rollback-gate build build-images up all bootstrap bootstrap-signoz tokens demo test temporal-replay temporal-cutover-baseline temporal-cutover-freeze qualify-temporal-cutover admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover monitor-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
+.PHONY: help init factory-core-up verify-ready a2a-pki a2a-pki-rotate a2a-secrets a2a-supply-chain a2a-worker-drainage a2a-rollback-gate a2a-config a2a-status a2a-cards a2a-smoke a2a-logs a2a-reset-state a2a-up-role a2a-up-full monitor-a2a-cutover a2a-evidence-manifest check-a2a-evidence-manifest check-a2a-cutover-approval test-a2a-temporal test-a2a-compose-integration test-a2a-compose-failures test-a2a-security test-a2a-performance test-a2a-e2e-parity test-a2a-rollback-load test-a2a-rollback-gate build build-images up all bootstrap bootstrap-signoz tokens demo test temporal-replay admissions-status admissions-close admissions-open backup-temporal-cutover restore-temporal-cutover test-temporal-compose test-temporal-ticket-ui test-temporal-orchestrator-restarts test-temporal-worker-heartbeat test-temporal-storage-restarts test-temporal-dependency-outages test-temporal-pipeline-delivery test-temporal-compose-cycle test-temporal-backpressure test-temporal-capacity-limits test-temporal-human-wait-rotation test-temporal-retention-rebuild test-temporal-network-partition test-sandbox-runtime test-sandbox-network mcp-shadow-campaign mcp-active-campaign mcp-shadow-report package config status restart logs urls temporal-status temporal-logs temporal-ui down clean
 
 help:
 	$(log-target)
@@ -57,10 +57,6 @@ help:
 	@echo -e "  $(CYAN)make demo$(NC)       - submit an AI task against the demo repository"
 	@echo -e "  $(CYAN)make test$(NC)       - run orchestrator and MCP server tests"
 	@echo -e "  $(CYAN)make temporal-replay$(NC) - replay versioned histories before worker image build"
-	@echo -e "  $(CYAN)make temporal-cutover-baseline$(NC) - verify the frozen pre-cutover pipeline baseline"
-	@echo -e "  $(CYAN)make temporal-cutover-freeze$(NC) - reject drift in the qualified cutover scope"
-	@echo -e "  $(CYAN)make qualify-temporal-cutover$(NC) - run the complete cutover qualification barrier"
-	@echo -e "  $(CYAN)make monitor-temporal-cutover$(NC) - monitor the strengthened post-cutover window"
 	@echo -e "  $(CYAN)make admissions-status$(NC) - show the durable ticket admission switch"
 	@echo -e "  $(CYAN)make admissions-close$(NC) - reject new tickets during a maintenance window"
 	@echo -e "  $(CYAN)make admissions-open$(NC) - reopen ticket admissions after verification"
@@ -383,18 +379,6 @@ temporal-replay:
 	@if [ -x ./apps/orchestrator/mvnw ]; then ./apps/orchestrator/mvnw $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=WorkflowDeterminismArchitectureTest; else mvn $(MAVEN_HOST_SETTINGS) -f apps/orchestrator/pom.xml test -Dtest=WorkflowDeterminismArchitectureTest; fi
 	@echo -e "$(GREEN)Temporal histories are replay-compatible.$(NC)"
 
-temporal-cutover-baseline:
-	$(log-target)
-	@ruby scripts/verify-pipeline-baseline.rb
-
-temporal-cutover-freeze:
-	$(log-target)
-	@ruby scripts/verify-temporal-cutover-freeze.rb
-
-qualify-temporal-cutover:
-	$(log-target)
-	@./scripts/qualify-temporal-cutover.sh
-
 admissions-status:
 	$(log-target)
 	@./scripts/set-admissions.sh status
@@ -417,10 +401,6 @@ restore-temporal-cutover:
 	@test -n "$(BACKUP_DIR)" || (echo "BACKUP_DIR is required" >&2; exit 2)
 	@test -n "$(RESTORE_PREFIX)" || (echo "RESTORE_PREFIX is required" >&2; exit 2)
 	@./scripts/restore-temporal-cutover-isolated.sh "$(BACKUP_DIR)" "$(RESTORE_PREFIX)"
-
-monitor-temporal-cutover:
-	$(log-target)
-	@./scripts/monitor-temporal-cutover.sh
 
 test-temporal-compose:
 	$(log-target)
