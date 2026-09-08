@@ -46,6 +46,7 @@ class SoftwareFactoryExecutionWorkflowV2Test {
         AtomicInteger resolutions = new AtomicInteger();
         io.temporal.common.WorkflowExecutionHistory history;
         try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+            TriageProjectionActivities pipeline = new TriageProjectionActivities();
             var workflowWorker = environment.newWorker("test-workflow");
             workflowWorker.registerWorkflowImplementationTypes(SoftwareFactoryExecutionWorkflowV2Impl.class);
             var contextWorker = environment.newWorker("test-context");
@@ -58,7 +59,8 @@ class SoftwareFactoryExecutionWorkflowV2Test {
             }, (HierarchicalRoutingActivities) request -> new HierarchicalRoutingActivities.Decision(
                     "c".repeat(64), "routing-policy-v1", "1", Map.of("risk", "R4"),
                     "human-triage", "HUMAN_TRIAGE", List.of("Risk requires triage"), List.of(),
-                    "BEFORE_CODE"));
+                    "BEFORE_CODE"), pipeline);
+            environment.newWorker("test-evidence").registerActivitiesImplementations(pipeline);
             environment.start();
             SoftwareFactoryExecutionWorkflowV2 workflow = environment.getWorkflowClient().newWorkflowStub(
                     SoftwareFactoryExecutionWorkflowV2.class, WorkflowOptions.newBuilder()
@@ -71,13 +73,53 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                     "task-1", "attempt-1", "customer-api", "UNRESOLVED", "requirement",
                     new SoftwareFactoryWorkflow.SourceLocation(
                             "http://gitea:3000/aiadmin/customer-api.git", "main", "test-context",
-                            Map.of("context", "test-context")), null, facts));
+                            Map.of("context", "test-context", "evidence", "test-evidence")), null, facts));
 
-            assertThat(result.status()).isEqualTo("HUMAN_TRIAGE");
+            assertThat(result.status()).isEqualTo("GATE_REJECTED:routing");
             assertThat(result.chronology()).contains("ROUTING_DECIDED:" + "c".repeat(64) + ":HUMAN_TRIAGE");
             assertThat(resolutions).hasValue(1);
+            assertThat(pipeline.sourceBindings).hasValue(1);
+            assertThat(pipeline.routingRejections).hasValue(1);
             history = environment.getWorkflowClient().fetchHistory("ai-factory/task-1/attempt-1");
         }
         WorkflowReplayer.replayWorkflowExecution(history, SoftwareFactoryExecutionWorkflowV2Impl.class);
+    }
+
+    private static final class TriageProjectionActivities implements PipelineExecutionActivities {
+        private final AtomicInteger sourceBindings = new AtomicInteger();
+        private final AtomicInteger routingRejections = new AtomicInteger();
+
+        @Override public com.example.aifactory.service.PipelineStepContracts.Result bindSource(SourceBinding binding) {
+            sourceBindings.incrementAndGet();
+            return result("bind-source", binding.sourceCommit());
+        }
+        @Override public void recordGateRejection(GateRejection rejection) {
+            routingRejections.incrementAndGet();
+        }
+        @Override public com.example.aifactory.service.PipelineStepContracts.Result execute(StepRequest request) {
+            throw unsupported();
+        }
+        @Override public PatchValidationResult validatePatchCandidate(StepRequest request) { throw unsupported(); }
+        @Override public PipelineAgentInput prepareAgentInput(PipelineAgentInputRequest request) { throw unsupported(); }
+        @Override public com.example.aifactory.service.PipelineStepContracts.Result consumeAgentResult(
+                PipelineAgentResultRequest request) { throw unsupported(); }
+        @Override public com.example.aifactory.model.PendingEffect prepareDelivery(DeliveryRequest request) {
+            throw unsupported();
+        }
+        @Override public String deliver(DeliveryRequest request) { throw unsupported(); }
+        @Override public void recordCancellation(Cancellation cancellation) { throw unsupported(); }
+        @Override public void recordApproval(Approval approval) { throw unsupported(); }
+        @Override public void recordHumanDecision(HumanDecision decision) { throw unsupported(); }
+        @Override public com.example.aifactory.workflow.EvidenceRepository.StoredManifest createApprovalManifest(
+                ApprovalManifestRequest request) { throw unsupported(); }
+
+        private static com.example.aifactory.service.PipelineStepContracts.Result result(
+                String step, String commit) {
+            return new com.example.aifactory.service.PipelineStepContracts.Result(
+                    1, step, "task-1", "attempt-1", commit, Map.of());
+        }
+        private static AssertionError unsupported() {
+            return new AssertionError("A triage route must not execute pipeline activities");
+        }
     }
 }

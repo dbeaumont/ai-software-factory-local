@@ -17,7 +17,7 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl extends ProductionExec
     @Override
     @WorkflowVersioningBehavior(VersioningBehavior.PINNED)
     public SoftwareFactoryWorkflow.Result run(SoftwareFactoryWorkflow.Request request) {
-        return execute(request, null);
+        return execute(request, null, false);
     }
 }
 
@@ -36,7 +36,8 @@ abstract class ProductionExecutionWorkflowRuntime {
     private final List<DelegationWorkflow.Result> pipelineDelegations = new java.util.ArrayList<>();
 
     protected final SoftwareFactoryWorkflow.Result execute(
-            SoftwareFactoryWorkflow.Request request, SourceResolutionActivities.Result admittedSource) {
+            SoftwareFactoryWorkflow.Request request, SourceResolutionActivities.Result admittedSource,
+            boolean sourceAlreadyBound) {
         requireProductionExecutionMode(request);
         SoftwareFactoryWorkflow.SourceLocation source = request == null ? null : request.sourceLocation();
         if (source == null) throw new IllegalArgumentException("Production workflow source location is required");
@@ -46,9 +47,7 @@ abstract class ProductionExecutionWorkflowRuntime {
             throw new SecurityException("Resolved source attestation changed workflow identity");
         }
         phase = "SOURCE_RESOLVED";
-        PipelineExecutionActivities context = pipeline(source, "context", TemporalActivityPolicies.Kind.READ);
-        context.bindSource(new PipelineExecutionActivities.SourceBinding(request.taskId(), request.attemptId(),
-                request.repositoryId(), resolved.sourceCommit(), resolved.workspace(), resolved.attestationDigest()));
+        if (!sourceAlreadyBound) bindSource(source, request, resolved);
         try {
             throwIfCancelled();
             runPipelineAgent(source, request, resolved, "architecture-agent", "PLAN", "plan",
@@ -148,6 +147,23 @@ abstract class ProductionExecutionWorkflowRuntime {
         return activities.resolve(new SourceResolutionActivities.Request(
                 request.taskId(), request.attemptId(), request.repositoryId(), source.repositoryUrl(),
                 source.branch(), idempotencyKey));
+    }
+
+    protected final void bindSource(SoftwareFactoryWorkflow.SourceLocation source,
+                                    SoftwareFactoryWorkflow.Request request,
+                                    SourceResolutionActivities.Result resolved) {
+        pipeline(source, "context", TemporalActivityPolicies.Kind.READ).bindSource(
+                new PipelineExecutionActivities.SourceBinding(request.taskId(), request.attemptId(),
+                        request.repositoryId(), resolved.sourceCommit(), resolved.workspace(),
+                        resolved.attestationDigest()));
+    }
+
+    protected final void recordRoutingTriage(SoftwareFactoryWorkflow.SourceLocation source,
+                                              SoftwareFactoryWorkflow.Request request,
+                                              SourceResolutionActivities.Result resolved) {
+        pipeline(source, "evidence", TemporalActivityPolicies.Kind.EVIDENCE).recordGateRejection(
+                new PipelineExecutionActivities.GateRejection(request.taskId(), request.attemptId(),
+                        resolved.sourceCommit(), "routing"));
     }
 
     private SoftwareFactoryWorkflow.Result cancelBeforeApproval(SoftwareFactoryWorkflow.SourceLocation source,
