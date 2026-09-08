@@ -39,10 +39,16 @@ public final class AgentLoop {
     }
 
     public Result run(Actor actor, String systemPrompt, String userPrompt, Budget budget) {
+        return run(actor, systemPrompt, userPrompt, budget, ignored -> { });
+    }
+
+    public Result run(Actor actor, String systemPrompt, String userPrompt, Budget budget,
+                      FinalValidator finalValidator) {
         Objects.requireNonNull(actor, "Actor is required");
         Objects.requireNonNull(systemPrompt, "System prompt is required");
         Objects.requireNonNull(userPrompt, "User input is required");
         Objects.requireNonNull(budget, "Budget is required").validate();
+        Objects.requireNonNull(finalValidator, "Final validator is required");
         long deadline = Math.addExact(nanoTime.getAsLong(), budget.deadline().toNanos());
         List<Message> messages = new ArrayList<>();
         messages.add(new Message("system", systemPrompt + "\n\n" + INPUT_DATA_GUARDRAIL
@@ -68,6 +74,16 @@ public final class AgentLoop {
             if (turn.stop() == Stop.FINAL) {
                 if (!turn.toolCalls().isEmpty() || turn.finalResult() == null || turn.finalResult().isBlank()) {
                     throw failure("invalid_final", "Final turn is malformed", StopCondition.CONTRACT_ERROR);
+                }
+                try {
+                    finalValidator.validate(turn.finalResult());
+                } catch (ContractFeedbackException invalid) {
+                    if (turnNumber == budget.maxTurns()) throw invalid;
+                    messages.add(new Message("assistant", turn.finalResult(), List.of()));
+                    messages.add(new Message("system", "Host contract validation rejected the preceding output: "
+                            + invalid.getMessage() + ". Return a corrected complete output only; do not omit fields.",
+                            List.of()));
+                    continue;
                 }
                 return new Result(turn.finalResult(), turnNumber, tokens, costMicros,
                         StopCondition.SUCCESS_CRITERIA_MET);
@@ -121,6 +137,8 @@ public final class AgentLoop {
     }
 
     public interface Model { Turn next(List<Message> messages); }
+    @FunctionalInterface
+    public interface FinalValidator { void validate(String finalResult); }
     public interface ToolExecutor { String execute(ToolCall call); }
     public interface ToolAuthorization { boolean isAllowed(Actor actor, String toolName); }
     public interface UsageSink { void consume(UsageDelta delta); }
@@ -193,5 +211,8 @@ public final class AgentLoop {
         }
         public String reason() { return reason; }
         public StopCondition stopCondition() { return stopCondition; }
+    }
+    public static final class ContractFeedbackException extends IllegalArgumentException {
+        public ContractFeedbackException(String message, Throwable cause) { super(message, cause); }
     }
 }

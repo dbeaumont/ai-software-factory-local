@@ -117,6 +117,24 @@ class AgentExecutionWorkerTest {
     }
 
     @Test
+    void repairsAContractInvalidFinalWithinTheOriginalTurnBudget() throws Exception {
+        JsonNode fixtures = fixtures();
+        AtomicInteger attempts = new AtomicInteger();
+        AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("developer", mapper),
+                (messages, tools, tokens) -> new AgentLoop.Turn(AgentLoop.Stop.FINAL,
+                        attempts.incrementAndGet() == 1 ? "{\"task_id\":\"task-1\"}"
+                                : fixtures.path("patch-proposal-v1").toString(),
+                        List.of(), 1, 1, 0), new NoTools());
+
+        AgentExecutionWorker.Result result = worker.execute(request(
+                "developer", "code-task-v1", fixtures.path("code-task-v1"), "patch-proposal-v1"));
+
+        assertEquals("proposal-1", result.document().path("proposal_id").asText());
+        assertEquals(2, result.turns());
+        assertEquals(2, attempts.get());
+    }
+
+    @Test
     void bindsSupervisorPlanIdentityRiskAndShortPathShapeInTheSystemPrompt() throws Exception {
         JsonNode fixtures = fixtures();
         tools.jackson.databind.node.ObjectNode input = mapper.createObjectNode();

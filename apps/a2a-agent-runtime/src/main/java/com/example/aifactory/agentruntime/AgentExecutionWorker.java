@@ -47,9 +47,24 @@ public final class AgentExecutionWorker {
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
         boolean pipelineCompatibility = "pipeline-agent-task-v1".equals(request.inputContract());
         String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : request.input().toString();
-        java.util.concurrent.Callable<AgentLoop.Result> agentLoop = () -> loop.run(
-                new AgentLoop.Actor(request.taskId(), role.identity().role()),
-                systemPrompt(request), agentInput, request.budget());
+        java.util.concurrent.Callable<AgentLoop.Result> agentLoop = () -> {
+            try {
+                return loop.run(new AgentLoop.Actor(request.taskId(), role.identity().role()),
+                        systemPrompt(request), agentInput, request.budget(), finalResult -> {
+                            if (pipelineCompatibility) return;
+                            try {
+                                role.validateOutput(request.outputContract(), finalResult, contractContext);
+                            } catch (AgentContractValidator.ContractValidationException invalid) {
+                                throw new AgentLoop.ContractFeedbackException(invalid.getMessage(), invalid);
+                            }
+                        });
+            } catch (AgentLoop.ContractFeedbackException invalid) {
+                if (invalid.getCause() instanceof AgentContractValidator.ContractValidationException contract) {
+                    throw contract;
+                }
+                throw invalid;
+            }
+        };
         AgentMcpExecutionContext mcpContext = new AgentMcpExecutionContext(
                 request.taskId(), request.attemptId(), request.input().path("source_commit").asText(),
                 Instant.now().plus(request.budget().deadline()));
