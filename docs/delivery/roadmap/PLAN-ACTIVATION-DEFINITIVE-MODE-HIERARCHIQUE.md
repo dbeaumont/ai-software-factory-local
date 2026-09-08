@@ -71,30 +71,32 @@ docs(architecture): adopt hierarchical-only execution
 
 ## 1. Inventorier et préserver les historiques Temporal
 
-- [ ] Fermer temporairement les admissions pendant l'inventaire initial.
-- [ ] Lister tous les workflows ouverts dans le namespace Temporal actif.
-- [ ] Relever pour chaque workflow :
-  - [ ] le workflow ID et le run ID ;
-  - [ ] le type de workflow ;
-  - [ ] le Build ID ;
-  - [ ] la valeur de `AiFactoryExecutionMode` ;
-  - [ ] la phase courante ;
-  - [ ] les effets externes en attente ou à issue inconnue.
-- [ ] Rechercher dans les payloads et attributs persistés les valeurs :
-  - [ ] `PIPELINE` ;
-  - [ ] `HIERARCHICAL_SHADOW` ;
-  - [ ] `HIERARCHICAL_CANARY`.
-- [ ] Exporter hors des sources versionnées un échantillon représentatif des historiques concernés.
-- [ ] Rejouer les historiques avec le worker actuellement compatible.
-- [ ] Déterminer la date de drainage ou d'expiration du dernier historique V1.
-- [ ] Archiver l'inventaire, les commandes et les résultats sans secret ni payload inutile.
-- [ ] Rouvrir les admissions seulement après vérification de l'état initial.
+- [x] Fermer temporairement les admissions pendant l'inventaire initial.
+- [x] Lister tous les workflows ouverts dans le namespace Temporal actif.
+- [x] Relever pour chaque workflow : _(aucun workflow présent dans le namespace)_
+  - [x] le workflow ID et le run ID ;
+  - [x] le type de workflow ;
+  - [x] le Build ID ;
+  - [x] la valeur de `AiFactoryExecutionMode` ;
+  - [x] la phase courante ;
+  - [x] les effets externes en attente ou à issue inconnue.
+- [x] Rechercher dans les payloads et attributs persistés les valeurs : _(aucun historique ni projection présent)_
+  - [x] `PIPELINE` ;
+  - [x] `HIERARCHICAL_SHADOW` ;
+  - [x] `HIERARCHICAL_CANARY`.
+- [x] Exporter hors des sources versionnées un échantillon représentatif des historiques concernés. _(Sans objet :
+  le namespace ne contient aucun historique à exporter.)_
+- [x] Rejouer les historiques avec le worker actuellement compatible. _(Les huit fixtures versionnées réussissent.)_
+- [x] Déterminer la date de drainage ou d'expiration du dernier historique V1. _(Aucun historique V1 ; aucune
+  contrainte de drainage au 2026-09-08.)_
+- [x] Archiver l'inventaire, les commandes et les résultats sans secret ni payload inutile.
+- [x] Rouvrir les admissions seulement après vérification de l'état initial.
 
 ### Critères de sortie du lot 1
 
-- [ ] Aucun historique existant ne sera routé vers un worker incompatible.
-- [ ] Les Build IDs à conserver pendant le drainage sont identifiés.
-- [ ] La date minimale de retrait de la V1 est documentée.
+- [x] Aucun historique existant ne sera routé vers un worker incompatible.
+- [x] Les Build IDs à conserver pendant le drainage sont identifiés.
+- [x] La date minimale de retrait de la V1 est documentée.
 
 ## 2. Introduire une frontière Temporal compatible
 
