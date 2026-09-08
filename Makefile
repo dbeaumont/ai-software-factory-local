@@ -298,15 +298,20 @@ up: init
 # A factory reset deliberately removes Docker data volumes but preserves operator-owned .env/.vault files,
 # A2A certificates and role secrets. This keeps stable local identities while rebuilding every service and store.
 all: init
-	$(log-target)
-	@echo -e "$(YELLOW)[factory 1/4] Removing all Docker services and persistent data volumes...$(NC)"
-	$(MAKE) clean
-	@echo -e "$(BLUE)[factory 2/4] Rebuilding and starting the complete A2A factory...$(NC)"
-	$(MAKE) up
-	@echo -e "$(BLUE)[factory 3/4] Bootstrapping repositories and quality credentials...$(NC)"
-	$(MAKE) bootstrap
-	@echo -e "$(BLUE)[factory 4/4] Bootstrap readiness barrier confirmed the final state.$(NC)"
-	@echo -e "$(GREEN)Full A2A factory ready from empty Docker data volumes!$(NC)"
+	@set -e; \
+	start_timer=$$(date +%s); \
+	echo -e "$(CYAN)[target: $@]$(NC)"; \
+	echo -e "$(YELLOW)[factory 1/4] Removing all Docker services and persistent data volumes...$(NC)"; \
+	$(MAKE) clean; \
+	echo -e "$(BLUE)[factory 2/4] Rebuilding and starting the complete A2A factory...$(NC)"; \
+	$(MAKE) up; \
+	echo -e "$(BLUE)[factory 3/4] Bootstrapping repositories and quality credentials...$(NC)"; \
+	$(MAKE) bootstrap; \
+	echo -e "$(BLUE)[factory 4/4] Bootstrap readiness barrier confirmed the final state.$(NC)"; \
+	echo -e "$(GREEN)Full A2A factory ready from empty Docker data volumes!$(NC)"; \
+	end_timer=$$(date +%s); \
+	elapsed_time=$$((end_timer - start_timer)); \
+	echo -e "$(YELLOW)Total startup time: $$((elapsed_time / 60))m $$((elapsed_time % 60))s$(NC)"
 
 # Bootstrap mutates Gitea/Sonar credentials and therefore recreates control-plane consumers. Readiness and
 # worker activation must be re-established after that recreation, not assumed from the earlier startup smoke.
