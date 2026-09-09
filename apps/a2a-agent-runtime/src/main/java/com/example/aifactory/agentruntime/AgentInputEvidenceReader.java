@@ -4,6 +4,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
@@ -58,6 +59,9 @@ final class AgentInputEvidenceReader {
         try {
             return mapper.readTree(content);
         } catch (Exception malformed) {
+            if ("integration-result-v1".equals(reference.contract())) {
+                return mapper.getNodeFactory().textNode(new String(content, StandardCharsets.UTF_8));
+            }
             throw new IllegalArgumentException("A2A input Evidence is not valid JSON", malformed);
         }
     }
