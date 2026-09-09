@@ -57,7 +57,7 @@ class AgentCoreTest {
         try (InputStream input = getClass().getClassLoader()
                 .getResourceAsStream("multiagents/fixtures/golden-contracts-v1.json")) {
             JsonNode documents = new ObjectMapper().readTree(input).path("documents");
-            assertEquals(20, validator.contracts().size());
+            assertEquals(21, validator.contracts().size());
             validator.contracts().forEach(contract -> {
                 JsonNode document = documents.path(contract);
                 Set<String> references = collectTextualIds(document);

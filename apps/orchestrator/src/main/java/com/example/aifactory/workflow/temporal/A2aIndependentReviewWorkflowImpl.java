@@ -20,7 +20,7 @@ import java.util.Map;
 /** Dedicated A2A review boundary containing only validated Evidence references and their digests. */
 public final class A2aIndependentReviewWorkflowImpl implements IndependentReviewWorkflow {
     private static final String ROLE = "independent-reviewer";
-    private static final String SKILL = "independent-reviewer.integration-result-v1";
+    private static final String SKILL = "independent-reviewer.evidence-manifest-v1";
     private final A2aActivities.Stubs activities = A2aActivities.newStubs();
     private final A2aTaskAwaiter tasks = new A2aTaskAwaiter();
 
@@ -74,7 +74,7 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
         // The runtime materializes the first reference as the reviewer's structured input. Keep the JSON
         // manifest first; the unified diff remains an admitted, digest-bound supporting reference.
         parts.add(reference(bundle.finalManifest().manifestId(), bundle.finalManifest().uri(),
-                bundle.finalManifest().digest(), "integration-result-v1", bundle.finalManifest().sizeBytes()));
+                bundle.finalManifest().digest(), "evidence-manifest-v1", bundle.finalManifest().sizeBytes()));
         parts.add(reference(bundle.consolidatedPatch().patchId(), bundle.consolidatedPatch().uri(),
                 bundle.consolidatedPatch().digest(), "integration-result-v1", bundle.consolidatedPatch().sizeBytes()));
         bundle.reviewedResults().forEach(result -> parts.add(reference(result.resultId(), result.uri(),

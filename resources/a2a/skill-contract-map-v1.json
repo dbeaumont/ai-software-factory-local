@@ -124,6 +124,17 @@
       ]
     },
     {
+      "skill_id": "independent-reviewer.evidence-manifest-v1",
+      "role": "independent-reviewer",
+      "input_contract": "evidence-manifest-v1",
+      "schema_version": "1",
+      "schema_uri": "classpath:/multiagents/schemas/evidence-manifest-v1.schema.json",
+      "accepted_media_types": [
+        "application/json",
+        "application/vnd.ai-factory.evidence-reference+json"
+      ]
+    },
+    {
       "skill_id": "independent-reviewer.test-assessment-v1",
       "role": "independent-reviewer",
       "input_contract": "test-assessment-v1",

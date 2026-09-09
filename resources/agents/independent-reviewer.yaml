@@ -12,6 +12,7 @@ prompt: prompts/independent-reviewer.md
 input_contracts:
   - architecture-assessment-v1
   - integration-result-v1
+  - evidence-manifest-v1
   - test-assessment-v1
   - security-assessment-v1
   - contradiction-v1

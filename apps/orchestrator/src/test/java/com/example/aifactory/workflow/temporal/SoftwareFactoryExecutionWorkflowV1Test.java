@@ -277,7 +277,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
             java.util.List<String> skills = new java.util.ArrayList<>(List.of(
                     role + ".pipeline-agent-task-v1", role + ".specialist-task-v1"));
             if ("independent-reviewer".equals(role)) {
-                skills.add("independent-reviewer.integration-result-v1");
+                skills.add("independent-reviewer.evidence-manifest-v1");
             }
             if ("developer".equals(role)) skills.add("developer.code-task-v1");
             if ("patch-repair".equals(role)) skills.add("patch-repair.patch-repair-task-v1");

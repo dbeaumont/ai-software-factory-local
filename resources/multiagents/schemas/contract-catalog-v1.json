@@ -16,6 +16,7 @@
     "patch-repair-proposal-v1": "patch-repair-proposal-v1.schema.json",
     "integration-proposal-v1": "integration-proposal-v1.schema.json",
     "integration-result-v1": "integration-result-v1.schema.json",
+    "evidence-manifest-v1": "evidence-manifest-v1.schema.json",
     "test-strategy-v1": "test-strategy-v1.schema.json",
     "test-assessment-v1": "test-assessment-v1.schema.json",
     "security-assessment-v1": "security-assessment-v1.schema.json",

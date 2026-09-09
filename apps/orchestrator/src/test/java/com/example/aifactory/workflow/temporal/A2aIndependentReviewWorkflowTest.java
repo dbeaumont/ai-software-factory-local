@@ -27,7 +27,7 @@ class A2aIndependentReviewWorkflowTest {
                     new A2aContracts.AgentCardDescriptor(role,
                             URI.create("https://a2a-independent-reviewer/.well-known/agent-card.json"),
                             URI.create("https://a2a-independent-reviewer/a2a"), "JSONRPC", "1.0", "a".repeat(64),
-                            List.of("independent-reviewer.integration-result-v1"), false, true));
+                            List.of("independent-reviewer.evidence-manifest-v1"), false, true));
             worker.registerActivitiesImplementations((A2aActivities.ReconcileDispatch) request -> {
                 dispatch.set(request);
                 return completed();
@@ -59,7 +59,7 @@ class A2aIndependentReviewWorkflowTest {
             assertThat(dispatch.get().command().parts().getFirst().mediaType()).isEqualTo(A2aMediaTypes.JSON);
             Map<String, Object> envelope = dispatch.get().command().parts().getFirst().data();
             assertThat(envelope).containsEntry("target_role", "independent-reviewer")
-                    .containsEntry("skill_id", "independent-reviewer.integration-result-v1")
+                    .containsEntry("skill_id", "independent-reviewer.evidence-manifest-v1")
                     .doesNotContainKeys("prompt", "reasoning", "raw_output", "private_output");
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> inputReferences =
@@ -67,6 +67,7 @@ class A2aIndependentReviewWorkflowTest {
             assertThat(inputReferences.getFirst())
                     .containsEntry("reference_id", "c".repeat(64))
                     .containsEntry("uri", "evidence://task-1/manifest")
+                    .containsEntry("contract", "evidence-manifest-v1")
                     .containsEntry("size_bytes", 256);
             assertThat(envelope.get("input_references").toString())
                     .contains("b".repeat(64), "c".repeat(64), "d".repeat(64), "f".repeat(64),
