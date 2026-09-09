@@ -45,7 +45,7 @@ public final class PatchScopeValidator {
     }
 
     private static boolean within(String path, String root) {
-        return path.equals(root) || path.startsWith(root + "/");
+        return ".".equals(root) || path.equals(root) || path.startsWith(root + "/");
     }
 
     private static List<String> strings(JsonNode array) {

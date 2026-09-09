@@ -39,6 +39,17 @@ class PatchProposalValidatorTest {
     }
 
     @Test
+    void treatsDotAsTheRepositoryRootScope() throws Exception {
+        String normalized = PatchIntegrator.normalize(PATCH);
+
+        PatchProposalValidator.ValidatedPatch validated = validator.validate(
+                codeTask(10_000, "."), proposal(normalized, "src/App.java", "MODIFY"), PATCH);
+
+        assertThat(validated.changes()).containsExactly(
+                new PatchProposalValidator.FileChange("src/App.java", null, "MODIFY"));
+    }
+
+    @Test
     void rejectsMetadataDigestSizePathOperationAndScopeDivergence() throws Exception {
         String normalized = PatchIntegrator.normalize(PATCH);
         var wrongDigest = proposal(normalized, "src/App.java", "MODIFY").deepCopy();
