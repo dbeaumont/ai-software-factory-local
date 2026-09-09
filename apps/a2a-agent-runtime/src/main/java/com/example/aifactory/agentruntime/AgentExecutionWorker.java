@@ -53,7 +53,7 @@ public final class AgentExecutionWorker {
                 (actor, tool) -> allowedTools.contains(tool),
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
         boolean pipelineCompatibility = "pipeline-agent-task-v1".equals(request.inputContract());
-        String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : request.input().toString();
+        String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : agentInput(request);
         java.util.concurrent.atomic.AtomicReference<String> acceptedFinal =
                 new java.util.concurrent.atomic.AtomicReference<>();
         java.util.concurrent.Callable<AgentLoop.Result> agentLoop = () -> {
@@ -111,6 +111,11 @@ public final class AgentExecutionWorker {
     }
 
     private Set<String> allowedTools(Request request) {
+        if ("independent-review-v1".equals(request.outputContract())
+                && request.admittedReferences().size() > 0
+                && request.admittedReferences().values().stream().allMatch(reference -> reference.content() != null)) {
+            return Set.of();
+        }
         JsonNode taskTools = request.input().path("allowed_tools");
         if (!taskTools.isArray()) return role.allowedTools();
         LinkedHashSet<String> allowed = new LinkedHashSet<>();
@@ -119,6 +124,25 @@ public final class AgentExecutionWorker {
             throw new SecurityException("Specialist task grants a tool outside the role manifest");
         }
         return Set.copyOf(allowed);
+    }
+
+    private static String agentInput(Request request) {
+        if (!"independent-review-v1".equals(request.outputContract())) return request.input().toString();
+        var bundle = tools.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        bundle.set("final_manifest", request.input());
+        var evidence = bundle.putArray("admitted_evidence");
+        request.admittedReferences().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .filter(entry -> entry.getValue().content() != null
+                        && !"evidence-manifest-v1".equals(entry.getValue().contract()))
+                .forEach(entry -> {
+                    var item = evidence.addObject();
+                    item.put("reference_id", entry.getKey());
+                    item.put("uri", entry.getValue().uri());
+                    item.put("digest", entry.getValue().digest());
+                    item.put("contract", entry.getValue().contract());
+                    item.set("content", entry.getValue().content());
+                });
+        return bundle.toString();
     }
 
     private String systemPrompt(Request request) {
@@ -163,9 +187,9 @@ public final class AgentExecutionWorker {
         }
         if ("independent-review-v1".equals(request.outputContract())) {
             prompt.append("\n\n## Revue finale bornee\n\n")
-                    .append("Le manifeste JSON est deja fourni comme entree primaire : ne le relis pas. ")
-                    .append("Lis les preuves de support necessaires avec `evidence.read`; si plusieurs lectures ")
-                    .append("sont requises, demande-les dans un seul tour d'outils, puis rends immediatement le verdict. ")
+                    .append("Le manifeste JSON et toutes les preuves de support admises sont deja materialises ")
+                    .append("dans l'entree utilisateur apres verification par l'hote. Aucun appel d'outil n'est requis. ")
+                    .append("Rends le verdict complet immediatement dans cet unique tour. ")
                     .append("Recopie sans modification les identifiants, URI et digests admis ci-dessous. ")
                     .append("`reviewed_result_ids` contient exactement les `reference_id` dont le contrat est ")
                     .append("`specialist-result-v1`; le manifeste final est la reference dont le contrat est ")
@@ -240,13 +264,18 @@ public final class AgentExecutionWorker {
         }
     }
 
-    public record AdmittedReference(String uri, String digest, String contract) {
+    public record AdmittedReference(String uri, String digest, String contract, JsonNode content) {
+        public AdmittedReference(String uri, String digest, String contract) {
+            this(uri, digest, contract, null);
+        }
+
         public AdmittedReference {
             if (uri == null || !uri.startsWith("evidence://")
                     || digest == null || !digest.matches("[0-9a-f]{64}")
                     || contract == null || contract.isBlank()) {
                 throw new IllegalArgumentException("Admitted Evidence reference is invalid");
             }
+            content = content == null ? null : content.deepCopy();
         }
     }
 

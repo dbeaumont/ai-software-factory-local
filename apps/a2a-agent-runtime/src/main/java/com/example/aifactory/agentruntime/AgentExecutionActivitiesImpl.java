@@ -81,14 +81,26 @@ final class AgentExecutionActivitiesImpl implements AgentExecutionActivities {
             }
         }
         JsonNode reference = references.get(0);
-        AgentInputEvidenceReader.Reference inputReference = new AgentInputEvidenceReader.Reference(
-                required(reference, "reference_id"), required(reference, "uri"), required(reference, "digest"),
-                reference.path("size_bytes").asLong(-1), required(reference, "contract"));
+        AgentInputEvidenceReader.Reference inputReference = evidenceReference(reference);
         if (!skill.equals(role + "." + inputReference.contract())) {
             throw new SecurityException("A2A primary input is outside the admitted skill or reference set");
         }
         String attemptId = attemptId(command.taskId(), inputReference.uri());
         JsonNode input = inputs.read(command.taskId(), attemptId, inputReference, maximumInputBytes);
+        if ("independent-review-v1".equals(outputContract)) {
+            long totalBytes = 0;
+            for (JsonNode admitted : references) {
+                AgentInputEvidenceReader.Reference bound = evidenceReference(admitted);
+                totalBytes = Math.addExact(totalBytes, bound.sizeBytes());
+                if (totalBytes > maximumInputBytes) {
+                    throw new SecurityException("A2A review evidence exceeds the admitted input size");
+                }
+                JsonNode content = bound.referenceId().equals(inputReference.referenceId())
+                        ? input : inputs.read(command.taskId(), attemptId, bound, maximumInputBytes);
+                admittedReferences.put(bound.referenceId(), new AgentExecutionWorker.AdmittedReference(
+                        bound.uri(), bound.digest(), bound.contract(), content));
+            }
+        }
         JsonNode budget = envelope.path("budget");
         AgentExecutionWorker.Result executed = worker.execute(new AgentExecutionWorker.Request(
                 command.taskId(), attemptId, role, inputReference.contract(), input, outputContract,
@@ -110,6 +122,12 @@ final class AgentExecutionActivitiesImpl implements AgentExecutionActivities {
         } catch (Exception failure) {
             throw new IllegalArgumentException("A2A execution envelope is not valid JSON", failure);
         }
+    }
+
+    private static AgentInputEvidenceReader.Reference evidenceReference(JsonNode reference) {
+        return new AgentInputEvidenceReader.Reference(
+                required(reference, "reference_id"), required(reference, "uri"), required(reference, "digest"),
+                reference.path("size_bytes").asLong(-1), required(reference, "contract"));
     }
 
     private static void requireCommand(Command command) {

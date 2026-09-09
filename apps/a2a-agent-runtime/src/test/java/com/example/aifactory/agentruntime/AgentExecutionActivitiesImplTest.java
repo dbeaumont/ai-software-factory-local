@@ -95,6 +95,55 @@ class AgentExecutionActivitiesImplTest {
                 "code-task-1", "supporting-evidence-1");
     }
 
+    @Test
+    void materializesEveryAdmittedReferenceForIndependentReview() throws Exception {
+        JsonNode documents = fixtures();
+        java.util.concurrent.atomic.AtomicInteger reads = new java.util.concurrent.atomic.AtomicInteger();
+        LlmCompletionPort llm = (messages, tools, tokens) -> {
+            assertThat(tools).isEmpty();
+            assertThat(messages.get(1).content()).contains("admitted_evidence", "result-1");
+            return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
+                    documents.path("independent-review-v1").toString(), List.of(), 10, 5, 42);
+        };
+        McpToolPort noTools = new McpToolPort() {
+            @Override public List<LlmCompletionPort.ToolDefinition> definitions() { return List.of(); }
+            @Override public String call(String tool, Map<String, Object> arguments) { throw new AssertionError(); }
+        };
+        AgentExecutionActivitiesImpl activities = new AgentExecutionActivitiesImpl(new AgentExecutionWorker(
+                RoleScopedAgentContext.load("independent-reviewer", mapper), llm, noTools),
+                (task, attempt, reference, maximum) -> {
+                    reads.incrementAndGet();
+                    return "evidence-manifest-v1".equals(reference.contract())
+                            ? documents.path("evidence-manifest-v1") : documents.path("specialist-result-v1");
+                }, mapper);
+        JsonNode envelope = mapper.readTree(envelope());
+        ((tools.jackson.databind.node.ObjectNode) envelope)
+                .put("target_role", "independent-reviewer")
+                .put("skill_id", "independent-reviewer.evidence-manifest-v1");
+        ((tools.jackson.databind.node.ObjectNode) envelope.path("constraints"))
+                .put("expected_output_contract", "independent-review-v1");
+        JsonNode primary = envelope.path("input_references").get(0);
+        ((tools.jackson.databind.node.ObjectNode) primary)
+                .put("reference_id", "d".repeat(64))
+                .put("uri", "evidence://task-1/attempt-1/manifest/" + "b".repeat(64))
+                .put("contract", "evidence-manifest-v1");
+        JsonNode secondary = primary.deepCopy();
+        ((tools.jackson.databind.node.ObjectNode) secondary)
+                .put("reference_id", "result-1")
+                .put("uri", "evidence://task-1/attempt-1/review/" + "b".repeat(64))
+                .put("contract", "specialist-result-v1");
+        ((ArrayNode) envelope.path("input_references")).add(secondary);
+        ArrayNode allowed = (ArrayNode) envelope.path("constraints").path("allowed_reference_ids");
+        allowed.set(0, mapper.getNodeFactory().textNode("d".repeat(64)));
+        allowed.add("result-1");
+
+        activities.execute(new AgentExecutionActivities.Command(
+                "task-1", "independent-reviewer", "independent-reviewer.evidence-manifest-v1",
+                envelope.toString(), null, null));
+
+        assertThat(reads).hasValue(2);
+    }
+
     private String envelope() throws Exception {
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("a2a/fixtures/a2a-envelope-v1.json")) {
             return mapper.readTree(input).toString();

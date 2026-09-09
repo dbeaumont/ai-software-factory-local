@@ -309,9 +309,11 @@ class AgentExecutionWorkerTest {
                 }, new NoTools());
         Map<String, AgentExecutionWorker.AdmittedReference> references = Map.of(
                 "manifest-1", new AgentExecutionWorker.AdmittedReference(
-                        "evidence://task-1/manifest", "b".repeat(64), "evidence-manifest-v1"),
+                        "evidence://task-1/manifest", "b".repeat(64), "evidence-manifest-v1",
+                        fixtures.path("evidence-manifest-v1")),
                 "result-1", new AgentExecutionWorker.AdmittedReference(
-                        "evidence://task-1/result", "c".repeat(64), "specialist-result-v1"));
+                        "evidence://task-1/result", "c".repeat(64), "specialist-result-v1",
+                        fixtures.path("specialist-result-v1")));
 
         worker.execute(new AgentExecutionWorker.Request(
                 "task-1", "attempt-1", "independent-reviewer", "evidence-manifest-v1",
@@ -321,7 +323,9 @@ class AgentExecutionWorkerTest {
         String prompt = seen.get().getFirst().content();
         assertTrue(prompt.contains("uri=`evidence://task-1/manifest`"));
         assertTrue(prompt.contains("contract=`evidence-manifest-v1`"));
-        assertTrue(prompt.contains("dans un seul tour d'outils"));
+        assertTrue(prompt.contains("dans cet unique tour"));
+        assertTrue(seen.get().get(1).content().contains("\"admitted_evidence\""));
+        assertTrue(seen.get().get(1).content().contains("\"reference_id\":\"result-1\""));
         assertEquals(4_096, outputLimit.get());
     }
 
