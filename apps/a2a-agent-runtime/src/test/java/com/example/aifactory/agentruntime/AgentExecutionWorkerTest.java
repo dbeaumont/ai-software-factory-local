@@ -71,6 +71,31 @@ class AgentExecutionWorkerTest {
     }
 
     @Test
+    void returnsInvalidPatchContentToContractFeedbackInsteadOfMaskingItsViolation() throws Exception {
+        JsonNode fixtures = fixtures();
+        tools.jackson.databind.node.ObjectNode proposal =
+                (tools.jackson.databind.node.ObjectNode) fixtures.path("patch-proposal-v1").deepCopy();
+        proposal.put("patch", "No compliant repository change was produced");
+        AtomicInteger attempts = new AtomicInteger();
+        AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("developer", mapper),
+                (messages, tools, tokens) -> {
+                    if (attempts.incrementAndGet() == 1) {
+                        return new AgentLoop.Turn(
+                                AgentLoop.Stop.FINAL, proposal.toString(), List.of(), 1, 1, 0);
+                    }
+                    assertTrue(messages.getLast().content().contains("pattern at /patch"));
+                    return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
+                            fixtures.path("patch-proposal-v1").toString(), List.of(), 1, 1, 0);
+                }, new NoTools());
+
+        AgentExecutionWorker.Result result = worker.execute(request(
+                "developer", "code-task-v1", fixtures.path("code-task-v1"), "patch-proposal-v1"));
+
+        assertEquals("proposal-1", result.document().path("proposal_id").asText());
+        assertEquals(2, attempts.get());
+    }
+
+    @Test
     void wrapsPipelineCompatibilityOutputAndUsesTheRoleCompatibilityPrompt() throws Exception {
         AtomicReference<List<AgentLoop.Message>> seen = new AtomicReference<>();
         AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("developer", mapper),

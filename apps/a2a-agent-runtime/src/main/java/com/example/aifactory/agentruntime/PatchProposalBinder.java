@@ -29,7 +29,9 @@ final class PatchProposalBinder {
             if (!(parsed instanceof ObjectNode proposal) || !proposal.path("patch").isTextual()) {
                 return modelOutput;
             }
-            String patch = normalize(proposal.path("patch").asText());
+            String modelPatch = proposal.path("patch").asText();
+            if (!modelPatch.contains("diff --git ")) return modelOutput;
+            String patch = normalize(modelPatch);
             String digest = digest(patch);
             byte[] bytes = patch.getBytes(StandardCharsets.UTF_8);
             JsonNode task = request.input();
@@ -63,7 +65,7 @@ final class PatchProposalBinder {
             });
             return mapper.writeValueAsString(proposal);
         } catch (Exception failure) {
-            throw new IllegalArgumentException("Cannot bind patch proposal metadata", failure);
+            throw new IllegalArgumentException("Cannot bind patch proposal metadata: " + failure.getMessage(), failure);
         }
     }
 
