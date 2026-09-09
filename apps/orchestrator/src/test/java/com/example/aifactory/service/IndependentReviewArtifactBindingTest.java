@@ -28,11 +28,11 @@ class IndependentReviewArtifactBindingTest {
     private static IndependentReviewBundle bundle(Map<String, String> digests) {
         return new IndependentReviewBundle("task-1", "pipeline-1", "1".repeat(40),
                 new IndependentReviewBundle.ConsolidatedPatch("patch-1", "evidence://task-1/patch",
-                        "b".repeat(64), List.of("src/App.java")),
+                        "b".repeat(64), 128, List.of("src/App.java")),
                 new IndependentReviewBundle.FinalManifest("2".repeat(64),
-                        "evidence://task-1/manifest", "3".repeat(64)),
+                        "evidence://task-1/manifest", "3".repeat(64), 256),
                 List.of(new IndependentReviewBundle.ResultReference("result-1", "code-agent",
-                        "evidence://task-1/result", "4".repeat(64))), List.of(), digests);
+                        "evidence://task-1/result", "4".repeat(64), 64)), List.of(), digests);
     }
 
     private static PipelineStepContracts.ArtifactReference artifact(String character) {

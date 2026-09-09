@@ -99,12 +99,13 @@ public final class McpEvidenceRepository implements EvidenceRepository {
         JsonNode response = mcp.call(server.expectedName(), "evidence.create_manifest", Map.copyOf(arguments));
         StoredManifest manifest = new StoredManifest(requiredText(response, "manifest_id"),
                 requiredText(response, "uri"), requiredText(response, "digest"), requiredText(response, "status"),
+                response.path("size_bytes").asLong(-1),
                 requiredText(response, "classification"), Instant.parse(requiredText(response, "retain_until")),
                 Instant.parse(requiredText(response, "created_at")));
         String expectedUri = "evidence://" + request.taskId() + '/' + request.attemptId()
                 + "/manifest/" + manifest.manifestId();
         if (!expectedUri.equals(manifest.uri()) || !"COMPLETE".equals(manifest.status())
-                || !manifest.manifestId().matches("[0-9a-f]{64}")
+                || !manifest.manifestId().matches("[0-9a-f]{64}") || manifest.sizeBytes() <= 0
                 || !manifest.digest().matches("[0-9a-f]{64}")) {
             throw altered("evidence MCP returned an invalid manifest binding");
         }

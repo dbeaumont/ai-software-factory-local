@@ -72,18 +72,19 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
     private static List<A2aContracts.Part> references(IndependentReviewBundle bundle) {
         List<A2aContracts.Part> parts = new ArrayList<>();
         parts.add(reference(bundle.consolidatedPatch().patchId(), bundle.consolidatedPatch().uri(),
-                bundle.consolidatedPatch().digest(), "integration-result-v1"));
+                bundle.consolidatedPatch().digest(), "integration-result-v1", bundle.consolidatedPatch().sizeBytes()));
         parts.add(reference(bundle.finalManifest().manifestId(), bundle.finalManifest().uri(),
-                bundle.finalManifest().digest(), "integration-result-v1"));
+                bundle.finalManifest().digest(), "integration-result-v1", bundle.finalManifest().sizeBytes()));
         bundle.reviewedResults().forEach(result -> parts.add(reference(result.resultId(), result.uri(),
-                result.digest(), "specialist-result-v1")));
+                result.digest(), "specialist-result-v1", result.sizeBytes())));
         bundle.contradictions().forEach(contradiction -> parts.add(reference(contradiction.contradictionId(),
-                contradiction.uri(), contradiction.digest(), "contradiction-v1")));
+                contradiction.uri(), contradiction.digest(), "contradiction-v1", contradiction.sizeBytes())));
         return List.copyOf(parts);
     }
 
-    private static A2aContracts.Part reference(String id, String uri, String digest, String contract) {
-        return A2aEvidencePartFactory.reference(id, uri, digest, contract);
+    private static A2aContracts.Part reference(String id, String uri, String digest, String contract,
+                                                long sizeBytes) {
+        return A2aEvidencePartFactory.reference(id, uri, digest, contract, sizeBytes);
     }
 
     private static void requireRequest(Request request) {

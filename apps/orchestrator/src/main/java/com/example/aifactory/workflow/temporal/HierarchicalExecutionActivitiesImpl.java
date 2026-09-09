@@ -711,7 +711,7 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
             List<String> changedFiles = changedFiles(state.patch);
             List<IndependentReviewBundle.ResultReference> reviewedResults = request.reviewedResults().stream()
                     .map(result -> new IndependentReviewBundle.ResultReference(result.documentId(), result.role(),
-                            result.artifact().uri(), result.artifact().digest()))
+                            result.artifact().uri(), result.artifact().digest(), result.artifact().sizeBytes()))
                     .toList();
             Map<String, EvidenceRepository.EvidenceReference> references = new LinkedHashMap<>();
             Map<String, String> digests = new LinkedHashMap<>();
@@ -735,9 +735,9 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
             IndependentReviewBundle bundle = new IndependentReviewBundle(
                     request.taskId(), request.attemptId(), request.sourceCommit(),
                     new IndependentReviewBundle.ConsolidatedPatch(
-                            "integrated-patch", patch.uri(), patch.digest(), changedFiles),
+                            "integrated-patch", patch.uri(), patch.digest(), patch.sizeBytes(), changedFiles),
                     new IndependentReviewBundle.FinalManifest(
-                            manifest.manifestId(), manifest.uri(), manifest.digest()),
+                            manifest.manifestId(), manifest.uri(), manifest.digest(), manifest.sizeBytes()),
                     reviewedResults, List.of(), Map.copyOf(requiredArtifactDigests(request.artifacts())));
             bundle.requireProductionArtifactBinding(request.artifacts());
             return new PreparedIndependentReview(bundle, manifest);

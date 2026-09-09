@@ -106,6 +106,8 @@ class EvidenceStoreTest {
         EvidenceStore.StoredManifest replay = store.createManifest("task-1", "attempt-1", "customer-api",
                 "a".repeat(40), patchDigest, artifacts, decision);
         assertEquals(first.manifestId(), replay.manifestId());
+        assertTrue(first.sizeBytes() > 0);
+        assertEquals(first.sizeBytes(), replay.sizeBytes());
         byte[] encryptedManifest = java.nio.file.Files.readAllBytes(root.resolve("task-1/attempt-1/manifest-" + first.manifestId() + ".json"));
         assertFalse(new String(encryptedManifest, StandardCharsets.UTF_8).contains("policy_decision"));
         assertEquals("CONFIDENTIAL", first.classification());

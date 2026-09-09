@@ -66,9 +66,10 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
         return Set.copyOf(references);
     }
 
-    public record ConsolidatedPatch(String patchId, String uri, String digest, List<String> changedFiles) {
+    public record ConsolidatedPatch(String patchId, String uri, String digest, long sizeBytes,
+                                    List<String> changedFiles) {
         public ConsolidatedPatch {
-            if (!validId(patchId) || !validEvidence(uri, digest) || changedFiles == null
+            if (!validId(patchId) || !validEvidence(uri, digest) || sizeBytes <= 0 || changedFiles == null
                     || changedFiles.isEmpty() || changedFiles.stream().anyMatch(IndependentReviewBundle::unsafePath)) {
                 throw new IllegalArgumentException("Consolidated patch reference is invalid");
             }
@@ -77,26 +78,29 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
         }
     }
 
-    public record FinalManifest(String manifestId, String uri, String digest) {
+    public record FinalManifest(String manifestId, String uri, String digest, long sizeBytes) {
         public FinalManifest {
-            if (manifestId == null || !manifestId.matches("[0-9a-f]{64}") || !validEvidence(uri, digest)) {
+            if (manifestId == null || !manifestId.matches("[0-9a-f]{64}") || !validEvidence(uri, digest)
+                    || sizeBytes <= 0) {
                 throw new IllegalArgumentException("Final manifest reference is invalid");
             }
         }
     }
 
-    public record ResultReference(String resultId, String role, String uri, String digest) {
+    public record ResultReference(String resultId, String role, String uri, String digest, long sizeBytes) {
         public ResultReference {
-            if (!validId(resultId) || !RESULT_ROLES.contains(role) || !validEvidence(uri, digest)) {
+            if (!validId(resultId) || !RESULT_ROLES.contains(role) || !validEvidence(uri, digest)
+                    || sizeBytes <= 0) {
                 throw new IllegalArgumentException("Reviewed result reference is invalid");
             }
         }
     }
 
-    public record ContradictionReference(String contradictionId, String status, String uri, String digest) {
+    public record ContradictionReference(String contradictionId, String status, String uri, String digest,
+                                         long sizeBytes) {
         public ContradictionReference {
             if (!validId(contradictionId) || !Set.of("OPEN", "RESOLVED").contains(status)
-                    || !validEvidence(uri, digest)) {
+                    || !validEvidence(uri, digest) || sizeBytes <= 0) {
                 throw new IllegalArgumentException("Contradiction reference is invalid");
             }
         }

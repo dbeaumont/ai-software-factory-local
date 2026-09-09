@@ -247,7 +247,7 @@ class SourceResolutionActivitiesTest {
                 ApprovalManifestRequest request) {
             return new com.example.aifactory.workflow.EvidenceRepository.StoredManifest(
                     "a".repeat(64), "evidence://task-1/pipeline-1/manifest/" + "a".repeat(64),
-                    "b".repeat(64), "COMPLETE", "INTERNAL", java.time.Instant.parse("2027-01-01T00:00:00Z"),
+                    "b".repeat(64), "COMPLETE", 256, "INTERNAL", java.time.Instant.parse("2027-01-01T00:00:00Z"),
                     java.time.Instant.parse("2026-09-05T20:00:00Z"));
         }
 

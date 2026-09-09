@@ -331,7 +331,7 @@ class SoftwareFactoryExecutionWorkflowV1Test {
         @Override public EvidenceRepository.StoredManifest createApprovalManifest(ApprovalManifestRequest request) {
             return new EvidenceRepository.StoredManifest(MANIFEST_ID,
                     "evidence://task-1/pipeline-1/manifest/" + MANIFEST_ID, MANIFEST_DIGEST, "COMPLETE",
-                    "CONFIDENTIAL", Instant.parse("2027-09-06T00:00:00Z"),
+                    256, "CONFIDENTIAL", Instant.parse("2027-09-06T00:00:00Z"),
                     Instant.parse("2026-09-06T00:00:00Z"));
         }
 

@@ -341,12 +341,13 @@ class SoftwareFactoryExecutionWorkflowV2Test {
             var patch = request.artifacts().get("patch");
             var manifest = new com.example.aifactory.workflow.EvidenceRepository.StoredManifest(
                     "b".repeat(64), "evidence://task-1/pipeline-1/manifest/" + "b".repeat(64),
-                    "c".repeat(64), "COMPLETE", "CONFIDENTIAL",
+                    "c".repeat(64), "COMPLETE", 256, "CONFIDENTIAL",
                     java.time.Instant.parse("2027-09-08T00:00:00Z"),
                     java.time.Instant.parse("2026-09-08T00:00:00Z"));
             var results = request.reviewedResults().stream().map(result ->
                     new com.example.aifactory.service.IndependentReviewBundle.ResultReference(
-                            result.documentId(), result.role(), result.artifact().uri(), result.artifact().digest()))
+                            result.documentId(), result.role(), result.artifact().uri(), result.artifact().digest(),
+                            result.artifact().sizeBytes()))
                     .toList();
             var digests = new java.util.LinkedHashMap<String, String>();
             for (String name : java.util.List.of("plan", "patch", "tests", "quality", "security", "sbom")) {
@@ -355,9 +356,10 @@ class SoftwareFactoryExecutionWorkflowV2Test {
             var bundle = new com.example.aifactory.service.IndependentReviewBundle(
                     request.taskId(), request.attemptId(), request.sourceCommit(),
                     new com.example.aifactory.service.IndependentReviewBundle.ConsolidatedPatch(
-                            "integrated-patch", patch.uri(), patch.digest(), java.util.List.of("src/Main.java")),
+                            "integrated-patch", patch.uri(), patch.digest(), patch.sizeBytes(),
+                            java.util.List.of("src/Main.java")),
                     new com.example.aifactory.service.IndependentReviewBundle.FinalManifest(
-                            manifest.manifestId(), manifest.uri(), manifest.digest()),
+                            manifest.manifestId(), manifest.uri(), manifest.digest(), manifest.sizeBytes()),
                     results, java.util.List.of(), java.util.Map.copyOf(digests));
             return new PreparedIndependentReview(bundle, manifest);
         }

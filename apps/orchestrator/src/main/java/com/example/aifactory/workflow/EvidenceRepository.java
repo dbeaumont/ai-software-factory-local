@@ -49,7 +49,7 @@ public interface EvidenceRepository {
     record StoredEvidence(String uri, String digest, String status, String mediaType, long sizeBytes,
                           String classification, Instant retainUntil, Instant storedAt) {}
 
-    record StoredManifest(String manifestId, String uri, String digest, String status,
+    record StoredManifest(String manifestId, String uri, String digest, String status, long sizeBytes,
                           String classification, Instant retainUntil, Instant createdAt) {}
 
     record EvidenceSummary(String uri, String type, String digest, String status,

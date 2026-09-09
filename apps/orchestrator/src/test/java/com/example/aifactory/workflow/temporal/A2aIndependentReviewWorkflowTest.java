@@ -62,20 +62,21 @@ class A2aIndependentReviewWorkflowTest {
                     .containsEntry("skill_id", "independent-reviewer.integration-result-v1")
                     .doesNotContainKeys("prompt", "reasoning", "raw_output", "private_output");
             assertThat(envelope.get("input_references").toString())
-                    .contains("b".repeat(64), "c".repeat(64), "d".repeat(64), "f".repeat(64));
+                    .contains("b".repeat(64), "c".repeat(64), "d".repeat(64), "f".repeat(64),
+                            "size_bytes=128", "size_bytes=256", "size_bytes=64", "size_bytes=32");
         }
     }
 
     private static IndependentReviewBundle bundle() {
         return new IndependentReviewBundle("task-1", "attempt-1", "0".repeat(40),
                 new IndependentReviewBundle.ConsolidatedPatch("patch-1", "evidence://task-1/patch",
-                        "b".repeat(64), List.of("src/App.java")),
+                        "b".repeat(64), 128, List.of("src/App.java")),
                 new IndependentReviewBundle.FinalManifest("c".repeat(64), "evidence://task-1/manifest",
-                        "c".repeat(64)),
+                        "c".repeat(64), 256),
                 List.of(new IndependentReviewBundle.ResultReference("result-1", "developer",
-                        "evidence://task-1/result", "d".repeat(64))),
+                        "evidence://task-1/result", "d".repeat(64), 64)),
                 List.of(new IndependentReviewBundle.ContradictionReference("contradiction-1", "RESOLVED",
-                        "evidence://task-1/contradiction", "f".repeat(64))));
+                        "evidence://task-1/contradiction", "f".repeat(64), 32)));
     }
 
     private static A2aContracts.TaskSnapshot completed() {

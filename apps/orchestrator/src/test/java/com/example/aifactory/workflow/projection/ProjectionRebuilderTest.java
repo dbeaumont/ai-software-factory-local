@@ -178,10 +178,10 @@ class ProjectionRebuilderTest {
     private static IndependentReviewWorkflow.Request review() {
         IndependentReviewBundle bundle = new IndependentReviewBundle("task-rebuild", "attempt-1", COMMIT,
                 new IndependentReviewBundle.ConsolidatedPatch("patch-1", "evidence://task-rebuild/patch",
-                        "d".repeat(64), List.of("src/App.java")),
-                new IndependentReviewBundle.FinalManifest(MANIFEST_ID, MANIFEST_URI, MANIFEST_DIGEST),
+                        "d".repeat(64), 128, List.of("src/App.java")),
+                new IndependentReviewBundle.FinalManifest(MANIFEST_ID, MANIFEST_URI, MANIFEST_DIGEST, 256),
                 List.of(new IndependentReviewBundle.ResultReference("security-1", "security-agent",
-                        "evidence://task-rebuild/security", "e".repeat(64))), List.of());
+                        "evidence://task-rebuild/security", "e".repeat(64), 64)), List.of());
         return new IndependentReviewWorkflow.Request("task-rebuild", "attempt-1", "final-review", COMMIT,
                 bundle, null);
     }

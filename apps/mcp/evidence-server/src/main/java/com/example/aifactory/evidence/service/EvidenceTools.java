@@ -46,7 +46,7 @@ public class EvidenceTools {
         EvidenceStore.StoredManifest manifest = store.createManifest(task_id, attempt_id, repository_id, source_commit,
                 patch_digest, stored, decision);
         return new StoredManifest(manifest.manifestId(), manifest.uri(), manifest.digest(), manifest.status(),
-                manifest.classification(), manifest.retainUntil(), manifest.createdAt());
+                manifest.sizeBytes(), manifest.classification(), manifest.retainUntil(), manifest.createdAt());
     }
 
     @Tool(name = "evidence.get_summary", description = "Return authorized evidence metadata without raw content")
@@ -120,7 +120,7 @@ public class EvidenceTools {
                                  @JsonProperty("input_digests") java.util.Map<String, String> inputDigests,
                                  @JsonProperty("decided_at") java.time.Instant decidedAt) {}
     public record StoredManifest(@JsonProperty("manifest_id") String manifestId, String uri, String digest,
-                                 String status, String classification,
+                                 String status, @JsonProperty("size_bytes") long sizeBytes, String classification,
                                  @JsonProperty("retain_until") java.time.Instant retainUntil,
                                  @JsonProperty("created_at") java.time.Instant createdAt) {}
     public record EvidenceSummary(String uri, String type, String digest, String status, String classification,

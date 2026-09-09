@@ -482,18 +482,18 @@ class SoftwareFactoryWorkflowTest {
     private static IndependentReviewBundle reviewBundle(String taskId) {
         return reviewBundle(taskId, java.util.List.of(new IndependentReviewBundle.ContradictionReference(
                 "contradiction-1", "OPEN", "evidence://" + taskId + "/contradiction",
-                "f".repeat(64))));
+                "f".repeat(64), 32)));
     }
 
     private static IndependentReviewBundle reviewBundle(
             String taskId, java.util.List<IndependentReviewBundle.ContradictionReference> contradictions) {
         return new IndependentReviewBundle(taskId, "attempt-1", "a".repeat(40),
                 new IndependentReviewBundle.ConsolidatedPatch("patch-1", "evidence://" + taskId + "/patch",
-                        "b".repeat(64), java.util.List.of("src/App.java")),
+                        "b".repeat(64), 128, java.util.List.of("src/App.java")),
                 new IndependentReviewBundle.FinalManifest("c".repeat(64),
-                        "evidence://" + taskId + "/manifest", "d".repeat(64)),
+                        "evidence://" + taskId + "/manifest", "d".repeat(64), 256),
                 java.util.List.of(new IndependentReviewBundle.ResultReference("result-1", "code-agent",
-                        "evidence://" + taskId + "/result", "e".repeat(64))), contradictions);
+                        "evidence://" + taskId + "/result", "e".repeat(64), 64)), contradictions);
     }
 
     private static SoftwareFactoryWorkflow stub(TestWorkflowEnvironment environment, String taskId) {

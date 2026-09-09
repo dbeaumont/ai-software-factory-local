@@ -104,7 +104,7 @@ public class EvidenceStore {
         }
         EvidencePolicy.Rule rule = policy.require("manifest");
         return new StoredManifest(manifestId, "evidence://" + taskId + '/' + attemptId + "/manifest/" + manifestId,
-                documentDigest, "COMPLETE", rule.classification(),
+                documentDigest, "COMPLETE", document.length, rule.classification(),
                 createdAt.plus(Duration.ofDays(rule.retentionDays())), createdAt);
     }
 
@@ -288,8 +288,8 @@ public class EvidenceStore {
     public record PolicyDecision(String schemaVersion, String taskId, String attemptId, String policyId,
                                  String policyVersion, String decision, List<String> reasons,
                                  Map<String, String> inputDigests, Instant decidedAt) {}
-    public record StoredManifest(String manifestId, String uri, String digest, String status, String classification,
-                                 Instant retainUntil, Instant createdAt) {}
+    public record StoredManifest(String manifestId, String uri, String digest, String status, long sizeBytes,
+                                 String classification, Instant retainUntil, Instant createdAt) {}
     public record ReadEvidence(String uri, String type, String digest, String status, String classification,
                                long sizeBytes, String contentBase64) {}
     public record LegalHold(String taskId, String attemptId, String actor, String reasonDigest,

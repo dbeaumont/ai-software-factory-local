@@ -139,7 +139,7 @@ class HierarchicalExecutionActivitiesImplTest {
         when(memory.find("task-1")).thenReturn(Optional.of(state));
         when(evidence.createManifest(any())).thenReturn(new EvidenceRepository.StoredManifest(
                 "b".repeat(64), "evidence://task-1/attempt-1/manifest/" + "b".repeat(64),
-                "c".repeat(64), "COMPLETE", "CONFIDENTIAL",
+                "c".repeat(64), "COMPLETE", 256, "CONFIDENTIAL",
                 Instant.parse("2027-09-08T00:00:00Z"), Instant.parse("2026-09-08T00:00:00Z")));
         var activities = new HierarchicalExecutionActivitiesImpl(memory, evidence,
                 new MultiAgentContractValidator(mapper), mapper,
@@ -195,11 +195,11 @@ class HierarchicalExecutionActivitiesImplTest {
         var bundle = new com.example.aifactory.service.IndependentReviewBundle(
                 "task-1", "attempt-1", "a".repeat(40),
                 new com.example.aifactory.service.IndependentReviewBundle.ConsolidatedPatch(
-                        "patch-1", "evidence://task-1/patch", "c".repeat(64), List.of("src/App.java")),
+                        "patch-1", "evidence://task-1/patch", "c".repeat(64), 128, List.of("src/App.java")),
                 new com.example.aifactory.service.IndependentReviewBundle.FinalManifest(
-                        "b".repeat(64), "evidence://task-1/manifest", "b".repeat(64)),
+                        "b".repeat(64), "evidence://task-1/manifest", "b".repeat(64), 256),
                 List.of(new com.example.aifactory.service.IndependentReviewBundle.ResultReference(
-                        "result-1", "developer", "evidence://task-1/result", "d".repeat(64))), List.of());
+                        "result-1", "developer", "evidence://task-1/result", "d".repeat(64), 64)), List.of());
         var activities = activities(memory, evidence, mapper);
 
         var accepted = activities.acceptIndependentReview(
