@@ -41,7 +41,7 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
 
     public void requireProductionArtifactBinding(
             Map<String, PipelineStepContracts.ArtifactReference> actualArtifacts) {
-        Set<String> required = Set.of("plan", "patch", "tests", "quality", "security");
+        Set<String> required = Set.of("plan", "patch", "tests", "quality", "security", "sbom");
         if (!reviewedArtifactDigests.keySet().equals(required)
                 || reviewedArtifactDigests.values().stream().anyMatch(
                 digest -> digest == null || !digest.matches("[0-9a-f]{64}"))

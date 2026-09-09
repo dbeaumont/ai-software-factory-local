@@ -92,23 +92,18 @@ abstract class ProductionExecutionWorkflowRuntime {
                 if ("HIERARCHICAL_PATH".equals(selectedPath)) {
                     runSecuritySpecialist(source, request, resolved, routingDecisionId);
                 }
-                currentStep = "prepare-delivery";
-                pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
-                        new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
-                                resolved.sourceCommit()));
                 var preparedReview = prepareIndependentReview(source, request, resolved, selectedPath);
-                storedManifest = preparedReview.manifest();
-                runIndependentReview(request, resolved, preparedReview.bundle());
+                artifacts.put("review", runIndependentReview(source, request, resolved, preparedReview.bundle()));
             } else {
                 runPipelineAgent(source, request, resolved, "independent-reviewer", "REVIEW", "review", Map.of(
                         "plan", artifacts.get("plan").digest(), "patch", artifacts.get("patch").digest(),
                         "tests", artifacts.get("tests").digest(), "quality", artifacts.get("quality").digest(),
                         "security", artifacts.get("security").digest()), null, 0);
-                currentStep = "prepare-delivery";
-                pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
-                        new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
-                                resolved.sourceCommit()));
             }
+            currentStep = "prepare-delivery";
+            pipeline(source, "scm", TemporalActivityPolicies.Kind.SCM).prepareDelivery(
+                    new PipelineExecutionActivities.DeliveryRequest(request.taskId(), request.attemptId(),
+                            resolved.sourceCommit()));
             throwIfCancelled();
         } catch (RuntimeException failure) {
             if (failure instanceof RequestedCancellation) {
@@ -558,7 +553,9 @@ abstract class ProductionExecutionWorkflowRuntime {
                         "test-agent", "security-agent")));
     }
 
-    private void runIndependentReview(SoftwareFactoryWorkflow.Request request,
+    private com.example.aifactory.service.PipelineStepContracts.ArtifactReference runIndependentReview(
+                                      SoftwareFactoryWorkflow.SourceLocation source,
+                                      SoftwareFactoryWorkflow.Request request,
                                       SourceResolutionActivities.Result resolved,
                                       com.example.aifactory.service.IndependentReviewBundle bundle) {
         currentStep = "independent-review";
@@ -576,6 +573,16 @@ abstract class ProductionExecutionWorkflowRuntime {
             throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
                     "Independent review did not accept the hierarchical result", "BUSINESS_REJECTION");
         }
+        if (result.artifacts().size() != 1) {
+            throw io.temporal.failure.ApplicationFailure.newNonRetryableFailure(
+                    "Independent review returned an ambiguous result set", "INCOMPATIBLE_SCHEMA");
+        }
+        HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
+                HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
+                        TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
+        return hierarchical.acceptIndependentReview(new HierarchicalExecutionActivities.AcceptIndependentReview(
+                request.taskId(), request.attemptId(), resolved.sourceCommit(), bundle,
+                result.artifacts().getFirst()));
     }
 
     private static HierarchicalExecutionActivities.ReviewedSpecialistResult reviewed(

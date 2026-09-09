@@ -101,6 +101,10 @@ class HierarchicalExecutionActivitiesImplTest {
         String uri = "evidence://task-1/attempt-1/agent-result/" + digest;
         when(evidence.read(any())).thenReturn(new EvidenceRepository.RawEvidence(
                 uri, "agent-result", digest, "COMPLETE", "INTERNAL", content));
+        when(evidence.store(any())).thenAnswer(invocation -> {
+            EvidenceRepository.StoreRequest stored = invocation.getArgument(0);
+            return stored(stored, stored.type());
+        });
         var activities = new HierarchicalExecutionActivitiesImpl(memory, evidence,
                 new MultiAgentContractValidator(mapper), mapper,
                 Clock.fixed(Instant.parse("2026-09-08T00:00:00Z"), ZoneOffset.UTC));
@@ -115,6 +119,7 @@ class HierarchicalExecutionActivitiesImplTest {
 
         assertThat(accepted.documentId()).isEqualTo("integration-proposal-1");
         assertThat(accepted.artifact().digest()).isEqualTo(digest);
+        assertThat(accepted.artifact().uri()).contains("/plan/");
         assertThat(state.plan).contains("integration-proposal-1", "developer_tasks");
         verify(memory).project("hierarchical-result:code-agent:" + digest, state);
     }
@@ -141,7 +146,7 @@ class HierarchicalExecutionActivitiesImplTest {
                 Clock.fixed(Instant.parse("2026-09-08T00:00:00Z"), ZoneOffset.UTC));
         Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts =
                 new LinkedHashMap<>();
-        for (String name : List.of("plan", "patch", "tests", "quality", "security")) {
+        for (String name : List.of("plan", "patch", "tests", "quality", "security", "sbom")) {
             artifacts.put(name, artifact(name));
         }
         List<HierarchicalExecutionActivities.ReviewedSpecialistResult> results = List.of(
@@ -164,9 +169,49 @@ class HierarchicalExecutionActivitiesImplTest {
                 .containsExactly("assessment-1", "integration-proposal-1", "patch-proposal-1", "test-strategy-1",
                         "test-assessment-1", "security-assessment-1");
         assertThat(prepared.bundle().reviewedArtifactDigests()).containsOnlyKeys(
-                "plan", "patch", "tests", "quality", "security");
-        assertThat(state.pendingEffect.manifestId()).isEqualTo("b".repeat(64));
-        verify(memory).project("hierarchical-review-manifest:" + "c".repeat(64), state);
+                "plan", "patch", "tests", "quality", "security", "sbom");
+        assertThat(state.pendingEffect.manifestId()).isNull();
+    }
+
+    @Test
+    void acceptsAndProjectsOnlyTheBoundIndependentReview() throws Exception {
+        ObjectMapper mapper = JsonMapper.builder().build();
+        TaskMemory memory = mock(TaskMemory.class);
+        EvidenceRepository evidence = mock(EvidenceRepository.class);
+        TaskState state = new TaskState("task-1", "AF-0001", new TaskRequest(
+                "http://gitea/customer-api.git", "main", "Review the change",
+                LlmMode.CLOUD, TaskRoutingFacts.qualifiedLowRiskFixture()));
+        state.sourceCommit = "a".repeat(40);
+        when(memory.find("task-1")).thenReturn(Optional.of(state));
+        byte[] content = mapper.writeValueAsBytes(goldenDocuments(mapper).path("independent-review-v1"));
+        String digest = digest(content);
+        String uri = "evidence://task-1/attempt-1/agent-result/" + digest;
+        when(evidence.read(any())).thenReturn(new EvidenceRepository.RawEvidence(
+                uri, "agent-result", digest, "COMPLETE", "CONFIDENTIAL", content));
+        when(evidence.store(any())).thenAnswer(invocation -> {
+            EvidenceRepository.StoreRequest stored = invocation.getArgument(0);
+            return stored(stored, stored.type());
+        });
+        var bundle = new com.example.aifactory.service.IndependentReviewBundle(
+                "task-1", "attempt-1", "a".repeat(40),
+                new com.example.aifactory.service.IndependentReviewBundle.ConsolidatedPatch(
+                        "patch-1", "evidence://task-1/patch", "c".repeat(64), List.of("src/App.java")),
+                new com.example.aifactory.service.IndependentReviewBundle.FinalManifest(
+                        "b".repeat(64), "evidence://task-1/manifest", "b".repeat(64)),
+                List.of(new com.example.aifactory.service.IndependentReviewBundle.ResultReference(
+                        "result-1", "developer", "evidence://task-1/result", "d".repeat(64))), List.of());
+        var activities = activities(memory, evidence, mapper);
+
+        var accepted = activities.acceptIndependentReview(
+                new HierarchicalExecutionActivities.AcceptIndependentReview(
+                        "task-1", "attempt-1", "a".repeat(40), bundle,
+                        new A2aActivities.EvidenceReference(
+                                "review-1", uri, digest, "independent-review-v1")));
+
+        assertThat(accepted.uri()).contains("/review/");
+        assertThat(state.reviewAccepted).isTrue();
+        assertThat(state.review).contains("\"decision\":\"ACCEPT\"");
+        verify(memory).project("hierarchical-independent-review:" + digest, state);
     }
 
     @Test

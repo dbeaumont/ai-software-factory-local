@@ -207,7 +207,6 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
         }
         PipelineProjectionEvent.DeliveryPrepared prepared = steps.prepareDelivery(state);
         PipelineProjectionEvent.Applier.apply(state, prepared);
-        state.transition(TaskStatus.WAITING_APPROVAL, "Pipeline complete; Temporal awaits approval");
         project(state);
         return prepared.pendingEffect();
     }
@@ -344,6 +343,7 @@ public final class PipelineExecutionActivitiesImpl implements PipelineExecutionA
                 request.repositoryId(), request.sourceCommit(), request.artifacts().get("patch").digest(),
                 Map.copyOf(references), policy, "workflow"));
         state.bindApprovalManifest(manifest.manifestId(), manifest.uri(), manifest.digest());
+        state.transition(TaskStatus.WAITING_APPROVAL, "Pipeline complete; Temporal awaits approval");
         project(state);
         return manifest;
     }

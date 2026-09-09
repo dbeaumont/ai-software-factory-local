@@ -18,7 +18,8 @@ public class EvidencePolicy {
             "repair-patch", "pipeline-a2a-result", "pipeline-test-consolidation",
             "hierarchical-specialist-result", "prepare-developer-tasks", "prepare-short-developer-task",
             "accept-developer-patch", "project-developer-patch", "prepare-native-patch-repair",
-            "accept-native-patch-repair", "project-native-patch-repair");
+            "accept-native-patch-repair", "project-native-patch-repair",
+            "hierarchical-independent-review");
     private static final Map<String, Rule> RULES = Map.ofEntries(
             Map.entry("plan", new Rule("INTERNAL", 90)), Map.entry("patch", new Rule("INTERNAL", 90)),
             Map.entry("patch-candidate", new Rule("INTERNAL", 90)),

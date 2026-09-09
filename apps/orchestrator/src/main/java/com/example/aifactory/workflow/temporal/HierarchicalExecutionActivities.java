@@ -38,6 +38,9 @@ public interface HierarchicalExecutionActivities {
     @ActivityMethod(name = "PrepareHierarchicalIndependentReview")
     PreparedIndependentReview prepareIndependentReview(PrepareIndependentReview request);
 
+    @ActivityMethod(name = "AcceptHierarchicalIndependentReview")
+    PipelineStepContracts.ArtifactReference acceptIndependentReview(AcceptIndependentReview request);
+
     record PrepareSpecialistTask(String taskId, String attemptId, String repositoryId, String sourceCommit,
                                  String delegationPlanId, String nodeId, String parentRole, String role,
                                  List<InputEvidence> inputs, Set<String> readPaths, Set<String> writePaths,
@@ -129,4 +132,8 @@ public interface HierarchicalExecutionActivities {
 
     record PreparedIndependentReview(IndependentReviewBundle bundle,
                                      EvidenceRepository.StoredManifest manifest) {}
+
+    record AcceptIndependentReview(String taskId, String attemptId, String sourceCommit,
+                                   IndependentReviewBundle bundle,
+                                   A2aActivities.EvidenceReference reference) {}
 }

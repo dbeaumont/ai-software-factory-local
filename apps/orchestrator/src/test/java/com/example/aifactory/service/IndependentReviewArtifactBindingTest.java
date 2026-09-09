@@ -13,15 +13,15 @@ class IndependentReviewArtifactBindingTest {
     void requiresEveryProducedPipelineDigest() {
         Map<String, PipelineStepContracts.ArtifactReference> artifacts = Map.of(
                 "plan", artifact("a"), "patch", artifact("b"), "tests", artifact("c"),
-                "quality", artifact("d"), "security", artifact("e"));
+                "quality", artifact("d"), "security", artifact("e"), "sbom", artifact("f"));
         IndependentReviewBundle bundle = bundle(Map.of(
                 "plan", "a".repeat(64), "patch", "b".repeat(64), "tests", "c".repeat(64),
-                "quality", "d".repeat(64), "security", "e".repeat(64)));
+                "quality", "d".repeat(64), "security", "e".repeat(64), "sbom", "f".repeat(64)));
 
         assertThatCode(() -> bundle.requireProductionArtifactBinding(artifacts)).doesNotThrowAnyException();
         assertThatThrownBy(() -> bundle.requireProductionArtifactBinding(Map.of(
                 "plan", artifact("f"), "patch", artifact("b"), "tests", artifact("c"),
-                "quality", artifact("d"), "security", artifact("e"))))
+                "quality", artifact("d"), "security", artifact("e"), "sbom", artifact("f"))))
                 .isInstanceOf(SecurityException.class);
     }
 

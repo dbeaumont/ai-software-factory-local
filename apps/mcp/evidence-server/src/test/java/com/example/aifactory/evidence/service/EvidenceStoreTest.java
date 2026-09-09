@@ -39,6 +39,8 @@ class EvidenceStoreTest {
         assertDoesNotThrow(() -> policy.requireRead("agent-result", "workflow", "pipeline-a2a-result"));
         assertDoesNotThrow(() -> policy.requireRead(
                 "tests-deterministic", "workflow", "pipeline-test-consolidation"));
+        assertDoesNotThrow(() -> policy.requireRead(
+                "agent-result", "workflow", "hierarchical-independent-review"));
         assertThrows(SecurityException.class, () -> policy.requireRead(
                 "tests-deterministic", "reviewer", "pipeline-test-consolidation"));
         assertDoesNotThrow(() -> policy.requireRead(
@@ -107,8 +109,12 @@ class EvidenceStoreTest {
         byte[] encryptedManifest = java.nio.file.Files.readAllBytes(root.resolve("task-1/attempt-1/manifest-" + first.manifestId() + ".json"));
         assertFalse(new String(encryptedManifest, StandardCharsets.UTF_8).contains("policy_decision"));
         assertEquals("CONFIDENTIAL", first.classification());
-        Map<String, EvidenceStore.EvidenceReference> incomplete = new LinkedHashMap<>(artifacts);
-        incomplete.remove("review");
+        Map<String, EvidenceStore.EvidenceReference> preReview = new LinkedHashMap<>(artifacts);
+        preReview.remove("review");
+        assertDoesNotThrow(() -> store.createManifest("task-1", "attempt-1", "customer-api",
+                "a".repeat(40), patchDigest, preReview, decision));
+        Map<String, EvidenceStore.EvidenceReference> incomplete = new LinkedHashMap<>(preReview);
+        incomplete.remove("sbom");
         assertThrows(IllegalArgumentException.class, () -> store.createManifest("task-1", "attempt-1", "customer-api",
                 "a".repeat(40), patchDigest, incomplete, decision));
         Map<String, EvidenceStore.EvidenceReference> crossTask = new LinkedHashMap<>(artifacts);

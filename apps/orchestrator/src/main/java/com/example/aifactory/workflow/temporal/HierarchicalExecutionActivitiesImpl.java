@@ -157,18 +157,27 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
             String artifactId = request.role().replace("-agent", "") + "-result";
             state.recordArtifact(artifactId, artifactId, raw.status(), raw.classification(), raw.uri(),
                     raw.digest(), raw.content().length, true);
+            com.example.aifactory.service.PipelineStepContracts.ArtifactReference acceptedArtifact =
+                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                            raw.uri(), raw.digest(), raw.content().length, raw.status(), "ACCEPTED");
             if (request.activateAsCodePlan()) {
+                EvidenceRepository.StoredEvidence canonicalPlan = evidence.store(
+                        new EvidenceRepository.StoreRequest(request.taskId(), request.attemptId(), "plan",
+                                "application/json", raw.content(), raw.digest(), "workflow"));
+                state.recordArtifact("plan", "plan", canonicalPlan.status(), canonicalPlan.classification(),
+                        canonicalPlan.uri(), canonicalPlan.digest(), canonicalPlan.sizeBytes(), true);
                 state.transition(com.example.aifactory.model.TaskStatus.PLANNING,
                         "Hierarchical execution plan accepted");
                 state.plan = new String(raw.content(), StandardCharsets.UTF_8);
+                acceptedArtifact = new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                        canonicalPlan.uri(), canonicalPlan.digest(), canonicalPlan.sizeBytes(),
+                        canonicalPlan.status(), "ACCEPTED");
             }
             if (Set.of("test-agent", "security-agent").contains(request.role())) {
                 state.assuranceResults.put(request.role(), mapper.convertValue(document, java.util.Map.class));
             }
             memory.project("hierarchical-result:" + request.role() + ':' + raw.digest(), state);
-            return new AcceptedSpecialistResult(documentId,
-                    new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
-                            raw.uri(), raw.digest(), raw.content().length, raw.status(), "ACCEPTED"));
+            return new AcceptedSpecialistResult(documentId, acceptedArtifact);
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
         } catch (Exception failure) {
@@ -699,9 +708,6 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
             throw new SecurityException("Independent review input is outside the projected workflow attempt");
         }
         try {
-            if (state.pendingEffect == null) {
-                throw new SecurityException("Independent review requires a prepared external effect");
-            }
             List<String> changedFiles = changedFiles(state.patch);
             List<IndependentReviewBundle.ResultReference> reviewedResults = request.reviewedResults().stream()
                     .map(result -> new IndependentReviewBundle.ResultReference(result.documentId(), result.role(),
@@ -709,14 +715,14 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                     .toList();
             Map<String, EvidenceRepository.EvidenceReference> references = new LinkedHashMap<>();
             Map<String, String> digests = new LinkedHashMap<>();
-            request.artifacts().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
-                var artifact = entry.getValue();
-                references.put(entry.getKey(), new EvidenceRepository.EvidenceReference(
+            for (String name : List.of("plan", "patch", "tests", "quality", "security", "sbom")) {
+                var artifact = request.artifacts().get(name);
+                references.put(name, new EvidenceRepository.EvidenceReference(
                         artifact.uri(), artifact.digest(), artifact.status()));
-                digests.put(entry.getKey(), artifact.digest());
-            });
+                digests.put(name, artifact.digest());
+            }
             EvidenceRepository.PolicyDecision policy = new EvidenceRepository.PolicyDecision(
-                    "1", request.taskId(), request.attemptId(), "hierarchical-gates", "1", "ALLOW",
+                    "1", request.taskId(), request.attemptId(), "hierarchical-pre-review-gates", "1", "ALLOW",
                     List.of("pre-review-gates-passed"), Map.copyOf(digests), Instant.now(clock));
             EvidenceRepository.StoredManifest manifest = evidence.createManifest(
                     new EvidenceRepository.ManifestRequest(request.taskId(), request.attemptId(),
@@ -734,8 +740,6 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                             manifest.manifestId(), manifest.uri(), manifest.digest()),
                     reviewedResults, List.of(), Map.copyOf(requiredArtifactDigests(request.artifacts())));
             bundle.requireProductionArtifactBinding(request.artifacts());
-            state.bindApprovalManifest(manifest.manifestId(), manifest.uri(), manifest.digest());
-            memory.project("hierarchical-review-manifest:" + manifest.digest(), state);
             return new PreparedIndependentReview(bundle, manifest);
         } catch (RuntimeException failure) {
             throw TemporalFailureClassifier.toApplicationFailure(failure);
@@ -745,12 +749,72 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
     private static Map<String, String> requiredArtifactDigests(
             Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts) {
         Map<String, String> required = new LinkedHashMap<>();
-        for (String name : List.of("plan", "patch", "tests", "quality", "security")) {
+        for (String name : List.of("plan", "patch", "tests", "quality", "security", "sbom")) {
             var artifact = artifacts.get(name);
             if (artifact == null) throw new SecurityException("Hierarchical review is missing evidence: " + name);
             required.put(name, artifact.digest());
         }
         return required;
+    }
+
+    @Override
+    public com.example.aifactory.service.PipelineStepContracts.ArtifactReference acceptIndependentReview(
+            AcceptIndependentReview request) {
+        requireValid(request);
+        TaskState state = memory.find(request.taskId()).orElseThrow(
+                () -> new IllegalArgumentException("Unknown hierarchical task"));
+        requireAttemptAndCommit(state, request.attemptId(), request.sourceCommit());
+        try {
+            EvidenceRepository.RawEvidence raw = evidence.read(new EvidenceRepository.ReadRequest(
+                    request.taskId(), request.attemptId(), request.reference().uri(), "workflow",
+                    "hierarchical-independent-review"));
+            if (!request.reference().digest().equals(raw.digest())) {
+                throw new SecurityException("Independent review Evidence digest changed");
+            }
+            var document = contracts.validate("independent-review-v1", mapper.readTree(raw.content()),
+                    new MultiAgentContractValidator.ContractContext(
+                            request.taskId(), request.attemptId(), request.bundle().referenceIds()));
+            var reviewedIds = new java.util.LinkedHashSet<String>();
+            document.path("reviewed_result_ids").forEach(value -> reviewedIds.add(value.asText()));
+            var expectedReviewedIds = request.bundle().reviewedResults().stream()
+                    .map(IndependentReviewBundle.ResultReference::resultId)
+                    .collect(java.util.stream.Collectors.toSet());
+            var openContradictionIds = new java.util.LinkedHashSet<String>();
+            document.path("open_contradiction_ids").forEach(value -> openContradictionIds.add(value.asText()));
+            var expectedOpenContradictionIds = request.bundle().contradictions().stream()
+                    .filter(value -> "OPEN".equals(value.status()))
+                    .map(IndependentReviewBundle.ContradictionReference::contradictionId)
+                    .collect(java.util.stream.Collectors.toSet());
+            var finalManifest = document.path("final_manifest");
+            if (!"independent-reviewer".equals(document.path("role").asText())
+                    || !request.sourceCommit().equals(document.path("source_commit").asText())
+                    || !request.bundle().finalManifest().manifestId().equals(
+                            finalManifest.path("manifest_id").asText())
+                    || !request.bundle().finalManifest().uri().equals(finalManifest.path("uri").asText())
+                    || !request.bundle().finalManifest().digest().equals(finalManifest.path("digest").asText())
+                    || !reviewedIds.equals(expectedReviewedIds)
+                    || !openContradictionIds.equals(expectedOpenContradictionIds)
+                    || !"ACCEPT".equals(document.path("decision").asText())
+                    || !openContradictionIds.isEmpty()) {
+                throw new TemporalFailureClassifier.BusinessRejectionException(
+                        "Independent review did not accept the source-bound result");
+            }
+            EvidenceRepository.StoredEvidence stored = evidence.store(new EvidenceRepository.StoreRequest(
+                    request.taskId(), request.attemptId(), "review", "application/json",
+                    raw.content(), raw.digest(), "workflow"));
+            state.review = new String(raw.content(), StandardCharsets.UTF_8);
+            state.reviewAccepted = true;
+            state.recordArtifact("review", "review", stored.status(), stored.classification(), stored.uri(),
+                    stored.digest(), stored.sizeBytes(), true);
+            memory.project("hierarchical-independent-review:" + stored.digest(), state);
+            return new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                    stored.uri(), stored.digest(), stored.sizeBytes(), stored.status(), "ACCEPT");
+        } catch (RuntimeException failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(failure);
+        } catch (Exception failure) {
+            throw TemporalFailureClassifier.toApplicationFailure(
+                    new IllegalStateException("Cannot accept hierarchical independent review", failure));
+        }
     }
 
     private static List<String> changedFiles(String patch) {
@@ -822,6 +886,22 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
             throw new IllegalArgumentException("Hierarchical independent review request is invalid");
         }
         requiredArtifactDigests(request.artifacts());
+    }
+
+    private static void requireValid(AcceptIndependentReview request) {
+        if (request == null || request.taskId() == null
+                || !request.taskId().matches("[A-Za-z0-9_-]{1,64}")
+                || request.attemptId() == null || !request.attemptId().matches("[A-Za-z0-9_-]{1,128}")
+                || request.sourceCommit() == null || !request.sourceCommit().matches("[0-9a-f]{40}")
+                || request.bundle() == null
+                || !request.bundle().boundTo(request.taskId(), request.attemptId(), request.sourceCommit())
+                || request.reference() == null
+                || !"independent-review-v1".equals(request.reference().contract())
+                || request.reference().uri() == null || !request.reference().uri().startsWith("evidence://")
+                || request.reference().digest() == null
+                || !request.reference().digest().matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Hierarchical independent review result request is invalid");
+        }
     }
 
     private static void requireValid(PrepareDeveloperTasks request) {

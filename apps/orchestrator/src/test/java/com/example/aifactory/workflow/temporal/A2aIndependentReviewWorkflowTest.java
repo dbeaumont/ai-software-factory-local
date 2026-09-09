@@ -47,8 +47,12 @@ class A2aIndependentReviewWorkflowTest {
             IndependentReviewWorkflow.Result result = workflow.run(new IndependentReviewWorkflow.Request(
                     "task-1", "attempt-1", "final-review", "0".repeat(40), bundle, null));
 
-            assertThat(result).isEqualTo(new IndependentReviewWorkflow.Result(
-                    "final-review", "independent-reviewer", "READY_FOR_ACTIVITIES"));
+            assertThat(result.reviewId()).isEqualTo("final-review");
+            assertThat(result.role()).isEqualTo("independent-reviewer");
+            assertThat(result.status()).isEqualTo("READY_FOR_ACTIVITIES");
+            assertThat(result.artifacts()).containsExactly(new A2aActivities.EvidenceReference(
+                    "review-1", completed().artifacts().getFirst().parts().getFirst().uri().toString(),
+                    "e".repeat(64), "independent-review-v1"));
             assertThat(dispatch.get().execution().delegationId())
                     .isEqualTo(TemporalIds.delegation("task-1", "attempt-1", "final-review"));
             assertThat(dispatch.get().command().parts()).hasSize(1);

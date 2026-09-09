@@ -21,5 +21,14 @@ public interface IndependentReviewWorkflow {
         }
     }
 
-    record Result(String reviewId, String role, String status) {}
+    record Result(String reviewId, String role, String status,
+                  java.util.List<A2aActivities.EvidenceReference> artifacts) {
+        public Result {
+            artifacts = artifacts == null ? java.util.List.of() : java.util.List.copyOf(artifacts);
+        }
+
+        public Result(String reviewId, String role, String status) {
+            this(reviewId, role, status, java.util.List.of());
+        }
+    }
 }

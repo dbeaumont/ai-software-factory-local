@@ -232,7 +232,9 @@ class SoftwareFactoryExecutionWorkflowV1Test {
                 case "security" -> "security";
                 default -> throw new IllegalArgumentException(step);
             };
-            return result(step, Map.of(name, artifact(name)));
+            return "security".equals(step)
+                    ? result(step, Map.of("security", artifact("security"), "sbom", artifact("sbom")))
+                    : result(step, Map.of(name, artifact(name)));
         }
 
         @Override public PipelineAgentInput prepareAgentInput(PipelineAgentInputRequest request) {

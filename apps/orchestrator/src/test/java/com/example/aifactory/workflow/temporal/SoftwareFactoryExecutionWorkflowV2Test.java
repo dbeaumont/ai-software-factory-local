@@ -349,7 +349,7 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                             result.documentId(), result.role(), result.artifact().uri(), result.artifact().digest()))
                     .toList();
             var digests = new java.util.LinkedHashMap<String, String>();
-            for (String name : java.util.List.of("plan", "patch", "tests", "quality", "security")) {
+            for (String name : java.util.List.of("plan", "patch", "tests", "quality", "security", "sbom")) {
                 digests.put(name, request.artifacts().get(name).digest());
             }
             var bundle = new com.example.aifactory.service.IndependentReviewBundle(
@@ -360,6 +360,13 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                             manifest.manifestId(), manifest.uri(), manifest.digest()),
                     results, java.util.List.of(), java.util.Map.copyOf(digests));
             return new PreparedIndependentReview(bundle, manifest);
+        }
+
+        @Override public com.example.aifactory.service.PipelineStepContracts.ArtifactReference
+        acceptIndependentReview(AcceptIndependentReview request) {
+            return new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                    "evidence://task-1/pipeline-1/review/" + request.reference().digest(),
+                    request.reference().digest(), 64, "COMPLETE", "ACCEPT");
         }
     }
 }
