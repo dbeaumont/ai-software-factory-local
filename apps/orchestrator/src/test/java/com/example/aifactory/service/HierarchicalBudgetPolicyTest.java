@@ -32,8 +32,8 @@ class HierarchicalBudgetPolicyTest {
 
     @Test
     void rejectsDelegationPerimeterAndWholeTaskOverruns() throws Exception {
-        assertThatThrownBy(() -> policy.validateDelegation("developer", mapper.readTree("""
-                {"max_turns":6,"max_tokens":12001,"max_cost_micros":12000000,
+        assertThatThrownBy(() -> policy.validateDelegation("independent-reviewer", mapper.readTree("""
+                {"max_turns":6,"max_tokens":15001,"max_cost_micros":10000000,
                  "timeout_seconds":900,"max_tool_calls":24}
                 """))).hasMessageContaining("delegation budget exceeded");
 

@@ -71,7 +71,9 @@ class A2aIndependentReviewWorkflowTest {
                     .containsEntry("size_bytes", 256);
             assertThat(envelope.get("input_references").toString())
                     .contains("b".repeat(64), "c".repeat(64), "d".repeat(64), "f".repeat(64),
-                            "size_bytes=128", "size_bytes=256", "size_bytes=64", "size_bytes=32");
+                            "size_bytes=128", "size_bytes=256", "size_bytes=64", "size_bytes=32",
+                            "tests-evidence", "quality-evidence", "security-evidence", "sbom-evidence",
+                            "pipeline-evidence-v1");
         }
     }
 
@@ -84,7 +86,15 @@ class A2aIndependentReviewWorkflowTest {
                 List.of(new IndependentReviewBundle.ResultReference("result-1", "developer",
                         "evidence://task-1/result", "d".repeat(64), 64)),
                 List.of(new IndependentReviewBundle.ContradictionReference("contradiction-1", "RESOLVED",
-                        "evidence://task-1/contradiction", "f".repeat(64), 32)));
+                        "evidence://task-1/contradiction", "f".repeat(64), 32)), Map.of(),
+                Map.of("tests", artifact("1"), "quality", artifact("2"),
+                        "security", artifact("3"), "sbom", artifact("4")));
+    }
+
+    private static com.example.aifactory.service.PipelineStepContracts.ArtifactReference artifact(String digit) {
+        return new com.example.aifactory.service.PipelineStepContracts.ArtifactReference(
+                "evidence://task-1/attempt-1/evidence/" + digit.repeat(64), digit.repeat(64),
+                16, "COMPLETE", "PASSED");
     }
 
     private static A2aContracts.TaskSnapshot completed() {

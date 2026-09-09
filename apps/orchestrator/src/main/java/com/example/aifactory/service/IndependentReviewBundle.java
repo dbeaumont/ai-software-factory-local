@@ -10,7 +10,8 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
                                       ConsolidatedPatch consolidatedPatch, FinalManifest finalManifest,
                                       List<ResultReference> reviewedResults,
                                       List<ContradictionReference> contradictions,
-                                      Map<String, String> reviewedArtifactDigests) {
+                                      Map<String, String> reviewedArtifactDigests,
+                                      Map<String, PipelineStepContracts.ArtifactReference> assuranceArtifacts) {
     private static final Set<String> RESULT_ROLES = Set.of(
             "supervisor", "architecture-agent", "code-agent", "developer", "patch-repair",
             "test-agent", "test-design", "test-evidence", "security-agent", "threat-model",
@@ -26,6 +27,11 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
         reviewedResults = List.copyOf(reviewedResults);
         contradictions = List.copyOf(contradictions);
         reviewedArtifactDigests = reviewedArtifactDigests == null ? Map.of() : Map.copyOf(reviewedArtifactDigests);
+        assuranceArtifacts = assuranceArtifacts == null ? Map.of() : Map.copyOf(assuranceArtifacts);
+        if (!assuranceArtifacts.isEmpty()
+                && !assuranceArtifacts.keySet().equals(Set.of("tests", "quality", "security", "sbom"))) {
+            throw new IllegalArgumentException("Independent review assurance evidence is incomplete");
+        }
         requireUnique(reviewedResults.stream().map(ResultReference::resultId).toList(), "result");
         requireUnique(contradictions.stream().map(ContradictionReference::contradictionId).toList(),
                 "contradiction");
@@ -36,7 +42,16 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
                                    List<ResultReference> reviewedResults,
                                    List<ContradictionReference> contradictions) {
         this(taskId, attemptId, sourceCommit, consolidatedPatch, finalManifest, reviewedResults,
-                contradictions, Map.of());
+                contradictions, Map.of(), Map.of());
+    }
+
+    public IndependentReviewBundle(String taskId, String attemptId, String sourceCommit,
+                                   ConsolidatedPatch consolidatedPatch, FinalManifest finalManifest,
+                                   List<ResultReference> reviewedResults,
+                                   List<ContradictionReference> contradictions,
+                                   Map<String, String> reviewedArtifactDigests) {
+        this(taskId, attemptId, sourceCommit, consolidatedPatch, finalManifest, reviewedResults,
+                contradictions, reviewedArtifactDigests, Map.of());
     }
 
     public void requireProductionArtifactBinding(
@@ -46,7 +61,11 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
                 || reviewedArtifactDigests.values().stream().anyMatch(
                 digest -> digest == null || !digest.matches("[0-9a-f]{64}"))
                 || !consolidatedPatch.digest().equals(reviewedArtifactDigests.get("patch"))
-                || actualArtifacts == null || required.stream().anyMatch(name ->
+                || actualArtifacts == null
+                || !assuranceArtifacts.keySet().equals(Set.of("tests", "quality", "security", "sbom"))
+                || assuranceArtifacts.entrySet().stream().anyMatch(entry ->
+                !entry.getValue().equals(actualArtifacts.get(entry.getKey())))
+                || required.stream().anyMatch(name ->
                 actualArtifacts.get(name) == null
                         || !actualArtifacts.get(name).digest().equals(reviewedArtifactDigests.get(name)))) {
             throw new SecurityException("Independent review inputs differ from produced pipeline evidence");
@@ -63,6 +82,7 @@ public record IndependentReviewBundle(String taskId, String attemptId, String so
         references.add(finalManifest.manifestId());
         reviewedResults.forEach(result -> references.add(result.resultId()));
         contradictions.forEach(contradiction -> references.add(contradiction.contradictionId()));
+        assuranceArtifacts.keySet().forEach(name -> references.add(name + "-evidence"));
         return Set.copyOf(references);
     }
 

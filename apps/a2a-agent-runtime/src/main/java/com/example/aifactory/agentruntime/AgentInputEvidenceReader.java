@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Set;
 
 /** Resolves the immutable input selected by the A2A envelope and verifies its complete binding. */
 final class AgentInputEvidenceReader {
@@ -59,7 +60,7 @@ final class AgentInputEvidenceReader {
         try {
             return mapper.readTree(content);
         } catch (Exception malformed) {
-            if ("integration-result-v1".equals(reference.contract())) {
+            if (Set.of("integration-result-v1", "pipeline-evidence-v1").contains(reference.contract())) {
                 return mapper.getNodeFactory().textNode(new String(content, StandardCharsets.UTF_8));
             }
             throw new IllegalArgumentException("A2A input Evidence is not valid JSON", malformed);

@@ -37,6 +37,7 @@ class EvidenceApprovalGateTest {
                         Map.entry("manifest_id", manifestId),
                         Map.entry("uri", "evidence://task-1/attempt-1/manifest/" + manifestId),
                         Map.entry("digest", manifestDigest), Map.entry("status", "COMPLETE"),
+                        Map.entry("size_bytes", 256),
                         Map.entry("classification", "CONFIDENTIAL"),
                         Map.entry("retain_until", "2027-09-02T00:00:00Z"),
                         Map.entry("created_at", "2026-09-02T00:00:00Z")));

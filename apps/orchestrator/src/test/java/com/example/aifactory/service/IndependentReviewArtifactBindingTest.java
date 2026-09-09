@@ -16,7 +16,7 @@ class IndependentReviewArtifactBindingTest {
                 "quality", artifact("d"), "security", artifact("e"), "sbom", artifact("f"));
         IndependentReviewBundle bundle = bundle(Map.of(
                 "plan", "a".repeat(64), "patch", "b".repeat(64), "tests", "c".repeat(64),
-                "quality", "d".repeat(64), "security", "e".repeat(64), "sbom", "f".repeat(64)));
+                "quality", "d".repeat(64), "security", "e".repeat(64), "sbom", "f".repeat(64)), artifacts);
 
         assertThatCode(() -> bundle.requireProductionArtifactBinding(artifacts)).doesNotThrowAnyException();
         assertThatThrownBy(() -> bundle.requireProductionArtifactBinding(Map.of(
@@ -25,14 +25,17 @@ class IndependentReviewArtifactBindingTest {
                 .isInstanceOf(SecurityException.class);
     }
 
-    private static IndependentReviewBundle bundle(Map<String, String> digests) {
+    private static IndependentReviewBundle bundle(Map<String, String> digests,
+                                                   Map<String, PipelineStepContracts.ArtifactReference> artifacts) {
         return new IndependentReviewBundle("task-1", "pipeline-1", "1".repeat(40),
                 new IndependentReviewBundle.ConsolidatedPatch("patch-1", "evidence://task-1/patch",
                         "b".repeat(64), 128, List.of("src/App.java")),
                 new IndependentReviewBundle.FinalManifest("2".repeat(64),
                         "evidence://task-1/manifest", "3".repeat(64), 256),
                 List.of(new IndependentReviewBundle.ResultReference("result-1", "code-agent",
-                        "evidence://task-1/result", "4".repeat(64), 64)), List.of(), digests);
+                        "evidence://task-1/result", "4".repeat(64), 64)), List.of(), digests,
+                Map.of("tests", artifacts.get("tests"), "quality", artifacts.get("quality"),
+                        "security", artifacts.get("security"), "sbom", artifacts.get("sbom")));
     }
 
     private static PipelineStepContracts.ArtifactReference artifact(String character) {

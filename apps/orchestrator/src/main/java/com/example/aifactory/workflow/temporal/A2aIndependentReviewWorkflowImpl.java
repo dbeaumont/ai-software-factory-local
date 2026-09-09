@@ -79,6 +79,10 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
                 bundle.consolidatedPatch().digest(), "integration-result-v1", bundle.consolidatedPatch().sizeBytes()));
         bundle.reviewedResults().forEach(result -> parts.add(reference(result.resultId(), result.uri(),
                 result.digest(), "specialist-result-v1", result.sizeBytes())));
+        bundle.assuranceArtifacts().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> parts.add(reference(entry.getKey() + "-evidence",
+                        entry.getValue().uri(), entry.getValue().digest(), "pipeline-evidence-v1",
+                        entry.getValue().sizeBytes())));
         bundle.contradictions().forEach(contradiction -> parts.add(reference(contradiction.contradictionId(),
                 contradiction.uri(), contradiction.digest(), "contradiction-v1", contradiction.sizeBytes())));
         return List.copyOf(parts);

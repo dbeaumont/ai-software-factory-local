@@ -738,7 +738,8 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
                             "integrated-patch", patch.uri(), patch.digest(), patch.sizeBytes(), changedFiles),
                     new IndependentReviewBundle.FinalManifest(
                             manifest.manifestId(), manifest.uri(), manifest.digest(), manifest.sizeBytes()),
-                    reviewedResults, List.of(), Map.copyOf(requiredArtifactDigests(request.artifacts())));
+                    reviewedResults, List.of(), Map.copyOf(requiredArtifactDigests(request.artifacts())),
+                    Map.copyOf(assuranceArtifacts(request.artifacts())));
             bundle.requireProductionArtifactBinding(request.artifacts());
             return new PreparedIndependentReview(bundle, manifest);
         } catch (RuntimeException failure) {
@@ -753,6 +754,19 @@ public final class HierarchicalExecutionActivitiesImpl implements HierarchicalEx
             var artifact = artifacts.get(name);
             if (artifact == null) throw new SecurityException("Hierarchical review is missing evidence: " + name);
             required.put(name, artifact.digest());
+        }
+        return required;
+    }
+
+    private static Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference>
+    assuranceArtifacts(
+            Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> artifacts) {
+        Map<String, com.example.aifactory.service.PipelineStepContracts.ArtifactReference> required =
+                new LinkedHashMap<>();
+        for (String name : List.of("tests", "quality", "security", "sbom")) {
+            var artifact = artifacts.get(name);
+            if (artifact == null) throw new SecurityException("Hierarchical review is missing evidence: " + name);
+            required.put(name, artifact);
         }
         return required;
     }

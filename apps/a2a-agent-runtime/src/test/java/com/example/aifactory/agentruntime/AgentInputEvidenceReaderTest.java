@@ -31,6 +31,20 @@ class AgentInputEvidenceReaderTest {
     }
 
     @Test
+    void materializesPipelineEvidenceAsTextAfterVerifyingItsBinding() {
+        byte[] report = "BUILD SUCCESS\nTests run: 1, Failures: 0".getBytes(StandardCharsets.UTF_8);
+        String digest = Digests.sha256(report);
+        AgentInputEvidenceReader reader = reader(report, digest);
+
+        var result = reader.read("task-1", "attempt-1", new AgentInputEvidenceReader.Reference(
+                "tests-evidence", "evidence://task-1/attempt-1/patch/" + digest,
+                digest, report.length, "pipeline-evidence-v1"), 1_024);
+
+        assertThat(result.isTextual()).isTrue();
+        assertThat(result.asText()).isEqualTo(new String(report, StandardCharsets.UTF_8));
+    }
+
+    @Test
     void rejectsNonJsonEvidenceForAnyOtherContract() {
         byte[] content = "not-json".getBytes(StandardCharsets.UTF_8);
         String digest = Digests.sha256(content);
