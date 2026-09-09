@@ -117,7 +117,12 @@ public final class AgentExecutionWorker {
     }
 
     private String systemPrompt(Request request) {
-        StringBuilder prompt = new StringBuilder(role.systemPrompt(request.inputContract()));
+        StringBuilder prompt = new StringBuilder(role.systemPrompt(request.inputContract()))
+                .append("\n\n## Contrat de sortie immuable\n\n")
+                .append("Retourne exclusivement un document `")
+                .append(request.outputContract())
+                .append("` dont `schema_version` est exactement la chaine JSON `\"1\"` ")
+                .append("(et jamais le nombre `1`).\n");
         if ("delegation-plan-v1".equals(request.outputContract())) {
             JsonNode input = request.input();
             prompt.append("\n\n## Binding immuable du plan de delegation\n\n")

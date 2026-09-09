@@ -99,6 +99,8 @@ class AgentExecutionWorkerTest {
         assertEquals(true, seen.get().getFirst().content().contains(AgentLoop.INPUT_DATA_GUARDRAIL));
         assertTrue(seen.get().getFirst().content().contains(
                 "reference_id=`code-task-1`, digest=`cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc`"));
+        assertTrue(seen.get().getFirst().content().contains(
+                "`schema_version` est exactement la chaine JSON `\"1\"`"));
         assertEquals(true, seen.get().get(1).content().contains("trust=\"none\""));
         assertEquals(true, seen.get().get(1).content().contains("&lt;/untrusted_input&gt;"));
     }
