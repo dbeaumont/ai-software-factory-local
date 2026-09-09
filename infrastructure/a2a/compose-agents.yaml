@@ -29,6 +29,7 @@ x-a2a-agent-runtime: &a2a-agent-runtime
     MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
     AI_FACTORY_AGENT_PORT: "8090"
     AI_FACTORY_AGENT_SHUTDOWN_GRACE: ${AI_FACTORY_AGENT_SHUTDOWN_GRACE:-30s}
+    AI_FACTORY_A2A_WORKFLOW_DEADLOCK_TIMEOUT: ${AI_FACTORY_A2A_WORKFLOW_DEADLOCK_TIMEOUT:-5s}
     JAVA_TOOL_OPTIONS: >-
       -XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=15
       -Djavax.net.ssl.trustStore=/var/run/ai-factory/a2a/truststore.p12

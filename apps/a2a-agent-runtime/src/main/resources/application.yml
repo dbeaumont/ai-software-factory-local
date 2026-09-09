@@ -97,6 +97,7 @@ ai-factory:
       max-activity-executions: ${AI_FACTORY_A2A_MAX_ACTIVITIES:16}
       max-active-tasks-per-tenant: ${AI_FACTORY_A2A_MAX_TASKS_PER_TENANT:64}
       max-queued-tasks: ${AI_FACTORY_A2A_MAX_QUEUED_TASKS:1000}
+      workflow-deadlock-detection-timeout: ${AI_FACTORY_A2A_WORKFLOW_DEADLOCK_TIMEOUT:5s}
       shutdown-grace: ${AI_FACTORY_AGENT_SHUTDOWN_GRACE:30s}
     rate-limit:
       window: ${AI_FACTORY_A2A_RATE_LIMIT_WINDOW:1m}

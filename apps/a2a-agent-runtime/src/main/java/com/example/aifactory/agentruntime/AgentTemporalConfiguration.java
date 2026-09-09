@@ -64,7 +64,9 @@ class AgentTemporalConfiguration {
                 .setMaxConcurrentWorkflowTaskPollers(concurrency.workflowPollers())
                 .setMaxConcurrentActivityTaskPollers(concurrency.activityPollers())
                 .setMaxConcurrentWorkflowTaskExecutionSize(concurrency.maxWorkflowExecutions())
-                .setMaxConcurrentActivityExecutionSize(concurrency.maxActivityExecutions()).build());
+                .setMaxConcurrentActivityExecutionSize(concurrency.maxActivityExecutions())
+                .setDefaultDeadlockDetectionTimeout(concurrency.workflowDeadlockDetectionTimeout().toMillis())
+                .build());
         worker.registerWorkflowImplementationTypes(AgentTaskWorkflowV1Impl.class);
         worker.registerActivitiesImplementations(new AgentTaskProjectionActivitiesImpl(taskStore, spanLinks, metrics));
         worker.registerActivitiesImplementations(new AgentArtifactActivitiesImpl(artifactPublisher));

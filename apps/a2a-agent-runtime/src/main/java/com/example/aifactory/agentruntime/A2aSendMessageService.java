@@ -85,7 +85,8 @@ public final class A2aSendMessageService {
                           AgentTaskWorkflowStarter workflowStarter, A2aTaskStore store) {
         this(runtime, cards, mapper, workflowControl, workflowStarter, store,
                 new A2aAdmissionController(store, new AgentConcurrencyProperties(
-                        2, 2, 32, 16, 64, 1_000, java.time.Duration.ofSeconds(30))));
+                        2, 2, 32, 16, 64, 1_000, java.time.Duration.ofSeconds(5),
+                        java.time.Duration.ofSeconds(30))));
     }
 
     A2aSendMessageService(AgentRuntimeProperties runtime, AgentCardCatalogGenerator cards, ObjectMapper mapper) {

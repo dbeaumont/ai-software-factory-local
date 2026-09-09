@@ -15,7 +15,8 @@ class A2aAdmissionControllerTest {
     void enforcesTenantQuotaButAlwaysAllowsAnIdempotentReplay() {
         InMemoryA2aTaskStore store = new InMemoryA2aTaskStore();
         A2aAdmissionController admission = new A2aAdmissionController(store,
-                new AgentConcurrencyProperties(1, 1, 2, 2, 1, 2, Duration.ofSeconds(5)));
+                new AgentConcurrencyProperties(1, 1, 2, 2, 1, 2, Duration.ofSeconds(5),
+                        Duration.ofSeconds(5)));
         AtomicInteger creates = new AtomicInteger();
 
         A2aTaskStore.CreateResult first = admission.admit("message-1", "developer", "tenant-a",
