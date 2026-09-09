@@ -1,5 +1,5 @@
 x-a2a-agent-runtime: &a2a-agent-runtime
-  image: ${AI_FACTORY_A2A_RUNTIME_IMAGE:-ai-factory-a2a-agent-runtime:hierarchical-v2-692bf98}
+  image: ${AI_FACTORY_A2A_RUNTIME_IMAGE:-ai-factory-a2a-agent-runtime:hierarchical-v2-a15de7bb}
   build:
     context: ../..
     dockerfile: apps/a2a-agent-runtime/Dockerfile
