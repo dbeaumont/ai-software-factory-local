@@ -30,7 +30,19 @@ final class PatchProposalBinder {
     static String bind(ObjectMapper mapper, AgentExecutionWorker.Request request, String modelOutput) {
         if (!"patch-proposal-v1".equals(request.outputContract())) return modelOutput;
         try {
-            JsonNode parsed = mapper.readTree(modelOutput);
+            JsonNode parsed;
+            try {
+                parsed = mapper.readTree(modelOutput);
+            } catch (Exception invalidJson) {
+                parsed = null;
+            }
+            if ((parsed == null || parsed.isTextual()) && modelOutput.contains("diff --git ")) {
+                ObjectNode rawProposal = mapper.createObjectNode();
+                rawProposal.put("proposal_id", "proposal-" + request.taskId());
+                rawProposal.put("patch", parsed != null && parsed.isTextual() ? parsed.asText() : modelOutput);
+                rawProposal.put("summary", "Patch proposed for " + request.input().path("code_task_id").asText());
+                parsed = rawProposal;
+            }
             if (!(parsed instanceof ObjectNode proposal) || !proposal.path("patch").isTextual()) {
                 return modelOutput;
             }

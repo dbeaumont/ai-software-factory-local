@@ -73,6 +73,26 @@ class AgentExecutionWorkerTest {
     }
 
     @Test
+    void acceptsABareUnifiedDiffAndBindsACompleteProposal() throws Exception {
+        JsonNode fixtures = fixtures();
+        String patch = fixtures.path("patch-proposal-v1").path("patch").asText();
+        AtomicReference<List<AgentLoop.Message>> seen = new AtomicReference<>();
+        AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("developer", mapper),
+                (messages, tools, tokens) -> {
+                    seen.set(messages);
+                    return new AgentLoop.Turn(AgentLoop.Stop.FINAL, patch, List.of(), 10, 5, 20);
+                }, new NoTools());
+
+        AgentExecutionWorker.Result result = worker.execute(request(
+                "developer", "code-task-v1", fixtures.path("code-task-v1"), "patch-proposal-v1"));
+
+        assertEquals("proposal-task-1", result.document().path("proposal_id").asText());
+        assertEquals(patch.stripTrailing() + "\n", result.document().path("patch").asText());
+        assertTrue(seen.get().getFirst().content().contains("Production obligatoire du patch"));
+        assertTrue(seen.get().getFirst().content().contains("forme JSON minimale exacte"));
+    }
+
+    @Test
     void returnsInvalidPatchContentToContractFeedbackInsteadOfMaskingItsViolation() throws Exception {
         JsonNode fixtures = fixtures();
         tools.jackson.databind.node.ObjectNode proposal =

@@ -148,6 +148,19 @@ public final class AgentExecutionWorker {
                         .append(shortPlanShape(request));
             }
         }
+        if ("patch-proposal-v1".equals(request.outputContract())) {
+            prompt.append("\n\n## Production obligatoire du patch\n\n")
+                    .append("Lis d'abord avec les outils `context.*` les fichiers necessaires dans les chemins autorises. ")
+                    .append("La sortie finale doit contenir un vrai diff unifie applicable, jamais une explication, ")
+                    .append("un refus, un blocage ou un exemple. Le champ `patch` commence exactement par ")
+                    .append("`diff --git a/<chemin> b/<chemin>` et inclut `---`, `+++` et au moins un hunk `@@`.\n")
+                    .append("L'hote derive et remplace les metadonnees de securite. ")
+                    .append("Tu peux donc retourner cette forme JSON minimale exacte, sans bloc Markdown :\n")
+                    .append("{\"proposal_id\":\"proposal-1\",\"patch\":\"diff --git a/<chemin> b/<chemin>\\n")
+                    .append("--- a/<chemin>\\n+++ b/<chemin>\\n@@ -1 +1 @@\\n-ancienne ligne\\n+nouvelle ligne\\n\",")
+                    .append("\"summary\":\"description concise\"}\n")
+                    .append("Remplace tous les marqueurs par le chemin et le contenu exacts lus dans le depot.\n");
+        }
         if (!request.admittedReferences().isEmpty()) {
             prompt.append("\n\n## Contexte d'admission immuable\n\n")
                     .append("Toute citation de la sortie doit reprendre exactement un couple autorise ci-dessous. ")
