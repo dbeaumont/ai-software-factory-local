@@ -143,6 +143,10 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                     : List.of("supervisor", "developer", "independent-reviewer"));
             assertThat(activities.roles).doesNotContain("architecture-agent", "security-agent");
             assertThat(hierarchical.preparedRoles).containsExactly("supervisor");
+            assertThat(hierarchical.specialistBudgets)
+                    .containsExactly(ProductionExecutionWorkflowRuntime.DEVELOPER_AGENT_BUDGET);
+            assertThat(hierarchical.developerBudgets)
+                    .containsExactly(ProductionExecutionWorkflowRuntime.DEVELOPER_AGENT_BUDGET);
             assertThat(deliveries).hasValue(1);
         }
     }
@@ -201,6 +205,8 @@ class SoftwareFactoryExecutionWorkflowV2Test {
                     "security-agent", "independent-reviewer");
             assertThat(hierarchical.preparedRoles).containsExactly(
                     "architecture-agent", "code-agent", "test-design", "test-agent", "security-agent");
+            assertThat(hierarchical.developerBudgets)
+                    .containsExactly(ProductionExecutionWorkflowRuntime.DEVELOPER_AGENT_BUDGET);
             assertThat(deliveries).hasValue(1);
         }
     }
@@ -245,9 +251,14 @@ class SoftwareFactoryExecutionWorkflowV2Test {
 
     private static final class HierarchicalFixture implements HierarchicalExecutionActivities {
         private final java.util.List<String> preparedRoles = new java.util.concurrent.CopyOnWriteArrayList<>();
+        private final java.util.List<DelegationWorkflow.Budget> specialistBudgets =
+                new java.util.concurrent.CopyOnWriteArrayList<>();
+        private final java.util.List<DelegationWorkflow.Budget> developerBudgets =
+                new java.util.concurrent.CopyOnWriteArrayList<>();
 
         @Override public A2aContracts.Part prepareSpecialistTask(PrepareSpecialistTask request) {
             preparedRoles.add(request.role());
+            specialistBudgets.add(request.budget());
             String digest = TemporalIds.sha256(request.role());
             return com.example.aifactory.a2a.A2aEvidencePartFactory.reference(
                     "specialist-" + request.nodeId(),
@@ -271,24 +282,26 @@ class SoftwareFactoryExecutionWorkflowV2Test {
         }
 
         @Override public java.util.List<DeveloperTask> prepareDeveloperTasks(PrepareDeveloperTasks request) {
+            developerBudgets.add(request.budget());
             String digest = TemporalIds.sha256("developer-task");
             var input = com.example.aifactory.a2a.A2aEvidencePartFactory.reference(
                     "code-task-1", "evidence://task-1/pipeline-1/code-task/" + digest,
                     digest, "code-task-v1", 64);
             return java.util.List.of(new DeveloperTask(
                     "developer-1", "code-task-1", java.util.Set.of(),
-                    new DelegationWorkflow.Budget(12_000, 12_000_000, 6, 900), input));
+                    request.budget(), input));
         }
 
         @Override public java.util.List<DeveloperTask> prepareShortDeveloperTasks(
                 PrepareShortDeveloperTasks request) {
+            developerBudgets.add(request.budget());
             String digest = TemporalIds.sha256("short-developer-task");
             var input = com.example.aifactory.a2a.A2aEvidencePartFactory.reference(
                     "code-developer-1", "evidence://task-1/pipeline-1/code-task/" + digest,
                     digest, "code-task-v1", 64);
             return java.util.List.of(new DeveloperTask(
                     "developer-1", "code-developer-1", java.util.Set.of(),
-                    new DelegationWorkflow.Budget(10_000, 10_000_000, 6, 600), input));
+                    request.budget(), input));
         }
 
         @Override public AcceptedDeveloperPatches acceptDeveloperPatches(AcceptDeveloperPatches request) {

@@ -23,6 +23,9 @@ public final class SoftwareFactoryExecutionWorkflowV1Impl extends ProductionExec
 
 /** Shared durable execution mechanics; versioned workflow boundaries own admission and routing. */
 abstract class ProductionExecutionWorkflowRuntime {
+    static final DelegationWorkflow.Budget DEVELOPER_AGENT_BUDGET =
+            new DelegationWorkflow.Budget(50_000, 25_000_000, 6, 900);
+
     private final SoftwareFactoryWorkflow delegate = new SoftwareFactoryWorkflowImpl();
     private String phase = "CREATED";
     private String currentStep = "source";
@@ -410,7 +413,8 @@ abstract class ProductionExecutionWorkflowRuntime {
         var plan = runHierarchicalSpecialist(source, request, resolved, routingDecisionId,
                 "short-plan", "supervisor", "supervisor", "supervisor", List.of(), java.util.Set.of(),
                 java.util.Set.of(),
-                List.of("Return exactly one bounded Developer node for the short path"));
+                List.of("Return exactly one bounded Developer node for the short path"),
+                DEVELOPER_AGENT_BUDGET);
         var accepted = acceptHierarchicalSpecialist(source, request, resolved,
                 "supervisor", "delegation-plan-v1", plan,
                 java.util.Set.of("specialist-short-plan"), true);
@@ -426,7 +430,7 @@ abstract class ProductionExecutionWorkflowRuntime {
                                            String selectedPath,
                                            String routingDecisionId) {
         currentStep = "developer-tasks";
-        DelegationWorkflow.Budget budget = new DelegationWorkflow.Budget(12_000, 12_000_000, 6, 900);
+        DelegationWorkflow.Budget budget = DEVELOPER_AGENT_BUDGET;
         HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
                 HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
                         TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
@@ -586,8 +590,19 @@ abstract class ProductionExecutionWorkflowRuntime {
             String parentNodeId, String parentRole, String role,
             List<HierarchicalExecutionActivities.InputEvidence> inputs, java.util.Set<String> dependsOn,
             java.util.Set<String> allowedTools, List<String> successCriteria) {
+        return runHierarchicalSpecialist(source, request, resolved, routingDecisionId, nodeId,
+                parentNodeId, parentRole, role, inputs, dependsOn, allowedTools, successCriteria,
+                new DelegationWorkflow.Budget(10_000, 10_000_000, 6, 600));
+    }
+
+    private A2aActivities.EvidenceReference runHierarchicalSpecialist(
+            SoftwareFactoryWorkflow.SourceLocation source, SoftwareFactoryWorkflow.Request request,
+            SourceResolutionActivities.Result resolved, String routingDecisionId, String nodeId,
+            String parentNodeId, String parentRole, String role,
+            List<HierarchicalExecutionActivities.InputEvidence> inputs, java.util.Set<String> dependsOn,
+            java.util.Set<String> allowedTools, List<String> successCriteria,
+            DelegationWorkflow.Budget budget) {
         currentStep = nodeId;
-        DelegationWorkflow.Budget budget = new DelegationWorkflow.Budget(10_000, 10_000_000, 6, 600);
         HierarchicalExecutionActivities hierarchical = io.temporal.workflow.Workflow.newActivityStub(
                 HierarchicalExecutionActivities.class, TemporalActivityPolicies.forKind(
                         TemporalActivityPolicies.Kind.EVIDENCE, source.taskQueues().get("evidence")));
