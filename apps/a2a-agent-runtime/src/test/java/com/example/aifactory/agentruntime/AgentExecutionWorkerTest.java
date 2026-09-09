@@ -43,6 +43,34 @@ class AgentExecutionWorkerTest {
     }
 
     @Test
+    void derivesPatchMetadataFromTheAdmittedTaskAndModelDiff() throws Exception {
+        JsonNode fixtures = fixtures();
+        tools.jackson.databind.node.ObjectNode proposal =
+                (tools.jackson.databind.node.ObjectNode) fixtures.path("patch-proposal-v1").deepCopy();
+        proposal.put("schema_version", 1);
+        proposal.put("scope_digest", "not-a-digest");
+        proposal.put("patch_digest", "sha256:not-a-digest");
+        proposal.putArray("files_touched");
+        proposal.putObject("diff_artifact").put("uri", "invalid").put("digest", "invalid")
+                .put("media_type", "text/plain").put("size_bytes", 1);
+        AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("developer", mapper),
+                (messages, tools, tokens) -> new AgentLoop.Turn(
+                        AgentLoop.Stop.FINAL, proposal.toString(), List.of(), 10, 5, 20), new NoTools());
+
+        AgentExecutionWorker.Result result = worker.execute(request(
+                "developer", "code-task-v1", fixtures.path("code-task-v1"), "patch-proposal-v1"));
+
+        assertEquals("1", result.document().path("schema_version").asText());
+        assertEquals(fixtures.path("code-task-v1").path("scope_digest").asText(),
+                result.document().path("scope_digest").asText());
+        assertTrue(result.document().path("patch_digest").asText().matches("[0-9a-f]{64}"));
+        assertEquals(result.document().path("patch_digest").asText(),
+                result.document().path("diff_artifact").path("digest").asText());
+        assertEquals("text/x-diff", result.document().path("diff_artifact").path("media_type").asText());
+        assertTrue(!result.document().path("files_touched").isEmpty());
+    }
+
+    @Test
     void wrapsPipelineCompatibilityOutputAndUsesTheRoleCompatibilityPrompt() throws Exception {
         AtomicReference<List<AgentLoop.Message>> seen = new AtomicReference<>();
         AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("developer", mapper),

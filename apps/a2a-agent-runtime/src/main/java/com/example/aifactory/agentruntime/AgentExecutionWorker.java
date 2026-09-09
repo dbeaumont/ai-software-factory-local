@@ -15,6 +15,7 @@ import java.util.Set;
 
 /** Worker-side execution service consumed by the A2A server transport. */
 public final class AgentExecutionWorker {
+    private static final tools.jackson.databind.ObjectMapper JSON = new tools.jackson.databind.ObjectMapper();
     private final RoleScopedAgentContext role;
     private final LlmCompletionPort llm;
     private final McpToolPort mcp;
@@ -53,14 +54,18 @@ public final class AgentExecutionWorker {
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
         boolean pipelineCompatibility = "pipeline-agent-task-v1".equals(request.inputContract());
         String agentInput = pipelineCompatibility ? request.input().path("payload").asText() : request.input().toString();
+        java.util.concurrent.atomic.AtomicReference<String> acceptedFinal =
+                new java.util.concurrent.atomic.AtomicReference<>();
         java.util.concurrent.Callable<AgentLoop.Result> agentLoop = () -> {
             try {
                 return loop.run(new AgentLoop.Actor(request.taskId(), role.identity().role()),
                         systemPrompt(request), agentInput, request.budget(), finalResult -> {
                             if (pipelineCompatibility) return;
                             try {
-                                role.validateOutput(request.outputContract(), finalResult, contractContext);
-                            } catch (AgentContractValidator.ContractValidationException invalid) {
+                                String bound = PatchProposalBinder.bind(JSON, request, finalResult);
+                                role.validateOutput(request.outputContract(), bound, contractContext);
+                                acceptedFinal.set(bound);
+                            } catch (IllegalArgumentException invalid) {
                                 throw new AgentLoop.ContractFeedbackException(invalid.getMessage(), invalid);
                             }
                         });
@@ -100,7 +105,7 @@ public final class AgentExecutionWorker {
             wrapped.put("cost_micros", result.costMicros());
             document = role.validateOutput(request.outputContract(), wrapped, contractContext);
         } else {
-            document = role.validateOutput(request.outputContract(), result.finalResult(), contractContext);
+            document = role.validateOutput(request.outputContract(), acceptedFinal.get(), contractContext);
         }
         return new Result(document, role.promptFingerprint(request.inputContract()), result.turns(), result.tokens(), result.costMicros());
     }
