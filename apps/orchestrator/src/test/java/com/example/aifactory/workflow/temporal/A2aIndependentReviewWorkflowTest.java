@@ -61,6 +61,13 @@ class A2aIndependentReviewWorkflowTest {
             assertThat(envelope).containsEntry("target_role", "independent-reviewer")
                     .containsEntry("skill_id", "independent-reviewer.integration-result-v1")
                     .doesNotContainKeys("prompt", "reasoning", "raw_output", "private_output");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> inputReferences =
+                    (List<Map<String, Object>>) envelope.get("input_references");
+            assertThat(inputReferences.getFirst())
+                    .containsEntry("reference_id", "c".repeat(64))
+                    .containsEntry("uri", "evidence://task-1/manifest")
+                    .containsEntry("size_bytes", 256);
             assertThat(envelope.get("input_references").toString())
                     .contains("b".repeat(64), "c".repeat(64), "d".repeat(64), "f".repeat(64),
                             "size_bytes=128", "size_bytes=256", "size_bytes=64", "size_bytes=32");

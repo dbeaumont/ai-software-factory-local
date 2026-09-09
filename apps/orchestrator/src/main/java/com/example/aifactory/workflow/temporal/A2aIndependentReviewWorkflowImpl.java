@@ -71,10 +71,12 @@ public final class A2aIndependentReviewWorkflowImpl implements IndependentReview
 
     private static List<A2aContracts.Part> references(IndependentReviewBundle bundle) {
         List<A2aContracts.Part> parts = new ArrayList<>();
-        parts.add(reference(bundle.consolidatedPatch().patchId(), bundle.consolidatedPatch().uri(),
-                bundle.consolidatedPatch().digest(), "integration-result-v1", bundle.consolidatedPatch().sizeBytes()));
+        // The runtime materializes the first reference as the reviewer's structured input. Keep the JSON
+        // manifest first; the unified diff remains an admitted, digest-bound supporting reference.
         parts.add(reference(bundle.finalManifest().manifestId(), bundle.finalManifest().uri(),
                 bundle.finalManifest().digest(), "integration-result-v1", bundle.finalManifest().sizeBytes()));
+        parts.add(reference(bundle.consolidatedPatch().patchId(), bundle.consolidatedPatch().uri(),
+                bundle.consolidatedPatch().digest(), "integration-result-v1", bundle.consolidatedPatch().sizeBytes()));
         bundle.reviewedResults().forEach(result -> parts.add(reference(result.resultId(), result.uri(),
                 result.digest(), "specialist-result-v1", result.sizeBytes())));
         bundle.contradictions().forEach(contradiction -> parts.add(reference(contradiction.contradictionId(),
