@@ -74,7 +74,7 @@ final class McpSdkSessionFactory implements RoleScopedMcpClient.SessionFactory {
                               ObjectMapper mapper) implements RoleScopedMcpClient.Session {
         @Override public String call(String toolName, Map<String, Object> arguments) {
             McpSchema.CallToolResult result = client.callTool(new McpSchema.CallToolRequest(toolName, arguments));
-            if (Boolean.TRUE.equals(result.isError())) throw new IllegalStateException("MCP tool returned an error");
+            if (Boolean.TRUE.equals(result.isError())) return modelVisibleError(result, mapper);
             try {
                 if (result.structuredContent() != null) return mapper.writeValueAsString(result.structuredContent());
                 for (McpSchema.Content content : result.content()) {
@@ -89,5 +89,23 @@ final class McpSdkSessionFactory implements RoleScopedMcpClient.SessionFactory {
             throw new IllegalStateException("MCP tool returned no structured JSON");
         }
         @Override public void close() { client.close(); }
+    }
+
+    static String modelVisibleError(McpSchema.CallToolResult result, ObjectMapper mapper) {
+        String message = "MCP tool rejected the call";
+        if (result != null && result.content() != null) {
+            for (McpSchema.Content content : result.content()) {
+                if (content instanceof McpSchema.TextContent text && text.text() != null && !text.text().isBlank()) {
+                    message = text.text().replaceAll("[\\p{Cntrl}&&[^\\r\\n\\t]]", "").strip();
+                    if (message.length() > 1_000) message = message.substring(0, 1_000);
+                    break;
+                }
+            }
+        }
+        try {
+            return mapper.writeValueAsString(Map.of("is_error", true, "message", message));
+        } catch (Exception failure) {
+            throw new IllegalStateException("Cannot serialize bounded MCP tool error", failure);
+        }
     }
 }
