@@ -566,7 +566,7 @@ abstract class ProductionExecutionWorkflowRuntime {
                         .build());
         IndependentReviewWorkflow.Result result = child.run(new IndependentReviewWorkflow.Request(
                 request.taskId(), request.attemptId(), "independent-review", resolved.sourceCommit(),
-                bundle, new DelegationWorkflow.Budget(10_000, 10_000_000, 6, 600)));
+                bundle, new DelegationWorkflow.Budget(15_000, 10_000_000, 6, 600)));
         pipelineDelegations.add(new DelegationWorkflow.Result(
                 result.reviewId(), result.role(), result.status()));
         if (!"READY_FOR_ACTIVITIES".equals(result.status())) {

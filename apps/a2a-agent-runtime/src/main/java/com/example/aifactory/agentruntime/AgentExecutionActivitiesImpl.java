@@ -60,7 +60,8 @@ final class AgentExecutionActivitiesImpl implements AgentExecutionActivities {
         long maximumInputBytes = constraints.path("max_input_bytes").asLong(-1);
         Set<String> allowedReferences = new LinkedHashSet<>();
         constraints.path("allowed_reference_ids").forEach(value -> allowedReferences.add(value.asText()));
-        java.util.LinkedHashMap<String, String> admittedReferences = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashMap<String, AgentExecutionWorker.AdmittedReference> admittedReferences =
+                new java.util.LinkedHashMap<>();
 
         JsonNode references = envelope.path("input_references");
         if (references.isEmpty()) {
@@ -72,9 +73,11 @@ final class AgentExecutionActivitiesImpl implements AgentExecutionActivities {
                 throw new SecurityException("A2A input reference is outside the admitted reference set");
             }
             String digest = required(admitted, "digest");
-            String previous = admittedReferences.putIfAbsent(referenceId, digest);
-            if (previous != null && !previous.equals(digest)) {
-                throw new SecurityException("A2A input reference ID is bound to conflicting digests");
+            AgentExecutionWorker.AdmittedReference value = new AgentExecutionWorker.AdmittedReference(
+                    required(admitted, "uri"), digest, required(admitted, "contract"));
+            AgentExecutionWorker.AdmittedReference previous = admittedReferences.putIfAbsent(referenceId, value);
+            if (previous != null && !previous.equals(value)) {
+                throw new SecurityException("A2A input reference ID has conflicting immutable bindings");
             }
         }
         JsonNode reference = references.get(0);

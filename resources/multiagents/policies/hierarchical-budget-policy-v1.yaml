@@ -10,7 +10,7 @@ dag:
 # Hard ceilings. Agent manifests may request less, never more.
 delegation:
   max_turns: 6
-  max_tokens: 12000
+  max_tokens: 15000
   max_cost_micros: 12000000
   timeout_seconds: 900
   max_tool_calls: 24
@@ -29,7 +29,8 @@ agents:
   security-agent: {max_turns: 6, max_tokens: 10000, max_cost_micros: 10000000, timeout_seconds: 600, max_tool_calls: 24}
   threat-model: {max_turns: 4, max_tokens: 6000, max_cost_micros: 6000000, timeout_seconds: 360, max_tool_calls: 16}
   security-findings: {max_turns: 3, max_tokens: 5000, max_cost_micros: 5000000, timeout_seconds: 300, max_tool_calls: 12}
-  independent-reviewer: {max_turns: 6, max_tokens: 10000, max_cost_micros: 10000000, timeout_seconds: 600, max_tool_calls: 24}
+  # Root-owned finalization uses the reserved 10k input + 5k output token envelope.
+  independent-reviewer: {max_turns: 6, max_tokens: 15000, max_cost_micros: 10000000, timeout_seconds: 600, max_tool_calls: 24}
 
 perimeters:
   architecture-agent: {max_turns: 14, max_tokens: 22000, max_cost_micros: 22000000, max_tool_calls: 56}

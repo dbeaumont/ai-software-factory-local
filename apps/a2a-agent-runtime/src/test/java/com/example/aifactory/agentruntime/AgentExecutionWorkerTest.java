@@ -173,7 +173,10 @@ class AgentExecutionWorkerTest {
 
         assertEquals(true, seen.get().getFirst().content().contains(AgentLoop.INPUT_DATA_GUARDRAIL));
         assertTrue(seen.get().getFirst().content().contains(
-                "reference_id=`code-task-1`, digest=`cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc`"));
+                "reference_id=`code-task-1`, uri=`evidence://task-1/attempt-1/input/code-task-1`"));
+        assertTrue(seen.get().getFirst().content().contains(
+                "digest=`cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc`, "
+                        + "contract=`specialist-task-v1`"));
         assertTrue(seen.get().getFirst().content().contains(
                 "`schema_version` est exactement la chaine JSON `\"1\"`"));
         assertEquals(true, seen.get().get(1).content().contains("trust=\"none\""));
@@ -253,7 +256,7 @@ class AgentExecutionWorkerTest {
         assertThrows(com.example.aifactory.agentcore.AgentContractValidator.ContractValidationException.class,
                 () -> worker.execute(new AgentExecutionWorker.Request(
                         "task-1", "attempt-1", "supervisor", "specialist-task-v1", input,
-                        "delegation-plan-v1", Map.of("specialist-short-plan", "c".repeat(64)),
+                        "delegation-plan-v1", admitted("specialist-short-plan"),
                         new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000), null, null)));
 
         String systemPrompt = seen.get().getFirst().content();
@@ -285,9 +288,40 @@ class AgentExecutionWorkerTest {
         assertThrows(com.example.aifactory.agentcore.AgentContractValidator.ContractValidationException.class,
                 () -> worker.execute(new AgentExecutionWorker.Request(
                         "task-1", "attempt-1", "supervisor", "specialist-task-v1", input,
-                        "delegation-plan-v1", Map.of("specialist-1", "c".repeat(64)),
+                        "delegation-plan-v1", admitted("specialist-1"),
                         new AgentLoop.Budget(6, Duration.ofSeconds(10), 10_000, 10_000), null, null)));
 
+        assertEquals(4_096, outputLimit.get());
+    }
+
+    @Test
+    void boundsIndependentReviewOutputAndExposesExactEvidenceBindings() throws Exception {
+        JsonNode fixtures = fixtures();
+        AtomicReference<List<AgentLoop.Message>> seen = new AtomicReference<>();
+        AtomicInteger outputLimit = new AtomicInteger();
+        AgentExecutionWorker worker = new AgentExecutionWorker(
+                RoleScopedAgentContext.load("independent-reviewer", mapper),
+                (messages, tools, tokens) -> {
+                    seen.set(messages);
+                    outputLimit.set(tokens);
+                    return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
+                            fixtures.path("independent-review-v1").toString(), List.of(), 10, 5, 0);
+                }, new NoTools());
+        Map<String, AgentExecutionWorker.AdmittedReference> references = Map.of(
+                "manifest-1", new AgentExecutionWorker.AdmittedReference(
+                        "evidence://task-1/manifest", "b".repeat(64), "evidence-manifest-v1"),
+                "result-1", new AgentExecutionWorker.AdmittedReference(
+                        "evidence://task-1/result", "c".repeat(64), "specialist-result-v1"));
+
+        worker.execute(new AgentExecutionWorker.Request(
+                "task-1", "attempt-1", "independent-reviewer", "evidence-manifest-v1",
+                fixtures.path("evidence-manifest-v1"), "independent-review-v1", references,
+                new AgentLoop.Budget(6, Duration.ofSeconds(10), 15_000, 10_000_000), null, null));
+
+        String prompt = seen.get().getFirst().content();
+        assertTrue(prompt.contains("uri=`evidence://task-1/manifest`"));
+        assertTrue(prompt.contains("contract=`evidence-manifest-v1`"));
+        assertTrue(prompt.contains("dans un seul tour d'outils"));
         assertEquals(4_096, outputLimit.get());
     }
 
@@ -309,7 +343,7 @@ class AgentExecutionWorkerTest {
 
         assertThrows(SecurityException.class, () -> worker.execute(new AgentExecutionWorker.Request(
                 "task-1", "attempt-1", "architecture-agent", "specialist-task-v1", input,
-                "architecture-assessment-v1", Map.of("specialist-task-1", "c".repeat(64)),
+                "architecture-assessment-v1", admitted("specialist-task-1"),
                 new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000), null, null)));
         assertEquals(0, calls.get());
     }
@@ -337,9 +371,15 @@ class AgentExecutionWorkerTest {
     private static AgentExecutionWorker.Request request(String role, String inputContract, JsonNode input,
                                                         String outputContract) {
         return new AgentExecutionWorker.Request("task-1", "attempt-1", role, inputContract, input, outputContract,
-                Map.of("code-task-1", "c".repeat(64)),
+                admitted("code-task-1"),
                 new AgentLoop.Budget(2, Duration.ofSeconds(10), 1_000, 1_000),
                 "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "task.id=task-1");
+    }
+
+    private static Map<String, AgentExecutionWorker.AdmittedReference> admitted(String referenceId) {
+        return Map.of(referenceId, new AgentExecutionWorker.AdmittedReference(
+                "evidence://task-1/attempt-1/input/" + referenceId,
+                "c".repeat(64), "specialist-task-v1"));
     }
 
     private JsonNode fixtures() throws Exception {

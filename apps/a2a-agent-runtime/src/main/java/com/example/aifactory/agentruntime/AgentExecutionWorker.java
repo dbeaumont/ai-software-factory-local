@@ -161,6 +161,16 @@ public final class AgentExecutionWorker {
                     .append("\"summary\":\"description concise\"}\n")
                     .append("Remplace tous les marqueurs par le chemin et le contenu exacts lus dans le depot.\n");
         }
+        if ("independent-review-v1".equals(request.outputContract())) {
+            prompt.append("\n\n## Revue finale bornee\n\n")
+                    .append("Le manifeste JSON est deja fourni comme entree primaire : ne le relis pas. ")
+                    .append("Lis les preuves de support necessaires avec `evidence.read`; si plusieurs lectures ")
+                    .append("sont requises, demande-les dans un seul tour d'outils, puis rends immediatement le verdict. ")
+                    .append("Recopie sans modification les identifiants, URI et digests admis ci-dessous. ")
+                    .append("`reviewed_result_ids` contient exactement les `reference_id` dont le contrat est ")
+                    .append("`specialist-result-v1`; le manifeste final est la reference dont le contrat est ")
+                    .append("`evidence-manifest-v1`.\n");
+        }
         if (!request.admittedReferences().isEmpty()) {
             prompt.append("\n\n## Contexte d'admission immuable\n\n")
                     .append("Toute citation de la sortie doit reprendre exactement un couple autorise ci-dessous. ")
@@ -168,20 +178,25 @@ public final class AgentExecutionWorker {
             request.admittedReferences().entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
                     .forEach(reference -> prompt.append("- reference_id=`")
-                            .append(reference.getKey()).append("`, digest=`")
-                            .append(reference.getValue()).append("`\n"));
+                            .append(reference.getKey()).append("`, uri=`")
+                            .append(reference.getValue().uri()).append("`, digest=`")
+                            .append(reference.getValue().digest()).append("`, contract=`")
+                            .append(reference.getValue().contract()).append("`\n"));
         }
         return prompt.toString();
     }
 
     private static int outputTokenLimit(Request request) {
-        int contractLimit = "delegation-plan-v1".equals(request.outputContract()) ? 4_096 : 8_192;
+        int contractLimit = switch (request.outputContract()) {
+            case "delegation-plan-v1", "independent-review-v1" -> 4_096;
+            default -> 8_192;
+        };
         return Math.min(request.budget().maxTokens(), contractLimit);
     }
 
     private static String shortPlanShape(Request request) {
         JsonNode input = request.input();
-        Map.Entry<String, String> citation = request.admittedReferences().entrySet().stream()
+        Map.Entry<String, AdmittedReference> citation = request.admittedReferences().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey()).findFirst().orElseThrow(
                         () -> new IllegalArgumentException("Short plan requires one admitted input reference"));
         return "{" +
@@ -193,7 +208,7 @@ public final class AgentExecutionWorker {
                 "\"risk_class\":" + input.path("risk_class") + "," +
                 "\"root_role\":\"supervisor\"," +
                 "\"citations\":[{\"reference_id\":\"" + citation.getKey() +
-                "\",\"kind\":\"EVIDENCE\",\"digest\":\"" + citation.getValue() + "\"}]," +
+                "\",\"kind\":\"EVIDENCE\",\"digest\":\"" + citation.getValue().digest() + "\"}]," +
                 "\"assumptions\":[],\"risks\":[]," +
                 "\"nodes\":[{\"node_id\":\"developer-short-plan\",\"role\":\"developer\"," +
                 "\"parent_node_id\":null,\"depends_on\":[]," +
@@ -207,7 +222,8 @@ public final class AgentExecutionWorker {
     }
 
     public record Request(String taskId, String attemptId, String role, String inputContract, JsonNode input,
-                          String outputContract, Map<String, String> admittedReferences, AgentLoop.Budget budget,
+                          String outputContract, Map<String, AdmittedReference> admittedReferences,
+                          AgentLoop.Budget budget,
                           String traceparent, String baggage) {
         public Request {
             if (taskId == null || taskId.isBlank() || attemptId == null || attemptId.isBlank()
@@ -218,8 +234,18 @@ public final class AgentExecutionWorker {
             admittedReferences = admittedReferences == null ? Map.of() : Map.copyOf(admittedReferences);
             if (admittedReferences.entrySet().stream().anyMatch(entry -> entry.getKey() == null
                     || !entry.getKey().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
-                    || entry.getValue() == null || !entry.getValue().matches("[0-9a-f]{64}"))) {
+                    || entry.getValue() == null)) {
                 throw new IllegalArgumentException("Admitted Evidence references are invalid");
+            }
+        }
+    }
+
+    public record AdmittedReference(String uri, String digest, String contract) {
+        public AdmittedReference {
+            if (uri == null || !uri.startsWith("evidence://")
+                    || digest == null || !digest.matches("[0-9a-f]{64}")
+                    || contract == null || contract.isBlank()) {
+                throw new IllegalArgumentException("Admitted Evidence reference is invalid");
             }
         }
     }
