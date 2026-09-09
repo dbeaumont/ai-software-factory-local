@@ -4,12 +4,13 @@
   "title": "Evidence manifest result v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["manifest_id", "uri", "digest", "status", "classification", "retain_until", "created_at"],
+  "required": ["manifest_id", "uri", "digest", "status", "size_bytes", "classification", "retain_until", "created_at"],
   "properties": {
     "manifest_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "uri": { "type": "string", "pattern": "^evidence://[A-Za-z0-9_-]{1,64}/[A-Za-z0-9_-]{1,128}/manifest/[0-9a-f]{64}$", "maxLength": 1024 },
     "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "status": { "const": "COMPLETE" },
+    "size_bytes": { "type": "integer", "minimum": 1, "maximum": 1048576 },
     "classification": { "enum": ["INTERNAL", "CONFIDENTIAL", "RESTRICTED"] },
     "retain_until": { "type": "string", "format": "date-time" },
     "created_at": { "type": "string", "format": "date-time" }

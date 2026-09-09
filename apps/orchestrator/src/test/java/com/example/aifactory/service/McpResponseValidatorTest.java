@@ -107,6 +107,14 @@ class McpResponseValidatorTest {
                   "stored_at": "2026-09-01T00:00:00Z"
                 }
                 """.formatted(digest, digest))));
+        assertThatNoException().isThrownBy(() -> validator.validate("evidence.create_manifest", mapper.readTree("""
+                {
+                  "manifest_id": "%s", "uri": "evidence://task-1/pipeline-1/manifest/%s",
+                  "digest": "%s", "status": "COMPLETE", "size_bytes": 512,
+                  "classification": "CONFIDENTIAL", "retain_until": "2026-10-01T00:00:00Z",
+                  "created_at": "2026-09-01T00:00:00Z"
+                }
+                """.formatted(digest, digest, digest))));
         assertThatNoException().isThrownBy(() -> validator.validate("scm.get_repository", mapper.readTree("""
                 {
                   "repositoryId": "customer-api", "owner": "aiadmin", "name": "customer-api",

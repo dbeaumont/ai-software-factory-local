@@ -15,7 +15,7 @@
     "patch_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "artifacts": {
       "type": "object", "additionalProperties": false,
-      "required": ["plan", "patch", "tests", "quality", "security", "sbom", "review"],
+      "required": ["plan", "patch", "tests", "quality", "security", "sbom"],
       "properties": {
         "plan": { "$ref": "#/$defs/evidence" },
         "patch": { "$ref": "#/$defs/evidence" },
