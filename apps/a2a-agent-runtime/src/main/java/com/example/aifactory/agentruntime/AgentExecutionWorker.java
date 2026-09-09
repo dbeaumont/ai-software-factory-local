@@ -47,7 +47,7 @@ public final class AgentExecutionWorker {
         List<LlmCompletionPort.ToolDefinition> toolDefinitions = mcp.definitions().stream()
                 .filter(definition -> allowedTools.contains(definition.name())).toList();
         AgentLoop loop = new AgentLoop(
-                messages -> llm.nextTurn(messages, toolDefinitions, Math.min(request.budget().maxTokens(), 8_192)),
+                messages -> llm.nextTurn(messages, toolDefinitions, outputTokenLimit(request)),
                 call -> mcp.call(call.name(), call.arguments()),
                 (actor, tool) -> allowedTools.contains(tool),
                 AgentLoop.SafetyLimits.defaults(), ignored -> { });
@@ -133,7 +133,9 @@ public final class AgentExecutionWorker {
                         .append("son `role` vaut `developer`, son `parent_node_id` vaut `null`, ")
                         .append("son `depends_on` vaut `[]` et son `scope.repository_id` vaut `")
                         .append(input.path("scope").path("repository_id").asText()).append("`.\n")
-                        .append("Chaque plafond du `budget` du noeud doit etre inferieur ou egal au plafond homonyme de l'entree.\n");
+                        .append("Chaque plafond du `budget` du noeud doit etre inferieur ou egal au plafond homonyme de l'entree.\n")
+                        .append("Reponds immediatement avec un objet de cette forme exacte, sans autre propriete ni texte :\n")
+                        .append(shortPlanShape(request));
             }
         }
         if (!request.admittedReferences().isEmpty()) {
@@ -147,6 +149,38 @@ public final class AgentExecutionWorker {
                             .append(reference.getValue()).append("`\n"));
         }
         return prompt.toString();
+    }
+
+    private static int outputTokenLimit(Request request) {
+        int contractLimit = "delegation-plan-v1".equals(request.outputContract()) ? 4_096 : 8_192;
+        return Math.min(request.budget().maxTokens(), contractLimit);
+    }
+
+    private static String shortPlanShape(Request request) {
+        JsonNode input = request.input();
+        Map.Entry<String, String> citation = request.admittedReferences().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey()).findFirst().orElseThrow(
+                        () -> new IllegalArgumentException("Short plan requires one admitted input reference"));
+        return "{" +
+                "\"schema_version\":\"1\"," +
+                "\"plan_id\":" + input.path("delegation_plan_id") + "," +
+                "\"task_id\":\"" + request.taskId() + "\"," +
+                "\"attempt_id\":\"" + request.attemptId() + "\"," +
+                "\"source_commit\":" + input.path("source_commit") + "," +
+                "\"risk_class\":" + input.path("risk_class") + "," +
+                "\"root_role\":\"supervisor\"," +
+                "\"citations\":[{\"reference_id\":\"" + citation.getKey() +
+                "\",\"kind\":\"EVIDENCE\",\"digest\":\"" + citation.getValue() + "\"}]," +
+                "\"assumptions\":[],\"risks\":[]," +
+                "\"nodes\":[{\"node_id\":\"developer-short-plan\",\"role\":\"developer\"," +
+                "\"parent_node_id\":null,\"depends_on\":[]," +
+                "\"objective\":" + input.path("objective") + "," +
+                "\"scope\":{\"repository_id\":" + input.path("scope").path("repository_id") +
+                ",\"read_paths\":[\".\"],\"write_paths\":[\".\"]}," +
+                "\"budget\":" + input.path("budget") + "," +
+                "\"success_criteria\":" + input.path("success_criteria") + "," +
+                "\"stop_condition\":\"SUCCESS_CRITERIA_MET\"}]," +
+                "\"created_at\":" + input.path("issued_at") + "}\n";
     }
 
     public record Request(String taskId, String attemptId, String role, String inputContract, JsonNode input,

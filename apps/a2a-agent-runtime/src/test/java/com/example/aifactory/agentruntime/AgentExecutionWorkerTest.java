@@ -163,10 +163,12 @@ class AgentExecutionWorkerTest {
         input.put("deadline", "2026-09-09T00:01:00Z");
         input.put("issued_at", "2026-09-09T00:00:00Z");
         AtomicReference<List<AgentLoop.Message>> seen = new AtomicReference<>();
+        AtomicInteger outputLimit = new AtomicInteger();
         AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("supervisor", mapper),
                 (messages, tools, tokens) -> {
                     assertTrue(tools.isEmpty());
                     seen.set(messages);
+                    outputLimit.set(tokens);
                     return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
                             fixtures.path("delegation-plan-v1").toString(), List.of(), 1, 1, 0);
                 }, new NoTools());
@@ -182,6 +184,34 @@ class AgentExecutionWorkerTest {
         assertTrue(systemPrompt.contains("`risk_class` = `R1`"));
         assertTrue(systemPrompt.contains("utilise `risks` = `[]`"));
         assertTrue(systemPrompt.contains("`scope.repository_id` vaut `customer-api`"));
+        assertTrue(systemPrompt.contains("\"node_id\":\"developer-short-plan\""));
+        assertTrue(systemPrompt.contains("\"reference_id\":\"specialist-short-plan\""));
+        assertEquals(1_000, outputLimit.get());
+    }
+
+    @Test
+    void capsDelegationPlanOutputBelowTheOverallAgentBudget() throws Exception {
+        JsonNode fixtures = fixtures();
+        tools.jackson.databind.node.ObjectNode input =
+                (tools.jackson.databind.node.ObjectNode) fixtures.path("specialist-task-v1").deepCopy();
+        input.put("role", "supervisor");
+        input.put("node_id", "short-plan");
+        input.putArray("allowed_tools");
+        AtomicInteger outputLimit = new AtomicInteger();
+        AgentExecutionWorker worker = new AgentExecutionWorker(RoleScopedAgentContext.load("supervisor", mapper),
+                (messages, tools, tokens) -> {
+                    outputLimit.set(tokens);
+                    return new AgentLoop.Turn(AgentLoop.Stop.FINAL,
+                            fixtures.path("delegation-plan-v1").toString(), List.of(), 1, 1, 0);
+                }, new NoTools());
+
+        assertThrows(com.example.aifactory.agentcore.AgentContractValidator.ContractValidationException.class,
+                () -> worker.execute(new AgentExecutionWorker.Request(
+                        "task-1", "attempt-1", "supervisor", "specialist-task-v1", input,
+                        "delegation-plan-v1", Map.of("specialist-1", "c".repeat(64)),
+                        new AgentLoop.Budget(6, Duration.ofSeconds(10), 10_000, 10_000), null, null)));
+
+        assertEquals(4_096, outputLimit.get());
     }
 
     @Test
