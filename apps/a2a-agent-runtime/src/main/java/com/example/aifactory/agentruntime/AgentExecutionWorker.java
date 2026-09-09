@@ -195,7 +195,8 @@ public final class AgentExecutionWorker {
                     .append("`specialist-result-v1`; le manifeste final est la reference dont le contrat est ")
                     .append("`evidence-manifest-v1`. Pars du gabarit JSON valide ci-dessous, conserve tous ses ")
                     .append("champs et toutes ses valeurs immuables, puis remplace uniquement les verdicts, ")
-                    .append("raisons et preuves de controles selon les preuves admises. N'ajoute aucune propriete.\n")
+                    .append("raisons et preuves de controles selon les preuves admises. N'ajoute aucune propriete. ")
+                    .append("Reste concis : au plus une raison courte et un URI de preuve par controle.\n")
                     .append(independentReviewShape(request)).append('\n');
         }
         if (!request.admittedReferences().isEmpty()) {
@@ -216,7 +217,7 @@ public final class AgentExecutionWorker {
     private static int outputTokenLimit(Request request) {
         int contractLimit = switch (request.outputContract()) {
             case "delegation-plan-v1" -> 4_096;
-            case "independent-review-v1" -> 2_048;
+            case "independent-review-v1" -> 4_096;
             default -> 8_192;
         };
         return Math.min(request.budget().maxTokens(), contractLimit);

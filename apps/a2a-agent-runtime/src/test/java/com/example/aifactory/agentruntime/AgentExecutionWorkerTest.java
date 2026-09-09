@@ -324,11 +324,12 @@ class AgentExecutionWorkerTest {
         assertTrue(prompt.contains("uri=`evidence://task-1/manifest`"));
         assertTrue(prompt.contains("contract=`evidence-manifest-v1`"));
         assertTrue(prompt.contains("dans cet unique tour"));
+        assertTrue(prompt.contains("au plus une raison courte et un URI de preuve par controle"));
         assertTrue(prompt.contains("\"review_id\":\"review-task-1\""));
         assertTrue(prompt.contains("\"required_human_gates\":[\"BEFORE_EXTERNAL_EFFECT\"]"));
         assertTrue(seen.get().get(1).content().contains("\"admitted_evidence\""));
         assertTrue(seen.get().get(1).content().contains("\"reference_id\":\"result-1\""));
-        assertEquals(2_048, outputLimit.get());
+        assertEquals(4_096, outputLimit.get());
     }
 
     @Test
