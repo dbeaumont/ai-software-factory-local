@@ -50,6 +50,7 @@ class AgentExecutionWorkerTest {
         proposal.put("schema_version", 1);
         proposal.put("scope_digest", "not-a-digest");
         proposal.put("patch_digest", "sha256:not-a-digest");
+        proposal.put("status", "COMPLETED");
         proposal.putArray("files_touched");
         proposal.putObject("diff_artifact").put("uri", "invalid").put("digest", "invalid")
                 .put("media_type", "text/plain").put("size_bytes", 1);
@@ -68,6 +69,7 @@ class AgentExecutionWorkerTest {
                 result.document().path("diff_artifact").path("digest").asText());
         assertEquals("text/x-diff", result.document().path("diff_artifact").path("media_type").asText());
         assertTrue(!result.document().path("files_touched").isEmpty());
+        assertTrue(!result.document().has("status"));
     }
 
     @Test

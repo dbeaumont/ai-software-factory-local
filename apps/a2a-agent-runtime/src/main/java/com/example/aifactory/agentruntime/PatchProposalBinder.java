@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,6 +19,10 @@ final class PatchProposalBinder {
     private static final Pattern HUNK_HEADER =
             Pattern.compile("@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@(.*)");
     private static final Pattern DIFF_HEADER = Pattern.compile("diff --git a/([^\\s]+) b/([^\\s]+)");
+    private static final Set<String> OUTPUT_FIELDS = Set.of(
+            "schema_version", "proposal_id", "code_task_id", "task_id", "attempt_id", "node_id",
+            "source_commit", "worktree_id", "scope_digest", "patch_digest", "patch", "files_touched",
+            "diff_artifact", "summary", "created_at");
 
     private PatchProposalBinder() {
     }
@@ -36,6 +41,11 @@ final class PatchProposalBinder {
             byte[] bytes = patch.getBytes(StandardCharsets.UTF_8);
             JsonNode task = request.input();
 
+            List<String> unexpected = new ArrayList<>();
+            proposal.propertyNames().forEach(name -> {
+                if (!OUTPUT_FIELDS.contains(name)) unexpected.add(name);
+            });
+            unexpected.forEach(proposal::remove);
             proposal.put("schema_version", "1");
             proposal.put("code_task_id", task.path("code_task_id").asText());
             proposal.put("task_id", request.taskId());
