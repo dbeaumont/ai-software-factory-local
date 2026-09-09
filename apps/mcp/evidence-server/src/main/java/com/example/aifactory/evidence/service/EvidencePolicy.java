@@ -14,6 +14,11 @@ public class EvidencePolicy {
     private static final java.util.Set<String> SUMMARY_ACTORS = java.util.Set.of(
             "workflow", "supervisor", "test-agent", "test-evidence", "security-agent",
             "security-findings", "independent-reviewer", "planner", "reviewer");
+    private static final java.util.Set<String> WORKFLOW_RAW_READ_PURPOSES = java.util.Set.of(
+            "repair-patch", "pipeline-a2a-result", "pipeline-test-consolidation",
+            "hierarchical-specialist-result", "prepare-developer-tasks", "prepare-short-developer-task",
+            "accept-developer-patch", "project-developer-patch", "prepare-native-patch-repair",
+            "accept-native-patch-repair", "project-native-patch-repair");
     private static final Map<String, Rule> RULES = Map.ofEntries(
             Map.entry("plan", new Rule("INTERNAL", 90)), Map.entry("patch", new Rule("INTERNAL", 90)),
             Map.entry("patch-candidate", new Rule("INTERNAL", 90)),
@@ -64,9 +69,7 @@ public class EvidencePolicy {
 
     public Rule requireRead(String type, String actor, String purpose) {
         Rule rule = require(type);
-        boolean workflowInternalPurpose = "workflow".equals(actor) && ("repair-patch".equals(purpose)
-                || "pipeline-a2a-result".equals(purpose)
-                || "pipeline-test-consolidation".equals(purpose)
+        boolean workflowInternalPurpose = "workflow".equals(actor) && (WORKFLOW_RAW_READ_PURPOSES.contains(purpose)
                 || (purpose != null && purpose.matches("apply-patch-integration:[0-9a-f]{64}")));
         boolean agentExecutionInput = AGENT_ROLES.contains(actor) && "agent-execution-input".equals(purpose);
         if (!("workflow".equals(actor) || "reviewer".equals(actor) || "independent-reviewer".equals(actor)
