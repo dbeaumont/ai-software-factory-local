@@ -193,7 +193,10 @@ public final class AgentExecutionWorker {
                     .append("Recopie sans modification les identifiants, URI et digests admis ci-dessous. ")
                     .append("`reviewed_result_ids` contient exactement les `reference_id` dont le contrat est ")
                     .append("`specialist-result-v1`; le manifeste final est la reference dont le contrat est ")
-                    .append("`evidence-manifest-v1`.\n");
+                    .append("`evidence-manifest-v1`. Pars du gabarit JSON valide ci-dessous, conserve tous ses ")
+                    .append("champs et toutes ses valeurs immuables, puis remplace uniquement les verdicts, ")
+                    .append("raisons et preuves de controles selon les preuves admises. N'ajoute aucune propriete.\n")
+                    .append(independentReviewShape(request)).append('\n');
         }
         if (!request.admittedReferences().isEmpty()) {
             prompt.append("\n\n## Contexte d'admission immuable\n\n")
@@ -212,7 +215,8 @@ public final class AgentExecutionWorker {
 
     private static int outputTokenLimit(Request request) {
         int contractLimit = switch (request.outputContract()) {
-            case "delegation-plan-v1", "independent-review-v1" -> 4_096;
+            case "delegation-plan-v1" -> 4_096;
+            case "independent-review-v1" -> 2_048;
             default -> 8_192;
         };
         return Math.min(request.budget().maxTokens(), contractLimit);
@@ -243,6 +247,46 @@ public final class AgentExecutionWorker {
                 "\"success_criteria\":" + input.path("success_criteria") + "," +
                 "\"stop_condition\":\"SUCCESS_CRITERIA_MET\"}]," +
                 "\"created_at\":" + input.path("issued_at") + "}\n";
+    }
+
+    private static String independentReviewShape(Request request) {
+        Map.Entry<String, AdmittedReference> manifest = request.admittedReferences().entrySet().stream()
+                .filter(entry -> "evidence-manifest-v1".equals(entry.getValue().contract()))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException(
+                        "Independent review requires one admitted Evidence manifest"));
+        var root = tools.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        root.put("schema_version", "1");
+        root.put("review_id", "review-" + request.taskId());
+        root.put("task_id", request.taskId());
+        root.put("attempt_id", request.attemptId());
+        root.put("role", "independent-reviewer");
+        root.put("source_commit", request.input().path("source_commit").asText());
+        root.putObject("final_manifest")
+                .put("manifest_id", request.input().path("manifest_id").asText())
+                .put("uri", manifest.getValue().uri())
+                .put("digest", manifest.getValue().digest());
+        var reviewed = root.putArray("reviewed_result_ids");
+        request.admittedReferences().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .filter(entry -> "specialist-result-v1".equals(entry.getValue().contract()))
+                .forEach(entry -> reviewed.add(entry.getKey()));
+        var checks = root.putObject("checks");
+        for (String name : List.of("architecture", "code", "tests", "security",
+                "evidence_integrity", "approval_binding")) {
+            var check = checks.putObject(name);
+            check.put("status", "INDETERMINATE");
+            check.putArray("reasons").add("A evaluer depuis les preuves admises");
+            check.putArray("evidence_uris").add(manifest.getValue().uri());
+        }
+        root.putArray("open_contradiction_ids");
+        root.put("decision", "INDETERMINATE");
+        root.putArray("reasons").add("Verdict a etablir depuis les preuves admises");
+        root.putArray("required_human_gates").add("BEFORE_EXTERNAL_EFFECT");
+        var evidence = root.putArray("evidence");
+        request.admittedReferences().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> evidence.addObject()
+                        .put("uri", entry.getValue().uri()).put("digest", entry.getValue().digest()));
+        root.put("completed_at", request.input().path("created_at").asText());
+        return root.toString();
     }
 
     public record Request(String taskId, String attemptId, String role, String inputContract, JsonNode input,
