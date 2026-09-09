@@ -183,10 +183,11 @@ public class EvidenceStore {
                 "manifest".equals(type) ? "manifest-" + identifier + ".json" : type + '-' + identifier + ".bin");
         if (!Files.isRegularFile(file)) throw new SecurityException("evidence is unavailable");
         byte[] clear = decrypt(Files.readAllBytes(file), aad(taskId, attemptId, type, identifier));
-        if (!"manifest".equals(type) && !constantDigest(identifier, digest(clear))) {
+        String contentDigest = digest(clear);
+        if (!"manifest".equals(type) && !constantDigest(identifier, contentDigest)) {
             throw new SecurityException("evidence digest mismatch at read");
         }
-        return new ReadEvidence(uri, type, identifier, "COMPLETE", rule.classification(), clear.length,
+        return new ReadEvidence(uri, type, contentDigest, "COMPLETE", rule.classification(), clear.length,
                 raw ? Base64.getEncoder().encodeToString(clear) : null);
     }
 

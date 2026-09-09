@@ -111,6 +111,13 @@ class EvidenceStoreTest {
         byte[] encryptedManifest = java.nio.file.Files.readAllBytes(root.resolve("task-1/attempt-1/manifest-" + first.manifestId() + ".json"));
         assertFalse(new String(encryptedManifest, StandardCharsets.UTF_8).contains("policy_decision"));
         assertEquals("CONFIDENTIAL", first.classification());
+        EvidenceStore.ReadEvidence readableManifest = store.read("task-1", "attempt-1", first.uri(),
+                "independent-reviewer", "agent-execution-input", true);
+        assertEquals(first.digest(), readableManifest.digest());
+        assertEquals(first.sizeBytes(), readableManifest.sizeBytes());
+        assertArrayEquals(MessageDigest.getInstance("SHA-256").digest(
+                        Base64.getDecoder().decode(readableManifest.contentBase64())),
+                HexFormat.of().parseHex(readableManifest.digest()));
         Map<String, EvidenceStore.EvidenceReference> preReview = new LinkedHashMap<>(artifacts);
         preReview.remove("review");
         assertDoesNotThrow(() -> store.createManifest("task-1", "attempt-1", "customer-api",
